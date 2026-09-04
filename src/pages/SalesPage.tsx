@@ -594,6 +594,12 @@ export default function SalesPage() {
         subtotal={calculateTotal()}
         selectedClient={selectedClient ? { id: "", name: selectedClient } : null}
         selectedStaff={staff?.find(s => s.id === selectedAppointmentStaffId) ?? (staff && staff.length > 0 ? staff[0] : null)}
+        // #15: a walk-in sale defaults to the first staff member (harmless with one
+        // staff member, silently wrong with several) — staffList + onStaffChange make
+        // that default visible and correctable via the checkout screen's "CHANGE"
+        // control instead of being locked in with no way to fix it.
+        staffList={staff ?? []}
+        onStaffChange={(member) => setSelectedAppointmentStaffId(member.id)}
         onConfirm={async (paymentData) => {
           try {
             // Map payment method from PaymentMethodPage format to backend format
