@@ -270,18 +270,20 @@ export default function StaffPage() {
 
   // Initialize working hours form when staff is selected. #13: read the real
   // workingHoursStart/workingHoursEnd (see getStaffDayHours) — a day with no entry
-  // there genuinely has no saved hours, so it starts as Closed with an editable
-  // 09:00–17:00 placeholder, not a fake "open 10:00–19:00" that Save would persist
-  // as if it were real.
+  // there genuinely has no saved hours, so it starts as Closed. Its editable
+  // placeholder start/end (shown once the owner toggles that day open) comes from the
+  // salon's own hours for that day, not a hardcoded guess — a new/unconfigured staff
+  // member's schedule should default to matching when the business itself is open.
   useEffect(() => {
     if (selectedStaff) {
       const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
       const hours: Record<string, { start: string; end: string; isClosed: boolean }> = {};
       days.forEach(day => {
         const dayHours = getStaffDayHours(selectedStaff, day);
+        const bizHours = getHoursForDay(DAY_KEY_TO_BACKEND[day]);
         hours[day] = {
-          start: dayHours.start || "09:00",
-          end: dayHours.end || "17:00",
+          start: dayHours.start || bizHours?.startTime || "09:00",
+          end: dayHours.end || bizHours?.endTime || "17:00",
           isClosed: dayHours.isClosed,
         };
       });
@@ -289,8 +291,8 @@ export default function StaffPage() {
     } else {
       setWorkingHoursForm({});
     }
-  }, [selectedStaff]);
-  
+  }, [selectedStaff, businessHours]);
+
   // Get business hours for the selected date
   const getBusinessHoursForSelectedDate = useCallback(() => {
     const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
@@ -476,17 +478,26 @@ export default function StaffPage() {
   };
 
   // Save working hours
-  const handleSaveWorkingHours = async () => {
+  // #13: the field the backend actually accepts is `schedule` (uppercase day keys,
+  // [start, end] tuples, closed days simply omitted) — not `workingHours`, which isn't
+  // a field on the update DTO at all. Sending the wrong field name silently dropped
+  // it, and the backend's (now-fixed) unconditional delete-then-replace of working
+  // hours turned "no schedule was sent" into "delete them all".
+  //
+  // Takes the hours form as a parameter (rather than always reading the
+  // workingHoursForm state) so a caller that just computed a new form value — #16:
+  // "Copy Schedule" below — can persist it immediately instead of leaving an edit that
+  // *looks* saved (a success toast) sitting unsaved in local state until a separate
+  // click on this same tab's own Save button.
+  const saveWorkingHoursSchedule = async (
+    hoursForm: Record<string, { start: string; end: string; isClosed: boolean }>,
+    successMessage = "Working hours updated successfully"
+  ) => {
     if (!selectedStaff) return;
 
     try {
-      // #13: the field the backend actually accepts is `schedule` (uppercase day
-      // keys, [start, end] tuples, closed days simply omitted) — not `workingHours`,
-      // which isn't a field on the update DTO at all. Sending the wrong field name
-      // silently dropped it, and the backend's (now-fixed) unconditional delete-then-
-      // replace of working hours turned "no schedule was sent" into "delete them all".
       const schedule: Record<string, string[]> = {};
-      Object.entries(workingHoursForm).forEach(([day, dayHours]) => {
+      Object.entries(hoursForm).forEach(([day, dayHours]) => {
         if (!dayHours.isClosed && dayHours.start && dayHours.end) {
           schedule[DAY_KEY_TO_BACKEND[day]] = [dayHours.start, dayHours.end];
         }
@@ -498,11 +509,13 @@ export default function StaffPage() {
       setTimeout(() => {
         setSelectedStaffId(currentId);
       }, 100);
-      toast.success("Working hours updated successfully");
+      toast.success(successMessage);
     } catch (error: any) {
       toast.error(error.message || "Failed to save working hours");
     }
   };
+
+  const handleSaveWorkingHours = () => saveWorkingHoursSchedule(workingHoursForm);
 
   // Quick actions for working hours
   const handleCopyToAllDays = (sourceDay: string) => {
@@ -519,7 +532,9 @@ export default function StaffPage() {
   };
 
   const handleSetWeekdays = () => {
-    const mondayHours = workingHoursForm.monday || { start: "10:00", end: "19:00", isClosed: false };
+    const mondayBiz = getHoursForDay("MONDAY");
+    const mondayHours = workingHoursForm.monday
+      || { start: mondayBiz?.startTime || "09:00", end: mondayBiz?.endTime || "17:00", isClosed: false };
     const weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday"];
     const updated = { ...workingHoursForm };
     weekdays.forEach(day => {
@@ -530,7 +545,9 @@ export default function StaffPage() {
   };
 
   const handleSetWeekends = () => {
-    const saturdayHours = workingHoursForm.saturday || { start: "10:00", end: "19:00", isClosed: false };
+    const saturdayBiz = getHoursForDay("SATURDAY");
+    const saturdayHours = workingHoursForm.saturday
+      || { start: saturdayBiz?.startTime || "09:00", end: saturdayBiz?.endTime || "17:00", isClosed: false };
     const weekends = ["saturday", "sunday"];
     const updated = { ...workingHoursForm };
     weekends.forEach(day => {
@@ -979,8 +996,11 @@ export default function StaffPage() {
                     variant="outline"
                     size="sm"
                     className="gap-2"
-                    onClick={() => {
-                      // Copy the selected day's hours to all staff working hour entries for that day
+                    onClick={async () => {
+                      // Copy the selected day's hours to all staff working hour entries for that day.
+                      // #16: this used to only mutate local form state (with a success toast implying
+                      // it was saved) — nothing persisted until a separate visit to the WORKING HOURS
+                      // tab's own Save button. Now saves immediately, same as that button does.
                       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                       const dayOfWeek = dayNames[selectedDate.getDay()];
                       const sourceHours = workingHoursForm[dayOfWeek];
@@ -994,7 +1014,7 @@ export default function StaffPage() {
                         updated[day] = { ...sourceHours };
                       });
                       setWorkingHoursForm(updated);
-                      toast.success(`Copied ${dayOfWeek} schedule to all days`);
+                      await saveWorkingHoursSchedule(updated, `Copied ${dayOfWeek} schedule to all days and saved`);
                     }}
                   >
                     <Copy size={16} />
