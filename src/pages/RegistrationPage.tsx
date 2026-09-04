@@ -565,7 +565,13 @@ const RegistrationPage = () => {
         {/* Step 1: Account Creation */}
         {currentStep === 1 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <div className="w-full">
+            <form
+              className="w-full"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (canProceedStep1) setCurrentStep(2);
+              }}
+            >
               <div className="mb-8">
                 <h1 className="text-3xl font-semibold text-gray-900 mb-2">Create your account</h1>
                 <p className="text-gray-600">Enter your information to get started</p>
@@ -778,7 +784,7 @@ const RegistrationPage = () => {
 
               <div className="pt-6 border-t border-gray-200 flex justify-end">
                 <Button
-                  onClick={() => setCurrentStep(2)}
+                  type="submit"
                   disabled={!canProceedStep1}
                   className="w-full md:w-auto min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -786,7 +792,7 @@ const RegistrationPage = () => {
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </form>
           </div>
         )}
 

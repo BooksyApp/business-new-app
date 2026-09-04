@@ -40,7 +40,7 @@ export interface CreateAppointmentRequest {
 
 export const appointmentService = {
   async getAppointmentById(id: number): Promise<Appointment> {
-    return apiClient.get<Appointment>(`/appointments/${id}`);
+    return apiClient.get<Appointment>(`/bookings/${id}`);
   },
 
   async getAppointmentsByBusiness(businessId: number, date?: Date): Promise<Appointment[]> {
@@ -54,7 +54,7 @@ export const appointmentService = {
     params.append('startDate', dateStr);
     params.append('endDate', dateStr);
     
-    return apiClient.get<Appointment[]>(`/appointments/business/${businessId}?${params.toString()}`);
+    return apiClient.get<Appointment[]>(`/bookings/business/${businessId}?${params.toString()}`);
   },
 
   async getAppointmentsByStaff(staffId: number, date?: Date): Promise<Appointment[]> {
@@ -68,7 +68,7 @@ export const appointmentService = {
     params.append('startDate', dateStr);
     params.append('endDate', dateStr);
     
-    return apiClient.get<Appointment[]>(`/appointments/staff/${staffId}?${params.toString()}`);
+    return apiClient.get<Appointment[]>(`/bookings/staff/${staffId}?${params.toString()}`);
   },
 
   async createAppointment(request: CreateAppointmentRequest & { idempotencyKey?: string }): Promise<Appointment> {
@@ -77,18 +77,18 @@ export const appointmentService = {
     // If caller doesn't provide one, fall back to a time+random key (single-use, not retry-safe).
     const key = request.idempotencyKey
       ?? `${request.businessId}-${request.staffId}-${request.appointmentDate}-${request.startTime}-${Date.now()}-${Math.random()}`;
-    return apiClient.post<Appointment>('/appointments', {
+    return apiClient.post<Appointment>('/bookings', {
       ...request,
       idempotencyKey: key,
     });
   },
 
   async updateAppointment(id: number, request: CreateAppointmentRequest): Promise<Appointment> {
-    return apiClient.put<Appointment>(`/appointments/${id}`, request);
+    return apiClient.put<Appointment>(`/bookings/${id}`, request);
   },
 
   async deleteAppointment(id: number): Promise<void> {
-    return apiClient.delete<void>(`/appointments/${id}`);
+    return apiClient.delete<void>(`/bookings/${id}`);
   },
 
   async confirmAppointment(id: number): Promise<Appointment> {
@@ -96,7 +96,7 @@ export const appointmentService = {
   },
 
   async cancelAppointment(id: number, reason: string): Promise<void> {
-    return apiClient.put<void>(`/appointments/${id}/cancel`, { reason });
+    return apiClient.put<void>(`/bookings/${id}/cancel`, { reason });
   },
 };
 
