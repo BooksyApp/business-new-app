@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, DollarSign, Users, TrendingUp, Clock, Star, Building2 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getUserBusinesses, isBusinessOwner } from "@/utils/businessUtils";
 import { businessService } from "@/services/businessService";
@@ -17,6 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function HomePage() {
   const { businessId } = useParams<{ businessId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // #9 (salon-hub QA): the Sidebar's "Switch Business" button links here with this flag
+  // so the picker always shows, even for an owner with just one business — the default
+  // behavior below auto-redirects a single business straight into it, which is exactly
+  // right on first login but left no way back to add a second business afterwards.
+  const forceSwitch = searchParams.get("switch") === "1";
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [noBusiness, setNoBusiness] = useState(false);
@@ -70,8 +76,9 @@ export default function HomePage() {
         const userBusinesses = await getUserBusinesses();
         setBusinesses(userBusinesses);
 
-        // If user has only one business, redirect to it
-        if (userBusinesses.length === 1) {
+        // If user has only one business, redirect to it — unless the picker was
+        // explicitly requested (Switch Business), in which case show it regardless.
+        if (userBusinesses.length === 1 && !forceSwitch) {
           // Store business ID in localStorage
           localStorage.setItem("currentBusinessId", userBusinesses[0].id.toString());
           localStorage.setItem("currentBusiness", JSON.stringify(userBusinesses[0]));
@@ -96,7 +103,7 @@ export default function HomePage() {
     };
 
     loadBusinesses();
-  }, [businessId, navigate]);
+  }, [businessId, navigate, forceSwitch]);
 
   const handleCreateBusiness = async () => {
     if (!newBizName.trim()) { toast.error("Enter your business name"); return; }
@@ -343,7 +350,11 @@ export default function HomePage() {
     );
   }
 
-  if (businesses.length > 1) {
+  // #9 (salon-hub QA): this screen only ever rendered with 2+ businesses, and even then
+  // had no way to add another — an owner going from 1 business to 2 (or 2 to 3, etc.)
+  // had no path to it at all. forceSwitch (Sidebar's "Switch Business" button) makes it
+  // reachable at exactly 1 business too, and the card below covers "add another".
+  if (businesses.length > 1 || (forceSwitch && businesses.length >= 1)) {
     return (
       <AppLayout>
         <PageHeader
@@ -381,6 +392,31 @@ export default function HomePage() {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Add another business */}
+            <Card className="border-dashed">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-accent/10">
+                    <Building2 className="h-6 w-6 text-accent" />
+                  </div>
+                  <CardTitle className="text-lg">Add a business</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Label htmlFor="newBizName" className="sr-only">Business name</Label>
+                <Input
+                  id="newBizName"
+                  placeholder="e.g. Glamour Studio"
+                  value={newBizName}
+                  onChange={e => setNewBizName(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleCreateBusiness()}
+                />
+                <Button className="w-full" variant="outline" onClick={handleCreateBusiness} disabled={creatingBiz}>
+                  {creatingBiz ? "Creating…" : "Create Business"}
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </AppLayout>

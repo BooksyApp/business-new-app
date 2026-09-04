@@ -5,6 +5,7 @@ import {
   ChevronDown,
   LogOut,
   Clock as ClockIcon,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -13,6 +14,7 @@ import { LanguageModal } from "./LanguageModal";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { authService } from "@/services/authService";
 import { clearAuthData } from "@/utils/authUtils";
+import { getCurrentUser } from "@/utils/businessUtils";
 
 // Custom Calendar Icon Component
 const CalendarIcon = ({ className, size = 24 }: { className?: string; size?: number }) => {
@@ -327,8 +329,20 @@ export function Sidebar() {
   const navigate = useNavigate();
   const businessId = useBusinessId();
   const [selectedLanguage, setSelectedLanguage] = useState("pl");
-  const [selectedTheme, setSelectedTheme] = useState("light");
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+
+  // #9 (salon-hub QA): there was no owner-identity element in the sidebar at all — the
+  // circle in its place was a dead "theme selector" (no onClick, never wired to
+  // anything) whose label read "THEM" instead of showing who's logged in.
+  const currentUser = getCurrentUser();
+  const initials = currentUser?.fullName
+    ? currentUser.fullName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part: string) => part[0]!.toUpperCase())
+        .join("")
+    : (currentUser?.email?.[0]?.toUpperCase() ?? "?");
 
   const handleLogout = async () => {
     await authService.logout();
@@ -463,19 +477,42 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom Section - Theme Selector + Logout */}
+      {/* Bottom Section - Owner profile + Switch Business + Logout */}
       <div className="flex flex-col items-center gap-2.5 pt-2 pb-4 border-t border-[#2a2a2a]/50">
         {/* Link/Chain Icon */}
         <div className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors group">
           <GlobeIcon size={16} className="text-white/40 group-hover:text-white/60" />
         </div>
 
-        {/* Theme Selector */}
-        <div className="relative">
-          <div className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors">
-            <span className="text-[8px] font-semibold text-white/40 uppercase tracking-wider">THEM</span>
-          </div>
-        </div>
+        {/* Switch Business — the only way back to "/" (Select Business) from inside a
+            business; ?switch=1 tells HomePage to show the picker even for a single
+            business, instead of its usual auto-redirect straight into it. */}
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => navigate('/?switch=1')}
+              className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors group"
+              aria-label="Switch business"
+            >
+              <Building2 size={16} className="text-white/40 group-hover:text-white/60" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="bg-[#1a1a1a] text-white border-none px-3 py-1.5 text-sm">
+            Switch business
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Owner profile */}
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <div className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center cursor-default">
+              <span className="text-xs font-semibold text-white/70 uppercase tracking-wider">{initials}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="bg-[#1a1a1a] text-white border-none px-3 py-1.5 text-sm">
+            {currentUser?.fullName || currentUser?.email || "Signed in"}
+          </TooltipContent>
+        </Tooltip>
 
         {/* Logout */}
         <Tooltip delayDuration={200}>
