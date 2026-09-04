@@ -1,18 +1,10 @@
 // API Configuration
-// In development, Vite proxy routes /api to http://localhost:8080
-// In production on Vercel, ALWAYS use the serverless function proxy at /api
-// The proxy handles HTTPS to HTTP conversion to avoid mixed content errors
-// NOTE: In production, we MUST use /api (relative URL) to go through Vercel proxy
-// Do NOT set VITE_API_BASE_URL in Vercel - it will cause mixed content errors
-
-// FORCE /api in production - ignore any environment variables
-// This ensures we always use the Vercel proxy (HTTPS) instead of direct HTTP calls
+// The manager site and the API are served from the same origin (Caddy on the VPS
+// reverse-proxies /api/** to the backend, everything else is this SPA) — so both
+// URLs are same-origin relative paths, no CORS or mixed-content workaround needed.
+// In development, the Vite dev server proxies /api to http://localhost:8080.
 export const API_BASE_URL = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_BASE_URL || '/api');
-// WebSocket Configuration
-// SockJS requires HTTP/HTTPS URLs (not ws:// or wss://) - it handles WebSocket upgrade internally
-// In development: Use empty string (relative path) so Vite proxy handles it
-// In production: Use HTTPS to avoid mixed content blocking (Vercel uses HTTPS)
-// SSL is configured on GCP server, listening on port 8443
+// WebSocket Configuration — SockJS wants an HTTP(S) URL, empty = same origin.
 export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || '';
 
 // Get current business ID from localStorage (set after login/registration)
