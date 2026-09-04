@@ -8,6 +8,7 @@ import LoadingView from "@/components/ui/loading-view";
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import("./pages/HomePage"));
+const CreateBusinessPage = lazy(() => import("./pages/CreateBusinessPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SalesPage = lazy(() => import("./pages/SalesPage"));
 const ItemsCategoryPage = lazy(() => import("./pages/ItemsCategoryPage"));
@@ -105,7 +106,17 @@ const App = () => (
                 </Suspense>
               }
             />
-            
+            <Route
+              path="/create-business"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ProtectedRoute>
+                    <CreateBusinessPage />
+                  </ProtectedRoute>
+                </Suspense>
+              }
+            />
+
             {/* Business-specific routes */}
             <Route
               path="/:businessId"
