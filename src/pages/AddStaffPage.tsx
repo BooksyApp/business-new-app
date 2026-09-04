@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,11 +26,13 @@ import { useStaff } from "@/hooks/useStaff";
 import { useServices } from "@/hooks/useServices";
 import { serviceService } from "@/services/serviceService";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { useNavigation } from "@/utils/navigationUtils";
 import { toast } from "sonner";
 import {
   WorkingHoursEditor,
   DEFAULT_WEEK,
+  WEEK_DAYS,
   scheduleToPayload,
   type WeekSchedule,
 } from "@/components/staff/WorkingHoursEditor";
@@ -41,8 +43,29 @@ export default function AddStaffPage() {
   const businessId = useBusinessId();
   const { createStaff, setStaffRole, loading: creating } = useStaff();
   const { services, loading: servicesLoading } = useServices();
+  const { businessHours } = useBusinessHours(businessId);
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
   const [schedule, setSchedule] = useState<WeekSchedule>(DEFAULT_WEEK);
+  const [scheduleSeededFromBusinessHours, setScheduleSeededFromBusinessHours] = useState(false);
+
+  // A brand-new staff member's default schedule should match when the salon itself is
+  // open, not a hardcoded Mon–Fri 09:00–17:00 guess (DEFAULT_WEEK, kept as the
+  // fallback for a business with no hours configured yet). Seeds once, when business
+  // hours first load — guarded so it never overwrites hours the owner already edited.
+  useEffect(() => {
+    if (scheduleSeededFromBusinessHours || businessHours.length === 0) return;
+    const seeded = WEEK_DAYS.reduce((acc, d) => {
+      const biz = businessHours.find(h => h.dayOfWeek === d.key);
+      acc[d.key] = {
+        enabled: biz?.enabled ?? DEFAULT_WEEK[d.key].enabled,
+        start: biz?.startTime || DEFAULT_WEEK[d.key].start,
+        end: biz?.endTime || DEFAULT_WEEK[d.key].end,
+      };
+      return acc;
+    }, {} as WeekSchedule);
+    setSchedule(seeded);
+    setScheduleSeededFromBusinessHours(true);
+  }, [businessHours, scheduleSeededFromBusinessHours]);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",

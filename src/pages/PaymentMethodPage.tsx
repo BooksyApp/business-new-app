@@ -28,6 +28,13 @@ interface PaymentMethodPageProps {
   subtotal?: number;
   selectedClient?: { id: string; name: string; avatar?: string } | null;
   selectedStaff?: { id: number; name: string; avatarUrl?: string; position?: string } | null;
+  // #15: the full roster this sale's staff can be picked from, and a callback so the
+  // parent (which is what actually sends staffId to the backend) learns about a change
+  // made here via "CHANGE" — previously that button did nothing at all, so a walk-in
+  // sale's staff (and therefore who commission gets attributed to) was locked to
+  // whatever the caller defaulted to, with no way to correct it from this screen.
+  staffList?: Array<{ id: number; name: string; avatarUrl?: string; position?: string }>;
+  onStaffChange?: (staff: { id: number; name: string; avatarUrl?: string; position?: string }) => void;
   onConfirm?: (paymentData: {
     tip: number;
     tipPercent: number;
@@ -40,13 +47,15 @@ interface PaymentMethodPageProps {
   onCancel?: () => void;
 }
 
-export default function PaymentMethodPage({ 
+export default function PaymentMethodPage({
   orderItems = [],
   subtotal = 80.00,
   selectedClient: propSelectedClient = null,
   selectedStaff: propSelectedStaff = null,
+  staffList = [],
+  onStaffChange,
   onConfirm,
-  onCancel 
+  onCancel
 }: PaymentMethodPageProps) {
   const navigate = useNavigate();
   const [selectedTip, setSelectedTip] = useState<{ amount: number; percent: number } | null>(null);
@@ -69,6 +78,7 @@ export default function PaymentMethodPage({
   const [splitCardAmount, setSplitCardAmount] = useState("");
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; avatar?: string } | null>(propSelectedClient);
   const [selectedStaff, setSelectedStaff] = useState<{ id: number; name: string; avatarUrl?: string; position?: string } | null>(propSelectedStaff);
+  const [showStaffPicker, setShowStaffPicker] = useState(false);
 
   // Update selected client when prop changes
   useEffect(() => {
@@ -454,33 +464,65 @@ export default function PaymentMethodPage({
 
           {/* Staff Info */}
           {selectedStaff && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                  {selectedStaff.avatarUrl ? (
-                    <img
-                      src={selectedStaff.avatarUrl}
-                      alt={selectedStaff.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs font-semibold text-gray-600">
-                      {(selectedStaff.name || '').split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </span>
-                  )}
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                    {selectedStaff.avatarUrl ? (
+                      <img
+                        src={selectedStaff.avatarUrl}
+                        alt={selectedStaff.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs font-semibold text-gray-600">
+                        {(selectedStaff.name || '').split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{selectedStaff.name}</p>
+                    {selectedStaff.position && (
+                      <p className="text-xs text-gray-500">{selectedStaff.position}</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{selectedStaff.name}</p>
-                  {selectedStaff.position && (
-                    <p className="text-xs text-gray-500">{selectedStaff.position}</p>
-                  )}
-                </div>
+                {/* #15: this used to have no onClick at all — the sale's staff (and so
+                    who gets commission credit) could never actually be changed here. */}
+                {staffList.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setShowStaffPicker(v => !v)}
+                  >
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    <Pencil className="h-3.5 w-3.5" />
+                    CHANGE
+                  </Button>
+                )}
               </div>
-              <Button variant="ghost" size="sm" className="h-8 text-xs">
-                <User className="h-3.5 w-3.5 mr-1.5" />
-                <Pencil className="h-3.5 w-3.5" />
-                CHANGE
-              </Button>
+              {showStaffPicker && staffList.length > 1 && (
+                <div className="mt-2 space-y-1 border-t border-gray-200 pt-2">
+                  {staffList.map((member) => (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStaff(member);
+                        onStaffChange?.(member);
+                        setShowStaffPicker(false);
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 transition-colors ${
+                        member.id === selectedStaff.id ? "font-medium text-gray-900" : "text-gray-600"
+                      }`}
+                    >
+                      {member.name}
+                      {member.position && <span className="text-xs text-gray-400 ml-1.5">{member.position}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
