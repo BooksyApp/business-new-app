@@ -40,6 +40,7 @@ import {
 import { format, addDays, subDays, parse, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useStaff } from "@/hooks/useStaff";
 import { useServices } from "@/hooks/useServices";
+import { serviceService } from "@/services/serviceService";
 import { useTimeOff } from "@/hooks/useTimeOff";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
@@ -103,6 +104,30 @@ const getColorClass = (color?: string): string => {
   return "bg-gray-400";
 };
 
+// #13: a staff member's real per-day hours live in workingHoursStart/workingHoursEnd
+// (keys like "MONDAY", values "HH:mm[:ss]") — the only fields the backend actually
+// sends. `workingHoursDetail`, read here previously, doesn't exist on any real API
+// response, so every read of it was always undefined and every staff member always
+// showed as if unconfigured (or, in the Working Hours tab specifically, as a fake
+// 10:00–19:00-every-day default that a Save then wrote back as if it were real).
+const DAY_KEY_TO_BACKEND: Record<string, string> = {
+  sunday: "SUNDAY", monday: "MONDAY", tuesday: "TUESDAY", wednesday: "WEDNESDAY",
+  thursday: "THURSDAY", friday: "FRIDAY", saturday: "SATURDAY",
+};
+
+function getStaffDayHours(
+  staff: { workingHoursStart?: Record<string, string>; workingHoursEnd?: Record<string, string> } | undefined,
+  dayKeyLowercase: string
+): { start: string | null; end: string | null; isClosed: boolean } {
+  const backendKey = DAY_KEY_TO_BACKEND[dayKeyLowercase];
+  const start = staff?.workingHoursStart?.[backendKey];
+  const end = staff?.workingHoursEnd?.[backendKey];
+  if (start && end) {
+    return { start: start.slice(0, 5), end: end.slice(0, 5), isClosed: false };
+  }
+  return { start: null, end: null, isClosed: true };
+}
+
 export default function StaffPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("staff-members");
@@ -121,7 +146,7 @@ export default function StaffPage() {
   // Fetch data from API
   const businessId = useBusinessId();
   const { getPath } = useNavigation();
-  const { staff: apiStaff, loading: staffLoading, updateStaff, refresh: refreshStaff } = useStaff(businessId);
+  const { staff: apiStaff, loading: staffLoading, updateStaff, setStaffRole, refresh: refreshStaff } = useStaff(businessId);
   const { services: apiServices, loading: servicesLoading, updateService, refresh: refreshServices } = useServices(businessId);
   const { timeOffs, createTimeOff, loading: timeOffsLoading } = useTimeOff(businessId);
   const { businessHours, getDefaultHours, getHoursForDay } = useBusinessHours(businessId);
@@ -170,8 +195,6 @@ export default function StaffPage() {
     email: "",
     position: "",
     permissionLevel: "",
-    showInCalendar: true,
-    availableForOnlineBooking: true,
     serviceIds: [] as number[],
   });
   const [commissionRuleForm, setCommissionRuleForm] = useState({
@@ -245,40 +268,28 @@ export default function StaffPage() {
     }
   }, [selectedStaff, apiServices]);
 
-  // Initialize working hours form when staff is selected
+  // Initialize working hours form when staff is selected. #13: read the real
+  // workingHoursStart/workingHoursEnd (see getStaffDayHours) — a day with no entry
+  // there genuinely has no saved hours, so it starts as Closed with an editable
+  // 09:00–17:00 placeholder, not a fake "open 10:00–19:00" that Save would persist
+  // as if it were real.
   useEffect(() => {
     if (selectedStaff) {
       const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
       const hours: Record<string, { start: string; end: string; isClosed: boolean }> = {};
-
-      // Use working hours from backend if available, otherwise use defaults
-      if (selectedStaff.workingHoursDetail) {
-        days.forEach(day => {
-          const dayHours = selectedStaff.workingHoursDetail?.[day];
-          if (dayHours) {
-            const isClosed = dayHours.isClosed === true ||
-                           (dayHours.start === null && dayHours.end === null);
-            hours[day] = {
-              start: dayHours.start || "10:00",
-              end: dayHours.end || "19:00",
-              isClosed: isClosed,
-            };
-          } else {
-            hours[day] = { start: "10:00", end: "19:00", isClosed: false };
-          }
-        });
-      } else {
-        // Default hours if no data from backend
-        days.forEach(day => {
-          hours[day] = { start: "10:00", end: "19:00", isClosed: false };
-        });
-      }
-
+      days.forEach(day => {
+        const dayHours = getStaffDayHours(selectedStaff, day);
+        hours[day] = {
+          start: dayHours.start || "09:00",
+          end: dayHours.end || "17:00",
+          isClosed: dayHours.isClosed,
+        };
+      });
       setWorkingHoursForm(hours);
     } else {
       setWorkingHoursForm({});
     }
-  }, [selectedStaff, selectedStaff?.workingHoursDetail]);
+  }, [selectedStaff]);
   
   // Get business hours for the selected date
   const getBusinessHoursForSelectedDate = useCallback(() => {
@@ -469,10 +480,18 @@ export default function StaffPage() {
     if (!selectedStaff) return;
 
     try {
-      const requestData = {
-        workingHours: workingHoursForm,
-      };
-      await updateStaff(selectedStaff.id, requestData);
+      // #13: the field the backend actually accepts is `schedule` (uppercase day
+      // keys, [start, end] tuples, closed days simply omitted) — not `workingHours`,
+      // which isn't a field on the update DTO at all. Sending the wrong field name
+      // silently dropped it, and the backend's (now-fixed) unconditional delete-then-
+      // replace of working hours turned "no schedule was sent" into "delete them all".
+      const schedule: Record<string, string[]> = {};
+      Object.entries(workingHoursForm).forEach(([day, dayHours]) => {
+        if (!dayHours.isClosed && dayHours.start && dayHours.end) {
+          schedule[DAY_KEY_TO_BACKEND[day]] = [dayHours.start, dayHours.end];
+        }
+      });
+      await updateStaff(selectedStaff.id, { schedule });
       await refreshStaff();
       const currentId = selectedStaffId;
       setSelectedStaffId(null);
@@ -771,12 +790,11 @@ export default function StaffPage() {
                       const staffTimeOffs = getTimeOffsForStaff(staff.id, selectedDate);
                       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                       const dayOfWeek = dayNames[selectedDate.getDay()];
-                      const staffWorkingHours = staff.workingHoursDetail?.[dayOfWeek];
-                      const isStaffClosed = staffWorkingHours?.isClosed === true || 
-                                           (staffWorkingHours?.start === null && staffWorkingHours?.end === null);
-                      const staffStartTime = staffWorkingHours?.start || null;
-                      const staffEndTime = staffWorkingHours?.end || null;
-                      
+                      const staffWorkingHours = getStaffDayHours(staff, dayOfWeek);
+                      const isStaffClosed = staffWorkingHours.isClosed;
+                      const staffStartTime = staffWorkingHours.start;
+                      const staffEndTime = staffWorkingHours.end;
+
                       // Calculate total working hours excluding time off
                       const calculateWorkingHours = () => {
                         if (isStaffClosed || !staffStartTime || !staffEndTime) {
@@ -1160,12 +1178,11 @@ export default function StaffPage() {
                           const staffTimeOffs = getTimeOffsForStaff(staff.id, date);
                           const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                           const dayOfWeek = dayNames[date.getDay()];
-                          const staffWorkingHours = staff.workingHoursDetail?.[dayOfWeek];
-                          const isStaffClosed = staffWorkingHours?.isClosed === true || 
-                                               (staffWorkingHours?.start === null && staffWorkingHours?.end === null);
-                          const staffStartTime = staffWorkingHours?.start || null;
-                          const staffEndTime = staffWorkingHours?.end || null;
-                          
+                          const staffWorkingHours = getStaffDayHours(staff, dayOfWeek);
+                          const isStaffClosed = staffWorkingHours.isClosed;
+                          const staffStartTime = staffWorkingHours.start;
+                          const staffEndTime = staffWorkingHours.end;
+
                           return (
                             <div key={dateIndex} className="flex-1 relative bg-white border-l border-gray-200" style={{ minHeight: staffTimeOffs.length > 0 ? '113px' : '56px' }}>
                               {/* Staff Working Hours Block - shows staff's working hours for this day */}
@@ -1794,18 +1811,30 @@ export default function StaffPage() {
                       </div>
                     </button>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
                         setEditingStaff(staff);
+                        // #13: `staff.role` is the real field (no such thing as
+                        // canBookAppointments on the backend); service assignments
+                        // live in service-catalog, not on the staff record itself, so
+                        // they need their own fetch — staff.serviceIds is never
+                        // populated and this used to always open with nothing checked.
+                        const role = staff.role
+                          ? staff.role.charAt(0) + staff.role.slice(1).toLowerCase()
+                          : "";
+                        let serviceIds: number[] = [];
+                        try {
+                          serviceIds = await serviceService.getStaffServiceIds(businessId, staff.id);
+                        } catch (err) {
+                          console.error("Failed to load staff service assignments:", err);
+                        }
                         setEditStaffForm({
                           name: staff.name || "",
                           phone: staff.phone || "",
                           email: staff.email || "",
                           position: staff.position || "",
-                          permissionLevel: "", // Would need to get from staff data
-                          showInCalendar: staff.canBookAppointments ?? true,
-                          availableForOnlineBooking: staff.canBookAppointments ?? true,
-                          serviceIds: staff.serviceIds || [],
+                          permissionLevel: role,
+                          serviceIds,
                         });
                         setIsEditStaffDialogOpen(true);
                       }}
@@ -1867,15 +1896,10 @@ export default function StaffPage() {
                     <Button
                       variant="outline"
                       className="gap-2 mt-2"
+                      onClick={() => navigate(getPath("calendar"))}
                     >
                       <Calendar size={16} />
                       SHOW CALENDAR
-                      <Badge
-                        variant="secondary"
-                        className="ml-1 bg-gray-900 text-white"
-                      >
-                        5
-                      </Badge>
                     </Button>
                   </div>
                 </div>
@@ -2981,8 +3005,6 @@ export default function StaffPage() {
             email: "",
             position: "",
             permissionLevel: "",
-            showInCalendar: true,
-            availableForOnlineBooking: true,
             serviceIds: [],
           });
         }
@@ -3010,13 +3032,22 @@ export default function StaffPage() {
                       return;
                     }
                     try {
+                      // #13: `serviceIds` isn't a field the backend's staff-update DTO
+                      // has — it was included here but silently ignored, so service
+                      // assignment changes made through this dialog never actually
+                      // saved. It's owned by service-catalog and needs its own call,
+                      // same as Add Staff already does correctly.
                       await updateStaff(editingStaff.id, {
                         name: editStaffForm.name,
                         phone: editStaffForm.phone || undefined,
                         email: editStaffForm.email || undefined,
                         position: editStaffForm.position || undefined,
-                        serviceIds: editStaffForm.serviceIds.length > 0 ? editStaffForm.serviceIds : undefined,
                       });
+                      await serviceService.setStaffServiceIds(businessId, editingStaff.id, editStaffForm.serviceIds);
+                      // #13/#293: role has its own endpoint — updateStaff's DTO has no field for it.
+                      if (editStaffForm.permissionLevel) {
+                        await setStaffRole(editingStaff.id, editStaffForm.permissionLevel.toUpperCase());
+                      }
                       toast.success("Staff member updated successfully");
                       setIsEditStaffDialogOpen(false);
                       refreshStaff();
@@ -3126,43 +3157,6 @@ export default function StaffPage() {
                         />
                       </div>
 
-                      {/* Show Staff Member in Calendar */}
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          id="edit-show-in-calendar"
-                          checked={editStaffForm.showInCalendar}
-                          onCheckedChange={(checked) =>
-                            setEditStaffForm(prev => ({ ...prev, showInCalendar: checked as boolean }))
-                          }
-                          className="mt-1"
-                        />
-                        <Label
-                          htmlFor="edit-show-in-calendar"
-                          className="text-sm text-gray-700 cursor-pointer"
-                        >
-                          Check the box if the Staff Member offers services and
-                          should be visible in your Booksy Calendar.
-                        </Label>
-                      </div>
-
-                      {/* Available for Online Booking */}
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          id="edit-online-booking"
-                          checked={editStaffForm.availableForOnlineBooking}
-                          onCheckedChange={(checked) =>
-                            setEditStaffForm(prev => ({ ...prev, availableForOnlineBooking: checked as boolean }))
-                          }
-                          className="mt-1"
-                        />
-                        <Label
-                          htmlFor="edit-online-booking"
-                          className="text-sm text-gray-700 cursor-pointer"
-                        >
-                          Check the box to allow clients to book services with
-                          this Staff Member online.
-                        </Label>
-                      </div>
                     </div>
                   </div>
 

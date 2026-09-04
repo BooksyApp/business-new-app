@@ -39,7 +39,7 @@ export default function AddStaffPage() {
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const businessId = useBusinessId();
-  const { createStaff, loading: creating } = useStaff();
+  const { createStaff, setStaffRole, loading: creating } = useStaff();
   const { services, loading: servicesLoading } = useServices();
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
   const [schedule, setSchedule] = useState<WeekSchedule>(DEFAULT_WEEK);
@@ -50,8 +50,6 @@ export default function AddStaffPage() {
     inviteAndCreateAccount: true,
     permissionLevel: "",
     position: "",
-    showInCalendar: true,
-    availableForOnlineBooking: true,
   });
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -91,6 +89,10 @@ export default function AddStaffPage() {
       // Persist the staff↔service assignments (owned by service-catalog).
       if (created?.id && selectedServiceIds.length > 0) {
         await serviceService.setStaffServiceIds(businessId, created.id, selectedServiceIds);
+      }
+      // #13/#293: role has its own endpoint — createStaff's DTO has no field for it.
+      if (created?.id && formData.permissionLevel) {
+        await setStaffRole(created.id, formData.permissionLevel.toUpperCase());
       }
       navigate(getPath("staff"));
     } catch (error: any) {
@@ -251,46 +253,6 @@ export default function AddStaffPage() {
                     />
                   </div>
 
-                  {/* Show Staff Member in Calendar */}
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="show-in-calendar"
-                      checked={formData.showInCalendar}
-                      onCheckedChange={(checked) =>
-                        handleInputChange("showInCalendar", checked as boolean)
-                      }
-                      className="mt-1"
-                    />
-                    <Label
-                      htmlFor="show-in-calendar"
-                      className="text-sm text-gray-700 cursor-pointer"
-                    >
-                      Check the box if the Staff Member offers services and
-                      should be visible in your Booksy Calendar.
-                    </Label>
-                  </div>
-
-                  {/* Available for Online Booking */}
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="online-booking"
-                      checked={formData.availableForOnlineBooking}
-                      onCheckedChange={(checked) =>
-                        handleInputChange(
-                          "availableForOnlineBooking",
-                          checked as boolean
-                        )
-                      }
-                      className="mt-1"
-                    />
-                    <Label
-                      htmlFor="online-booking"
-                      className="text-sm text-gray-700 cursor-pointer"
-                    >
-                      Check the box to allow clients to book services with
-                      this Staff Member online.
-                    </Label>
-                  </div>
                 </div>
               </div>
 

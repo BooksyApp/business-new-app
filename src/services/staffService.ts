@@ -9,15 +9,19 @@ export interface Staff {
   position?: string;
   avatarUrl?: string;
   initials?: string;
+  // #13 (salon-hub): `role`, `workingHoursStart`/`workingHoursEnd` are the only staff
+  // fields the backend (`StaffDto`) actually sends. `workingHours` (singular string),
+  // `workingHoursDetail`, and the four `can*` booleans below used to be declared here
+  // too, but nothing on the backend has ever populated them — every read of them was
+  // silently `undefined`. Kept `workingHours`/`workingHoursDetail` for now since
+  // CalendarPage.tsx still reads them (tracked separately, out of #13's scope); the
+  // `can*` fields had no real callers left once #13's fixes landed, so they're gone.
+  role?: string; // "OWNER" | "MANAGER" | "STAFF" — see staffService.setRole()
   workingHours?: string;
   workingHoursDetail?: Record<string, { start: string | null; end: string | null; isClosed: boolean }>;
   // Per-day working hours from the backend (keys "MONDAY"…, values "HH:mm[:ss]").
   workingHoursStart?: Record<string, string>;
   workingHoursEnd?: Record<string, string>;
-  canBookAppointments?: boolean;
-  canManageCalendar?: boolean;
-  canViewReports?: boolean;
-  canManageStaff?: boolean;
   serviceIds?: number[];
   isActive: boolean;
 }
@@ -63,6 +67,13 @@ export const staffService = {
 
   async deleteStaff(id: number, businessId: number): Promise<void> {
     return apiClient.delete<void>(`/staff/${id}/business/${businessId}`);
+  },
+
+  // #13/#293: the "Permission Level" picker in Add/Edit Staff was decorative — the
+  // value never reached the backend (there's no such field on the create/update DTO).
+  // Role has its own dedicated endpoint instead.
+  async setRole(id: number, role: string): Promise<Staff> {
+    return apiClient.put<Staff>(`/staff/${id}/role`, { role });
   },
 };
 
