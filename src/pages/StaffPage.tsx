@@ -153,11 +153,12 @@ export default function StaffPage() {
   
   // Commission and Payment hooks
   const selectedStaffIdForCommissions = selectedStaffer !== "All" ? parseInt(selectedStaffer) : undefined;
-  const { 
-    commissions, 
-    pendingCommissions, 
-    totalPending, 
-    loading: commissionsLoading 
+  const {
+    commissions,
+    pendingCommissions,
+    totalPending,
+    loading: commissionsLoading,
+    refresh: refreshCommissions,
   } = useCommissions({ staffId: selectedStaffIdForCommissions });
   const {
     rules: commissionRules,
@@ -2992,6 +2993,10 @@ export default function StaffPage() {
                       referenceNumber: paymentForm.referenceNumber || undefined,
                       notes: paymentForm.notes || undefined,
                     });
+                    // The commissions this payment settled are now PAID server-side —
+                    // without this, the Pending Commissions panel kept showing the old
+                    // (now stale) pending total/list until the staffer was re-selected.
+                    await refreshCommissions();
                     toast.success("Payment created successfully");
                     setIsPaymentDialogOpen(false);
                     // Reset form
