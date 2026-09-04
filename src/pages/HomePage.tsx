@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, DollarSign, Users, TrendingUp, Clock, Star, Building2 } from "lucide-react";
+import { Calendar, DollarSign, Users, TrendingUp, Clock, Star, Building2, Plus } from "lucide-react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getUserBusinesses, isBusinessOwner } from "@/utils/businessUtils";
@@ -393,28 +393,18 @@ export default function HomePage() {
               </Card>
             ))}
 
-            {/* Add another business */}
-            <Card className="border-dashed">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-lg bg-accent/10">
-                    <Building2 className="h-6 w-6 text-accent" />
-                  </div>
-                  <CardTitle className="text-lg">Add a business</CardTitle>
+            {/* Add another business — a dedicated page (CreateBusinessPage), not an
+                inline name field: an owner adding a business expects to fill in
+                category/address/phone, not get a bare-name stub. */}
+            <Card
+              className="border-dashed cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center min-h-[180px]"
+              onClick={() => navigate("/create-business")}
+            >
+              <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
+                <div className="p-3 rounded-lg bg-accent/10">
+                  <Plus className="h-6 w-6 text-accent" />
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Label htmlFor="newBizName" className="sr-only">Business name</Label>
-                <Input
-                  id="newBizName"
-                  placeholder="e.g. Glamour Studio"
-                  value={newBizName}
-                  onChange={e => setNewBizName(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleCreateBusiness()}
-                />
-                <Button className="w-full" variant="outline" onClick={handleCreateBusiness} disabled={creatingBiz}>
-                  {creatingBiz ? "Creating…" : "Create Business"}
-                </Button>
+                <CardTitle className="text-lg">Add a business</CardTitle>
               </CardContent>
             </Card>
           </div>
