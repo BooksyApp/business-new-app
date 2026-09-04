@@ -104,8 +104,18 @@ export const commissionService = {
     return apiClient.get<Commission[]>(`/commissions/business/${businessId}/staff/${staffId}/pending`);
   },
 
+  // #17: the backend returns { totalPending: <number> }, not a bare number — this used
+  // to fetch it typed as `number` (an unchecked cast, no runtime mismatch), so the
+  // whole response OBJECT ended up in useCommissions()'s totalPending state. Staff
+  // page's "Total: {totalPending.toFixed(2)} zł" then called .toFixed on an object,
+  // throwing during render — the actual cause of "selecting a staffer under
+  // COMMISSIONS crashes the whole page" (a same-tick, unrelated 500 from a different
+  // endpoint was the red herring that made this look network-related).
   async getTotalPendingCommission(businessId: number, staffId: number): Promise<number> {
-    return apiClient.get<number>(`/commissions/business/${businessId}/staff/${staffId}/total-pending`);
+    const result = await apiClient.get<{ totalPending: number }>(
+      `/commissions/business/${businessId}/staff/${staffId}/total-pending`
+    );
+    return result?.totalPending ?? 0;
   },
 
   async getCommissionsByDateRange(
