@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, DollarSign, Users, TrendingUp, Clock, Star, Building2 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Calendar, DollarSign, Users, TrendingUp, Clock, Star, Building2, Plus } from "lucide-react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getUserBusinesses, isBusinessOwner } from "@/utils/businessUtils";
 import { businessService } from "@/services/businessService";
@@ -17,6 +17,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function HomePage() {
   const { businessId } = useParams<{ businessId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // #9 (salon-hub QA): the Sidebar's "Switch Business" button links here with this flag
+  // so the picker always shows, even for an owner with just one business — the default
+  // behavior below auto-redirects a single business straight into it, which is exactly
+  // right on first login but left no way back to add a second business afterwards.
+  const forceSwitch = searchParams.get("switch") === "1";
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [noBusiness, setNoBusiness] = useState(false);
@@ -70,8 +76,9 @@ export default function HomePage() {
         const userBusinesses = await getUserBusinesses();
         setBusinesses(userBusinesses);
 
-        // If user has only one business, redirect to it
-        if (userBusinesses.length === 1) {
+        // If user has only one business, redirect to it — unless the picker was
+        // explicitly requested (Switch Business), in which case show it regardless.
+        if (userBusinesses.length === 1 && !forceSwitch) {
           // Store business ID in localStorage
           localStorage.setItem("currentBusinessId", userBusinesses[0].id.toString());
           localStorage.setItem("currentBusiness", JSON.stringify(userBusinesses[0]));
@@ -96,7 +103,7 @@ export default function HomePage() {
     };
 
     loadBusinesses();
-  }, [businessId, navigate]);
+  }, [businessId, navigate, forceSwitch]);
 
   const handleCreateBusiness = async () => {
     if (!newBizName.trim()) { toast.error("Enter your business name"); return; }
@@ -343,7 +350,11 @@ export default function HomePage() {
     );
   }
 
-  if (businesses.length > 1) {
+  // #9 (salon-hub QA): this screen only ever rendered with 2+ businesses, and even then
+  // had no way to add another — an owner going from 1 business to 2 (or 2 to 3, etc.)
+  // had no path to it at all. forceSwitch (Sidebar's "Switch Business" button) makes it
+  // reachable at exactly 1 business too, and the card below covers "add another".
+  if (businesses.length > 1 || (forceSwitch && businesses.length >= 1)) {
     return (
       <AppLayout>
         <PageHeader
@@ -381,6 +392,21 @@ export default function HomePage() {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Add another business — a dedicated page (CreateBusinessPage), not an
+                inline name field: an owner adding a business expects to fill in
+                category/address/phone, not get a bare-name stub. */}
+            <Card
+              className="border-dashed cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-105 flex items-center justify-center min-h-[180px]"
+              onClick={() => navigate("/create-business")}
+            >
+              <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
+                <div className="p-3 rounded-lg bg-accent/10">
+                  <Plus className="h-6 w-6 text-accent" />
+                </div>
+                <CardTitle className="text-lg">Add a business</CardTitle>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </AppLayout>

@@ -30,45 +30,44 @@ const LoginPage = () => {
         password,
       });
 
-      const { accessToken, user, business } = authResponse;
+      // #9: AuthResponse is a flat record (accessToken, refreshToken, userId, fullName,
+      // email, role, businessId) — it never had nested user/business objects. The old
+      // code here destructured those anyway, got undefined for both, and stored the
+      // literal string "undefined" as the "user" localStorage entry on every login.
+      const { accessToken, refreshToken, userId, fullName, email: respEmail, role, businessId } =
+        authResponse as any;
 
       // Store tokens in localStorage
       localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("refreshToken", authResponse.refreshToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      const user = { id: userId, fullName, email: respEmail, role };
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Store business data if available in response
-      if (business && business.id) {
-        localStorage.setItem("currentBusinessId", business.id.toString());
-        localStorage.setItem("currentBusiness", JSON.stringify(business));
-        console.log("Business stored from login response:", business.id);
-      } else if (user && user.role === "BUSINESS_OWNER") {
-        // If business is not in response and user is a business owner, try to fetch it
-        // This is a fallback - the backend should include business in login response
+      // businessId is the owner's primary business id, not the full record — fetch it
+      // so currentBusiness actually has name/address/etc. for the UI to read.
+      if (businessId) {
         try {
-          console.log("Business not in login response, fetching for owner:", user.id);
-          const businesses = await businessService.getBusinessesByOwner(
-            user.id,
-            accessToken
-          );
-          if (businesses && businesses.length > 0) {
-            const firstBusiness = businesses[0];
-            localStorage.setItem(
-              "currentBusinessId",
-              firstBusiness.id.toString()
-            );
-            localStorage.setItem(
-              "currentBusiness",
-              JSON.stringify(firstBusiness)
-            );
-            console.log("Business fetched and stored:", firstBusiness.id);
-          } else {
-            console.warn("No businesses found for user:", user.id);
-          }
+          const business = await businessService.getBusiness(businessId, accessToken);
+          localStorage.setItem("currentBusinessId", business.id.toString());
+          localStorage.setItem("currentBusiness", JSON.stringify(business));
         } catch (err) {
           console.warn("Could not fetch business after login (this is non-critical):", err);
           // Don't fail login if business fetch fails - user can still access the app
           // Business can be fetched later when needed
+        }
+      } else if (role === "BUSINESS_OWNER") {
+        // Defensive fallback: an owner with no businessId on the token shouldn't happen
+        // (AuthService.register always provisions one), but if it ever does, fall back
+        // to listing by owner instead of leaving currentBusiness unset.
+        try {
+          const businesses = await businessService.getBusinessesByOwner(userId, accessToken);
+          if (businesses && businesses.length > 0) {
+            const firstBusiness = businesses[0];
+            localStorage.setItem("currentBusinessId", firstBusiness.id.toString());
+            localStorage.setItem("currentBusiness", JSON.stringify(firstBusiness));
+          }
+        } catch (err) {
+          console.warn("Could not fetch business after login (this is non-critical):", err);
         }
       }
 

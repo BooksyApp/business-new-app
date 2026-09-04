@@ -344,9 +344,9 @@ const RegistrationPage = () => {
         services: formData.services.length > 0 ? JSON.stringify(formData.services) : undefined,
       });
 
-      const { accessToken, refreshToken, userId, fullName, email, role } = authResponse as any;
+      const { accessToken, refreshToken, userId, businessId, fullName, email, role } = authResponse as any;
 
-      // Store tokens FIRST so apiClient can use them for the business creation call
+      // Store tokens FIRST so apiClient can use them for the business update call below
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
 
@@ -354,9 +354,15 @@ const RegistrationPage = () => {
       const user = { id: userId, fullName, email, role };
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Create the business in business-service now that we have a userId + token
-      const business = await businessService.createBusiness({
-        ownerId: userId,
+      // #6: registerBusiness() above already provisioned a business server-side (a
+      // BUSINESS_OWNER always gets one — see AuthService.register / businessId on
+      // AuthResponse) and returned its id. Fill in the rest of the wizard's details on
+      // THAT business with an update — a second businessService.createBusiness() call
+      // here used to create a duplicate, unrelated business on every single signup.
+      if (!businessId) {
+        throw new Error('Registration succeeded but no business was provisioned for this account.');
+      }
+      const business = await businessService.updateBusiness(businessId, {
         name: formData.businessName,
         category: formData.category || undefined,
         address: formData.address || undefined,
