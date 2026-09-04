@@ -64,6 +64,13 @@ export function useStaff(businessIdParam?: number) {
     }
   }, [businessId]);
 
+  // #13/#293: separate endpoint from updateStaff — see staffService.setRole.
+  const setStaffRole = useCallback(async (id: number, role: string) => {
+    const updated = await staffService.setRole(id, role);
+    setStaff(prev => prev.map(s => s.id === id ? updated : s));
+    return updated;
+  }, []);
+
   return {
     staff,
     loading,
@@ -71,6 +78,7 @@ export function useStaff(businessIdParam?: number) {
     createStaff,
     updateStaff,
     deleteStaff,
+    setStaffRole,
     refresh: loadStaff,
   };
 }
