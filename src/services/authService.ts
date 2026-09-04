@@ -35,34 +35,21 @@ export interface LoginRequest {
   password: string;
 }
 
+// #9 (salon-hub QA): this used to declare a nested { user: {...}, business: {...} }
+// shape that /api/auth/login, /register/business and /refresh never actually return —
+// AuthController sends one flat record for all three. LoginPage destructured
+// `authResponse.user` / `.business` against this wrong type, got `undefined` for both
+// at runtime, and stored the literal string "undefined" into localStorage under the
+// "user" key on every login (only masked because ProtectedRoute's own /auth/validate
+// call happens to overwrite it moments later — a race, not a fix).
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
-  tokenType: string;
-  expiresIn: number;
-  user: {
-    id: number;
-    email: string;
-    role: string;
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-  };
-  business?: {
-    id: number;
-    ownerId: number;
-    name: string;
-    category?: string;
-    email?: string;
-    phone?: string;
-    address?: string;
-    buildingNumber?: string;
-    apartmentNumber?: string;
-    country?: string;
-    latitude?: number;
-    longitude?: number;
-    status: string;
-  };
+  userId: number;
+  fullName: string;
+  email: string;
+  role: string;
+  businessId: number | null;
 }
 
 // Use API_BASE_URL from config which handles both dev (proxy) and production (full URL)
