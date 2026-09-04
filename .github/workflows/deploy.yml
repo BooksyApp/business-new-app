@@ -51,6 +51,9 @@ jobs:
       - name: smoke check
         run: |
           sleep 3
-          code=$(curl -s -o /dev/null -w "%{http_code}" "https://${{ secrets.VPS_HOST }}/" -H "Host: srv1946733.hstgr.cloud" -k)
+          # Hit the real hostname (needed for TLS SNI to pick the right cert) — an
+          # -H "Host:" override on a bare-IP URL only rewrites the HTTP layer, not
+          # the SNI the TLS handshake uses, and fails the connection outright.
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://srv1946733.hstgr.cloud/")
           echo "root path -> HTTP $code"
           test "$code" = "200"
