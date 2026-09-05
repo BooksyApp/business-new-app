@@ -148,7 +148,7 @@ class AuthService {
   }
 
   async registerBusiness(data: RegisterRequest): Promise<AuthResponse> {
-    // Registration doesn't require auth token - uses own request method
+    // Backend endpoint: POST /api/auth/register/business (public, whitelisted in SecurityConfig)
     return this.request<AuthResponse>('/auth/register/business', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -156,17 +156,17 @@ class AuthService {
   }
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    // Manager login should go to auth-service route first.
+    // Backend AuthController: /api/public/auth/login expects { emailOrPhone, password }
     try {
-      return await this.request<AuthResponse>('/auth/login', {
+      return await this.request<AuthResponse>('/public/auth/login', {
         method: 'POST',
         body: JSON.stringify({
-          email: data.email,
+          emailOrPhone: data.email,
           password: data.password,
         }),
       });
     } catch (primaryError: any) {
-      // Keep backward compatibility with older/public auth contract.
+      // Fallback to the admin alias at /api/auth/login (also public, accepts {email} too)
       const fallbackStatus = primaryError?.status;
       const shouldTryPublicFallback =
         !fallbackStatus ||
@@ -174,7 +174,7 @@ class AuthService {
       if (!shouldTryPublicFallback) {
         throw primaryError;
       }
-      return this.request<AuthResponse>('/public/auth/login', {
+      return this.request<AuthResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           emailOrPhone: data.email,
