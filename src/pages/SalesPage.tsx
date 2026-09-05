@@ -122,7 +122,7 @@ export default function SalesPage() {
     // { id: "time-passes", name: "TIME PASSES" },
   ];
   const [basket, setBasket] = useState<any[]>([]);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientWithStats | null>(null);
   const [periodFilter, setPeriodFilter] = useState("Days");
   const [searchQuery, setSearchQuery] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -143,6 +143,41 @@ export default function SalesPage() {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [serviceSearchQuery, setServiceSearchQuery] = useState("");
   const [addonSearchQuery, setAddonSearchQuery] = useState("");
+
+  // Client picker for quick sale
+  const [clients, setClients] = useState<ClientWithStats[]>([]);
+  const [loadingClients, setLoadingClients] = useState(false);
+  const [searchQueryClient, setSearchQueryClient] = useState("");
+  const [showClientPicker, setShowClientPicker] = useState(false);
+
+  useEffect(() => {
+    const loadClients = async () => {
+      if (!businessId) return;
+      try {
+        setLoadingClients(true);
+        const data = await clientService.getClientsWithAppointments(businessId);
+        setClients(data);
+      } catch {
+        setClients([]);
+      } finally {
+        setLoadingClients(false);
+      }
+    };
+    loadClients();
+  }, [businessId]);
+
+  const filteredClients = clients
+    .filter((c) => {
+      const q = searchQueryClient.toLowerCase();
+      if (!q) return true;
+      const name = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
+      return name.includes(q) || (c.email || "").toLowerCase().includes(q) || (c.phone || "").toLowerCase().includes(q);
+    })
+    .slice(0, 50);
+
+  const getClientDisplayName = (c: ClientWithStats) => {
+    return `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.email || c.phone || "Unknown";
+  };
 
   // Load quick sale items from API on mount
   useEffect(() => {
