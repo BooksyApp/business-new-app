@@ -148,6 +148,66 @@ export interface ServiceAnalytics {
   servicesByCategory: Record<string, number>;
 }
 
+export interface StaffDetail {
+  staffId: number;
+  staffName: string;
+  bookings: number;
+  completed: number;
+  noShow: number;
+  revenue: number;
+  completionRate: number;
+}
+
+export interface PerformanceAnalytics {
+  staffDetails: StaffDetail[];
+  totalStaffRevenue: number;
+  totalStaffBookings: number;
+  averageRevenuePerStaff: number;
+}
+
+export interface CancellationByDay {
+  date: string;
+  cancellations: number;
+}
+
+export interface CancellationAnalytics {
+  cancellationsByDay: CancellationByDay[];
+  totalCancellations: number;
+}
+
+export interface PeakHour {
+  hour: number;
+  bookings: number;
+}
+
+export interface PeakHoursAnalytics {
+  peakHours: PeakHour[];
+}
+
+export interface CustomerRetentionAnalytics {
+  totalClients: number;
+  returningClients: number;
+  retentionRate: number;
+}
+
+export interface ProfitabilityAnalytics {
+  totalRevenue: number;
+  estimatedProfit: number;
+  profitMargin: number;
+}
+
+export interface PaymentMethod {
+  method: string;
+  transactions: number;
+  revenue: number;
+  percentage: number;
+}
+
+export interface PaymentMethodsAnalytics {
+  paymentMethods: PaymentMethod[];
+  totalRevenue: number;
+}
+
 export const analysisService = {
   async getAnalyticsOverview(
     businessId: number,
@@ -228,90 +288,90 @@ export const analysisService = {
     businessId: number,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<PerformanceAnalytics> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const queryString = params.toString();
     const url = `/analytics/business/${businessId}/performance${queryString ? `?${queryString}` : ''}`;
-    
-    return apiClient.get(url);
+
+    return apiClient.get<PerformanceAnalytics>(url);
   },
   
   async getCancellationAnalytics(
     businessId: number,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<CancellationAnalytics> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const queryString = params.toString();
     const url = `/analytics/business/${businessId}/cancellations${queryString ? `?${queryString}` : ''}`;
-    
-    return apiClient.get(url);
+
+    return apiClient.get<CancellationAnalytics>(url);
   },
   
   async getPeakHoursAnalytics(
     businessId: number,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<PeakHoursAnalytics> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const queryString = params.toString();
     const url = `/analytics/business/${businessId}/peak-hours${queryString ? `?${queryString}` : ''}`;
-    
-    return apiClient.get(url);
+
+    return apiClient.get<PeakHoursAnalytics>(url);
   },
   
   async getCustomerRetentionAnalytics(
     businessId: number,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<CustomerRetentionAnalytics> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const queryString = params.toString();
     const url = `/analytics/business/${businessId}/customer-retention${queryString ? `?${queryString}` : ''}`;
-    
-    return apiClient.get(url);
+
+    return apiClient.get<CustomerRetentionAnalytics>(url);
   },
   
   async getProfitabilityAnalytics(
     businessId: number,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<ProfitabilityAnalytics> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const queryString = params.toString();
     const url = `/analytics/business/${businessId}/profitability${queryString ? `?${queryString}` : ''}`;
-    
-    return apiClient.get(url);
+
+    return apiClient.get<ProfitabilityAnalytics>(url);
   },
   
   async getPaymentMethodAnalytics(
     businessId: number,
     startDate?: string,
     endDate?: string
-  ) {
+  ): Promise<PaymentMethodsAnalytics> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
-    
+
     const queryString = params.toString();
     const url = `/analytics/business/${businessId}/payment-methods${queryString ? `?${queryString}` : ''}`;
-    
-    return apiClient.get(url);
+
+    return apiClient.get<PaymentMethodsAnalytics>(url);
   },
   
   async getSeasonalAnalytics(

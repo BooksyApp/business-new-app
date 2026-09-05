@@ -26,13 +26,19 @@ import {
   LineChart
 } from "lucide-react";
 import { useBusinessId } from "@/hooks/useBusinessId";
-import { 
-  analysisService, 
+import {
+  analysisService,
   type AnalyticsOverview,
   type RevenueAnalytics,
   type BookingAnalytics,
   type ClientAnalytics,
-  type ServiceAnalytics
+  type ServiceAnalytics,
+  type PerformanceAnalytics,
+  type CancellationAnalytics,
+  type PeakHoursAnalytics,
+  type CustomerRetentionAnalytics,
+  type ProfitabilityAnalytics,
+  type PaymentMethodsAnalytics
 } from "@/services/analysisService";
 import { format, subDays } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -58,12 +64,12 @@ export default function AnalyticsPage() {
   const [bookings, setBookings] = useState<BookingAnalytics | null>(null);
   const [clients, setClients] = useState<ClientAnalytics | null>(null);
   const [services, setServices] = useState<ServiceAnalytics | null>(null);
-  const [performance, setPerformance] = useState<any>(null);
-  const [cancellations, setCancellations] = useState<any>(null);
-  const [peakHours, setPeakHours] = useState<any>(null);
-  const [customerRetention, setCustomerRetention] = useState<any>(null);
-  const [profitability, setProfitability] = useState<any>(null);
-  const [paymentMethods, setPaymentMethods] = useState<any>(null);
+  const [performance, setPerformance] = useState<PerformanceAnalytics | null>(null);
+  const [cancellations, setCancellations] = useState<CancellationAnalytics | null>(null);
+  const [peakHours, setPeakHours] = useState<PeakHoursAnalytics | null>(null);
+  const [customerRetention, setCustomerRetention] = useState<CustomerRetentionAnalytics | null>(null);
+  const [profitability, setProfitability] = useState<ProfitabilityAnalytics | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodsAnalytics | null>(null);
   const [seasonal, setSeasonal] = useState<any>(null);
   const [serviceDuration, setServiceDuration] = useState<any>(null);
   const [waitTimes, setWaitTimes] = useState<any>(null);
@@ -404,23 +410,45 @@ export default function AnalyticsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Performance Analytics</CardTitle>
-                    <CardDescription>Staff utilization and efficiency metrics</CardDescription>
+                    <CardDescription>Staff revenue and booking metrics</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
-                        <p className="text-sm text-muted-foreground">Booking Efficiency</p>
-                        <p className="text-2xl font-bold">{performance.bookingEfficiency?.toFixed(1)}%</p>
+                        <p className="text-sm text-muted-foreground">Total Staff Revenue</p>
+                        <p className="text-2xl font-bold">{performance.totalStaffRevenue?.toFixed(2)} zł</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Staff Utilization</p>
-                        <p className="text-2xl font-bold">{performance.staffUtilizationRate?.toFixed(1)}%</p>
+                        <p className="text-sm text-muted-foreground">Total Staff Bookings</p>
+                        <p className="text-2xl font-bold">{performance.totalStaffBookings}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Service Completion</p>
-                        <p className="text-2xl font-bold">{performance.serviceCompletionRate?.toFixed(1)}%</p>
+                        <p className="text-sm text-muted-foreground">Avg Revenue/Staff</p>
+                        <p className="text-2xl font-bold">{performance.averageRevenuePerStaff?.toFixed(2)} zł</p>
                       </div>
                     </div>
+                    {performance.staffDetails && performance.staffDetails.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left text-muted-foreground">
+                              <th className="pb-2 font-medium">Staff Name</th>
+                              <th className="pb-2 font-medium">Bookings</th>
+                              <th className="pb-2 font-medium">Completion Rate</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {performance.staffDetails.map((staff) => (
+                              <tr key={staff.staffId} className="border-b hover:bg-muted/50">
+                                <td className="py-2">{staff.staffName || `Staff ${staff.staffId}`}</td>
+                                <td className="py-2">{staff.bookings}</td>
+                                <td className="py-2">{staff.completionRate?.toFixed(1)}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -437,27 +465,33 @@ export default function AnalyticsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Cancellation Analytics</CardTitle>
-                    <CardDescription>Cancellation and no-show analysis</CardDescription>
+                    <CardDescription>Cancellation summary</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Cancellation Rate</p>
-                        <p className="text-2xl font-bold">{cancellations.cancellationRate?.toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">No-Show Rate</p>
-                        <p className="text-2xl font-bold">{cancellations.noShowRate?.toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Revenue Lost (Cancellations)</p>
-                        <p className="text-2xl font-bold">{cancellations.revenueLostToCancellations?.toFixed(2)} zł</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Revenue Lost (No-Shows)</p>
-                        <p className="text-2xl font-bold">{cancellations.revenueLostToNoShows?.toFixed(2)} zł</p>
-                      </div>
+                    <div className="mb-6">
+                      <p className="text-sm text-muted-foreground">Total Cancellations</p>
+                      <p className="text-2xl font-bold">{cancellations.totalCancellations}</p>
                     </div>
+                    {cancellations.cancellationsByDay && cancellations.cancellationsByDay.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left text-muted-foreground">
+                              <th className="pb-2 font-medium">Date</th>
+                              <th className="pb-2 font-medium">Cancellations</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cancellations.cancellationsByDay.map((item, idx) => (
+                              <tr key={idx} className="border-b hover:bg-muted/50">
+                                <td className="py-2">{item.date}</td>
+                                <td className="py-2">{item.cancellations}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -474,19 +508,37 @@ export default function AnalyticsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Peak Hours Analytics</CardTitle>
-                    <CardDescription>Busiest hours and optimal booking times</CardDescription>
+                    <CardDescription>Busiest hours and booking distribution</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Busiest Hour</p>
-                        <p className="text-2xl font-bold">{peakHours.busiestHour || "N/A"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Busiest Day</p>
-                        <p className="text-2xl font-bold">{peakHours.busiestDay || "N/A"}</p>
-                      </div>
+                    <div className="mb-6">
+                      <p className="text-sm text-muted-foreground">Busiest Hour</p>
+                      <p className="text-2xl font-bold">
+                        {peakHours.peakHours && peakHours.peakHours.length > 0
+                          ? `${String(peakHours.peakHours[0].hour).padStart(2, '0')}:00`
+                          : "N/A"}
+                      </p>
                     </div>
+                    {peakHours.peakHours && peakHours.peakHours.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left text-muted-foreground">
+                              <th className="pb-2 font-medium">Hour</th>
+                              <th className="pb-2 font-medium">Bookings</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {peakHours.peakHours.map((item, idx) => (
+                              <tr key={idx} className="border-b hover:bg-muted/50">
+                                <td className="py-2">{String(item.hour).padStart(2, '0')}:00</td>
+                                <td className="py-2">{item.bookings}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -503,25 +555,21 @@ export default function AnalyticsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Customer Retention Analytics</CardTitle>
-                    <CardDescription>Customer loyalty and lifetime value</CardDescription>
+                    <CardDescription>Customer retention and repeat visit analysis</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Repeat Customer Rate</p>
-                        <p className="text-2xl font-bold">{customerRetention.repeatCustomerRate?.toFixed(1)}%</p>
+                        <p className="text-sm text-muted-foreground">Retention Rate</p>
+                        <p className="text-2xl font-bold">{customerRetention.retentionRate?.toFixed(1)}%</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Average CLV</p>
-                        <p className="text-2xl font-bold">{customerRetention.averageCustomerLifetimeValue?.toFixed(2)} zł</p>
+                        <p className="text-sm text-muted-foreground">Total Clients</p>
+                        <p className="text-2xl font-bold">{customerRetention.totalClients}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Avg Visits/Customer</p>
-                        <p className="text-2xl font-bold">{customerRetention.averageVisitsPerCustomer?.toFixed(1)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Repeat Customers</p>
-                        <p className="text-2xl font-bold">{customerRetention.totalRepeatCustomers || 0}</p>
+                        <p className="text-sm text-muted-foreground">Returning Clients</p>
+                        <p className="text-2xl font-bold">{customerRetention.returningClients}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -540,25 +588,21 @@ export default function AnalyticsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Profitability Analytics</CardTitle>
-                    <CardDescription>Profit margins and cost analysis</CardDescription>
+                    <CardDescription>Profit and revenue metrics</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-4 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Total Profit</p>
-                        <p className="text-2xl font-bold">{profitability.totalProfit?.toFixed(2)} zł</p>
+                        <p className="text-sm text-muted-foreground">Total Revenue</p>
+                        <p className="text-2xl font-bold">{profitability.totalRevenue?.toFixed(2)} zł</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Estimated Profit</p>
+                        <p className="text-2xl font-bold">{profitability.estimatedProfit?.toFixed(2)} zł</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Profit Margin</p>
                         <p className="text-2xl font-bold">{profitability.profitMargin?.toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Avg Profit/Booking</p>
-                        <p className="text-2xl font-bold">{profitability.averageProfitPerBooking?.toFixed(2)} zł</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Revenue</p>
-                        <p className="text-2xl font-bold">{profitability.totalRevenue?.toFixed(2)} zł</p>
                       </div>
                     </div>
                   </CardContent>
@@ -577,19 +621,55 @@ export default function AnalyticsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Payment Method Analytics</CardTitle>
-                    <CardDescription>Payment distribution and trends</CardDescription>
+                    <CardDescription>Payment methods breakdown</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 mb-6">
                       <div>
                         <p className="text-sm text-muted-foreground">Most Popular Method</p>
-                        <p className="text-2xl font-bold">{paymentMethods.mostPopularMethod || "N/A"}</p>
+                        <p className="text-2xl font-bold">
+                          {paymentMethods.paymentMethods && paymentMethods.paymentMethods.length > 0
+                            ? paymentMethods.paymentMethods.reduce((max, item) =>
+                                item.transactions > max.transactions ? item : max
+                              ).method
+                            : "N/A"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Highest Value Method</p>
-                        <p className="text-2xl font-bold">{paymentMethods.highestValueMethod || "N/A"}</p>
+                        <p className="text-2xl font-bold">
+                          {paymentMethods.paymentMethods && paymentMethods.paymentMethods.length > 0
+                            ? paymentMethods.paymentMethods.reduce((max, item) =>
+                                item.revenue > max.revenue ? item : max
+                              ).method
+                            : "N/A"}
+                        </p>
                       </div>
                     </div>
+                    {paymentMethods.paymentMethods && paymentMethods.paymentMethods.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left text-muted-foreground">
+                              <th className="pb-2 font-medium">Method</th>
+                              <th className="pb-2 font-medium">Transactions</th>
+                              <th className="pb-2 font-medium">Revenue</th>
+                              <th className="pb-2 font-medium">Percentage</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paymentMethods.paymentMethods.map((item, idx) => (
+                              <tr key={idx} className="border-b hover:bg-muted/50">
+                                <td className="py-2">{item.method}</td>
+                                <td className="py-2">{item.transactions}</td>
+                                <td className="py-2">{item.revenue.toFixed(2)} zł</td>
+                                <td className="py-2">{item.percentage?.toFixed(1)}%</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
