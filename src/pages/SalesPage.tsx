@@ -1176,11 +1176,86 @@ export default function SalesPage() {
             <div className="w-96 border-l border-gray-200 bg-white flex flex-col">
               {/* Client Selection */}
               <div className="p-4 border-b border-gray-200">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors">
+                <Dialog open={showClientPicker} onOpenChange={setShowClientPicker}>
+                  <DialogContent className="max-w-lg max-h-[70vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Select Client</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      {/* Search */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <input
+                          type="text"
+                          placeholder="Search by name, phone, or email"
+                          value={searchQueryClient}
+                          onChange={(e) => setSearchQueryClient(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          autoFocus
+                        />
+                      </div>
+                      {/* Client list */}
+                      {loadingClients ? (
+                        <div className="flex items-center justify-center py-6">
+                          <p className="text-sm text-gray-500">Loading clients...</p>
+                        </div>
+                      ) : filteredClients.length === 0 ? (
+                        <div className="text-center py-6">
+                          <p className="text-sm text-gray-500">
+                            {searchQueryClient ? "No clients match your search" : "No clients yet — create one first"}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 max-h-80 overflow-y-auto">
+                          {filteredClients.map((client) => (
+                            <button
+                              key={client.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setShowClientPicker(false);
+                              }}
+                              className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                                selectedClient?.id === client.id
+                                  ? "border-accent bg-accent/5"
+                                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                              }`}
+                            >
+                              {/* Avatar placeholder */}
+                              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                                <User className="h-4 w-4 text-gray-600" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {getClientDisplayName(client)}
+                                </p>
+                                <div className="flex gap-3 mt-0.5">
+                                  {client.email && <span className="text-xs text-gray-500 truncate">{client.email}</span>}
+                                  {client.phone && <span className="text-xs text-gray-500 truncate">{client.phone}</span>}
+                                </div>
+                              </div>
+                              {selectedClient?.id === client.id && (
+                                <div className="shrink-0 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-white" />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Trigger button */}
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors"
+                  onClick={() => setShowClientPicker(true)}
+                >
                   <div className="flex items-center gap-3">
                     <User size={20} className="text-gray-400" />
                     <span className="text-sm text-gray-600">
-                      {selectedClient || "Select a client or leave blank"}
+                      {selectedClient ? getClientDisplayName(selectedClient) : "Select a client or leave blank"}
                     </span>
                   </div>
                   <Plus size={20} className="text-gray-400" />
