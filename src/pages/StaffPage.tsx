@@ -41,6 +41,7 @@ import {
 import { format, addDays, subDays, parse, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useStaff } from "@/hooks/useStaff";
 import { invitationService, type Invitation } from "@/services/clientService";
+import { shiftService, type Shift } from "@/services/shiftService";
 import { useServices } from "@/hooks/useServices";
 import { serviceService } from "@/services/serviceService";
 import { useTimeOff } from "@/hooks/useTimeOff";
@@ -154,6 +155,24 @@ export default function StaffPage() {
   // the add-staff screen promised an invite and the list said nothing afterwards.
   // Invitations carry no staffId, only recipientEmail, so they match on that.
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+
+  // #49: the SHIFTS tab rendered each staff member's weekly working hours and their
+  // time off, and never called shiftService at all — so a shift scheduled for a
+  // specific date (the whole point of the shifts table) appeared nowhere. The tab was
+  // permanently blind to the data it is named after.
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    shiftService
+      .getShiftsByBusinessAndDate(businessId, dateStr)
+      .then((data) => setShifts(data || []))
+      // A failed shift fetch must leave the rest of the tab usable.
+      .catch(() => setShifts([]));
+  }, [businessId, selectedDate]);
+
+  /** A shift row overrides the staff member's default weekly hours for that date. */
+  const shiftForStaff = (staffId: number) => shifts.find((sh) => sh.staffId === staffId);
   useEffect(() => {
     if (!businessId) return;
     invitationService
@@ -832,9 +851,12 @@ export default function StaffPage() {
                       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
                       const dayOfWeek = dayNames[selectedDate.getDay()];
                       const staffWorkingHours = getStaffDayHours(staff, dayOfWeek);
-                      const isStaffClosed = staffWorkingHours.isClosed;
-                      const staffStartTime = staffWorkingHours.start;
-                      const staffEndTime = staffWorkingHours.end;
+                      // #49: a scheduled shift is an override for this date — prefer it
+                      // over the weekly default, which is what the tab used to show alone.
+                      const scheduledShift = shiftForStaff(staff.id);
+                      const isStaffClosed = scheduledShift ? false : staffWorkingHours.isClosed;
+                      const staffStartTime = scheduledShift?.startTime ?? staffWorkingHours.start;
+                      const staffEndTime = scheduledShift?.endTime ?? staffWorkingHours.end;
 
                       // Calculate total working hours excluding time off
                       const calculateWorkingHours = () => {
@@ -897,7 +919,14 @@ export default function StaffPage() {
                             {isStaffClosed ? (
                               <span className="text-red-600">Closed</span>
                             ) : staffStartTime && staffEndTime ? (
-                              <span>{staffStartTime} - {staffEndTime}</span>
+                              <span className="inline-flex items-center gap-2">
+                                {staffStartTime} - {staffEndTime}
+                                {scheduledShift && (
+                                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+                                    Shift
+                                  </span>
+                                )}
+                              </span>
                             ) : (
                               <span className="text-gray-400">Not set</span>
                             )}
