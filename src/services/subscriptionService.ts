@@ -1,0 +1,37 @@
+import { apiClient } from "@/config/api";
+
+/**
+ * #42: the Stripe subscription module shipped complete — status, checkout session,
+ * webhook — with zero UI. A business could not subscribe or upgrade from the manager
+ * app at all.
+ */
+export interface SubscriptionStatus {
+  businessId: number;
+  planKey: string | null;
+  /** NONE when the business has never subscribed. */
+  status: string;
+  currentPeriodEnd: string | null;
+}
+
+class SubscriptionService {
+  async getStatus(businessId: number): Promise<SubscriptionStatus> {
+    return apiClient.get<SubscriptionStatus>(`/businesses/${businessId}/subscription`);
+  }
+
+  /** Plan keys come from server configuration — never hardcode a list here. */
+  async getPlans(): Promise<string[]> {
+    return apiClient.get<string[]>(`/subscriptions/plans`);
+  }
+
+  /** Returns the Stripe-hosted checkout URL the browser should be sent to. */
+  async createCheckout(businessId: number, planKey: string): Promise<string> {
+    const origin = window.location.origin;
+    const res = await apiClient.post<{ checkoutUrl: string }>(
+      `/businesses/${businessId}/subscription/checkout`,
+      { planKey, successUrl: `${origin}/business?subscribed=1`, cancelUrl: `${origin}/business` }
+    );
+    return res.checkoutUrl;
+  }
+}
+
+export const subscriptionService = new SubscriptionService();
