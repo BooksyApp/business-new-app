@@ -358,13 +358,27 @@ class WebSocketService {
     };
   }
 
-  subscribeToStaffAppointments(staffId: number, handler: MessageHandler<Appointment>): () => void {
+  /**
+   * The destination is `/topic/appointments/{businessId}/staff/{staffId}` — with the
+   * business id, which this used to omit. Two things were broken by that: nothing
+   * publishes to `/topic/appointments/staff/{id}` (BookingController and
+   * CustomerBookingService both send to the four-segment form), and the broker's
+   * subscription authorizer cannot read a tenant out of the short form, so it fails
+   * closed and throws. A throw on SUBSCRIBE makes Spring send an ERROR frame and close
+   * the STOMP session, which took every other live subscription down with it — the
+   * "websocket disconnected" the dashboard kept showing.
+   */
+  subscribeToStaffAppointments(
+    businessId: number,
+    staffId: number,
+    handler: MessageHandler<Appointment>
+  ): () => void {
     if (!this.connected || !this.stompClient) {
       return () => {};
     }
 
     const subscription = this.stompClient.subscribe(
-      `/topic/appointments/staff/${staffId}`,
+      `/topic/appointments/${businessId}/staff/${staffId}`,
       (message: any) => {
         try {
           const appointment = JSON.parse(message.body);

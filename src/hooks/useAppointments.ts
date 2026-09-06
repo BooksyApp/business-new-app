@@ -209,19 +209,12 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
         await new Promise(resolve => setTimeout(resolve, 300));
         if (!isMounted) return;
 
-        // Wait for WebSocket libraries to load
-        let retries = 0;
-        const maxRetries = 20;
-        while (!(window as any).SockJS || !(window as any).Stomp) {
-          if (!isMounted) return; // abort if unmounted while waiting
-          if (retries >= maxRetries) {
-            console.warn('[useAppointments] WebSocket libraries not loaded — real-time updates disabled');
-            return;
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-          retries++;
-        }
-
+        // This used to poll for window.SockJS / window.Stomp. Those globals came from two
+        // <script> tags that #53 removed when it bundled both libraries as imports, so the
+        // condition could never become true: the loop spun for two seconds, logged
+        // 'WebSocket libraries not loaded', and returned without ever calling connect().
+        // The calendar has been showing 'Disconnected' ever since, with a live broker on
+        // the other end. websocketService imports them directly; nothing to wait for.
         if (!isMounted) return;
         setWebsocketStatus('connecting');
         await websocketService.connect();
