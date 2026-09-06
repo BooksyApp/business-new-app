@@ -1,6 +1,9 @@
 import { apiClient } from '@/config/api';
 
 export interface BusinessRequest {
+  depositPercent?: number;
+  cancellationWindowHours?: number;
+  lateCancellationFee?: number;
   ownerId: number;
   name: string;
   description?: string;
@@ -23,6 +26,15 @@ export interface BusinessRequest {
 export interface Business {
   /** #12: ISO code from businesses.currency (V17). Drives every price display. */
   currency?: string;
+  /**
+   * #37: the deposit and cancellation policy. Backed by businesses.deposit_percent /
+   * cancellation_window_hours / late_cancellation_fee (V41), read and written by the
+   * backend since #244/#308 — no screen had ever exposed them, so a feature that
+   * shipped complete on the server was unreachable from the manager app.
+   */
+  depositPercent?: number;
+  cancellationWindowHours?: number;
+  lateCancellationFee?: number;
   id: number;
   ownerId: number;
   name: string;
