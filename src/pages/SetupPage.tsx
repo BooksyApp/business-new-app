@@ -68,10 +68,15 @@ const settingsCategories: SettingsCategory[] = [
     title: "Payments",
     description: "Manage payment methods and billing",
     icon: CreditCard,
-    mainPath: "sales",
+    // #27: this page's own convention is "no badge = built, Soon = not". Payments broke
+    // it: it had no badge, implying real screens, while all three items just navigated to
+    // the Sales page. There is no Payment Methods, Invoices or Tax Settings screen, so the
+    // honest label is Soon — and the redirects are removed, because sending someone who
+    // asked for Tax Settings to a sales list is worse than doing nothing.
+    comingSoon: true,
     items: [
-      { label: "Payment Methods", path: "sales" },
-      { label: "Invoices", path: "sales" },
+      { label: "Payment Methods" },
+      { label: "Invoices" },
       { label: "Tax Settings" },
     ],
     color: "text-status-completed",
