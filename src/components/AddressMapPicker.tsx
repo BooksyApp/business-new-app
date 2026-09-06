@@ -1,6 +1,14 @@
 import { API_BASE_URL } from '@/config/api';
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+
+// #56: see the TileLayer below. Set VITE_MAP_TILE_URL / VITE_MAP_TILE_ATTRIBUTION to move
+// off the OSM public tile servers without touching this file.
+const TILE_URL =
+  import.meta.env.VITE_MAP_TILE_URL || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTRIBUTION =
+  import.meta.env.VITE_MAP_TILE_ATTRIBUTION ||
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -166,10 +174,11 @@ export default function AddressMapPicker({
           doubleClickZoom={!disabled}
           touchZoom={!disabled}
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          {/* #56: OSM's public tile servers exclude products like this, so the provider
+              has to change. Making the URL and attribution configuration means that swap
+              is an env change, not a code change and a release. The OSM values stay the
+              default so nothing breaks before the new provider is chosen. */}
+          <TileLayer attribution={TILE_ATTRIBUTION} url={TILE_URL} />
           {/* Only pan to center when mapCenter changes (from external selection), never change zoom */}
           <MapPan center={mapCenter} />
           
