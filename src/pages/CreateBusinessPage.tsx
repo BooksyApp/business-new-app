@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/config/api';
 import { useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
@@ -59,8 +60,10 @@ export default function CreateBusinessPage() {
     setIsSearching(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1`,
-        { headers: { "User-Agent": "Booksy Registration App" } }
+        // #56: proxied through the backend — see GeocodeService. The User-Agent set
+        // here never left the browser (forbidden header), so OSM never received the
+        // identification its policy requires.
+        `${API_BASE_URL}/public/geocode?q=${encodeURIComponent(query)}`
       );
       const data = await response.json();
       setAddressResults(data);

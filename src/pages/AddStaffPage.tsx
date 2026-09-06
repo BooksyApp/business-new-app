@@ -87,6 +87,10 @@ export default function AddStaffPage() {
     );
   };
 
+  // #55: an invitation needs somewhere to send it. The switch alone is not enough, so
+  // the label and the confirmation both follow what will actually happen.
+  const willInvite = formData.inviteAndCreateAccount && !!formData.email.trim();
+
   const handleAddAndSendInvite = async () => {
     // Email format validation
     const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
@@ -116,6 +120,17 @@ export default function AddStaffPage() {
       // #13/#293: role has its own endpoint — createStaff's DTO has no field for it.
       if (created?.id && formData.permissionLevel) {
         await setStaffRole(created.id, formData.permissionLevel.toUpperCase());
+      }
+      // #55: the button used to promise an invite and then say nothing at all. Report
+      // what was actually requested. Whether the invitation is *emailed* is a separate
+      // layer (backend #496: notifications are disabled by default and the sending
+      // domain has no SPF/DKIM/DMARC), so do not claim delivery here.
+      if (willInvite) {
+        toast.success(`Staff member added and invited at ${formData.email.trim()}`);
+      } else if (formData.inviteAndCreateAccount) {
+        toast.success("Staff member added. No invitation sent — add an email address to invite them.");
+      } else {
+        toast.success("Staff member added");
       }
       navigate(getPath("staff"));
     } catch (error: any) {
@@ -155,7 +170,7 @@ export default function AddStaffPage() {
               ) : (
                 <>
                   <Send size={16} />
-                  ADD AND SEND INVITE
+                  {willInvite ? "ADD AND SEND INVITE" : "ADD STAFF"}
                 </>
               )}
             </Button>

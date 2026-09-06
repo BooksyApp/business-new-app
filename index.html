@@ -2,12 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Booksy - Salon Management</title>
-    <!-- SockJS and STOMP for WebSocket -->
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/stompjs@2/lib/stomp.min.js"></script>
+    <!-- #54: an admin dashboard must never be indexed. robots.txt disallows crawling;
+         this covers agents that fetch the page anyway. -->
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="description" content="Salon business management: calendar, clients, staff, services and point of sale." />
+    <meta name="theme-color" content="#3b82f6" />
   </head>
   <body>
     <div id="root"></div>

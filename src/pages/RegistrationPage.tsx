@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/config/api';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -204,12 +205,11 @@ const RegistrationPage = () => {
     setIsSearching(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=8&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'Booksy Registration App'
-          }
-        }
+        // #56: this used to call nominatim.openstreetmap.org directly, once per user IP.
+        // The User-Agent header set here never left the browser — it is a forbidden
+        // header, so the identification OSM's policy requires was never actually sent.
+        // The backend proxy sends it, caches results and is one client instead of many.
+        `${API_BASE_URL}/public/geocode?q=${encodeURIComponent(query)}`
       );
       const data = await response.json();
       setAddressResults(data);
