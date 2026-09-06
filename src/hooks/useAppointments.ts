@@ -22,6 +22,8 @@ export interface Appointment {
   clientEmail?: string;
   notes?: string;
   price?: number;
+  // #30: drives which lifecycle actions the calendar modal offers.
+  status?: string;
 }
 
 // Frontend staff type
@@ -51,6 +53,7 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     clientEmail: apiAppt.clientEmail,
     notes: apiAppt.notes,
     price: apiAppt.price,
+    status: apiAppt.status,   // #30
   };
 };
 

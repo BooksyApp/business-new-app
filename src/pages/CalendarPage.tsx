@@ -65,6 +65,7 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     color: apt.color as any,
     date: apt.date,
     apiId: apt.apiId,
+    status: apt.status,   // #30
   };
 };
 
