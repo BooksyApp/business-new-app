@@ -20,6 +20,9 @@ const StaffPage = lazy(() => import("./pages/StaffPage"));
 const EditStaffPage = lazy(() => import("./pages/EditStaffPage"));
 const AddStaffPage = lazy(() => import("./pages/AddStaffPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
+// #26/#44: "Inventory" now opens real product stock. The add-on management that used to
+// live behind that label keeps its own route so nothing is lost.
+const ProductsPage = lazy(() => import("./pages/ProductsPage"));
 const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const SetupPage = lazy(() => import("./pages/SetupPage"));
@@ -134,7 +137,8 @@ const App = () => (
               <Route path="calendar" element={<Suspense fallback={<PageLoader />}><CalendarPage /></Suspense>} />
               <Route path="tasks" element={<Suspense fallback={<PageLoader />}><HomePage /></Suspense>} />
               <Route path="clients" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
-              <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
+              <Route path="inventory" element={<Suspense fallback={<PageLoader />}><ProductsPage /></Suspense>} />
+              <Route path="addons" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
               <Route path="shopping" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="items-category" element={<Suspense fallback={<PageLoader />}><ItemsCategoryPage /></Suspense>} />

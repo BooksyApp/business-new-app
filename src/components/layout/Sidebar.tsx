@@ -313,7 +313,10 @@ const navItems: NavItem[] = [
   { icon: TaskIcon, label: "Sales", path: "/sales" },
   { icon: ItemCategoryIcon, label: "Services", path: "/items-category" },
   { icon: Users, label: "Clients", path: "/clients" },
+  // #26: this used to open add-on service management, which has no SKU, no quantity and
+  // no reorder threshold — nothing an owner clicking "Inventory" would expect.
   { icon: Package, label: "Inventory", path: "/inventory" },
+  { icon: Package, label: "Add-ons", path: "/addons" },
   // { icon: MarketingIcon, label: "Marketing", path: "/marketing" }, // Disabled
   // { icon: CouponIcon, label: "Coupon", path: "/contacts" }, // Disabled
   { icon: AnalyticsIcon, label: "Analytics", path: "/analytics" },
