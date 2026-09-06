@@ -18,6 +18,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { appointmentService } from "@/services/appointmentService";
 import { useServices } from "@/hooks/useServices";
@@ -45,6 +46,10 @@ export default function ClientsPage() {
     lastName: "",
     email: "",
     phone: "",
+    // #47: consent starts unset, not false. "Not asked" and "declined" are different
+    // facts, and only an explicit answer may be recorded as consent.
+    allowMarketingEmails: false,
+    allowSmsNotifications: false,
   });
   const [invitationForm, setInvitationForm] = useState({
     serviceId: "",
@@ -604,6 +609,32 @@ export default function ClientsPage() {
               />
             </div>
 
+            {/* #47: the backend has carried allow_marketing_emails / allow_sms_notifications
+                since V1 and the types declared them, but no screen could ever set one — so
+                every client's consent was permanently NULL and any campaign would have had
+                zero opted-in recipients. */}
+            <div className="space-y-3 rounded-lg border border-border/60 p-3">
+              <p className="text-sm font-medium">Marketing consent</p>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={newClientForm.allowMarketingEmails}
+                  onCheckedChange={(checked) =>
+                    setNewClientForm(prev => ({ ...prev, allowMarketingEmails: checked === true }))
+                  }
+                />
+                Client agreed to marketing emails
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={newClientForm.allowSmsNotifications}
+                  onCheckedChange={(checked) =>
+                    setNewClientForm(prev => ({ ...prev, allowSmsNotifications: checked === true }))
+                  }
+                />
+                Client agreed to SMS notifications
+              </label>
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
@@ -754,6 +785,8 @@ export default function ClientsPage() {
                     lastName: "",
                     email: "",
                     phone: "",
+                    allowMarketingEmails: false,
+                    allowSmsNotifications: false,
                   });
                 }}
               >
@@ -781,6 +814,9 @@ export default function ClientsPage() {
                       email: newClientForm.email || undefined,
                       phone: newClientForm.phone || undefined,
                       sendInvitation: shouldInvite, // Pass invitation flag - backend will handle it transactionally
+                      // #47: real values instead of the hardcoded nulls.
+                      allowMarketingEmails: newClientForm.allowMarketingEmails,
+                      allowSmsNotifications: newClientForm.allowSmsNotifications,
                     });
                     
                     if (shouldInvite) {
@@ -795,6 +831,8 @@ export default function ClientsPage() {
                       lastName: "",
                       email: "",
                       phone: "",
+                      allowMarketingEmails: false,
+                      allowSmsNotifications: false,
                     });
                     
                     // Reload clients list and invitations

@@ -81,6 +81,9 @@ class ClientService {
     email?: string;
     phone?: string;
     sendInvitation?: boolean;
+    // #47: GDPR consent, recorded on create.
+    allowMarketingEmails?: boolean;
+    allowSmsNotifications?: boolean;
   }): Promise<Client> {
     return apiClient.post<Client>(`/clients/business/${businessId}`, clientData);
   }
