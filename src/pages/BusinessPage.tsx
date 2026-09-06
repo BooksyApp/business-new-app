@@ -62,7 +62,7 @@ export default function BusinessPage() {
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "", phone: "", description: "", address: "", category: "", website: "", email: "",
+    name: "", phone: "", description: "", address: "", category: "", website: "", email: "", coverImageUrl: "",
     // #37: empty means "leave unchanged" — the backend COALESCEs each column, so a blank
     // field must not be sent as 0 and silently wipe a configured policy.
     depositPercent: "", cancellationWindowHours: "", lateCancellationFee: ""
@@ -133,6 +133,7 @@ export default function BusinessPage() {
           address: businessPayload.address ?? "",
           category: businessPayload.category ?? "",
           website: businessPayload.website ?? "",
+          coverImageUrl: businessPayload.coverImageUrl ?? "",
           email: businessPayload.email ?? "",
           depositPercent: businessPayload.depositPercent != null ? String(businessPayload.depositPercent) : "",
           cancellationWindowHours: businessPayload.cancellationWindowHours != null ? String(businessPayload.cancellationWindowHours) : "",
@@ -170,6 +171,9 @@ export default function BusinessPage() {
         address: editForm.address || undefined,
         category: editForm.category || undefined,
         website: editForm.website || undefined,
+        // customer-app #4: sent even when blank, so clearing the field actually removes
+        // the photo. The backend maps '' to null; undefined would leave it as it was.
+        coverImageUrl: editForm.coverImageUrl,
         email: editForm.email || undefined,
         // #37: only send what was actually filled in. undefined leaves the column alone.
         depositPercent: editForm.depositPercent.trim() !== "" ? Number(editForm.depositPercent) : undefined,
@@ -549,6 +553,29 @@ export default function BusinessPage() {
                 onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))}
                 placeholder="https://example.com"
               />
+            </div>
+            {/* customer-app #4: without this the salon shows a stock photo in the
+                customer app, same as every other salon. */}
+            <div className="space-y-2">
+              <Label>Photo URL</Label>
+              <Input
+                value={editForm.coverImageUrl}
+                onChange={e => setEditForm(f => ({ ...f, coverImageUrl: e.target.value }))}
+                placeholder="https://example.com/your-salon.jpg"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown to customers in the app. Leave empty to use the default image.
+              </p>
+              {editForm.coverImageUrl.trim() ? (
+                <img
+                  src={editForm.coverImageUrl}
+                  alt="Salon photo preview"
+                  className="h-32 w-full rounded-lg border border-border/60 object-cover"
+                  // A typo in a URL should look like a broken link, not a broken layout.
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  onLoad={e => { (e.currentTarget as HTMLImageElement).style.display = "block"; }}
+                />
+              ) : null}
             </div>
             {/* #37: deposit and cancellation policy shipped backend-only (#244/#308) and
                 was unreachable from the manager app — a salon could not set a deposit at

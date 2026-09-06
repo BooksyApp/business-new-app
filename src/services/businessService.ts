@@ -9,6 +9,12 @@ export interface BusinessRequest {
   description?: string;
   category?: string;
   logoUrl?: string;
+  /**
+   * customer-app #4: the photo customers see for this salon. Until V74 there was no
+   * image column at all, so every salon in the customer app showed the same stock shot.
+   * A URL the salon supplies — there is no file storage yet. Empty string clears it.
+   */
+  coverImageUrl?: string;
   website?: string;
   email?: string;
   phone?: string;
@@ -41,6 +47,8 @@ export interface Business {
   description?: string;
   category?: string;
   logoUrl?: string;
+  /** customer-app #4: the photo customers see for this salon. */
+  coverImageUrl?: string;
   website?: string;
   email?: string;
   phone?: string;
