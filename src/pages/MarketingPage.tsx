@@ -7,6 +7,8 @@ import { getCurrentBusinessId } from "@/config/api";
 import { formatPrice } from "@/lib/currency";
 import { promoService, type PromoCode } from "@/services/promoService";
 import { giftCardService, packageService, type GiftCard, type ServicePackage } from "@/services/growthService";
+import { campaignService, type Campaign, type AudiencePreview } from "@/services/campaignService";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -23,41 +25,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 
-const campaigns = [
-  { 
-    id: "1", 
-    name: "Summer Sale - 20% Off", 
-    type: "Email", 
-    status: "active", 
-    sent: 847, 
-    opened: 423, 
-    clicked: 156,
-    openRate: "50%",
-    clickRate: "18%"
-  },
-  { 
-    id: "2", 
-    name: "New Client Welcome", 
-    type: "SMS", 
-    status: "active", 
-    sent: 156, 
-    opened: null, 
-    clicked: null,
-    openRate: null,
-    clickRate: null
-  },
-  { 
-    id: "3", 
-    name: "Birthday Discount", 
-    type: "Email", 
-    status: "scheduled", 
-    sent: 0, 
-    opened: 0, 
-    clicked: 0,
-    openRate: "0%",
-    clickRate: "0%"
-  },
-];
+// #46: the campaign list here was hardcoded — invented names, invented open rates,
+// invented revenue — on a screen an owner reads as their real marketing performance.
+// It comes from the API now.
 
 const marketingTools = [
   { 
@@ -114,6 +84,67 @@ export default function MarketingPage() {
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [pkgForm, setPkgForm] = useState({ name: "", sessionsTotal: "5", price: "" });
   const [pkgBusy, setPkgBusy] = useState(false);
+
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignForm, setCampaignForm] = useState({
+    name: "", channel: "EMAIL", segment: "LAPSED_90D", subject: "", body: "",
+  });
+  const [audience, setAudience] = useState<AudiencePreview | null>(null);
+  const [campaignBusy, setCampaignBusy] = useState(false);
+
+  const loadCampaigns = useCallback(() => {
+    if (!businessId) return;
+    campaignService.list(businessId).then((d) => setCampaigns(d || [])).catch(() => setCampaigns([]));
+  }, [businessId]);
+
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+
+  // Recheck the audience whenever the targeting changes, so the size is never stale
+  // relative to the segment and channel actually selected.
+  useEffect(() => {
+    if (!businessId) return;
+    campaignService
+      .preview(businessId, campaignForm.segment, campaignForm.channel)
+      .then(setAudience)
+      .catch(() => setAudience(null));
+  }, [businessId, campaignForm.segment, campaignForm.channel]);
+
+  const createCampaign = async () => {
+    const name = campaignForm.name.trim();
+    const body = campaignForm.body.trim();
+    if (!name || !body) {
+      toast.error("A name and a message are required");
+      return;
+    }
+    setCampaignBusy(true);
+    try {
+      await campaignService.create(businessId, {
+        name, channel: campaignForm.channel, segment: campaignForm.segment,
+        subject: campaignForm.channel === "EMAIL" ? campaignForm.subject.trim() || undefined : undefined,
+        body,
+      });
+      setCampaignForm({ name: "", channel: "EMAIL", segment: "LAPSED_90D", subject: "", body: "" });
+      loadCampaigns();
+      toast.success("Campaign created as a draft");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not create the campaign");
+    } finally {
+      setCampaignBusy(false);
+    }
+  };
+
+  const queueCampaign = async (id: number) => {
+    setCampaignBusy(true);
+    try {
+      const c = await campaignService.queue(businessId, id);
+      loadCampaigns();
+      toast.success(`Queued for ${c.recipientCount} recipients`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not queue the campaign");
+    } finally {
+      setCampaignBusy(false);
+    }
+  };
 
   const loadPackages = useCallback(() => {
     if (!businessId) return;
@@ -425,80 +456,89 @@ export default function MarketingPage() {
           })}
         </div>
 
-        {/* Enhanced Active Campaigns */}
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-bold">Active Campaigns</CardTitle>
-                <CardDescription className="mt-1">Your running and scheduled campaigns</CardDescription>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
-              >
-                <TrendingUp size={14} />
-                View All
-              </Button>
-            </div>
+        {/* #46: real campaigns. */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="text-lg">Campaigns</CardTitle>
+            <CardDescription>
+              Target a segment rather than a list — a copied list is stale the next day.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {campaigns.map((campaign, index) => (
-                <div
-                  key={campaign.id}
-                  className="flex items-center justify-between p-5 rounded-xl border border-border/60 hover:border-accent/30 hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/10 transition-all duration-300 group cursor-pointer"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl ${campaign.type === "Email" ? "bg-appointment-blue/10" : "bg-appointment-green/10"} group-hover:scale-110 transition-transform`}>
-                      {campaign.type === "Email" ? (
-                        <Mail className="h-5 w-5 text-appointment-blue" />
-                      ) : (
-                        <MessageSquare className="h-5 w-5 text-appointment-green" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-sm">{campaign.name}</h4>
-                        <Badge 
-                          variant="secondary" 
-                          className={campaign.status === "active" 
-                            ? "bg-status-completed/10 text-status-completed border-status-completed/20 text-[10px] px-2 py-0.5" 
-                            : "bg-status-pending/10 text-status-pending border-status-pending/20 text-[10px] px-2 py-0.5"
-                          }
-                        >
-                          {campaign.status}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground font-medium">{campaign.type} Campaign</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="text-center">
-                      <p className="font-bold text-base">{campaign.sent}</p>
-                      <p className="text-xs text-muted-foreground font-medium">Sent</p>
-                    </div>
-                    {campaign.opened !== null && (
-                      <div className="text-center">
-                        <p className="font-bold text-base">{campaign.opened}</p>
-                        <p className="text-xs text-muted-foreground font-medium">Opened</p>
-                        <p className="text-xs text-status-completed font-semibold mt-0.5">{campaign.openRate}</p>
-                      </div>
-                    )}
-                    {campaign.clicked !== null && (
-                      <div className="text-center">
-                        <p className="font-bold text-base">{campaign.clicked}</p>
-                        <p className="text-xs text-muted-foreground font-medium">Clicked</p>
-                        <p className="text-xs text-status-completed font-semibold mt-0.5">{campaign.clickRate}</p>
-                      </div>
-                    )}
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />
-                  </div>
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Name</Label>
+                <Input className="h-9 w-52" value={campaignForm.name} placeholder="Win-back October"
+                  onChange={(e) => setCampaignForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Channel</Label>
+                <select className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={campaignForm.channel}
+                  onChange={(e) => setCampaignForm((f) => ({ ...f, channel: e.target.value }))}>
+                  <option value="EMAIL">Email</option>
+                  <option value="SMS">SMS</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Segment</Label>
+                <select className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  value={campaignForm.segment}
+                  onChange={(e) => setCampaignForm((f) => ({ ...f, segment: e.target.value }))}>
+                  <option value="LAPSED_90D">Not seen in 90 days</option>
+                  <option value="TOP_SPENDERS">Top spenders</option>
+                </select>
+              </div>
             </div>
+
+            {campaignForm.channel === "EMAIL" && (
+              <div className="space-y-1">
+                <Label className="text-xs">Subject</Label>
+                <Input className="h-9" value={campaignForm.subject}
+                  onChange={(e) => setCampaignForm((f) => ({ ...f, subject: e.target.value }))} />
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-xs">Message</Label>
+              <Textarea rows={3} value={campaignForm.body}
+                onChange={(e) => setCampaignForm((f) => ({ ...f, body: e.target.value }))} />
+            </div>
+
+            {audience && (
+              <p className="text-sm text-muted-foreground">
+                {audience.segmentSize} in this segment • <span className="font-medium">{audience.reachable} reachable</span>
+                {audience.reachable < audience.segmentSize && (
+                  <> — the rest have no {campaignForm.channel === "EMAIL" ? "email address" : "phone number"} on
+                  file, or have not consented to marketing.</>
+                )}
+              </p>
+            )}
+
+            <Button disabled={campaignBusy} onClick={createCampaign}>CREATE DRAFT</Button>
+
+            {campaigns.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No campaigns yet.</p>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {campaigns.map((c) => (
+                  <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.channel} • {c.segment === "LAPSED_90D" ? "Not seen in 90 days" : "Top spenders"} • {c.status}
+                        {c.status !== "DRAFT" ? ` • ${c.recipientCount} recipients` : ""}
+                      </p>
+                    </div>
+                    {c.status === "DRAFT" && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs"
+                        disabled={campaignBusy} onClick={() => queueCampaign(c.id)}>
+                        Queue
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

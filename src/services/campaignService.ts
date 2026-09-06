@@ -1,0 +1,54 @@
+import { apiClient } from "@/config/api";
+
+/**
+ * #46: MarketingPage shipped with hardcoded campaign names, open rates and revenue on a
+ * screen an owner reads as their real marketing performance. These are the real endpoints.
+ */
+export interface Campaign {
+  id: number;
+  businessId: number;
+  name: string;
+  channel: "EMAIL" | "SMS";
+  segment: "LAPSED_90D" | "TOP_SPENDERS";
+  subject: string | null;
+  body: string;
+  status: "DRAFT" | "QUEUED" | "SENT" | "FAILED" | "CANCELLED";
+  recipientCount: number;
+  createdAt: string | null;
+}
+
+/**
+ * Segment size and reachable count are separate on purpose: "40 in segment, 6 reachable"
+ * tells a salon it has a consent problem, which a single number would hide.
+ */
+export interface AudiencePreview {
+  segment: string;
+  channel: string;
+  segmentSize: number;
+  reachable: number;
+}
+
+class CampaignService {
+  async list(businessId: number): Promise<Campaign[]> {
+    return apiClient.get<Campaign[]>(`/marketing/campaigns/business/${businessId}`);
+  }
+
+  async preview(businessId: number, segment: string, channel: string): Promise<AudiencePreview> {
+    return apiClient.get<AudiencePreview>(
+      `/marketing/campaigns/business/${businessId}/preview?segment=${segment}&channel=${channel}`
+    );
+  }
+
+  async create(businessId: number, body: {
+    name: string; channel: string; segment: string; subject?: string; body: string;
+  }): Promise<Campaign> {
+    return apiClient.post<Campaign>(`/marketing/campaigns/business/${businessId}`, body);
+  }
+
+  /** Freezes the recipient list. Delivery itself waits on backend #496. */
+  async queue(businessId: number, campaignId: number): Promise<Campaign> {
+    return apiClient.post<Campaign>(`/marketing/campaigns/business/${businessId}/${campaignId}/queue`, {});
+  }
+}
+
+export const campaignService = new CampaignService();
