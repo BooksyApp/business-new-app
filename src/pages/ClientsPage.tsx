@@ -1,5 +1,6 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
+import { loyaltyService } from "@/services/growthService";
 import { currencySymbol } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -45,6 +46,24 @@ export default function ClientsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [clientDetailOpen, setClientDetailOpen] = useState(false);
   const [detailClient, setDetailClient] = useState<ClientWithStats | null>(null);
+  // #28: LoyaltyController has served points per client all along with no caller, so a
+  // salon could not see a client's balance — the loyalty scheme was invisible to the
+  // people running it. Points are per (business, client), so this belongs on the client
+  // rather than on the Marketing page with the other growth features.
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
+
+  const loadLoyalty = (clientId: number) => {
+    setLoyaltyPoints(null);
+    if (!businessId || !clientId) return;
+    loyaltyService
+      .account(businessId, clientId)
+      .then((a) => {
+        const raw = a?.pointsBalance ?? a?.points_balance;
+        setLoyaltyPoints(typeof raw === "number" ? raw : 0);
+      })
+      // No account yet is the normal case for a new client, not an error worth a toast.
+      .catch(() => setLoyaltyPoints(0));
+  };
   const [newClientForm, setNewClientForm] = useState({
     firstName: "",
     lastName: "",
@@ -365,7 +384,7 @@ export default function ClientsPage() {
                         key={client.id}
                         className="border-b border-border/40 hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/10 transition-all duration-300 cursor-pointer group"
                         style={{ animationDelay: `${index * 30}ms` }}
-                        onClick={() => { setDetailClient(client); setClientDetailOpen(true); }}
+                        onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-3">
@@ -515,10 +534,10 @@ export default function ClientsPage() {
                               {/* #22: the row is clickable now, so the menu must not also
                                   open the detail dialog behind itself. */}
                               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); }}>
+                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}>
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); }}>
+                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}>
                                   View Appointments
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -904,7 +923,13 @@ export default function ClientsPage() {
       </Dialog>
 
       {/* Client Detail Dialog */}
-      <Dialog open={clientDetailOpen} onOpenChange={setClientDetailOpen}>
+      <Dialog
+        open={clientDetailOpen}
+        onOpenChange={(open) => {
+          setClientDetailOpen(open);
+          if (!open) setLoyaltyPoints(null);
+        }}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Client Details</DialogTitle>
@@ -922,6 +947,16 @@ export default function ClientsPage() {
               <div className="flex gap-2 text-sm"><span className="font-medium w-28">Last Visit:</span><span>{formatDate(detailClient.lastVisitDate)}</span></div>
               <div className="flex gap-2 text-sm"><span className="font-medium w-28">Completed:</span><span>{detailClient.completedAppointments ?? 0}</span></div>
               <div className="flex gap-2 text-sm"><span className="font-medium w-28">Cancelled:</span><span>{detailClient.cancelledAppointments ?? 0}</span></div>
+              <div className="flex gap-2 text-sm">
+                <span className="font-medium w-28">No-shows:</span>
+                <span>{detailClient.noShowAppointments ?? 0}</span>
+              </div>
+              <div className="flex gap-2 text-sm">
+                <span className="font-medium w-28">Loyalty:</span>
+                <span>
+                  {loyaltyPoints != null ? `${loyaltyPoints} points` : "—"}
+                </span>
+              </div>
             </div>
           )}
         </DialogContent>

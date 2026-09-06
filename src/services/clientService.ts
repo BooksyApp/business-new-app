@@ -30,6 +30,8 @@ export interface ClientWithStats {
   confirmedAppointments: number;
   completedAppointments: number;
   cancelledAppointments: number;
+  /** #36: the backend added this counter; the type never declared it. */
+  noShowAppointments?: number;
 }
 
 export interface Client {

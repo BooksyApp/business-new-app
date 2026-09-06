@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { getCurrentBusinessId } from "@/config/api";
 import { formatPrice } from "@/lib/currency";
 import { promoService, type PromoCode } from "@/services/promoService";
+import { giftCardService, packageService, type GiftCard, type ServicePackage } from "@/services/growthService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -100,6 +101,80 @@ export default function MarketingPage() {
   const [promos, setPromos] = useState<PromoCode[]>([]);
   const [promoForm, setPromoForm] = useState({ code: "", type: "PERCENT", value: "" });
   const [promoBusy, setPromoBusy] = useState(false);
+
+  // #28: gift cards and packages, same story as promo codes — complete backends with no
+  // way in. Gift cards have no list-by-business endpoint, only lookup by code, so the
+  // UI offers issue + find rather than pretending a list exists.
+  const [giftAmount, setGiftAmount] = useState("");
+  const [giftEmail, setGiftEmail] = useState("");
+  const [giftLookupCode, setGiftLookupCode] = useState("");
+  const [foundCard, setFoundCard] = useState<GiftCard | null>(null);
+  const [giftBusy, setGiftBusy] = useState(false);
+
+  const [packages, setPackages] = useState<ServicePackage[]>([]);
+  const [pkgForm, setPkgForm] = useState({ name: "", sessionsTotal: "5", price: "" });
+  const [pkgBusy, setPkgBusy] = useState(false);
+
+  const loadPackages = useCallback(() => {
+    if (!businessId) return;
+    packageService.list(businessId).then((d) => setPackages(d || [])).catch(() => setPackages([]));
+  }, [businessId]);
+
+  useEffect(() => { loadPackages(); }, [loadPackages]);
+
+  const issueGiftCard = async () => {
+    const amount = Number(giftAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("A positive amount is required");
+      return;
+    }
+    setGiftBusy(true);
+    try {
+      const card = await giftCardService.issue(businessId, amount, giftEmail.trim() || undefined);
+      setFoundCard(card);
+      setGiftAmount(""); setGiftEmail("");
+      toast.success(`Gift card ${card.code} issued`);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not issue the gift card");
+    } finally {
+      setGiftBusy(false);
+    }
+  };
+
+  const lookupGiftCard = async () => {
+    const code = giftLookupCode.trim();
+    if (!code) return;
+    setGiftBusy(true);
+    try {
+      setFoundCard(await giftCardService.lookup(code));
+    } catch {
+      setFoundCard(null);
+      toast.error("No gift card with that code");
+    } finally {
+      setGiftBusy(false);
+    }
+  };
+
+  const createPackage = async () => {
+    const name = pkgForm.name.trim();
+    const sessionsTotal = Number(pkgForm.sessionsTotal);
+    const price = Number(pkgForm.price);
+    if (!name || !Number.isFinite(sessionsTotal) || sessionsTotal < 1 || !Number.isFinite(price) || price < 0) {
+      toast.error("Name, at least one session and a non-negative price are required");
+      return;
+    }
+    setPkgBusy(true);
+    try {
+      await packageService.create(businessId, { name, sessionsTotal, price, active: true });
+      setPkgForm({ name: "", sessionsTotal: "5", price: "" });
+      loadPackages();
+      toast.success("Package created");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not create the package");
+    } finally {
+      setPkgBusy(false);
+    }
+  };
 
   const loadPromos = useCallback(() => {
     if (!businessId) return;
@@ -228,6 +303,94 @@ export default function MarketingPage() {
                         Deactivate
                       </Button>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* #28: gift cards. */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="text-lg">Gift cards</CardTitle>
+            <CardDescription>
+              Issue a card and look one up by its code. The backend generates the code and
+              tracks the remaining balance.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Amount</Label>
+                <Input type="number" min="0" step="0.01" value={giftAmount} className="h-9 w-32"
+                  onChange={(e) => setGiftAmount(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Recipient email (optional)</Label>
+                <Input type="email" value={giftEmail} className="h-9 w-60"
+                  onChange={(e) => setGiftEmail(e.target.value)} placeholder="client@example.com" />
+              </div>
+              <Button className="h-9" disabled={giftBusy} onClick={issueGiftCard}>ISSUE CARD</Button>
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Find by code</Label>
+                <Input value={giftLookupCode} className="h-9 w-48"
+                  onChange={(e) => setGiftLookupCode(e.target.value)} placeholder="GC-XXXX" />
+              </div>
+              <Button variant="outline" className="h-9" disabled={giftBusy} onClick={lookupGiftCard}>
+                LOOK UP
+              </Button>
+            </div>
+            {foundCard && (
+              <div className="rounded-lg border border-border/60 p-3 text-sm">
+                <p className="font-medium">{foundCard.code}</p>
+                <p className="text-muted-foreground">
+                  Balance {formatPrice(foundCard.balance)} of {formatPrice(foundCard.amount)}
+                  {foundCard.status ? ` • ${foundCard.status}` : ""}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* #28: service packages. */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="text-lg">Packages</CardTitle>
+            <CardDescription>Prepaid bundles of sessions a client buys up front.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Name</Label>
+                <Input value={pkgForm.name} className="h-9 w-52" placeholder="5x Haircut"
+                  onChange={(e) => setPkgForm((f) => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Sessions</Label>
+                <Input type="number" min="1" value={pkgForm.sessionsTotal} className="h-9 w-24"
+                  onChange={(e) => setPkgForm((f) => ({ ...f, sessionsTotal: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Price</Label>
+                <Input type="number" min="0" step="0.01" value={pkgForm.price} className="h-9 w-28"
+                  onChange={(e) => setPkgForm((f) => ({ ...f, price: e.target.value }))} />
+              </div>
+              <Button className="h-9" disabled={pkgBusy} onClick={createPackage}>CREATE PACKAGE</Button>
+            </div>
+            {packages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No packages yet.</p>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {packages.map((pk) => (
+                  <div key={pk.id} className="flex items-center justify-between py-2 text-sm">
+                    <span className="font-medium">{pk.name}</span>
+                    <span className="text-muted-foreground">
+                      {pk.sessions_total} sessions • {formatPrice(pk.price)}
+                      {pk.active === false ? " • inactive" : ""}
+                    </span>
                   </div>
                 ))}
               </div>
