@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { subscriptionService, type SubscriptionStatus } from "@/services/subscriptionService";
 import { Check, ChevronRight, ExternalLink, Eye, MapPin, MessageSquare, Pencil, Share2, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { businessService, type Business } from "@/services/businessService";
@@ -67,6 +68,36 @@ export default function BusinessPage() {
     depositPercent: "", cancellationWindowHours: "", lateCancellationFee: ""
   });
   const [saving, setSaving] = useState(false);
+
+  // #42: the Stripe subscription module shipped complete — status, checkout, webhook —
+  // with zero UI, so a business could not subscribe or upgrade from the manager app at
+  // all. Plan keys come from the server (stripe.billing.plans); hardcoding a list here
+  // would drift from the configuration silently.
+  const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
+  const [plans, setPlans] = useState<string[]>([]);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+
+  useEffect(() => {
+    const idRaw = localStorage.getItem("currentBusinessId");
+    const id = idRaw ? Number.parseInt(idRaw, 10) : NaN;
+    if (!Number.isFinite(id) || id <= 0) return;
+    subscriptionService.getStatus(id).then(setSubscription).catch(() => setSubscription(null));
+    subscriptionService.getPlans().then((p) => setPlans(p || [])).catch(() => setPlans([]));
+  }, []);
+
+  const startCheckout = async (planKey: string) => {
+    const idRaw = localStorage.getItem("currentBusinessId");
+    const id = idRaw ? Number.parseInt(idRaw, 10) : NaN;
+    if (!Number.isFinite(id) || id <= 0) return;
+    setCheckoutBusy(true);
+    try {
+      // Stripe hosts the payment page; leaving the app is the intended flow.
+      window.location.href = await subscriptionService.createCheckout(id, planKey);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not start checkout");
+      setCheckoutBusy(false);
+    }
+  };
 
   const publicUrl = useMemo(() => {
     if (!business?.name) return "";
@@ -416,6 +447,42 @@ export default function BusinessPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* #42: subscription state and upgrade path. */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+          <h3 className="text-base font-semibold text-gray-900 mb-1">Subscription</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            {subscription && subscription.status !== "NONE" ? (
+              <>
+                Plan <span className="font-medium">{subscription.planKey || "—"}</span> •{" "}
+                {subscription.status}
+                {subscription.currentPeriodEnd
+                  ? ` • renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+                  : ""}
+              </>
+            ) : (
+              "No active subscription."
+            )}
+          </p>
+          {plans.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No plans are configured on the server yet.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {plans.map((planKey) => (
+                <Button
+                  key={planKey}
+                  variant={subscription?.planKey === planKey ? "outline" : "default"}
+                  disabled={checkoutBusy || subscription?.planKey === planKey}
+                  onClick={() => startCheckout(planKey)}
+                >
+                  {subscription?.planKey === planKey ? `${planKey} (current)` : `Choose ${planKey}`}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {isLoading ? (
