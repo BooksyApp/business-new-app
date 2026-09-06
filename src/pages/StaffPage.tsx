@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { format, addDays, subDays, parse, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { useStaff } from "@/hooks/useStaff";
+import { invitationService, type Invitation } from "@/services/clientService";
 import { useServices } from "@/hooks/useServices";
 import { serviceService } from "@/services/serviceService";
 import { useTimeOff } from "@/hooks/useTimeOff";
@@ -147,6 +148,27 @@ export default function StaffPage() {
   const businessId = useBusinessId();
   const { getPath } = useNavigation();
   const { staff: apiStaff, loading: staffLoading, updateStaff, setStaffRole, refresh: refreshStaff } = useStaff(businessId);
+
+  // #55: an owner had no way to see who had been invited and had not signed up yet —
+  // the add-staff screen promised an invite and the list said nothing afterwards.
+  // Invitations carry no staffId, only recipientEmail, so they match on that.
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    invitationService
+      .getInvitationsByBusiness(businessId)
+      .then((data) => setInvitations(data || []))
+      // A failed invitations fetch must not take the staff list down with it.
+      .catch(() => setInvitations([]));
+  }, [businessId]);
+
+  const pendingInviteFor = (email?: string | null) => {
+    const e = (email || "").trim().toLowerCase();
+    if (!e) return undefined;
+    return invitations.find(
+      (inv) => inv.status === "PENDING" && (inv.recipientEmail || "").trim().toLowerCase() === e
+    );
+  };
   const { services: apiServices, loading: servicesLoading, updateService, refresh: refreshServices } = useServices(businessId);
   const { timeOffs, createTimeOff, loading: timeOffsLoading } = useTimeOff(businessId);
   const { businessHours, getDefaultHours, getHoursForDay } = useBusinessHours(businessId);
@@ -1829,6 +1851,14 @@ export default function StaffPage() {
                         <p className="text-sm font-medium text-gray-900">
                           {staff.name}
                         </p>
+                        {/* #55: pending means the invitation exists and the person has
+                            not registered yet. It does not mean the email was delivered
+                            — that is backend #496. */}
+                        {pendingInviteFor(staff.email) && (
+                          <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                            Invited
+                          </span>
+                        )}
                       </div>
                     </button>
                     <button

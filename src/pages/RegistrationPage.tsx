@@ -122,6 +122,9 @@ const RegistrationPage = () => {
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const searchAddressRef = useRef<NodeJS.Timeout | null>(null);
+  // #56: set when the address lookup is unreachable, so the wizard can tell the user to
+  // type the address and building number by hand instead of silently going nowhere.
+  const [geocodeUnavailable, setGeocodeUnavailable] = useState(false);
   const [addressSearch, setAddressSearch] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [additionalDetails, setAdditionalDetails] = useState("");
@@ -216,6 +219,7 @@ const RegistrationPage = () => {
     } catch (error) {
       console.error('Error searching address:', error);
       setAddressResults([]);
+      setGeocodeUnavailable(true);
     } finally {
       setIsSearching(false);
     }
@@ -1060,6 +1064,15 @@ const RegistrationPage = () => {
                           // Update the address search input field with shortened address
                           const addressParts = address.split(',').slice(0, 3).join(',');
                           setAddressSearch(addressParts);
+                        } else {
+                          // #56: reverse geocoding failed or is unavailable. The pin still
+                          // gave us real coordinates, so fall back to whatever the user
+                          // typed rather than leaving formData.address empty — otherwise
+                          // canProceedStep3 blocks registration entirely with no way out,
+                          // because typing only sets addressSearch, never formData.address.
+                          const typed = addressSearch.trim();
+                          if (typed) updateFormData("address", typed);
+                          setGeocodeUnavailable(true);
                         }
                         // Update building number if available
                         if (buildingNumber) {
@@ -1069,6 +1082,13 @@ const RegistrationPage = () => {
                       selectedPosition={formData.latitude && formData.longitude ? [formData.latitude, formData.longitude] : null}
                       disabled={editingDay !== null}
                     />
+                    {geocodeUnavailable && (
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                        Address lookup is unavailable right now. Click your location on the
+                        map and type the address and building number by hand — that is
+                        enough to continue.
+                      </p>
+                    )}
                     {formData.latitude && formData.longitude && (
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>Coordinates: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}</span>
