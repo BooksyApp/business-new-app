@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/config/api';
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -137,12 +138,10 @@ export default function AddressMapPicker({
     // Reverse geocode to get address
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'Booksy Registration App'
-          }
-        }
+        // #56: proxied through the backend for the same reason as the forward lookup —
+        // the User-Agent set here never left the browser (forbidden header), so OSM never
+        // received the identification its policy requires. See GeocodeService.
+        `${API_BASE_URL}/public/geocode/reverse?lat=${lat}&lon=${lng}`
       );
       const data = await response.json();
       const address = data.display_name || '';
