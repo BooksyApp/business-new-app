@@ -1,4 +1,11 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getCurrentBusinessId } from "@/config/api";
+import { formatPrice } from "@/lib/currency";
+import { promoService, type PromoCode } from "@/services/promoService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
@@ -84,6 +91,59 @@ const marketingTools = [
 
 export default function MarketingPage() {
   const navigate = useNavigate();
+  const businessId = getCurrentBusinessId();
+
+  // #28: promo codes shipped complete on the backend (V24, PromoController) and were
+  // unreachable from the manager app — a salon could not issue a discount code at all.
+  // This is also the first thing on this page backed by real data rather than the
+  // hardcoded campaign figures around it (#46).
+  const [promos, setPromos] = useState<PromoCode[]>([]);
+  const [promoForm, setPromoForm] = useState({ code: "", type: "PERCENT", value: "" });
+  const [promoBusy, setPromoBusy] = useState(false);
+
+  const loadPromos = useCallback(() => {
+    if (!businessId) return;
+    promoService.list(businessId).then((d) => setPromos(d || [])).catch(() => setPromos([]));
+  }, [businessId]);
+
+  useEffect(() => { loadPromos(); }, [loadPromos]);
+
+  const createPromo = async () => {
+    const code = promoForm.code.trim().toUpperCase();
+    const value = Number(promoForm.value);
+    if (!code || !Number.isFinite(value) || value < 0) {
+      toast.error("A code and a non-negative value are required");
+      return;
+    }
+    if (promoForm.type === "PERCENT" && value > 100) {
+      toast.error("A percentage discount cannot exceed 100");
+      return;
+    }
+    setPromoBusy(true);
+    try {
+      await promoService.create(businessId, { code, type: promoForm.type as "PERCENT" | "FIXED", value, active: true });
+      setPromoForm({ code: "", type: "PERCENT", value: "" });
+      loadPromos();
+      toast.success("Promo code created");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not create the promo code");
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const deactivatePromo = async (id: number) => {
+    setPromoBusy(true);
+    try {
+      await promoService.deactivate(businessId, id);
+      loadPromos();
+      toast.success("Promo code deactivated");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not deactivate the promo code");
+    } finally {
+      setPromoBusy(false);
+    }
+  };
   
   return (
     <AppLayout>
@@ -99,6 +159,82 @@ export default function MarketingPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* #28: real promo codes, backed by PromoController. */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="text-lg">Promo codes</CardTitle>
+            <CardDescription>
+              Discount codes clients can redeem at checkout. Deactivating keeps redeemed
+              history intact.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Code</Label>
+                <Input
+                  value={promoForm.code}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, code: e.target.value }))}
+                  placeholder="SUMMER20"
+                  className="h-9 w-44"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Type</Label>
+                <select
+                  value={promoForm.type}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, type: e.target.value }))}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="PERCENT">Percent</option>
+                  <option value="FIXED">Fixed</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Value</Label>
+                <Input
+                  type="number" min="0" step="0.01"
+                  value={promoForm.value}
+                  onChange={(e) => setPromoForm((f) => ({ ...f, value: e.target.value }))}
+                  className="h-9 w-28"
+                />
+              </div>
+              <Button className="h-9" disabled={promoBusy} onClick={createPromo}>
+                CREATE CODE
+              </Button>
+            </div>
+
+            {promos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No promo codes yet.</p>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {promos.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between py-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {p.code}{" "}
+                        <span className="text-muted-foreground font-normal">
+                          {p.type === "PERCENT" ? `${p.value}%` : formatPrice(p.value)}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Used {p.uses}{p.max_uses != null ? ` of ${p.max_uses}` : ""}
+                        {p.active ? "" : " • inactive"}
+                      </p>
+                    </div>
+                    {p.active && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs"
+                        disabled={promoBusy} onClick={() => deactivatePromo(p.id)}>
+                        Deactivate
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Enhanced Marketing Tools */}
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {marketingTools.map((tool, index) => {
