@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, Edit, Trash2, ArrowRight, Calendar as CalendarIcon, ChevronDown, XCircle } from "lucide-react";
+import { Clock, User, Edit, Trash2, ArrowRight, Calendar as CalendarIcon, ChevronDown, XCircle, CheckCircle2, UserX } from "lucide-react";
 import type { Appointment, Staff } from "./AppointmentBlock";
 import { appointmentService, type Appointment as ApiAppointment } from "@/services/appointmentService";
 import { format, parse } from "date-fns";
@@ -42,6 +42,30 @@ export function AppointmentModal({
   const [fullAppointment, setFullAppointment] = useState<ApiAppointment | null>(null);
   const [loading, setLoading] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  // #30: one in-flight flag for both transitions — a double tap would otherwise fire the
+  // second call, get rejected by BookingStateMachine, and show an error for an action
+  // that actually succeeded.
+  const [lifecycleBusy, setLifecycleBusy] = useState(false);
+
+  const runLifecycle = async (action: "confirm" | "no-show") => {
+    if (!appointment?.apiId) return;
+    setLifecycleBusy(true);
+    try {
+      if (action === "confirm") {
+        await appointmentService.confirmAppointment(appointment.apiId);
+        toast.success("Appointment confirmed");
+      } else {
+        await appointmentService.markNoShow(appointment.apiId);
+        toast.success("Marked as no-show");
+      }
+      onCancelled?.();   // the same refresh callback the cancel path uses
+      onClose();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not update the appointment");
+    } finally {
+      setLifecycleBusy(false);
+    }
+  };
   const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => {
@@ -258,7 +282,26 @@ export function AppointmentModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-4 py-3 border-t border-gray-200 flex gap-2 shrink-0">
+        {/* #30: the backend has supported confirm and no-show since V22, both guarded by
+            BookingStateMachine, but this footer offered only Cancel and Edit.
+            confirmAppointment() sat in appointmentService with zero callers, and a salon
+            had no way to record a no-show at all — the status that drives deposits and
+            client history. */}
+        <div className="px-4 py-3 border-t border-gray-200 flex flex-wrap gap-2 shrink-0">
+          {appointment?.apiId && appointment.status === "PENDING" && (
+            <Button variant="outline" className="flex-1 h-8 text-xs" disabled={lifecycleBusy}
+              onClick={() => runLifecycle("confirm")}>
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+              CONFIRM
+            </Button>
+          )}
+          {appointment?.apiId && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
+            <Button variant="outline" className="flex-1 h-8 text-xs" disabled={lifecycleBusy}
+              onClick={() => runLifecycle("no-show")}>
+              <UserX className="h-3.5 w-3.5 mr-1.5" />
+              NO-SHOW
+            </Button>
+          )}
           <Button
             variant="outline"
             className="flex-1 h-8 text-xs"

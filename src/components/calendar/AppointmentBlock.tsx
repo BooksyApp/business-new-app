@@ -25,6 +25,9 @@ export interface Appointment {
   notes?: string;
   price?: number;
   apiId?: number;
+  // #30: needed to decide which lifecycle actions apply. Optional because older
+  // call sites build these without it; the footer simply shows fewer buttons then.
+  status?: string;
 }
 
 export interface Staff {
