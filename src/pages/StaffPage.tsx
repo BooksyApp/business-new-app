@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { resourceTypeService, type ResourceType } from "@/services/resourceTypeService";
 import { timeOffService } from "@/services/timeOffService";
 import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -156,6 +157,55 @@ export default function StaffPage() {
   // the add-staff screen promised an invite and the list said nothing afterwards.
   // Invitations carry no staffId, only recipientEmail, so they match on that.
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+
+  // #43: resource types — shared equipment a booking consumes.
+  const [resourceTypes, setResourceTypes] = useState<ResourceType[]>([]);
+  const [resourceForm, setResourceForm] = useState({ name: "", quantity: "1" });
+  const [resourceBusy, setResourceBusy] = useState(false);
+
+  const loadResourceTypes = useCallback(() => {
+    if (!businessId) return;
+    resourceTypeService
+      .list(businessId)
+      .then((data) => setResourceTypes(data || []))
+      .catch(() => setResourceTypes([]));
+  }, [businessId]);
+
+  useEffect(() => { loadResourceTypes(); }, [loadResourceTypes]);
+
+  const addResourceType = async () => {
+    const name = resourceForm.name.trim();
+    const quantity = Number(resourceForm.quantity);
+    if (!name || !Number.isFinite(quantity) || quantity < 1) {
+      toast.error("Name and a quantity of at least 1 are required");
+      return;
+    }
+    setResourceBusy(true);
+    try {
+      await resourceTypeService.create(businessId, name, quantity);
+      setResourceForm({ name: "", quantity: "1" });
+      loadResourceTypes();
+      toast.success("Resource added");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not add the resource");
+    } finally {
+      setResourceBusy(false);
+    }
+  };
+
+  const removeResourceType = async (id: number) => {
+    setResourceBusy(true);
+    try {
+      // Backend deactivates rather than deleting, so existing bookings keep resolving.
+      await resourceTypeService.deactivate(businessId, id);
+      loadResourceTypes();
+      toast.success("Resource deactivated");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not remove the resource");
+    } finally {
+      setResourceBusy(false);
+    }
+  };
 
   // #49: the SHIFTS tab rendered each staff member's weekly working hours and their
   // time off, and never called shiftService at all — so a shift scheduled for a
@@ -750,8 +800,10 @@ export default function StaffPage() {
               >
                 SHIFTS
               </button>
-              {/* Resources tab disabled */}
-              {/* <button
+              {/* #43: this tab was commented out and ResourceTypeController had zero
+                  callers, so a salon could not record the shared equipment its bookings
+                  depend on — chairs, washbasins, lasers. */}
+              <button
                 onClick={() => setActiveTab("resources")}
                 className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === "resources"
@@ -760,7 +812,7 @@ export default function StaffPage() {
                 }`}
               >
                 RESOURCES
-              </button> */}
+              </button>
               <button
                 onClick={() => setActiveTab("commissions")}
                 className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
@@ -782,6 +834,62 @@ export default function StaffPage() {
         </div>
 
         {/* Shifts View */}
+        {activeTab === "resources" && (
+          <div className="p-6 space-y-4">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Resource name</Label>
+                <Input
+                  value={resourceForm.name}
+                  onChange={(e) => setResourceForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Washbasin"
+                  className="h-9 w-56"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Quantity</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={resourceForm.quantity}
+                  onChange={(e) => setResourceForm((f) => ({ ...f, quantity: e.target.value }))}
+                  className="h-9 w-24"
+                />
+              </div>
+              <Button className="h-9" disabled={resourceBusy} onClick={addResourceType}>
+                ADD RESOURCE
+              </Button>
+            </div>
+
+            {resourceTypes.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No resources yet. Add the equipment your bookings share — chairs, washbasins,
+                treatment rooms.
+              </p>
+            ) : (
+              <div className="rounded-lg border border-gray-200 divide-y">
+                {resourceTypes.filter((r) => r.isActive !== false).map((r) => (
+                  <div key={r.id} className="flex items-center justify-between px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{r.name}</p>
+                      <p className="text-xs text-gray-500">Quantity: {r.quantity}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={resourceBusy}
+                      onClick={() => removeResourceType(r.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "shifts" && (
           <>
             {/* Print Styles */}
