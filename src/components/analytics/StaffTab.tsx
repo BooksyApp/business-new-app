@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import { UserCheck, DollarSign, Calendar, TrendingUp } from "lucide-react";
 import type { StaffPerformance } from "@/services/analysisService";
@@ -26,7 +27,7 @@ export default function StaffTab({ data }: StaffTabProps) {
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{money(data.totalStaffRevenue)} zł</div>
+            <div className="text-2xl font-bold">{money(data.totalStaffRevenue)} {currencySymbol()}</div>
           </CardContent>
         </Card>
         <Card className="border-border/60 shadow-sm">
@@ -34,7 +35,7 @@ export default function StaffTab({ data }: StaffTabProps) {
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Avg Revenue/Staff</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{money(data.averageRevenuePerStaff)} zł</div>
+            <div className="text-2xl font-bold">{money(data.averageRevenuePerStaff)} {currencySymbol()}</div>
           </CardContent>
         </Card>
       </div>
@@ -62,12 +63,12 @@ export default function StaffTab({ data }: StaffTabProps) {
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{staff.staffName || `Staff ${staff.staffId}`}</p>
                         <p className="text-xs text-muted-foreground">
-                          {staff.bookings} bookings • Avg ticket: {money(staff.averageTicket)} zł
+                          {staff.bookings} bookings • Avg ticket: {money(staff.averageTicket)} {currencySymbol()}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-status-completed text-base">{money(staff.revenue)} zł</div>
+                      <div className="font-bold text-status-completed text-base">{money(staff.revenue)} {currencySymbol()}</div>
                       {staff.utilizationRate !== null && (
                         <div className="text-xs text-muted-foreground">
                           {pct(staff.utilizationRate)}% utilization
@@ -99,7 +100,7 @@ export default function StaffTab({ data }: StaffTabProps) {
             <CardTitle className="text-sm">Average Performance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{money(data.averageRevenuePerStaff)} zł</div>
+            <div className="text-3xl font-bold">{money(data.averageRevenuePerStaff)} {currencySymbol()}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Per staff member
             </p>

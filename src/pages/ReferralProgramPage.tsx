@@ -1,4 +1,5 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { currencySymbol } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,8 +76,8 @@ export default function ReferralProgramPage() {
   };
 
   const formatCurrency = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return "0.00 zł";
-    return `${amount.toFixed(2)} zł`;
+    if (amount === null || amount === undefined) return `0.00 ${currencySymbol()}`;
+    return `${amount.toFixed(2)} ${currencySymbol()}`;
   };
 
   const getStatusBadge = (status: string) => {

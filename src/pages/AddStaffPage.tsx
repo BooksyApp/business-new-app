@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -349,7 +350,7 @@ export default function AddStaffPage() {
                                     : "N/A"}
                                 </span>
                                 <span className="font-semibold text-gray-900">
-                                  {service.price ? `${service.price.toFixed(2)} zł` : "N/A"}
+                                  {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
                                 </span>
                               </div>
                             </div>

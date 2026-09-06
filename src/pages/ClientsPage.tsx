@@ -1,4 +1,5 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { currencySymbol } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -182,8 +183,8 @@ export default function ClientsPage() {
   // Format currency
   const formatCurrency = (amount: number | string | null) => {
     const n = typeof amount === "number" ? amount : Number(amount);
-    if (amount === null || amount === undefined || Number.isNaN(n)) return "0.00 zł";
-    return `${n.toFixed(2)} zł`;
+    if (amount === null || amount === undefined || Number.isNaN(n)) return `0.00 ${currencySymbol()}`;
+    return `${n.toFixed(2)} ${currencySymbol()}`;
   };
 
   // Format date

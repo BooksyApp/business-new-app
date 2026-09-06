@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { format, addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, isToday, getDay, parse } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -2542,7 +2543,7 @@ export default function CalendarPage() {
                                   </Badge>
                                 </div>
                                 <span className="text-xs text-gray-500 ml-2 shrink-0">
-                                  {service.price ? `${service.price.toFixed(2)} zł` : "Free"}
+                                  {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "Free"}
                                 </span>
                               </CommandItem>
                             );
@@ -2783,7 +2784,7 @@ export default function CalendarPage() {
                   const occurrences = bookingMode === "recurring" ? computeRecurrenceDates(appointmentForm.date, recurrence).length : 1;
                   total = perVisit * occurrences;
                 }
-                const label = `${total.toFixed(2)} zł`;
+                const label = `${total.toFixed(2)} ${currencySymbol()}`;
                 return (
                   <>
                     <div className="flex justify-between items-center">

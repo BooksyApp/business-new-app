@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,7 +141,7 @@ export default function InventoryPage() {
               {loading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               ) : (
-                <div className="text-3xl font-bold text-appointment-purple">{totalValue.toFixed(2)} zł</div>
+                <div className="text-3xl font-bold text-appointment-purple">{totalValue.toFixed(2)} {currencySymbol()}</div>
               )}
             </CardContent>
           </Card>
@@ -233,7 +234,7 @@ export default function InventoryPage() {
                       {addon.priceType ?? "FIXED"}
                     </Badge>
                     <span className="font-bold text-status-completed text-base">
-                      {addon.price != null ? `${addon.price.toFixed(2)} zł` : "Price TBD"}
+                      {addon.price != null ? `${addon.price.toFixed(2)} ${currencySymbol()}` : "Price TBD"}
                     </span>
                   </div>
                 </CardContent>
@@ -269,7 +270,7 @@ export default function InventoryPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Price (zł)</Label>
+                <Label>Price ({currencySymbol()})</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -330,7 +331,7 @@ export default function InventoryPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Price (zł)</Label>
+                  <Label>Price ({currencySymbol()})</Label>
                   <Input
                     type="number"
                     step="0.01"

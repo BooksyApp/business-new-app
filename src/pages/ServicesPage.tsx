@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,7 @@ function formatDuration(minutes?: number) {
 
 function formatPrice(price?: number) {
   if (price == null) return "Price TBD";
-  return `${price.toFixed(2)} zł`;
+  return `${price.toFixed(2)} ${currencySymbol()}`;
 }
 
 export default function ServicesPage() {
@@ -376,7 +377,7 @@ export default function ServicesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Price (zł)</Label>
+                <Label>Price ({currencySymbol()})</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -447,7 +448,7 @@ export default function ServicesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Price (zł)</Label>
+                  <Label>Price ({currencySymbol()})</Label>
                   <Input
                     type="number"
                     step="0.01"

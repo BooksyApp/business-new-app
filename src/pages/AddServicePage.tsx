@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -471,7 +472,7 @@ export default function AddServicePage() {
                         <SelectItem value="RANGE">Range</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span className="text-sm text-gray-600">zł</span>
+                    <span className="text-sm text-gray-600">{currencySymbol()}</span>
                     <Input
                       type="number"
                       value={formData.price}

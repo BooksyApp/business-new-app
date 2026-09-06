@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,7 +190,7 @@ export default function AddAddonPage() {
                     <div className="flex items-center gap-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">zł</span>
+                          <span className="text-sm text-gray-600">{currencySymbol()}</span>
                           <Input
                             type="number"
                             placeholder="0.00"
