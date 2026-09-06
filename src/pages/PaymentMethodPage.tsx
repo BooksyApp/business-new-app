@@ -751,7 +751,8 @@ export default function PaymentMethodPage({
           <DialogHeader>
             <DialogTitle>Customer Payment</DialogTitle>
             <DialogDescription>
-              Enter the amount the customer is paying
+              Enter the amount the customer is paying. You will still confirm the sale on
+              the next screen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -806,6 +807,12 @@ export default function PaymentMethodPage({
               >
                 Cancel
               </Button>
+              {/* #23: this button read "Confirm", so staff took it as the end of checkout,
+                  watched the dialog close with the cart unchanged and no /api/sales call,
+                  and only discovered by accident that CONFIRM AND PAY still had to be
+                  pressed. It is NOT the final step — the dialog opens when cash is
+                  selected, before the tip is chosen — so submitting from here would be
+                  the worse bug. Name it for what it does instead. */}
               <Button
                 onClick={() => {
                   const amount = parseFloat(tempPaymentAmount) || total;
@@ -816,7 +823,7 @@ export default function PaymentMethodPage({
                 disabled={!tempPaymentAmount || parseFloat(tempPaymentAmount) < 0}
                 className="bg-gray-900 hover:bg-gray-800"
               >
-                Confirm
+                Set Amount
               </Button>
             </div>
           </div>

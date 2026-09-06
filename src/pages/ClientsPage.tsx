@@ -335,10 +335,15 @@ export default function ClientsPage() {
                   </thead>
                   <tbody>
                     {filteredClients.map((client, index) => (
-                      <tr 
-                        key={client.id} 
+                      // #22: the row carried cursor-pointer and a hover highlight but had
+                      // no onClick, so it advertised itself as clickable and did nothing —
+                      // View Details was only reachable through the ⋯ menu. Open the same
+                      // dialog the menu item opens.
+                      <tr
+                        key={client.id}
                         className="border-b border-border/40 hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/10 transition-all duration-300 cursor-pointer group"
                         style={{ animationDelay: `${index * 30}ms` }}
+                        onClick={() => { setDetailClient(client); setClientDetailOpen(true); }}
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-3">
@@ -460,7 +465,9 @@ export default function ClientsPage() {
                                 variant="ghost" 
                                 size="sm"
                                 className="h-7 text-xs gap-1.5 hover:bg-accent/10 hover:text-accent transition-all"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  // #22: the row opens the detail dialog now.
+                                  e.stopPropagation();
                                   setSelectedClient(client);
                                   setInvitationDialogOpen(true);
                                 }}
@@ -476,11 +483,16 @@ export default function ClientsPage() {
                                   size="icon"
                                   aria-label="More actions"
                                   className="h-8 w-8 hover:bg-accent/10 hover:text-accent transition-all"
+                                  // #22: the row opens the detail dialog now, so opening
+                                  // the menu must not also open it underneath.
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <MoreHorizontal size={16} />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              {/* #22: the row is clickable now, so the menu must not also
+                                  open the detail dialog behind itself. */}
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); }}>
                                   View Details
                                 </DropdownMenuItem>
