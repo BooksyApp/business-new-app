@@ -1,6 +1,8 @@
 import { WS_BASE_URL } from '@/config/api';
 import { Appointment } from './appointmentService';
 import { Sale } from './saleService';
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
 
 type MessageHandler<T> = (data: T) => void;
 
@@ -51,9 +53,10 @@ class WebSocketService {
           this.cleanupConnection(false);
         }
 
-        // Using SockJS for WebSocket connection
-        const SockJS = (window as any).SockJS;
-        const Stomp = (window as any).Stomp;
+        // #53: SockJS and Stomp used to arrive as globals from two <script> tags
+        // pointing at cdn.jsdelivr.net with a floating major version and no SRI, so
+        // whatever that CDN returned executed with full privileges in an authenticated
+        // admin session. They are bundled now; the API is unchanged.
 
         if (!SockJS || !Stomp) {
           console.warn('SockJS or Stomp not available. WebSocket features disabled.');
