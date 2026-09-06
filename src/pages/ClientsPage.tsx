@@ -1,7 +1,8 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { currencySymbol } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Filter, MoreHorizontal, Phone, Mail, TrendingUp, User, Loader2, Send, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,6 +35,8 @@ import {
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientWithStats[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+
+
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [invitationDialogOpen, setInvitationDialogOpen] = useState(false);
@@ -61,6 +64,19 @@ export default function ClientsPage() {
     notes: "",
   });
   const businessId = useBusinessId();
+
+  // #45: the waitlist existed end to end on the backend and had no frontend surface
+  // anywhere — a salon could not see who was waiting, while notifyWaitingClients was
+  // already emailing those people whenever a slot freed up.
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  useEffect(() => {
+    if (!businessId) return;
+    waitlistService
+      .listForBusiness(businessId)
+      .then((data) => setWaitlist((data || []).filter((w) => w.status === "WAITING")))
+      // A failed waitlist fetch must not take the clients table down.
+      .catch(() => setWaitlist([]));
+  }, [businessId]);
   const { services } = useServices(businessId);
   const { staff } = useStaff(businessId);
 
@@ -519,6 +535,39 @@ export default function ClientsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* #45: who is waiting for a slot at this business. */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle className="text-lg">Waitlist</CardTitle>
+            <CardDescription>
+              Clients waiting for a slot. They are emailed automatically when a booking is
+              cancelled and frees one up.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {waitlist.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nobody is waiting right now.</p>
+            ) : (
+              <div className="divide-y divide-border/40">
+                {waitlist.map((w) => (
+                  <div key={w.id} className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium">{w.clientName || w.clientEmail || "Client"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {w.clientEmail}
+                        {w.clientPhone ? ` • ${w.clientPhone}` : ""}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {w.preferredDate ? `Prefers ${w.preferredDate}` : "Any date"}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
