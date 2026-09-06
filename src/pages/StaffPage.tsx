@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { timeOffService } from "@/services/timeOffService";
 import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -161,6 +162,25 @@ export default function StaffPage() {
   // specific date (the whole point of the shifts table) appeared nowhere. The tab was
   // permanently blind to the data it is named after.
   const [shifts, setShifts] = useState<Shift[]>([]);
+
+  // #48: PUT /api/time-off/{id}/approve and timeOffService.approveTimeOff have existed
+  // all along with no caller. Backend create() also approved everything unconditionally,
+  // so nothing was ever pending — that half is fixed on the backend; this is the screen
+  // that lets a manager actually act on a pending request.
+  const [approvingTimeOffId, setApprovingTimeOffId] = useState<number | null>(null);
+
+  const approveTimeOffRequest = async (timeOffId: number) => {
+    setApprovingTimeOffId(timeOffId);
+    try {
+      await timeOffService.approveTimeOff(timeOffId, businessId);
+      toast.success("Time off approved");
+      await refreshStaff();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not approve the time off");
+    } finally {
+      setApprovingTimeOffId(null);
+    }
+  };
   useEffect(() => {
     if (!businessId) return;
     const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -938,9 +958,31 @@ export default function StaffPage() {
                                   const startTime = timeOff.isFullDay ? "00:00" : (timeOff.startTime || "00:00");
                                   const endTime = timeOff.isFullDay ? "23:59" : (timeOff.endTime || "23:59");
                                   return (
-                                    <div key={timeOff.id} className="text-sm">
-                                      {timeOff.isFullDay ? 'Full Day' : `${startTime} - ${endTime}`}
-                                      {timeOff.reason && <span className="text-gray-600 ml-2">({timeOff.reason})</span>}
+                                    <div key={timeOff.id} className="text-sm flex items-center gap-2">
+                                      <span>
+                                        {timeOff.isFullDay ? 'Full Day' : `${startTime} - ${endTime}`}
+                                        {timeOff.reason && <span className="text-gray-600 ml-2">({timeOff.reason})</span>}
+                                      </span>
+                                      {/* #48: nothing anywhere showed whether time off was
+                                          approved, and approveTimeOff() had zero callers —
+                                          so a request left pending was invisible and could
+                                          never be approved. */}
+                                      {!timeOff.isApproved && (
+                                        <>
+                                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                                            Pending
+                                          </span>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-6 px-2 text-[11px]"
+                                            disabled={approvingTimeOffId === timeOff.id}
+                                            onClick={() => approveTimeOffRequest(timeOff.id)}
+                                          >
+                                            Approve
+                                          </Button>
+                                        </>
+                                      )}
                                     </div>
                                   );
                                 })}
