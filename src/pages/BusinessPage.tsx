@@ -301,15 +301,30 @@ export default function BusinessPage() {
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                   <div className="grid grid-cols-3 gap-0">
                     <div className="col-span-2">
+                      {/* customer-app #4: this was a grey gradient standing in for a photo
+                          that had nowhere to live. Now it shows the salon's own cover when
+                          one is set, so saving a photo has a visible result here and not
+                          only in the customer app. */}
                       <div className="h-64 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 flex items-center justify-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-br from-gray-700 via-gray-600 to-gray-800 opacity-90"></div>
-                        <div className="relative z-10 w-full h-full flex items-center justify-center">
-                          <div className="absolute left-8 top-8 w-16 h-16 bg-gray-500/30 rounded-full"></div>
-                          <div className="absolute right-12 bottom-12 w-20 h-20 bg-gray-400/20 rounded-lg"></div>
-                          <div className="text-center">
-                            <div className="w-32 h-32 bg-white/10 rounded-lg mx-auto backdrop-blur-sm border border-white/20"></div>
-                          </div>
-                        </div>
+                        {business?.coverImageUrl ? (
+                          <img
+                            src={business.coverImageUrl}
+                            alt={`${business?.name ?? "Salon"} cover`}
+                            className="absolute inset-0 h-full w-full object-cover"
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-gradient-to-br from-gray-700 via-gray-600 to-gray-800 opacity-90"></div>
+                            <div className="relative z-10 w-full h-full flex items-center justify-center">
+                              <div className="absolute left-8 top-8 w-16 h-16 bg-gray-500/30 rounded-full"></div>
+                              <div className="absolute right-12 bottom-12 w-20 h-20 bg-gray-400/20 rounded-lg"></div>
+                              <div className="text-center">
+                                <div className="w-32 h-32 bg-white/10 rounded-lg mx-auto backdrop-blur-sm border border-white/20"></div>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
