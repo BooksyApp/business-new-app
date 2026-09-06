@@ -15,7 +15,9 @@ export interface Appointment {
   appointmentDate: string;
   startTime: string;
   endTime: string;
-  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+  // #30: IN_PROGRESS was contract drift — no Java code produces it and
+  // chk_appointment_status (V1/V22) rejects it, so it could never arrive.
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
   paymentStatus: 'PENDING' | 'PAID' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
   price?: number;
   color?: string;
@@ -93,6 +95,12 @@ export const appointmentService = {
 
   async confirmAppointment(id: number): Promise<Appointment> {
     return apiClient.put<Appointment>(`/bookings/${id}/confirm`, {});
+  },
+
+  // #30: PUT /api/bookings/{id}/no-show has existed on the backend since V22 with no
+  // caller here, so a salon could never record that a client failed to turn up.
+  async markNoShow(id: number): Promise<Appointment> {
+    return apiClient.put<Appointment>(`/bookings/${id}/no-show`, {});
   },
 
   async cancelAppointment(id: number, reason: string): Promise<void> {
