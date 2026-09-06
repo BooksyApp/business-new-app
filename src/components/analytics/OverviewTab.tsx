@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import { 
   BarChart3, 
@@ -25,7 +26,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
   const metrics = [
     { 
       title: "Total Revenue", 
-      value: `${money(data.totalRevenue)} zł`, 
+      value: `${money(data.totalRevenue)} ${currencySymbol()}`, 
       change: `${data.revenueChange >= 0 ? '+' : ''}${pct(data.revenueChange)}%`, 
       trend: data.revenueChange >= 0 ? "up" : "down", 
       period: "vs previous period", 
@@ -55,7 +56,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
     },
     { 
       title: "Avg. Ticket", 
-      value: `${money(data.averageTicket)} zł`, 
+      value: `${money(data.averageTicket)} ${currencySymbol()}`, 
       change: `${data.averageTicketChange >= 0 ? '+' : ''}${pct(data.averageTicketChange)}%`, 
       trend: data.averageTicketChange >= 0 ? "up" : "down", 
       period: "vs previous period", 
@@ -126,7 +127,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                       <div 
                         className="w-full bg-gradient-to-t from-status-completed to-status-completed/60 rounded-t hover:from-status-completed/80 hover:to-status-completed/40 transition-all cursor-pointer"
                         style={{ height: `${height}%`, minHeight: height > 0 ? '4px' : '0' }}
-                        title={`${format(new Date(day.date), "MMM dd")}: ${money(day.revenue)} zł`}
+                        title={`${format(new Date(day.date), "MMM dd")}: ${money(day.revenue)} ${currencySymbol()}`}
                       />
                       <span className="text-[10px] text-muted-foreground hidden md:block">
                         {format(new Date(day.date), "MMM dd")}
@@ -176,7 +177,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-status-completed text-base">{money(service.revenue)} zł</div>
+                      <div className="font-bold text-status-completed text-base">{money(service.revenue)} {currencySymbol()}</div>
                       {service.growth !== 0 && (
                         <div className={`text-xs font-medium ${service.growth > 0 ? 'text-status-completed' : 'text-destructive'}`}>
                           {service.growth > 0 ? '+' : ''}{pct(service.growth)}%
@@ -217,11 +218,11 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                       </span>
                       <div>
                         <p className="font-semibold text-sm">{staff.staffName}</p>
-                        <p className="text-xs text-muted-foreground">{staff.bookings} bookings • Avg: {money(staff.averageTicket)} zł</p>
+                        <p className="text-xs text-muted-foreground">{staff.bookings} bookings • Avg: {money(staff.averageTicket)} {currencySymbol()}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-status-completed text-base">{money(staff.revenue)} zł</div>
+                      <div className="font-bold text-status-completed text-base">{money(staff.revenue)} {currencySymbol()}</div>
                       {staff.growth !== 0 && (
                         <div className={`text-xs font-medium ${staff.growth > 0 ? 'text-status-completed' : 'text-destructive'}`}>
                           {staff.growth > 0 ? '+' : ''}{pct(staff.growth)}%
@@ -302,14 +303,14 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                     <DollarSign className="h-4 w-4 text-status-completed" />
                     <span className="text-xs font-semibold text-muted-foreground">Avg Revenue</span>
                   </div>
-                  <div className="text-2xl font-bold">{money(data.staffPerformance.averageRevenuePerStaff)} zł</div>
+                  <div className="text-2xl font-bold">{money(data.staffPerformance.averageRevenuePerStaff)} {currencySymbol()}</div>
                 </div>
               </div>
               <div className="p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/30">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold">Total Staff Revenue</span>
                 </div>
-                <div className="text-xl font-bold">{money(data.staffPerformance.totalStaffRevenue)} zł</div>
+                <div className="text-xl font-bold">{money(data.staffPerformance.totalStaffRevenue)} {currencySymbol()}</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {data.staffPerformance.totalStaffBookings} total bookings
                 </div>

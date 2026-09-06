@@ -1,4 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import { Package, TrendingUp, Award } from "lucide-react";
 import type { ServiceAnalytics } from "@/services/analysisService";
@@ -18,7 +19,7 @@ export default function ServicesTab({ data }: ServicesTabProps) {
             <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Avg Service Price</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{money(data.averageServicePrice)} zł</div>
+            <div className="text-2xl font-bold">{money(data.averageServicePrice)} {currencySymbol()}</div>
           </CardContent>
         </Card>
         <Card className="border-border/60 shadow-sm">
@@ -65,9 +66,9 @@ export default function ServicesTab({ data }: ServicesTabProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-status-completed text-base">{money(service.revenue)} zł</div>
+                    <div className="font-bold text-status-completed text-base">{money(service.revenue)} {currencySymbol()}</div>
                     <div className="text-xs text-muted-foreground">
-                      Avg: {money(service.averagePrice)} zł • {pct(service.revenuePercentage)}% of total
+                      Avg: {money(service.averagePrice)} {currencySymbol()} • {pct(service.revenuePercentage)}% of total
                     </div>
                   </div>
                 </div>
@@ -95,12 +96,12 @@ export default function ServicesTab({ data }: ServicesTabProps) {
                     <span className="font-semibold">{category.categoryName}</span>
                     <span className="text-sm text-muted-foreground">{pct(category.revenuePercentage)}%</span>
                   </div>
-                  <div className="text-xl font-bold mb-1">{money(category.totalRevenue)} zł</div>
+                  <div className="text-xl font-bold mb-1">{money(category.totalRevenue)} {currencySymbol()}</div>
                   <div className="text-sm text-muted-foreground">
                     {category.totalBookings} bookings • {category.serviceCount} services
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Avg price: {money(category.averageServicePrice)} zł
+                    Avg price: {money(category.averageServicePrice)} {currencySymbol()}
                   </div>
                 </div>
               ))}

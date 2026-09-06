@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -837,7 +838,7 @@ export default function AddComboServicePage() {
                                       : "N/A"}
                                   </span>
                                   <span className="font-semibold text-gray-900">
-                                    {service.price ? `${service.price.toFixed(2)} zł` : "N/A"}
+                                    {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
                                   </span>
                                 </div>
                               </div>
@@ -1048,7 +1049,7 @@ export default function AddComboServicePage() {
                         <div className="space-y-2">
                           <Label>Price</Label>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">zł</span>
+                            <span className="text-sm text-gray-600">{currencySymbol()}</span>
                             <Input
                               type="number"
                               placeholder="0.00"
@@ -1109,7 +1110,7 @@ export default function AddComboServicePage() {
                             <div className="space-y-2">
                               <Label>Price</Label>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">zł</span>
+                                <span className="text-sm text-gray-600">{currencySymbol()}</span>
                                 <Input
                                   type="number"
                                   placeholder="0.00"
@@ -1145,7 +1146,7 @@ export default function AddComboServicePage() {
                         <div>
                           <p className="text-sm text-gray-600 mb-1">COMBO PRICE</p>
                           <p className="text-2xl font-bold text-gray-900">
-                            {calculateComboPrice()} zł
+                            {calculateComboPrice()} {currencySymbol()}
                           </p>
                         </div>
                         <div>

@@ -21,6 +21,8 @@ export interface BusinessRequest {
 }
 
 export interface Business {
+  /** #12: ISO code from businesses.currency (V17). Drives every price display. */
+  currency?: string;
   id: number;
   ownerId: number;
   name: string;

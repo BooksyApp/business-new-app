@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +84,7 @@ const formatDuration = (minutes?: number): string => {
 // Helper function to format price
 const formatPrice = (price?: number): string => {
   if (price === undefined || price === null) return "N/A";
-  return `${price.toFixed(2)} zł`;
+  return `${price.toFixed(2)} ${currencySymbol()}`;
 };
 
 // Helper function to get initials
@@ -1628,7 +1629,7 @@ export default function StaffPage() {
                         <h3 className="font-semibold text-gray-900">Pending Commissions</h3>
                         <p className="text-sm text-gray-600 mt-1">
                           {pendingCommissions.length} commission{pendingCommissions.length !== 1 ? 's' : ''} • 
-                          Total: {totalPending.toFixed(2)} zł
+                          Total: {totalPending.toFixed(2)} {currencySymbol()}
                         </p>
                       </div>
                       {pendingCommissions.length > 0 && (
@@ -1683,7 +1684,7 @@ export default function StaffPage() {
                       const displayValue = ruleToShow 
                         ? ruleToShow.type === CommissionType.PERCENTAGE 
                           ? `${ruleToShow.value}%` 
-                          : `${ruleToShow.value.toFixed(2)} zł`
+                          : `${ruleToShow.value.toFixed(2)} ${currencySymbol()}`
                         : "Not set";
                       
                       return (
@@ -1772,13 +1773,13 @@ export default function StaffPage() {
                                 {commission.category.replace('_', ' ')}
                               </p>
                               <p className="text-sm text-gray-600">
-                                Sale: {commission.saleAmount.toFixed(2)} zł •
+                                Sale: {commission.saleAmount.toFixed(2)} {currencySymbol()} •
                                 Date: {new Date(commission.commissionDate).toLocaleDateString()}
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="font-semibold text-green-600">
-                                {commission.commissionAmount.toFixed(2)} zł
+                                {commission.commissionAmount.toFixed(2)} {currencySymbol()}
                               </p>
                               <Badge variant="outline" className="mt-1">
                                 {commission.status}
@@ -2823,7 +2824,7 @@ export default function StaffPage() {
 
             <div className="space-y-2">
               <Label>
-                {commissionRuleForm.type === CommissionType.PERCENTAGE ? "Percentage (%)" : "Fixed Amount (zł)"}
+                {commissionRuleForm.type === CommissionType.PERCENTAGE ? "Percentage (%)" : `Fixed Amount (${currencySymbol()})`}
               </Label>
               <Input
                 type="number"
@@ -2939,7 +2940,7 @@ export default function StaffPage() {
           <div className="space-y-4 py-4">
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">Total Pending Commissions</p>
-              <p className="text-2xl font-bold text-gray-900">{totalPending.toFixed(2)} zł</p>
+              <p className="text-2xl font-bold text-gray-900">{totalPending.toFixed(2)} {currencySymbol()}</p>
               <p className="text-xs text-gray-500 mt-1">{pendingCommissions.length} commission{pendingCommissions.length !== 1 ? 's' : ''}</p>
             </div>
 
@@ -3280,7 +3281,7 @@ export default function StaffPage() {
                                         : "N/A"}
                                     </span>
                                     <span className="font-semibold text-gray-900">
-                                      {service.price ? `${service.price.toFixed(2)} zł` : "N/A"}
+                                      {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
                                     </span>
                                   </div>
                                 </div>

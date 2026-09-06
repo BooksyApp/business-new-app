@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -336,7 +337,7 @@ export default function PaymentMethodPage({
               <div className="mt-2 p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">
-                    Custom tip: {selectedTip ? (selectedTip.percent > 0 ? `${selectedTip.percent.toFixed(1)}%` : `${selectedTip.amount.toFixed(2)} zł`) : `${parseFloat(customTip).toFixed(2)} zł`}
+                    Custom tip: {selectedTip ? (selectedTip.percent > 0 ? `${selectedTip.percent.toFixed(1)}%` : `${selectedTip.amount.toFixed(2)} ${currencySymbol()}`) : `${parseFloat(customTip).toFixed(2)} ${currencySymbol()}`}
                   </span>
                   <Button
                     variant="ghost"
@@ -455,7 +456,7 @@ export default function PaymentMethodPage({
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">x{item.quantity}</p>
-                      <p className="text-sm font-semibold text-gray-900 mt-0.5">{item.price.toFixed(2)} zł</p>
+                      <p className="text-sm font-semibold text-gray-900 mt-0.5">{item.price.toFixed(2)} {currencySymbol()}</p>
                     </div>
                   </div>
                 ))}
@@ -465,7 +466,7 @@ export default function PaymentMethodPage({
                 <p className="text-sm text-gray-600">Pedicure klasyczny (1h 15m)</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-gray-500">x1</span>
-                  <span className="text-sm font-medium text-gray-900">100,00 zł</span>
+                  <span className="text-sm font-medium text-gray-900">{`100,00 ${currencySymbol()}`}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">Discount 20%</p>
               </div>
@@ -547,7 +548,7 @@ export default function PaymentMethodPage({
           <div className="space-y-2 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium text-gray-900">{subtotal.toFixed(2)} zł</span>
+              <span className="font-medium text-gray-900">{subtotal.toFixed(2)} {currencySymbol()}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
@@ -567,7 +568,7 @@ export default function PaymentMethodPage({
                 </Button>
               </div>
               <span className="font-medium text-gray-900">
-                {discountAmount > 0 ? `-${discountAmount.toFixed(2)} zł` : "0,00 zł"}
+                {discountAmount > 0 ? `-${discountAmount.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
               </span>
             </div>
             {/* Usage section disabled */}
@@ -581,12 +582,12 @@ export default function PaymentMethodPage({
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Tip</span>
               <span className="font-medium text-gray-900">
-                {(selectedTip?.amount || parseFloat(customTip) || 0).toFixed(2)} zł
+                {(selectedTip?.amount || parseFloat(customTip) || 0).toFixed(2)} {currencySymbol()}
               </span>
             </div>
             <div className="flex items-center justify-between pt-3 border-t border-gray-200">
               <span className="text-base font-bold text-gray-900">TOTAL</span>
-              <span className="text-lg font-bold text-gray-900">{total.toFixed(2)} zł</span>
+              <span className="text-lg font-bold text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
             </div>
           </div>
 
@@ -594,35 +595,35 @@ export default function PaymentMethodPage({
           <div className="space-y-2 pt-4 border-t border-gray-200">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600">Total</span>
-              <span className="font-medium text-gray-900">{total.toFixed(2)} zł</span>
+              <span className="font-medium text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
             </div>
             {selectedPaymentMethod === "split" ? (
               <>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Cash</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCashAmount) || 0} zł</span>
+                  <span className="font-medium text-gray-900">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Card</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCardAmount) || 0} zł</span>
+                  <span className="font-medium text-gray-900">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
                 </div>
               </>
             ) : (
               <>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Customer gives</span>
-                  <span className="font-medium text-gray-900">{paymentAmount.toFixed(2)} zł</span>
+                  <span className="font-medium text-gray-900">{paymentAmount.toFixed(2)} {currencySymbol()}</span>
                 </div>
                 {change > 0 && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Return</span>
-                    <span className="font-medium text-gray-900">{change.toFixed(2)} zł</span>
+                    <span className="font-medium text-gray-900">{change.toFixed(2)} {currencySymbol()}</span>
                   </div>
                 )}
                 {change < 0 && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Due to</span>
-                    <span className="font-medium text-red-600">{Math.abs(change).toFixed(2)} zł</span>
+                    <span className="font-medium text-red-600">{Math.abs(change).toFixed(2)} {currencySymbol()}</span>
                   </div>
                 )}
               </>
@@ -694,13 +695,13 @@ export default function PaymentMethodPage({
             {/* Tip Value Input */}
             <div className="space-y-2">
               <Label>
-                {customTipType === "percentage" ? "Tip Percentage (%)" : "Tip Amount (zł)"}
+                {customTipType === "percentage" ? "Tip Percentage (%)" : `Tip Amount (${currencySymbol()})`}
               </Label>
               <div className="relative">
                 {customTipType === "percentage" ? (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">%</span>
                 ) : (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">zł</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
                 )}
                 <Input
                   type="number"
@@ -714,7 +715,7 @@ export default function PaymentMethodPage({
               {customTipValue && (
                 <p className="text-xs text-gray-500">
                   {customTipType === "percentage" ? (
-                    <>Tip amount: {(subtotal * (parseFloat(customTipValue) || 0) / 100).toFixed(2)} zł</>
+                    <>Tip amount: {(subtotal * (parseFloat(customTipValue) || 0) / 100).toFixed(2)} {currencySymbol()}</>
                   ) : (
                     <>Tip percentage: {subtotal > 0 ? ((parseFloat(customTipValue) || 0) / subtotal * 100).toFixed(2) : 0}%</>
                   )}
@@ -757,9 +758,9 @@ export default function PaymentMethodPage({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Amount (zł)</Label>
+              <Label>Amount ({currencySymbol()})</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">zł</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
                 <Input
                   type="number"
                   placeholder="Enter amount"
@@ -774,22 +775,22 @@ export default function PaymentMethodPage({
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-1">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Total</span>
-                    <span className="font-medium text-gray-900">{total.toFixed(2)} zł</span>
+                    <span className="font-medium text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Customer gives</span>
-                    <span className="font-medium text-gray-900">{parseFloat(tempPaymentAmount) || 0} zł</span>
+                    <span className="font-medium text-gray-900">{parseFloat(tempPaymentAmount) || 0} {currencySymbol()}</span>
                   </div>
                   {parseFloat(tempPaymentAmount) > total && (
                     <div className="flex items-center justify-between text-sm pt-1 border-t border-gray-200">
                       <span className="text-gray-600">Return</span>
-                      <span className="font-medium text-green-600">{(parseFloat(tempPaymentAmount) - total).toFixed(2)} zł</span>
+                      <span className="font-medium text-green-600">{(parseFloat(tempPaymentAmount) - total).toFixed(2)} {currencySymbol()}</span>
                     </div>
                   )}
                   {parseFloat(tempPaymentAmount) < total && (
                     <div className="flex items-center justify-between text-sm pt-1 border-t border-gray-200">
                       <span className="text-gray-600">Due to</span>
-                      <span className="font-medium text-red-600">{(total - parseFloat(tempPaymentAmount)).toFixed(2)} zł</span>
+                      <span className="font-medium text-red-600">{(total - parseFloat(tempPaymentAmount)).toFixed(2)} {currencySymbol()}</span>
                     </div>
                   )}
                 </div>
@@ -875,13 +876,13 @@ export default function PaymentMethodPage({
             {/* Discount Value Input */}
             <div className="space-y-2">
               <Label>
-                {discountType === "percentage" ? "Discount Percentage (%)" : "Discount Amount (zł)"}
+                {discountType === "percentage" ? "Discount Percentage (%)" : `Discount Amount (${currencySymbol()})`}
               </Label>
               <div className="relative">
                 {discountType === "percentage" ? (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">%</span>
                 ) : (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">zł</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
                 )}
                 <Input
                   type="number"
@@ -895,7 +896,7 @@ export default function PaymentMethodPage({
               {discountValue && (
                 <p className="text-xs text-gray-500">
                   {discountType === "percentage" ? (
-                    <>Discount amount: {(subtotal * (parseFloat(discountValue) || 0) / 100).toFixed(2)} zł</>
+                    <>Discount amount: {(subtotal * (parseFloat(discountValue) || 0) / 100).toFixed(2)} {currencySymbol()}</>
                   ) : (
                     <>Discount percentage: {subtotal > 0 ? ((parseFloat(discountValue) || 0) / subtotal * 100).toFixed(2) : 0}%</>
                   )}
@@ -939,15 +940,15 @@ export default function PaymentMethodPage({
             <div className="p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="text-gray-600">Total Amount</span>
-                <span className="font-semibold text-gray-900">{total.toFixed(2)} zł</span>
+                <span className="font-semibold text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
               </div>
             </div>
 
             {/* Cash Amount Input */}
             <div className="space-y-2">
-              <Label>Cash Amount (zł)</Label>
+              <Label>Cash Amount ({currencySymbol()})</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">zł</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
                 <Input
                   type="number"
                   placeholder="Enter cash amount"
@@ -966,9 +967,9 @@ export default function PaymentMethodPage({
 
             {/* Card Amount Input */}
             <div className="space-y-2">
-              <Label>Card Amount (zł)</Label>
+              <Label>Card Amount ({currencySymbol()})</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">zł</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
                 <Input
                   type="number"
                   placeholder="Enter card amount"
@@ -990,11 +991,11 @@ export default function PaymentMethodPage({
               <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Cash</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCashAmount) || 0} zł</span>
+                  <span className="font-medium text-gray-900">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Card</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCardAmount) || 0} zł</span>
+                  <span className="font-medium text-gray-900">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
                   <span className="text-gray-600 font-semibold">Total</span>
@@ -1003,12 +1004,12 @@ export default function PaymentMethodPage({
                       ? "text-green-600"
                       : "text-red-600"
                   }`}>
-                    {((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0)).toFixed(2)} zł
+                    {((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0)).toFixed(2)} {currencySymbol()}
                   </span>
                 </div>
                 {Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) >= 0.01 && (
                   <p className="text-xs text-red-600 mt-1">
-                    Amounts must equal {total.toFixed(2)} zł
+                    Amounts must equal {total.toFixed(2)} {currencySymbol()}
                   </p>
                 )}
               </div>

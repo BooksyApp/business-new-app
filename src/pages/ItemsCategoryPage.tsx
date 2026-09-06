@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ArrowLeft, Search, Plus, ChevronRight, GripVertical, Sparkles, FolderPlus, Package, Layers, Loader2, Box, EyeOff, MapPin, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +43,7 @@ const formatDuration = (minutes?: number): string => {
 // Helper function to format price
 const formatPrice = (price?: number): string => {
   if (price === undefined || price === null) return "N/A";
-  return `${price.toFixed(2)} zł`;
+  return `${price.toFixed(2)} ${currencySymbol()}`;
 };
 
 // Helper function to get color class from color string

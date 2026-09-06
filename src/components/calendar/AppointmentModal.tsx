@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -244,13 +245,13 @@ export function AppointmentModal({
             <div className="flex justify-between items-center">
               <Label className="text-xs font-medium">Total</Label>
               <span className="text-xs font-semibold">
-                {price ? `${price.toFixed(2)} zł` : "0,00 zł"}
+                {price ? `${price.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <Label className="text-xs font-medium">To be paid</Label>
               <span className="text-xs font-semibold">
-                {price ? `${price.toFixed(2)} zł` : "0,00 zł"}
+                {price ? `${price.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
               </span>
             </div>
           </div>

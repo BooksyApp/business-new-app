@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -416,7 +417,7 @@ export default function AnalyticsPage() {
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
                         <p className="text-sm text-muted-foreground">Total Staff Revenue</p>
-                        <p className="text-2xl font-bold">{performance.totalStaffRevenue?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{performance.totalStaffRevenue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Total Staff Bookings</p>
@@ -424,7 +425,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Avg Revenue/Staff</p>
-                        <p className="text-2xl font-bold">{performance.averageRevenuePerStaff?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{performance.averageRevenuePerStaff?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                     </div>
                     {performance.staffDetails && performance.staffDetails.length > 0 && (
@@ -594,11 +595,11 @@ export default function AnalyticsPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Total Revenue</p>
-                        <p className="text-2xl font-bold">{profitability.totalRevenue?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{profitability.totalRevenue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Estimated Profit</p>
-                        <p className="text-2xl font-bold">{profitability.estimatedProfit?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{profitability.estimatedProfit?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Profit Margin</p>
@@ -662,7 +663,7 @@ export default function AnalyticsPage() {
                               <tr key={idx} className="border-b hover:bg-muted/50">
                                 <td className="py-2">{item.method}</td>
                                 <td className="py-2">{item.transactions}</td>
-                                <td className="py-2">{item.revenue.toFixed(2)} zł</td>
+                                <td className="py-2">{item.revenue.toFixed(2)} {currencySymbol()}</td>
                                 <td className="py-2">{item.percentage?.toFixed(1)}%</td>
                               </tr>
                             ))}
@@ -812,7 +813,7 @@ export default function AnalyticsPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Average Revenue/Hour</p>
-                        <p className="text-2xl font-bold">{revenuePerHour.averageRevenuePerHour?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{revenuePerHour.averageRevenuePerHour?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Best Hour</p>
@@ -820,7 +821,7 @@ export default function AnalyticsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Peak Hour Revenue</p>
-                        <p className="text-2xl font-bold">{revenuePerHour.peakHourRevenue?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{revenuePerHour.peakHourRevenue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -849,11 +850,11 @@ export default function AnalyticsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Avg First Visit Value</p>
-                        <p className="text-2xl font-bold">{acquisition.averageFirstVisitValue?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{acquisition.averageFirstVisitValue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Acquisition Cost</p>
-                        <p className="text-2xl font-bold">{acquisition.customerAcquisitionCost?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{acquisition.customerAcquisitionCost?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -882,11 +883,11 @@ export default function AnalyticsPage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Bundle Revenue</p>
-                        <p className="text-2xl font-bold">{bundles.bundleRevenue?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{bundles.bundleRevenue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Avg Bundle Value</p>
-                        <p className="text-2xl font-bold">{bundles.averageBundleValue?.toFixed(2)} zł</p>
+                        <p className="text-2xl font-bold">{bundles.averageBundleValue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Revenue %</p>
