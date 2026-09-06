@@ -4,48 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Star, ThumbsUp, MessageSquare, TrendingUp, Reply } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { useEffect, useState } from "react";
+import { getCurrentBusinessId } from "@/config/api";
+import { reviewService, ratingBreakdown, type Review, type RatingSummary } from "@/services/reviewService";
 
-const reviewStats = {
-  average: 4.8,
-  total: 128,
-  breakdown: [
-    { stars: 5, count: 89, percent: 69 },
-    { stars: 4, count: 28, percent: 22 },
-    { stars: 3, count: 8, percent: 6 },
-    { stars: 2, count: 2, percent: 2 },
-    { stars: 1, count: 1, percent: 1 },
-  ],
-};
+// #25: this page shipped with hardcoded demo reviews — invented client names,
+// invented comments and an invented 4.8 average from 128 reviews — on a screen a salon
+// owner would read as their real reputation. ReviewController has existed all along;
+// nothing here had ever called it.
+//
+// The API returns rating, comment, createdAt and staffId. It does NOT return a client
+// name or a service name, so those are not shown rather than fabricated.
 
-const recentReviews = [
-  {
-    id: "1",
-    client: "Sarah Mitchell",
-    rating: 5,
-    date: "2 days ago",
-    service: "Hair Cut & Color",
-    staff: "Maria",
-    comment: "Absolutely loved my experience! Maria is incredibly talented and understood exactly what I wanted. The salon is beautiful and the service was exceptional.",
-  },
-  {
-    id: "2",
-    client: "James Wilson",
-    rating: 5,
-    date: "3 days ago",
-    service: "Swedish Massage",
-    staff: "Amy",
-    comment: "Best massage I've ever had. Amy is a true professional. The atmosphere was so relaxing. Will definitely be back!",
-  },
-  {
-    id: "3",
-    client: "Emily Brown",
-    rating: 4,
-    date: "5 days ago",
-    service: "Manicure",
-    staff: "Wendy",
-    comment: "Great service and lovely results. The only reason for 4 stars is the wait time was a bit longer than expected.",
-  },
-];
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -62,6 +32,24 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function ReviewsPage() {
+  const businessId = getCurrentBusinessId();
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [summary, setSummary] = useState<RatingSummary>({ count: 0, average: null });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!businessId) { setLoading(false); return; }
+    Promise.all([
+      reviewService.getByBusiness(businessId),
+      reviewService.getSummary(businessId),
+    ])
+      .then(([list, sum]) => { setReviews(list || []); setSummary(sum || { count: 0, average: null }); })
+      .catch(() => { setReviews([]); setSummary({ count: 0, average: null }); })
+      .finally(() => setLoading(false));
+  }, [businessId]);
+
+  const breakdown = ratingBreakdown(reviews);
+
   return (
     <AppLayout>
       <PageHeader
@@ -89,15 +77,15 @@ export default function ReviewsPage() {
             <CardContent>
               <div className="flex items-center gap-4 mb-6">
                 <span className="text-5xl font-bold bg-gradient-to-br from-accent to-purple-600 bg-clip-text text-transparent">
-                  {reviewStats.average}
+                  {summary.average != null ? summary.average.toFixed(1) : "—"}
                 </span>
                 <div>
                   <StarRating rating={5} />
-                  <p className="text-sm text-muted-foreground font-medium mt-1">{reviewStats.total} reviews</p>
+                  <p className="text-sm text-muted-foreground font-medium mt-1">{summary.count} {summary.count === 1 ? "review" : "reviews"}</p>
                 </div>
               </div>
               <div className="space-y-2.5">
-                {reviewStats.breakdown.map((item) => (
+                {breakdown.map((item) => (
                   <div key={item.stars} className="flex items-center gap-3">
                     <span className="text-sm font-semibold w-4">{item.stars}</span>
                     <Star size={12} className="fill-appointment-yellow text-appointment-yellow" />
@@ -149,7 +137,14 @@ export default function ReviewsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {recentReviews.map((review, index) => (
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading reviews…</p>
+              ) : reviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No reviews yet. They appear here as clients leave them.
+                </p>
+              ) : null}
+              {reviews.map((review, index) => (
                 <div 
                   key={review.id} 
                   className="border-b border-border/60 pb-6 last:border-0 last:pb-0"
@@ -159,22 +154,28 @@ export default function ReviewsPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="ring-2 ring-background">
                         <AvatarFallback className="bg-gradient-to-br from-accent/20 to-purple-600/20 text-foreground font-semibold">
-                          {review.client.split(" ").map(n => n[0]).join("")}
+                          {review.staffId ? "S" : "C"}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-semibold text-sm">{review.client}</p>
+                        {/* #25: the API carries no client or service name. Showing the
+                            rating honestly beats inventing an author for it. */}
+                        <p className="font-semibold text-sm">Client review</p>
                         <p className="text-xs text-muted-foreground font-medium">
-                          {review.service} • {review.staff}
+                          {review.staffId ? `Staff #${review.staffId}` : "No staff recorded"}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
                       <StarRating rating={review.rating} />
-                      <p className="text-xs text-muted-foreground font-medium mt-1">{review.date}</p>
+                      <p className="text-xs text-muted-foreground font-medium mt-1">
+                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}
+                      </p>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">{review.comment}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                    {review.comment || <span className="italic">Rating only, no comment</span>}
+                  </p>
                   <Button 
                     variant="outline" 
                     size="sm"
