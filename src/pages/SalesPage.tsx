@@ -675,8 +675,12 @@ export default function SalesPage() {
               staffId: staffId,
               clientName: selectedClient || undefined,
               items: saleItems,
-              discountAmount: 0,
-              discountPercent: 0,
+              // #31: these were hardcoded to zero, so the recorded sale was always at
+              // full price even when the screen showed a discount and the customer paid
+              // the discounted total. Backend #34 had to land first — with the discount
+              // finally arriving, commissions would otherwise have been paid on gross.
+              discountAmount: paymentData.discountAmount,
+              discountPercent: paymentData.discountPercent,
               tipAmount: paymentData.tip,
               tipPercent: paymentData.tipPercent,
               paymentMethod: paymentMethodMap[paymentData.paymentMethod] || 'CASH',

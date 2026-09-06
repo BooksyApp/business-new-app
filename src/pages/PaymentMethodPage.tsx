@@ -38,6 +38,11 @@ interface PaymentMethodPageProps {
   onConfirm?: (paymentData: {
     tip: number;
     tipPercent: number;
+    // #31: the discount was applied on screen, shown in the summary and used for the
+    // change calculation, but never left this component — so the sale was recorded at
+    // full price while the customer paid the discounted total.
+    discountAmount: number;
+    discountPercent: number;
     paymentMethod: string;
     amount: number;
     change: number;
@@ -212,6 +217,8 @@ export default function PaymentMethodPage({
       const paymentData: {
         tip: number;
         tipPercent: number;
+        discountAmount: number;
+        discountPercent: number;
         paymentMethod: string;
         amount: number;
         change: number;
@@ -220,6 +227,9 @@ export default function PaymentMethodPage({
       } = {
         tip: selectedTip?.amount || parseFloat(customTip) || 0,
         tipPercent: selectedTip?.percent || 0,
+        // #31: carry the applied discount out with the rest of the payment.
+        discountAmount,
+        discountPercent,
         paymentMethod: selectedPaymentMethod,
         amount: paymentAmount,
         change: paymentAmount - (subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0)),
