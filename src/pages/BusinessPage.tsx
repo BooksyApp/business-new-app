@@ -61,7 +61,10 @@ export default function BusinessPage() {
   // Edit dialog state
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "", phone: "", description: "", address: "", category: "", website: "", email: ""
+    name: "", phone: "", description: "", address: "", category: "", website: "", email: "",
+    // #37: empty means "leave unchanged" — the backend COALESCEs each column, so a blank
+    // field must not be sent as 0 and silently wipe a configured policy.
+    depositPercent: "", cancellationWindowHours: "", lateCancellationFee: ""
   });
   const [saving, setSaving] = useState(false);
 
@@ -100,6 +103,9 @@ export default function BusinessPage() {
           category: businessPayload.category ?? "",
           website: businessPayload.website ?? "",
           email: businessPayload.email ?? "",
+          depositPercent: businessPayload.depositPercent != null ? String(businessPayload.depositPercent) : "",
+          cancellationWindowHours: businessPayload.cancellationWindowHours != null ? String(businessPayload.cancellationWindowHours) : "",
+          lateCancellationFee: businessPayload.lateCancellationFee != null ? String(businessPayload.lateCancellationFee) : "",
         });
       })
       .catch((e: unknown) => {
@@ -134,6 +140,10 @@ export default function BusinessPage() {
         category: editForm.category || undefined,
         website: editForm.website || undefined,
         email: editForm.email || undefined,
+        // #37: only send what was actually filled in. undefined leaves the column alone.
+        depositPercent: editForm.depositPercent.trim() !== "" ? Number(editForm.depositPercent) : undefined,
+        cancellationWindowHours: editForm.cancellationWindowHours.trim() !== "" ? Number(editForm.cancellationWindowHours) : undefined,
+        lateCancellationFee: editForm.lateCancellationFee.trim() !== "" ? Number(editForm.lateCancellationFee) : undefined,
       });
       setBusiness(updated);
       setEditOpen(false);
@@ -472,6 +482,41 @@ export default function BusinessPage() {
                 onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))}
                 placeholder="https://example.com"
               />
+            </div>
+            {/* #37: deposit and cancellation policy shipped backend-only (#244/#308) and
+                was unreachable from the manager app — a salon could not set a deposit at
+                all. Leaving a field empty keeps the current value. */}
+            <div className="space-y-2 rounded-lg border border-border/60 p-3">
+              <p className="text-sm font-medium">Booking policy</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Deposit %</Label>
+                  <Input
+                    type="number" min="0" max="100" step="1"
+                    value={editForm.depositPercent}
+                    onChange={e => setEditForm(f => ({ ...f, depositPercent: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Free cancel (h)</Label>
+                  <Input
+                    type="number" min="0" step="1"
+                    value={editForm.cancellationWindowHours}
+                    onChange={e => setEditForm(f => ({ ...f, cancellationWindowHours: e.target.value }))}
+                    placeholder="24"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Late fee</Label>
+                  <Input
+                    type="number" min="0" step="0.01"
+                    value={editForm.lateCancellationFee}
+                    onChange={e => setEditForm(f => ({ ...f, lateCancellationFee: e.target.value }))}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
