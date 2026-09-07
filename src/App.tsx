@@ -29,6 +29,9 @@ const SetupPage = lazy(() => import("./pages/SetupPage"));
 const MarketingPage = lazy(() => import("./pages/MarketingPage"));
 const ReferralProgramPage = lazy(() => import("./pages/ReferralProgramPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
+const LocationsPage = lazy(() => import("./pages/LocationsPage"));
+const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
+const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 const BusinessPage = lazy(() => import("./pages/BusinessPage"));
 const BusinessHoursPage = lazy(() => import("./pages/BusinessHoursPage"));
 const RegistrationPage = lazy(() => import("./pages/RegistrationPage"));
@@ -158,6 +161,9 @@ const App = () => (
               <Route path="business" element={<Suspense fallback={<PageLoader />}><BusinessPage /></Suspense>} />
               <Route path="business-hours" element={<Suspense fallback={<PageLoader />}><BusinessHoursPage /></Suspense>} />
               <Route path="setup" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
+              <Route path="locations" element={<Suspense fallback={<PageLoader />}><LocationsPage /></Suspense>} />
+              <Route path="booking-rules" element={<Suspense fallback={<PageLoader />}><BookingRulesPage /></Suspense>} />
+              <Route path="security" element={<Suspense fallback={<PageLoader />}><SecurityPage /></Suspense>} />
               <Route path="help" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense>} />
               <Route path="payment-method" element={<Suspense fallback={<PageLoader />}><PaymentMethodPage /></Suspense>} />
