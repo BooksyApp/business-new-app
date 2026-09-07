@@ -331,6 +331,7 @@ const navItems: NavItem[] = [
   // Same as Reviews: the page and route existed (#32) with nothing linking to them, so a
   // salon could not reach its own referral programme.
   { icon: Gift, label: "Referrals", path: "/referral-program" },
+  { icon: BadgeCheck, label: "Memberships", path: "/memberships" },
   { icon: StaffIcon, label: "Staff", path: "/staff" },
   { icon: BusinessIcon, label: "Business", path: "/business" },
   { icon: ClockIcon, label: "Hours", path: "/business-hours" },
