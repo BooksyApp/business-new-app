@@ -27,6 +27,12 @@ export interface PaymentConfirmationRequest {
     unitPrice: number;
     duration?: string;
     notes?: string;
+    /** A benefit that pays for this line instead of money. */
+    coveredBy?: 'MEMBERSHIP' | 'PACKAGE' | 'VISIT_REWARD';
+    /** Set when the line IS a membership being sold, so the sale enrols the client. */
+    membershipId?: number;
+    /** Set when the line is a gift card being sold, so the sale issues one. */
+    giftCardAmount?: number;
   }>;
   discountAmount?: number;
   discountPercent?: number;

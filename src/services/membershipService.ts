@@ -61,6 +61,15 @@ class MembershipService {
     return apiClient.delete<void>(`/businesses/${businessId}/memberships/${id}`);
   }
 
+  services(businessId: number, id: number): Promise<number[]> {
+    return apiClient.get<number[]>(`/businesses/${businessId}/memberships/${id}/services`);
+  }
+
+  /** Replaces the services a plan covers. An empty list means every service. */
+  setServices(businessId: number, id: number, serviceIds: number[]): Promise<number[]> {
+    return apiClient.put<number[]>(`/businesses/${businessId}/memberships/${id}/services`, { serviceIds });
+  }
+
   members(businessId: number): Promise<MembershipMember[]> {
     return apiClient.get<MembershipMember[]>(`/businesses/${businessId}/memberships/members`);
   }

@@ -1,0 +1,36 @@
+import { apiClient } from "@/config/api";
+
+export interface ClientBenefits {
+  points: number;
+  visits: number;
+  visitsForReward: number;
+  rewardsAvailable: number;
+  memberships: Array<{
+    id: number;
+    membership_id: number;
+    name: string;
+    discount_percent: number;
+    included_sessions: number;
+    sessions_remaining: number;
+    renews_at: string;
+    serviceIds: number[];
+  }>;
+  packages: Array<{ id: number; name: string; service_id: number | null; sessions_remaining: number }>;
+  giftCards: Array<{ code: string; balance: number }>;
+}
+
+/**
+ * What a client can pay with, in one call.
+ *
+ * The checkout screen used to offer "Membership" and "Package" as payment methods with
+ * nothing behind them — the cashier picked one and found out at confirm whether the client
+ * actually had it. This is asked once, when the client is chosen, so unusable options are
+ * never offered.
+ */
+class TillBenefitsService {
+  get(businessId: number, clientId: number): Promise<ClientBenefits> {
+    return apiClient.get<ClientBenefits>(`/businesses/${businessId}/clients/${clientId}/benefits`);
+  }
+}
+
+export const tillBenefitsService = new TillBenefitsService();
