@@ -17,6 +17,14 @@ export interface BusinessRequest {
    * A URL the salon supplies — there is no file storage yet. Empty string clears it.
    */
   coverImageUrl?: string;
+  /** Branding: a URL, since this system has no file storage. */
+  logoUrl?: string;
+  brandColor?: string;
+  receiptFooter?: string;
+  /** Branding: a URL, since this system has no file storage. */
+  logoUrl?: string;
+  brandColor?: string;
+  receiptFooter?: string;
   website?: string;
   email?: string;
   phone?: string;
