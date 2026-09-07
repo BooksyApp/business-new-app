@@ -2,6 +2,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { subscriptionService, type SubscriptionStatus } from "@/services/subscriptionService";
 import { Check, ChevronRight, ExternalLink, Eye, MapPin, MessageSquare, Pencil, Share2, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { categoryService, type BusinessCategory } from "@/services/categoryService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { businessService, type Business } from "@/services/businessService";
 import { serviceService, type Service } from "@/services/serviceService";
 import { useNavigate } from "react-router-dom";
@@ -54,6 +56,7 @@ export default function BusinessPage() {
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const [copied, setCopied] = useState(false);
+  const [categories, setCategories] = useState<BusinessCategory[]>([]);
   const [business, setBusiness] = useState<Business | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +79,12 @@ export default function BusinessPage() {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [plans, setPlans] = useState<string[]>([]);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+
+  useEffect(() => {
+    // An empty list leaves the picker empty rather than falling back to a private copy
+    // of the options: two lists that can disagree is the problem this replaces.
+    categoryService.list().then(setCategories).catch(() => setCategories([]));
+  }, []);
 
   useEffect(() => {
     const idRaw = localStorage.getItem("currentBusinessId");
@@ -545,13 +554,29 @@ export default function BusinessPage() {
                 />
               </div>
             </div>
+            {/* Was a free-text box, so the same trade was stored three different ways and
+                the customer app listed each spelling as its own category. */}
             <div className="space-y-2">
               <Label>Category</Label>
-              <Input
+              <Select
                 value={editForm.category}
-                onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
-                placeholder="e.g. Hair Salon, Spa, Barbershop"
-              />
+                onValueChange={v => setEditForm(f => ({ ...f, category: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(c => (
+                    <SelectItem key={c.slug} value={c.name}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editForm.category && !categories.some(c => c.name === editForm.category) ? (
+                <p className="text-xs text-muted-foreground">
+                  Currently "{editForm.category}" — pick the closest match so customers can
+                  find you under it.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label>Address</Label>

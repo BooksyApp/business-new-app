@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { categoryService, type BusinessCategory } from "@/services/categoryService";
 import AddressMapPicker from "@/components/AddressMapPicker";
 import { authService } from "@/services/authService";
 import { businessService } from "@/services/businessService";
@@ -144,19 +145,31 @@ const RegistrationPage = () => {
     { id: "3", street: "Karola Taylora", city: "Warsaw", country: "Poland" },
   ];
 
-  const featuredCategories = [
-    { id: "nail-salons", name: "Nail salons", icon: Sparkles },
-    { id: "brows-lashes", name: "Brows & Lashes", icon: Heart },
-    { id: "skin-care", name: "Skin care", icon: Heart },
-    { id: "hair-salons", name: "Hair salons", icon: Scissors },
-    { id: "aesthetic-medicine", name: "Aesthetic medicine", icon: Stethoscope },
-    { id: "barbers", name: "Barbers", icon: Scissors },
-  ];
+  // The first six from the same backend list, so the tiles and the dropdown can never
+  // offer different spellings of the same trade. Icons are ours; the names are not.
+  const CATEGORY_ICONS: Record<string, typeof Scissors> = {
+    "hair-salon": Scissors,
+    barbershop: Scissors,
+    "nail-salon": Sparkles,
+    "brows-lashes": Heart,
+    "skin-care": Heart,
+    massage: Heart,
+    "spa-wellness": Heart,
+    "aesthetic-medicine": Stethoscope,
+    dental: Stethoscope,
+  };
+  const featuredCategories = otherCategories.slice(0, 6).map((c) => ({
+    id: c.slug,
+    name: c.name,
+    icon: CATEGORY_ICONS[c.slug] ?? Sparkles,
+  }));
 
-  const otherCategories = [
-    "Automotive", "Dental", "Diet & training", "Hair Removal", "Health",
-    "Massage", "Tattoo & Piercing", "Wellness", "Yoga & Fitness",
-  ];
+  // Was a hardcoded array here and a free-text box on the business profile, so the same
+  // trade ended up stored three different ways. One list, from the backend.
+  const [otherCategories, setOtherCategories] = useState<BusinessCategory[]>([]);
+  useEffect(() => {
+    categoryService.list().then(setOtherCategories).catch(() => setOtherCategories([]));
+  }, []);
 
   const helpOptions = [
     "More self-booked clients", "Selling products", "Less canceled or missed appointments",
@@ -819,20 +832,23 @@ const RegistrationPage = () => {
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-gray-700">Business Category</Label>
                     <div className="grid grid-cols-3 gap-3">
+                      {/* Stores the name, matching the backend list. The tiles used to
+                          store their own id, so a salon picking one was filed under a
+                          slug the dropdown and the customer app never used. */}
                       {featuredCategories.map((cat) => {
                         const Icon = cat.icon;
                         return (
                           <button
                             key={cat.id}
-                            onClick={() => updateFormData("category", cat.id)}
+                            onClick={() => updateFormData("category", cat.name)}
                             className={`p-4 rounded-xl border-2 transition-all ${
-                              formData.category === cat.id
+                              formData.category === cat.name
                                 ? "border-gray-900 bg-gray-50"
                                 : "border-gray-200 hover:border-gray-300 bg-white"
                             }`}
                           >
                             <Icon className={`h-6 w-6 mx-auto mb-2 ${
-                              formData.category === cat.id ? "text-gray-900" : "text-gray-400"
+                              formData.category === cat.name ? "text-gray-900" : "text-gray-400"
                             }`} />
                             <p className="text-xs font-medium text-gray-700 leading-tight">{cat.name}</p>
                           </button>
@@ -844,9 +860,12 @@ const RegistrationPage = () => {
                         <SelectValue placeholder="Or select another category" />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* The name, not a slug: the wizard used to store "hair-salons"
+                            while the profile stored "Hair Salon", and the customer app
+                            showed both. */}
                         {otherCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat.toLowerCase().replace(/\s+/g, "-")}>
-                            {cat}
+                          <SelectItem key={cat.slug} value={cat.name}>
+                            {cat.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,30 @@ export default function AnalyticsPage() {
   };
 
   // Reset all cached data when period changes so guards allow re-fetching
+  /**
+   * Day-by-day revenue and bookings as CSV. The button did nothing at all, on the one
+   * screen an owner opens when they need these numbers somewhere else — a spreadsheet,
+   * an accountant, a bank. Built from what is already loaded, so it needs no new endpoint
+   * and always matches what is on screen.
+   */
+  const exportCsv = () => {
+    if (!revenue) return;
+    const rows = [
+      ["Date", "Revenue", "Bookings"],
+      ...(revenue.revenueByDay ?? []).map(d => [d.date, String(d.revenue ?? 0), String(d.bookings ?? 0)]),
+    ];
+    // Quote every field: a salon name or a date format with a comma in it would otherwise
+    // shift every later column by one.
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `analytics-${period}-days-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${(revenue.revenueByDay ?? []).length} days`);
+  };
+
   useEffect(() => {
     setOverview(null);
     setRevenue(null);
@@ -241,9 +266,11 @@ export default function AnalyticsPage() {
                 <SelectItem value="365">Last Year</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
+              onClick={exportCsv}
+              disabled={loading || !revenue}
             >
               <Download size={16} />
               Export
