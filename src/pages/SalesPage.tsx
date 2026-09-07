@@ -647,7 +647,14 @@ export default function SalesPage() {
       <PaymentMethodPage
         orderItems={orderItems}
         subtotal={calculateTotal()}
-        selectedClient={selectedClient ? { id: "", name: selectedClient } : null}
+        // The client object, not its name: every benefit at the till — membership,
+        // package, points, the stamp card — is keyed by client id, and this was passing
+        // the whole record in as a name string.
+        selectedClient={
+          selectedClient
+            ? { id: String(selectedClient.id), name: getClientDisplayName(selectedClient) }
+            : null
+        }
         selectedStaff={staff?.find(s => s.id === selectedAppointmentStaffId) ?? (staff && staff.length > 0 ? staff[0] : null)}
         // #15: a walk-in sale defaults to the first staff member (harmless with one
         // staff member, silently wrong with several) — staffList + onStaffChange make
@@ -679,6 +686,11 @@ export default function SalesPage() {
                 quantity: 1,
                 unitPrice: price,
                 duration: item.duration,
+                // Which benefit covers this line, when one does. Set per line so a basket
+                // can mix a service that is free on the membership with one that is paid.
+                coveredBy: paymentData.coverage?.[item.id],
+                membershipId: item.membershipId,
+                giftCardAmount: item.giftCardAmount,
               };
             });
 
@@ -692,7 +704,8 @@ export default function SalesPage() {
             const confirmationRequest: PaymentConfirmationRequest = {
               businessId: businessId!,
               staffId: staffId,
-              clientName: selectedClient || undefined,
+              clientId: selectedClient ? Number(selectedClient.id) : undefined,
+              clientName: selectedClient ? getClientDisplayName(selectedClient) : undefined,
               items: saleItems,
               // #31: these were hardcoded to zero, so the recorded sale was always at
               // full price even when the screen showed a discount and the customer paid
@@ -703,6 +716,8 @@ export default function SalesPage() {
               tipAmount: paymentData.tip,
               tipPercent: paymentData.tipPercent,
               paymentMethod: paymentMethodMap[paymentData.paymentMethod] || 'CASH',
+              // The tenders, when the checkout screen collected more than one.
+              payments: paymentData.payments,
               paymentAmount: paymentData.amount,
               giftCardCode: paymentData.giftCardCode,
               splitCashAmount: paymentData.splitCashAmount,

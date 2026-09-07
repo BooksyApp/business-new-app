@@ -1,6 +1,18 @@
 import { apiClient } from '@/config/api';
 
+/** One tender on a bill. A bill can have several: 20 off a gift card, 80 in cash. */
+export interface SalePayment {
+  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS';
+  amount: number;
+  /** Gift card code, when the method is GIFT_CARD. */
+  giftCardCode?: string;
+  /** Points spent, when the method is POINTS. */
+  points?: number;
+}
+
 export interface PaymentConfirmationRequest {
+  /** Several tenders on one bill. Preferred over paymentMethod + split fields. */
+  payments?: SalePayment[];
   businessId: number;
   staffId?: number;
   clientId?: number;
