@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import { quickSaleService, type QuickSaleItem as QuickSaleItemAPI } from "@/services/quickSaleService";
+import { membershipService, type Membership } from "@/services/membershipService";
 import { appointmentService } from "@/services/appointmentService";
 import { clientService, type ClientWithStats } from "@/services/clientService";
 import { categoryService, type Category } from "@/services/categoryService";
@@ -124,10 +125,12 @@ export default function SalesPage() {
     { id: "to-be-settled", name: "TO BE SETTLED" },
     { id: "services", name: "SERVICES" },
     { id: "extras", name: "EXTRAS" },
+    // Memberships are off until the plans and their billing are signed off.
+    // { id: "memberships", name: "MEMBERSHIPS" },
+    { id: "gift-cards", name: "GIFT CARDS" },
     // Disabled sections from products to timepass
     // { id: "products", name: "PRODUCTS" },
     // { id: "own-amount", name: "OWN AMOUNT" },
-    // { id: "gift-cards", name: "GIFT CARDS" },
     // { id: "packages", name: "PACKAGES" },
     // { id: "time-passes", name: "TIME PASSES" },
   ];
@@ -144,6 +147,10 @@ export default function SalesPage() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedQuickSaleItems, setSelectedQuickSaleItems] = useState<string[]>([]);
   const [quickSaleItems, setQuickSaleItems] = useState<QuickSaleItem[]>([]);
+  // Sellable at the till, not just bookable: a membership and a gift card are things the
+  // salon takes money for over the counter, which the basket had no way to represent.
+  const [sellableMemberships, setSellableMemberships] = useState<Membership[]>([]);
+  const [giftCardAmount, setGiftCardAmount] = useState("100");
   const [loadingQuickSale, setLoadingQuickSale] = useState(false);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [appointmentsError, setAppointmentsError] = useState(false);
@@ -229,6 +236,10 @@ export default function SalesPage() {
     };
 
     loadQuickSaleItems();
+    membershipService
+      .list(businessId, true)
+      .then(setSellableMemberships)
+      .catch(() => setSellableMemberships([]));
   }, [businessId, services, servicesLoading]);
 
   // Load today's appointments when "to-be-settled" category is active
@@ -682,7 +693,14 @@ export default function SalesPage() {
               return {
                 serviceId: item.serviceId,
                 serviceName: item.name,
-                serviceType: item.type === 'combo' ? 'COMBO' : 'SERVICE',
+                serviceType:
+                  item.type === 'combo'
+                    ? 'COMBO'
+                    : item.type === 'membership'
+                      ? 'MEMBERSHIP'
+                      : item.type === 'gift-card'
+                        ? 'GIFT_CARD'
+                        : 'SERVICE',
                 quantity: 1,
                 unitPrice: price,
                 duration: item.duration,
@@ -1067,6 +1085,118 @@ export default function SalesPage() {
                         })}
                     </div>
                   )}
+                </>
+              )}
+
+              {activeCategory === "memberships" && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">MEMBERSHIPS</h2>
+                  </div>
+                  {sellableMemberships.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No plans yet. Create one under Memberships and it becomes sellable here.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                      {sellableMemberships.map((plan) => (
+                        <button
+                          key={plan.id}
+                          onClick={() =>
+                            setBasket((b) => [
+                              ...b,
+                              {
+                                id: `membership-${plan.id}-${Date.now()}`,
+                                name: plan.name,
+                                price: String(plan.price),
+                                type: "membership",
+                                // The sale enrols the client in this plan once it is paid.
+                                membershipId: plan.id,
+                              },
+                            ])
+                          }
+                          className="rounded-lg border border-gray-200 p-4 text-left hover:border-gray-400"
+                        >
+                          <p className="font-medium text-gray-900">{plan.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {plan.price} {currencySymbol()} every{" "}
+                            {plan.billing_period_months === 1
+                              ? "month"
+                              : `${plan.billing_period_months} months`}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {[
+                              plan.discount_percent > 0 ? `${plan.discount_percent}% off visits` : null,
+                              plan.included_sessions > 0
+                                ? `${plan.included_sessions} sessions included`
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <p className="mt-4 text-xs text-gray-500">
+                    Pick the client on the checkout screen — a membership is sold to someone, not to
+                    the counter.
+                  </p>
+                </>
+              )}
+
+              {activeCategory === "gift-cards" && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">GIFT CARDS</h2>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500">Amount ({currencySymbol()})</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={giftCardAmount}
+                        onChange={(e) => setGiftCardAmount(e.target.value)}
+                        className="block w-40 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        const amount = parseFloat(giftCardAmount) || 0;
+                        if (amount <= 0) return;
+                        setBasket((b) => [
+                          ...b,
+                          {
+                            id: `gift-card-${Date.now()}`,
+                            name: `Gift card ${amount} ${currencySymbol()}`,
+                            price: String(amount),
+                            type: "gift-card",
+                            // The sale issues the card once it is paid, to the client on the bill.
+                            giftCardAmount: amount,
+                          },
+                        ]);
+                      }}
+                      className="rounded-lg bg-gray-900 px-4 py-2 text-white"
+                    >
+                      Add to basket
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[50, 100, 200, 500].map((preset) => (
+                      <button
+                        key={preset}
+                        onClick={() => setGiftCardAmount(String(preset))}
+                        className="rounded-full border border-gray-300 px-4 py-1 text-sm hover:border-gray-500"
+                      >
+                        {preset} {currencySymbol()}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-xs text-gray-500">
+                    The card is issued to the client on the bill, so it shows up in their app with no
+                    code to type.
+                  </p>
                 </>
               )}
 

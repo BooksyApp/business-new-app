@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import {
+  loyaltySettingsService,
   membershipService,
   type Membership,
   type MembershipMember,
@@ -39,6 +40,10 @@ export default function MembershipsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY);
+  // The stamp card, which is a loyalty programme rather than a plan — but it lives here
+  // because both answer "what keeps this client coming back".
+  const [visitsForReward, setVisitsForReward] = useState("");
+  const [savingLoyalty, setSavingLoyalty] = useState(false);
 
   const load = async () => {
     try {
@@ -49,6 +54,8 @@ export default function MembershipsPage() {
       ]);
       setPlans(p);
       setMembers(m);
+      const loyalty = await loyaltySettingsService.get(businessId).catch(() => null);
+      setVisitsForReward(loyalty?.visitsForReward ? String(loyalty.visitsForReward) : "");
     } finally {
       setLoading(false);
     }
@@ -109,6 +116,51 @@ export default function MembershipsPage() {
             </TabsList>
 
             <TabsContent value="plans" className="space-y-4 pt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Stamp card</CardTitle>
+                  <CardDescription>
+                    Come this many times, the next service is free. Leave empty to run no stamp card.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <Label htmlFor="visits">Visits for a free service</Label>
+                    <Input
+                      id="visits"
+                      type="number"
+                      min={0}
+                      value={visitsForReward}
+                      onChange={(e) => setVisitsForReward(e.target.value)}
+                      placeholder="5"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    disabled={savingLoyalty}
+                    onClick={async () => {
+                      setSavingLoyalty(true);
+                      try {
+                        await loyaltySettingsService.update(businessId, {
+                          visitsForReward: visitsForReward ? Number(visitsForReward) : null,
+                        });
+                        toast.success(
+                          visitsForReward
+                            ? `Every ${visitsForReward} visits earns a free service`
+                            : "Stamp card turned off"
+                        );
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Could not save");
+                      } finally {
+                        setSavingLoyalty(false);
+                      }
+                    }}
+                  >
+                    {savingLoyalty ? "Saving…" : "Save"}
+                  </Button>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">New plan</CardTitle>

@@ -20,6 +20,10 @@ import {
   MoreHorizontal, Share2, Percent, DollarSign
 } from "lucide-react";
 
+import { BenefitsAndTenders, type Coverage } from "@/components/checkout/BenefitsAndTenders";
+import { useBusinessId } from "@/hooks/useBusinessId";
+import type { SalePayment } from "@/services/paymentConfirmationService";
+
 interface PaymentMethodPageProps {
   orderItems?: Array<{
     id: string;
@@ -53,6 +57,10 @@ interface PaymentMethodPageProps {
     splitCardAmount?: number;
     /** Required when paying by gift card — the card is spent by code. */
     giftCardCode?: string;
+    /** Several tenders on one bill, when the cashier used more than one. */
+    payments?: SalePayment[];
+    /** Which line each benefit paid for, keyed by order item id. */
+    coverage?: Coverage;
   }) => void;
   onCancel?: () => void;
 }
@@ -68,6 +76,15 @@ export default function PaymentMethodPage({
   onCancel
 }: PaymentMethodPageProps) {
   const navigate = useNavigate();
+  const checkoutBusinessId = useBusinessId();
+  // Benefits and tenders live in their own panel: they are per line and per method, which
+  // the single-method tiles below cannot express.
+  const [multi, setMulti] = useState<{
+    coverage: Coverage;
+    payments: SalePayment[];
+    due: number;
+    remaining: number;
+  }>({ coverage: {}, payments: [], due: 0, remaining: 0 });
   const [selectedTip, setSelectedTip] = useState<{ amount: number; percent: number } | null>(null);
   const [customTip, setCustomTip] = useState("");
   const [showCustomTip, setShowCustomTip] = useState(false);
@@ -265,6 +282,8 @@ export default function PaymentMethodPage({
         splitCashAmount?: number;
         splitCardAmount?: number;
         giftCardCode?: string;
+        payments?: SalePayment[];
+        coverage?: Coverage;
       } = {
         tip: selectedTip?.amount || parseFloat(customTip) || 0,
         tipPercent: selectedTip?.percent || 0,
@@ -278,6 +297,13 @@ export default function PaymentMethodPage({
 
       if (selectedPaymentMethod === "gift-card") {
         paymentData.giftCardCode = giftCardCode.trim().toUpperCase();
+      }
+
+      // When the cashier used the benefits panel, that is the payment: it already knows
+      // what each line was covered by and how the rest was tendered.
+      if (multi.payments.length > 0 || Object.values(multi.coverage).some(Boolean)) {
+        paymentData.payments = multi.payments;
+        paymentData.coverage = multi.coverage;
       }
 
       // Add split amounts if payment method is split
@@ -457,6 +483,21 @@ export default function PaymentMethodPage({
 
       {/* Right Panel - Order Summary */}
       <div className="w-1/2 bg-white flex flex-col">
+        <div className="p-6 pb-0 shrink-0">
+          <BenefitsAndTenders
+            businessId={checkoutBusinessId}
+            clientId={selectedClient?.id ? Number(selectedClient.id) : null}
+            orderItems={orderItems.map((item) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              serviceId: (item as { serviceId?: number }).serviceId,
+            }))}
+            total={subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0)}
+            onChange={setMulti}
+          />
+        </div>
         {/* Header */}
         <div className="p-6 border-b border-gray-200 shrink-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>

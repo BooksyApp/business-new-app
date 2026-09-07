@@ -76,3 +76,25 @@ class MembershipService {
 }
 
 export const membershipService = new MembershipService();
+
+export interface LoyaltySettings {
+  pointsPerUnit: number | null;
+  visitsForReward: number | null;
+  rewardServiceId: number | null;
+}
+
+/**
+ * The salon's loyalty rules. Points-per-spend and the stamp card are separate programmes
+ * on purpose: one rewards how much a client spends, the other how often they come back.
+ */
+class LoyaltySettingsService {
+  get(businessId: number): Promise<LoyaltySettings> {
+    return apiClient.get<LoyaltySettings>(`/businesses/${businessId}/loyalty-settings`);
+  }
+
+  update(businessId: number, settings: Partial<LoyaltySettings>): Promise<LoyaltySettings> {
+    return apiClient.put<LoyaltySettings>(`/businesses/${businessId}/loyalty-settings`, settings);
+  }
+}
+
+export const loyaltySettingsService = new LoyaltySettingsService();
