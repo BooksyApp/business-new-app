@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { PageHeader } from "@/components/PageHeader";
+import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import {
   notificationSettingsService,
   type NotificationSettings,
 } from "@/services/notificationSettingsService";
-import { getCurrentBusinessId } from "@/utils/authUtils";
+import { getCurrentBusinessId } from "@/config/api";
 
 const EMAIL_ROWS: Array<{ key: keyof NotificationSettings; label: string; hint: string }> = [
   { key: "emailConfirmation", label: "Booking confirmed", hint: "Sent the moment a customer books." },

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { PageHeader } from "@/components/PageHeader";
+import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { PageHeader } from "@/components/PageHeader";
+import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { businessService, type Business } from "@/services/businessService";
-import { getCurrentBusinessId } from "@/utils/authUtils";
+import { getCurrentBusinessId } from "@/config/api";
 
 /**
  * Setup listed "Logo & Colors", "Email Templates" and "Receipt Design" with nothing behind
