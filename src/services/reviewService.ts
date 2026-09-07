@@ -44,17 +44,19 @@ class ReviewService {
 
   /** Post or clear the salon's public answer. An empty string removes it. */
   async reply(businessId: number, reviewId: number, reply: string): Promise<Review> {
-    return apiClient.put<Review>(`/reviews/business/${businessId}/${reviewId}/reply`, { reply });
+    // Under /businesses, not /reviews: GET /api/reviews/** is public and the prefix is a
+    // tenant exemption, so a salon-side write there was callable in any salon's name.
+    return apiClient.put<Review>(`/businesses/${businessId}/reviews/${reviewId}/reply`, { reply });
   }
 
   /** Who would be asked to review, so the count is visible before anything is sent. */
   async requestPreview(businessId: number): Promise<ReviewRequestPreview> {
-    return apiClient.get<ReviewRequestPreview>(`/reviews/request/business/${businessId}`);
+    return apiClient.get<ReviewRequestPreview>(`/businesses/${businessId}/review-requests`);
   }
 
   async sendRequests(businessId: number): Promise<{ requested: number; skipped: number }> {
     return apiClient.post<{ requested: number; skipped: number }>(
-      `/reviews/request/business/${businessId}`,
+      `/businesses/${businessId}/review-requests`,
       {}
     );
   }
