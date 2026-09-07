@@ -21,6 +21,7 @@ export interface Appointment {
   staffName?: string; // Master/staff name
   color: AppointmentColor | string; // Can be a color name or hex color
   // Additional fields from API
+  clientId?: number;
   clientPhone?: string;
   clientEmail?: string;
   notes?: string;

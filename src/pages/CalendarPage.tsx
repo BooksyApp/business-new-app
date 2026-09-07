@@ -67,8 +67,11 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     endTime: apt.endTime,
     staffId: apt.staffId,
     color: apt.color as any,
-    // Needed on the block itself: the "requested by client" flag lives in the notes.
+    // Needed on the block itself: the "requested by client" flag lives in the notes, and
+    // the badges are keyed off the client record rather than a name string.
     notes: apt.notes,
+    clientId: (apt as { clientId?: number }).clientId,
+    clientEmail: (apt as { clientEmail?: string }).clientEmail,
     date: apt.date,
     apiId: apt.apiId,
     status: apt.status,   // #30
@@ -651,24 +654,49 @@ export default function CalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, isNewAppointmentOpen]);
 
-  /** Visits per client name, for the new/regular badges. */
+  /**
+   * Visits per client, for the new/regular badges.
+   *
+   * Keyed three ways on purpose: an appointment carries a client id when it was booked
+   * against a record, and only a typed-in name when it was not. Matching on the name alone
+   * missed every booking where the two differed by a middle name or a capital letter, so
+   * the badges never appeared.
+   */
   const visitsByClient = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of clients) {
+      const visits = c.totalVisits ?? 0;
+      map.set(`id:${c.id}`, visits);
       const name = `${c.firstName} ${c.lastName || ""}`.trim().toLowerCase();
-      if (name) map.set(name, c.totalVisits ?? 0);
+      if (name) map.set(`name:${name}`, visits);
+      if (c.email) map.set(`email:${c.email.trim().toLowerCase()}`, visits);
     }
     return map;
   }, [clients]);
 
-  const visitsFor = (name?: string) =>
-    name ? visitsByClient.get(name.trim().toLowerCase()) ?? null : null;
+  const visitsFor = (who?: { clientId?: number; clientName?: string; clientEmail?: string } | string) => {
+    const key = typeof who === "string" ? { clientName: who } : who;
+    if (!key) return null;
+    if (key.clientId != null) {
+      const byId = visitsByClient.get(`id:${key.clientId}`);
+      if (byId != null) return byId;
+    }
+    if (key.clientEmail) {
+      const byEmail = visitsByClient.get(`email:${key.clientEmail.trim().toLowerCase()}`);
+      if (byEmail != null) return byEmail;
+    }
+    if (key.clientName) {
+      const byName = visitsByClient.get(`name:${key.clientName.trim().toLowerCase()}`);
+      if (byName != null) return byName;
+    }
+    return null;
+  };
 
-  const blockVisuals = (apt: { clientName?: string; notes?: string }) => ({
+  const blockVisuals = (apt: { clientName?: string; notes?: string; clientId?: number; clientEmail?: string }) => ({
     colorClasses: clientColorClasses(apt.clientName),
     tags: appointmentTags({
       notes: apt.notes,
-      visits: apt.clientName ? visitsByClient.get(apt.clientName.trim().toLowerCase()) ?? null : null,
+      visits: visitsFor(apt),
     }),
   });
 
@@ -1668,7 +1696,7 @@ export default function CalendarPage() {
                       }}
                     >
                       <AppointmentBlock
-                                    visits={visitsFor(item.item.clientName)}
+                                    visits={visitsFor(item.item)}
                                     appointment={item.item} 
                                     onClick={(e) => {
                                       // Only handle click if not dragging
@@ -2060,7 +2088,7 @@ export default function CalendarPage() {
                   className="cursor-pointer"
                 >
                   <AppointmentBlock
-                    visits={visitsFor(apt.clientName)}
+                    visits={visitsFor(apt)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);
@@ -2108,7 +2136,7 @@ export default function CalendarPage() {
                   className="cursor-pointer"
                 >
                   <AppointmentBlock
-                    visits={visitsFor(apt.clientName)}
+                    visits={visitsFor(apt)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);

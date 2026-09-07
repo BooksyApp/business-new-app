@@ -350,19 +350,11 @@ export function AppointmentModal({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">Start</Label>
-              <Select value={appointment.startTime} disabled>
-                <SelectTrigger className="h-8 text-xs bg-gray-50">
-                  <SelectValue />
-                </SelectTrigger>
-              </Select>
+              <Input value={startTime} readOnly className="h-8 text-xs bg-gray-50" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">End</Label>
-              <Select value={appointment.endTime} disabled>
-                <SelectTrigger className="h-8 text-xs bg-gray-50">
-                  <SelectValue />
-                </SelectTrigger>
-              </Select>
+              <Input value={endTime} readOnly className="h-8 text-xs bg-gray-50" />
             </div>
           </div>
 
@@ -371,7 +363,7 @@ export function AppointmentModal({
             <Label className="text-xs">Staff</Label>
             <Select value={appointment.staffId} disabled>
               <SelectTrigger className="h-8 text-xs bg-gray-50">
-                <SelectValue placeholder="Select staff" />
+                <SelectValue placeholder={staffName} />
               </SelectTrigger>
               <SelectContent>
                 {staff && (

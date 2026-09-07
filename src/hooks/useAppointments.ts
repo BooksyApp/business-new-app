@@ -49,6 +49,7 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     date: date,
     apiId: apiAppt.id,
     // Additional fields
+    clientId: apiAppt.clientId,
     clientPhone: apiAppt.clientPhone,
     clientEmail: apiAppt.clientEmail,
     notes: apiAppt.notes,
