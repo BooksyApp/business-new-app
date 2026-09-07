@@ -5,6 +5,8 @@ import { Star, ThumbsUp, MessageSquare, TrendingUp, Reply } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { getCurrentBusinessId } from "@/config/api";
 import { reviewService, ratingBreakdown, type Review, type RatingSummary } from "@/services/reviewService";
 
@@ -36,6 +38,46 @@ export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<RatingSummary>({ count: 0, average: null });
   const [loading, setLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [savingReply, setSavingReply] = useState(false);
+  // How many customers could be asked. Shown on the button so a salon knows whether
+  // pressing it will do anything before it does.
+  const [requestCount, setRequestCount] = useState(0);
+  const [requesting, setRequesting] = useState(false);
+
+  const saveReply = async (reviewId: number, text?: string) => {
+    if (!businessId) return;
+    setSavingReply(true);
+    try {
+      const updated = await reviewService.reply(businessId, reviewId, text ?? replyText);
+      setReviews(prev => prev.map(r => (r.id === reviewId ? updated : r)));
+      setReplyingTo(null);
+      setReplyText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not post your reply");
+    } finally {
+      setSavingReply(false);
+    }
+  };
+
+  const sendRequests = async () => {
+    if (!businessId) return;
+    setRequesting(true);
+    try {
+      const res = await reviewService.sendRequests(businessId);
+      toast.success(
+        res.requested > 0
+          ? `Asked ${res.requested} customer${res.requested === 1 ? "" : "s"} to review their visit`
+          : "Nobody to ask right now"
+      );
+      setRequestCount(0);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send review requests");
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   useEffect(() => {
     if (!businessId) { setLoading(false); return; }
@@ -48,6 +90,14 @@ export default function ReviewsPage() {
       .finally(() => setLoading(false));
   }, [businessId]);
 
+  useEffect(() => {
+    if (!businessId) return;
+    reviewService
+      .requestPreview(businessId)
+      .then(p => setRequestCount(p.count))
+      .catch(() => setRequestCount(0));
+  }, [businessId]);
+
   const breakdown = ratingBreakdown(reviews);
 
   return (
@@ -57,11 +107,22 @@ export default function ReviewsPage() {
         subtitle="Monitor and respond to client feedback"
         actions={
           <Button 
-            variant="outline" 
+            variant="outline"
             className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
+            disabled={requesting || requestCount === 0}
+            onClick={() => void sendRequests()}
+            title={
+              requestCount === 0
+                ? "Everyone who has been and paid in the last 30 days has already been asked or reviewed"
+                : undefined
+            }
           >
             <MessageSquare size={16} />
-            Request Reviews
+            {requesting
+              ? "Sending…"
+              : requestCount > 0
+                ? `Request Reviews (${requestCount})`
+                : "Request Reviews"}
           </Button>
         }
       />
@@ -80,7 +141,9 @@ export default function ReviewsPage() {
                   {summary.average != null ? summary.average.toFixed(1) : "—"}
                 </span>
                 <div>
-                  <StarRating rating={5} />
+                  {/* Was hardcoded to five stars beside the real average, so a 2.0 salon
+                      showed a perfect row. */}
+                  <StarRating rating={Math.round(summary.average ?? 0)} />
                   <p className="text-sm text-muted-foreground font-medium mt-1">{summary.count} {summary.count === 1 ? "review" : "reviews"}</p>
                 </div>
               </div>
@@ -154,13 +217,13 @@ export default function ReviewsPage() {
                     <div className="flex items-center gap-3">
                       <Avatar className="ring-2 ring-background">
                         <AvatarFallback className="bg-gradient-to-br from-accent/20 to-purple-600/20 text-foreground font-semibold">
-                          {review.staffId ? "S" : "C"}
+                          {(review.authorName || "C").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        {/* #25: the API carries no client or service name. Showing the
-                            rating honestly beats inventing an author for it. */}
-                        <p className="font-semibold text-sm">Client review</p>
+                        {/* The API carries the reviewer's first name now (user_id was
+                            never recorded before, so nobody could be named). */}
+                        <p className="font-semibold text-sm">{review.authorName || "A customer"}</p>
                         <p className="text-xs text-muted-foreground font-medium">
                           {review.staffId ? `Staff #${review.staffId}` : "No staff recorded"}
                         </p>
@@ -176,14 +239,60 @@ export default function ReviewsPage() {
                   <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                     {review.comment || <span className="italic">Rating only, no comment</span>}
                   </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
-                  >
-                    <Reply size={14} />
-                    Reply
-                  </Button>
+                  {/* Answering a review in public is how a bad one stops being the last
+                      word on it. The button did nothing until now. */}
+                  {review.reply && replyingTo !== review.id ? (
+                    <div className="rounded-lg border border-border/60 bg-muted/40 p-3">
+                      <p className="text-xs font-semibold text-foreground mb-1">Your reply</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{review.reply}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-7 px-2 text-xs"
+                        onClick={() => { setReplyingTo(review.id); setReplyText(review.reply ?? ""); }}
+                      >
+                        Edit reply
+                      </Button>
+                    </div>
+                  ) : replyingTo === review.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        placeholder="Reply publicly to this review…"
+                        rows={3}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" disabled={savingReply} onClick={() => void saveReply(review.id)}>
+                          {savingReply ? "Saving…" : "Post reply"}
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)}>
+                          Cancel
+                        </Button>
+                        {review.reply ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            disabled={savingReply}
+                            onClick={() => void saveReply(review.id, "")}
+                          >
+                            Remove reply
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
+                      onClick={() => { setReplyingTo(review.id); setReplyText(""); }}
+                    >
+                      <Reply size={14} />
+                      Reply
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
