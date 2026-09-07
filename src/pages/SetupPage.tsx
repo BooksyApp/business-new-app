@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Star
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface SettingsCategory {
   id: string;
@@ -28,7 +27,6 @@ interface SettingsCategory {
   bgColor: string;
   borderColor: string;
   mainPath?: string;
-  comingSoon?: boolean;
 }
 
 const settingsCategories: SettingsCategory[] = [
@@ -41,7 +39,7 @@ const settingsCategories: SettingsCategory[] = [
     items: [
       { label: "Business Profile", path: "business" },
       { label: "Opening Hours", path: "business-hours" },
-      { label: "Locations" },
+      { label: "Locations", path: "locations" },
     ],
     color: "text-appointment-blue",
     bgColor: "bg-appointment-blue/10",
@@ -52,16 +50,17 @@ const settingsCategories: SettingsCategory[] = [
     title: "Booking Settings",
     description: "Configure your booking preferences",
     icon: Clock,
-    mainPath: "staff",
+    mainPath: "booking-rules",
     items: [
-      { label: "Booking Rules", path: "staff" },
-      { label: "Online Booking" },
-      { label: "Cancellation Policy" },
+      // These were three labels for the same handful of fields on the business record:
+      // one redirected to the staff page and two did nothing. They are one screen now.
+      { label: "Deposits & cancellations", path: "booking-rules" },
+      { label: "Opening hours", path: "business-hours" },
+      { label: "Services & pricing", path: "items-category" },
     ],
     color: "text-appointment-purple",
     bgColor: "bg-appointment-purple/10",
     borderColor: "border-appointment-purple/20",
-    comingSoon: true,
   },
   {
     id: "payments",
@@ -73,11 +72,10 @@ const settingsCategories: SettingsCategory[] = [
     // the Sales page. There is no Payment Methods, Invoices or Tax Settings screen, so the
     // honest label is Soon — and the redirects are removed, because sending someone who
     // asked for Tax Settings to a sales list is worse than doing nothing.
-    comingSoon: true,
+    mainPath: "booking-rules",
     items: [
-      { label: "Payment Methods" },
-      { label: "Invoices" },
-      { label: "Tax Settings" },
+      { label: "Currency & tax", path: "booking-rules" },
+      { label: "Sales & receipts", path: "sales" },
     ],
     color: "text-status-completed",
     bgColor: "bg-status-completed/10",
@@ -86,47 +84,45 @@ const settingsCategories: SettingsCategory[] = [
   {
     id: "notifications",
     title: "Notifications",
-    description: "Set up reminders and alerts",
+    description: "What your customers hear from you, and when",
     icon: Bell,
+    mainPath: "notifications",
     items: [
-      { label: "Email Notifications" },
-      { label: "SMS Settings" },
-      { label: "Push Notifications" },
+      { label: "Email notifications", path: "notifications" },
+      { label: "Reminder timing", path: "notifications" },
+      { label: "SMS & push", path: "notifications" },
     ],
-    color: "text-appointment-coral",
-    bgColor: "bg-appointment-coral/10",
-    borderColor: "border-appointment-coral/20",
-    comingSoon: true,
+    color: "text-appointment-yellow",
+    bgColor: "bg-appointment-yellow/10",
+    borderColor: "border-appointment-yellow/20",
+  },
+  {
+    id: "branding",
+    title: "Branding",
+    description: "How your salon looks to customers",
+    icon: Palette,
+    mainPath: "branding",
+    items: [
+      { label: "Logo & cover photo", path: "branding" },
+      { label: "Brand colour", path: "branding" },
+      { label: "Receipt footer", path: "branding" },
+    ],
+    color: "text-appointment-purple",
+    bgColor: "bg-appointment-purple/10",
+    borderColor: "border-appointment-purple/20",
   },
   {
     id: "security",
     title: "Security",
     description: "Manage access and permissions",
     icon: Shield,
+    mainPath: "security",
     items: [
-      { label: "Password" },
-      { label: "Two-Factor Auth" },
-      { label: "Login History" },
+      { label: "Change password", path: "security" },
     ],
     color: "text-status-pending",
     bgColor: "bg-status-pending/10",
     borderColor: "border-status-pending/20",
-    comingSoon: true,
-  },
-  {
-    id: "branding",
-    title: "Branding",
-    description: "Customize your salon's appearance",
-    icon: Palette,
-    items: [
-      { label: "Logo & Colors" },
-      { label: "Email Templates" },
-      { label: "Receipt Design" },
-    ],
-    color: "text-appointment-pink",
-    bgColor: "bg-appointment-pink/10",
-    borderColor: "border-appointment-pink/20",
-    comingSoon: true,
   },
   {
     id: "online",
@@ -135,14 +131,13 @@ const settingsCategories: SettingsCategory[] = [
     icon: Globe,
     mainPath: "business",
     items: [
-      { label: "Booking Page", path: "business" },
-      { label: "Widget" },
-      { label: "Custom Domain" },
+      { label: "Salon profile & photo", path: "business" },
+      { label: "Reviews", path: "reviews" },
+      { label: "Referral programme", path: "referral-program" },
     ],
     color: "text-appointment-teal",
     bgColor: "bg-appointment-teal/10",
     borderColor: "border-appointment-teal/20",
-    comingSoon: true,
   },
   {
     id: "team",
@@ -151,14 +146,12 @@ const settingsCategories: SettingsCategory[] = [
     icon: Users,
     mainPath: "staff",
     items: [
-      { label: "Roles", path: "staff" },
-      { label: "Permissions", path: "staff" },
-      { label: "Access Logs" },
+      { label: "Staff & roles", path: "staff" },
+      { label: "Working hours", path: "business-hours" },
     ],
     color: "text-appointment-green",
     bgColor: "bg-appointment-green/10",
     borderColor: "border-appointment-green/20",
-    comingSoon: true,
   },
 ];
 
@@ -220,11 +213,6 @@ export default function SetupPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <CardTitle className="text-base font-bold">{category.title}</CardTitle>
-                          {category.comingSoon && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                              Soon
-                            </Badge>
-                          )}
                         </div>
                         <CardDescription className="text-sm font-medium mt-0.5">{category.description}</CardDescription>
                       </div>
@@ -239,7 +227,7 @@ export default function SetupPage() {
                         key={item.label}
                         variant="secondary"
                         size="sm"
-                        className={`text-xs border-border/60 transition-all ${item.path ? "hover:border-accent/40 hover:bg-accent/5 cursor-pointer" : "cursor-default opacity-70"}`}
+                        className="text-xs border-border/60 transition-all hover:border-accent/40 hover:bg-accent/5 cursor-pointer"
                         onClick={(e) => handleItemClick(e, item.path)}
                       >
                         {item.label}

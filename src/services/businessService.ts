@@ -1,6 +1,8 @@
 import { apiClient } from '@/config/api';
 
 export interface BusinessRequest {
+  currency?: string;
+  taxRate?: number;
   depositPercent?: number;
   cancellationWindowHours?: number;
   lateCancellationFee?: number;
@@ -15,6 +17,14 @@ export interface BusinessRequest {
    * A URL the salon supplies — there is no file storage yet. Empty string clears it.
    */
   coverImageUrl?: string;
+  /** Branding: a URL, since this system has no file storage. */
+  logoUrl?: string;
+  brandColor?: string;
+  receiptFooter?: string;
+  /** Branding: a URL, since this system has no file storage. */
+  logoUrl?: string;
+  brandColor?: string;
+  receiptFooter?: string;
   website?: string;
   email?: string;
   phone?: string;
@@ -32,6 +42,7 @@ export interface BusinessRequest {
 export interface Business {
   /** #12: ISO code from businesses.currency (V17). Drives every price display. */
   currency?: string;
+  taxRate?: number;
   /**
    * #37: the deposit and cancellation policy. Backed by businesses.deposit_percent /
    * cancellation_window_hours / late_cancellation_fee (V41), read and written by the
@@ -118,6 +129,16 @@ class BusinessService {
 
   async createBranch(data: BranchRequest, _accessToken?: string): Promise<Branch> {
     return apiClient.post<Branch>(`/businesses/${data.businessId}/branches`, data);
+  }
+
+  /** GET has existed since the branches endpoint shipped; nothing had ever called it. */
+  async getBranches(businessId: number): Promise<Branch[]> {
+    return apiClient.get<Branch[]>(`/businesses/${businessId}/branches`);
+  }
+
+  /** Signed-in user's own password. Every other session is signed out by the change. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>(`/auth/change-password`, { currentPassword, newPassword });
   }
 }
 

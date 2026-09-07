@@ -319,8 +319,11 @@ const navItems: NavItem[] = [
   // no reorder threshold — nothing an owner clicking "Inventory" would expect.
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: Package, label: "Add-ons", path: "/addons" },
-  // { icon: MarketingIcon, label: "Marketing", path: "/marketing" }, // Disabled
-  // { icon: CouponIcon, label: "Coupon", path: "/contacts" }, // Disabled
+  // Re-enabled: the page was commented out when it rendered invented campaigns and
+  // invented open rates. #46 gave it real campaigns and #28 real promo codes, both of
+  // which it now reads — so the reason for hiding it is gone, and hiding a working page
+  // is the same dead end as showing a broken one.
+  { icon: MarketingIcon, label: "Marketing", path: "/marketing" },
   { icon: AnalyticsIcon, label: "Analytics", path: "/analytics" },
   // The route and the page have existed since #299 with nothing linking to them, so a
   // salon could collect reviews and had no way to read one.
