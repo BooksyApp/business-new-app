@@ -34,6 +34,8 @@ export interface Sale {
   paymentMethod: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'SPLIT' | 'MEMBERSHIP' | 'GIFT_CARD' | 'PACKAGE';
   paymentAmount: number;
   changeAmount: number;
+  /** Required when paymentMethod is GIFT_CARD — the card is spent by code. */
+  giftCardCode?: string;
   splitCashAmount?: number;
   splitCardAmount?: number;
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED';

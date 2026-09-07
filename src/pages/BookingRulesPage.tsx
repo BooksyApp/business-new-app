@@ -152,6 +152,9 @@ export default function BookingRulesPage() {
                   { key: "CASH", label: "Cash" },
                   { key: "CARD", label: "Card in the salon" },
                   { key: "ONLINE", label: "Paid online" },
+                  { key: "GIFT_CARD", label: "Gift card" },
+                  { key: "PACKAGE", label: "Package" },
+                  { key: "MEMBERSHIP", label: "Membership" },
                 ].map(m => (
                   <div key={m.key} className="flex items-center justify-between gap-6">
                     <p className="text-sm font-medium">{m.label}</p>

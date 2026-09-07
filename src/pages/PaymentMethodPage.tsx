@@ -51,6 +51,8 @@ interface PaymentMethodPageProps {
     change: number;
     splitCashAmount?: number;
     splitCardAmount?: number;
+    /** Required when paying by gift card — the card is spent by code. */
+    giftCardCode?: string;
   }) => void;
   onCancel?: () => void;
 }
@@ -132,11 +134,13 @@ export default function PaymentMethodPage({
     { id: "cash", name: "Cash", icon: Hand, requires: "CASH" },
     { id: "card-terminal", name: "Card", icon: CreditCard, requires: "CARD" },
     { id: "split", name: "Split payment", icon: Split, requires: "SPLIT" },
-    // Disabled payment methods
+    // Value the customer already paid for. These were commented out because nothing
+    // behind them existed: a salon could sell a package and hand over a gift card and
+    // then had no way to accept either. booksy-backend takes both at checkout now.
+    { id: "gift-card", name: "Gift card", icon: Gift, requires: "GIFT_CARD" },
+    { id: "package", name: "Package", icon: Package, requires: "PACKAGE" },
+    { id: "membership", name: "Membership", icon: UserCircle, requires: "MEMBERSHIP" },
     // { id: "check", name: "Check", icon: FileText },
-    // { id: "membership", name: "Membership", icon: UserCircle },
-    // { id: "gift-card", name: "Gift Card", icon: Gift },
-    // { id: "package", name: "Package", icon: Package },
   ];
 
   // Split needs both halves to be accepted; offering it with one of them off would let a
@@ -146,6 +150,9 @@ export default function PaymentMethodPage({
       ? accepted.includes("CASH") && accepted.includes("CARD")
       : accepted.includes(m.requires)
   );
+
+  // A gift card is spent by code, so the till has to ask for it before it can take one.
+  const [giftCardCode, setGiftCardCode] = useState("");
 
   const total = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
   const change = paymentAmount > total ? paymentAmount - total : 0;
@@ -240,6 +247,12 @@ export default function PaymentMethodPage({
       }
     }
 
+    // The server refuses a gift-card sale without a code; asking here saves the trip.
+    if (selectedPaymentMethod === "gift-card" && !giftCardCode.trim()) {
+      toast.error("Enter the gift card code");
+      return;
+    }
+
     if (onConfirm) {
       const paymentData: {
         tip: number;
@@ -251,6 +264,7 @@ export default function PaymentMethodPage({
         change: number;
         splitCashAmount?: number;
         splitCardAmount?: number;
+        giftCardCode?: string;
       } = {
         tip: selectedTip?.amount || parseFloat(customTip) || 0,
         tipPercent: selectedTip?.percent || 0,
@@ -261,6 +275,10 @@ export default function PaymentMethodPage({
         amount: paymentAmount,
         change: paymentAmount - (subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0)),
       };
+
+      if (selectedPaymentMethod === "gift-card") {
+        paymentData.giftCardCode = giftCardCode.trim().toUpperCase();
+      }
 
       // Add split amounts if payment method is split
       if (selectedPaymentMethod === "split") {
@@ -407,6 +425,11 @@ export default function PaymentMethodPage({
                         setSplitCashAmount("");
                         setSplitCardAmount("");
                         setShowSplitDialog(true);
+                      } else {
+                        // Gift card, package, membership: the customer has already paid,
+                        // so there is nothing to hand over and no change to give.
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+                        setPaymentAmount(currentTotal);
                       }
                     }}
                     className={`relative p-4 border-2 rounded-lg text-left transition-all ${
@@ -623,7 +646,25 @@ export default function PaymentMethodPage({
               <span className="text-gray-600">Total</span>
               <span className="font-medium text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
             </div>
-            {selectedPaymentMethod === "split" ? (
+            {selectedPaymentMethod === "gift-card" ? (
+              <div className="space-y-1.5">
+                <label className="text-sm text-gray-600">Gift card code</label>
+                <Input
+                  value={giftCardCode}
+                  onChange={e => setGiftCardCode(e.target.value.toUpperCase())}
+                  placeholder="Card code"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-gray-500">
+                  The card must have been issued by this salon and hold at least the total.
+                </p>
+              </div>
+            ) : selectedPaymentMethod === "package" || selectedPaymentMethod === "membership" ? (
+              <p className="text-xs text-gray-500">
+                One session comes off this client's package. Pick the client on the sale first —
+                without one there is no package to spend from.
+              </p>
+            ) : selectedPaymentMethod === "split" ? (
               <>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Cash</span>
