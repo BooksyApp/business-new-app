@@ -20,12 +20,41 @@ class ErrorBoundary extends React.Component<
     return { error };
   }
 
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    // Always to the console, in every build: a crash a developer cannot see the cause of
+    // takes an afternoon to find, and the console is not shown to a customer anyway.
+    console.error("[booqi] render crash:", error, info?.componentStack);
+  }
+
   render() {
     if (this.state.error) {
       return (
         <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
           <h1>Something went wrong</h1>
           <p>Please refresh the page. If the issue persists, contact support.</p>
+          {/* The message and stack, in development only. "Something went wrong" with
+              nothing else is the least useful thing a crash can say to the person who has
+              to fix it — and in production it is all a salon should see. */}
+          {import.meta.env.DEV ? (
+            <details open style={{ marginTop: "1.5rem" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+                {this.state.error.name}: {this.state.error.message}
+              </summary>
+              <pre
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "1rem",
+                  background: "#f6f6f7",
+                  borderRadius: 8,
+                  overflow: "auto",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                }}
+              >
+                {this.state.error.stack}
+              </pre>
+            </details>
+          ) : null}
         </div>
       );
     }

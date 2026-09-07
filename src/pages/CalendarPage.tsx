@@ -541,7 +541,7 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!businessId) return;
     waitlistService
-      .getByBusiness(businessId)
+      .listForBusiness(businessId)
       .then(rows => setWaitlist(rows.filter(w => w.status !== "CANCELLED")))
       // A failed waitlist fetch must not take the calendar down with it.
       .catch(() => setWaitlist([]));
