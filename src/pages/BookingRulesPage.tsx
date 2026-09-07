@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { businessService, type Business } from "@/services/businessService";
 import { getCurrentBusinessId } from "@/config/api";
 
@@ -29,7 +30,11 @@ export default function BookingRulesPage() {
     lateCancellationFee: "",
     currency: "",
     taxRate: "",
+    minBookingNoticeMinutes: "",
+    maxBookingDaysAhead: "",
   });
+  const [onlineBooking, setOnlineBooking] = useState(true);
+  const [methods, setMethods] = useState<string[]>(["CASH", "CARD"]);
 
   useEffect(() => {
     if (!businessId) { setLoading(false); return; }
@@ -43,7 +48,11 @@ export default function BookingRulesPage() {
           lateCancellationFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : "",
           currency: b.currency ?? "",
           taxRate: b.taxRate != null ? String(b.taxRate) : "",
+          minBookingNoticeMinutes: b.minBookingNoticeMinutes != null ? String(b.minBookingNoticeMinutes) : "",
+          maxBookingDaysAhead: b.maxBookingDaysAhead != null ? String(b.maxBookingDaysAhead) : "",
         });
+        setOnlineBooking(b.onlineBookingEnabled !== false);
+        setMethods((b.acceptedPaymentMethods ?? "CASH,CARD").split(",").map(m => m.trim()).filter(Boolean));
       })
       .catch(() => toast.error("Could not load your booking settings"))
       .finally(() => setLoading(false));
@@ -62,6 +71,12 @@ export default function BookingRulesPage() {
         lateCancellationFee: num(form.lateCancellationFee),
         currency: form.currency.trim() ? form.currency.trim().toUpperCase() : undefined,
         taxRate: num(form.taxRate),
+        onlineBookingEnabled: onlineBooking,
+        minBookingNoticeMinutes: num(form.minBookingNoticeMinutes),
+        maxBookingDaysAhead: num(form.maxBookingDaysAhead),
+        // Always sent: an empty list is a real choice (a salon that takes no payment in
+        // the app), so it must not be read as "unchanged".
+        acceptedPaymentMethods: methods.join(","),
       });
       setBusiness(updated);
       toast.success("Booking settings saved");
@@ -91,7 +106,7 @@ export default function BookingRulesPage() {
 
   return (
     <AppLayout>
-      <PageHeader title="Booking rules" subtitle="Deposits, cancellations, currency and tax" />
+      <PageHeader title="Booking policy" subtitle="Online booking, deposits, cancellations, payment and tax" />
 
       <div className="p-6 space-y-6 max-w-3xl">
         {loading ? (
@@ -104,6 +119,50 @@ export default function BookingRulesPage() {
                 {field("depositPercent", "Deposit %", "Taken up front. A booking stays unconfirmed until it is paid. Leave empty for no deposit.", { type: "number", min: 0, max: 100, placeholder: "0" })}
                 {field("cancellationWindowHours", "Free cancellation (hours)", "How long before the appointment a customer can cancel without a fee.", { type: "number", min: 0, placeholder: "24" })}
                 {field("lateCancellationFee", "Late cancellation fee", "Charged when they cancel inside that window.", { type: "number", min: 0, step: "0.01", placeholder: "0.00" })}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">Online booking</CardTitle></CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <p className="text-sm font-medium">Accept bookings from the app</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Turn this off while you are closed or fully booked. Customers are told to
+                      call instead, and your salon stays visible.
+                    </p>
+                  </div>
+                  <Switch checked={onlineBooking} onCheckedChange={setOnlineBooking} />
+                </div>
+                <div className="grid gap-5 md:grid-cols-2 pt-2 border-t border-border/60">
+                  {field("minBookingNoticeMinutes", "Minimum notice (minutes)", "How soon from now someone may book. 0 lets them book the next free slot.", { type: "number", min: 0, placeholder: "30" })}
+                  {field("maxBookingDaysAhead", "Book up to (days ahead)", "How far into the future the calendar goes.", { type: "number", min: 1, max: 365, placeholder: "180" })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="text-base">Payment methods</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  What the till offers when you take payment.
+                </p>
+                {[
+                  { key: "CASH", label: "Cash" },
+                  { key: "CARD", label: "Card in the salon" },
+                  { key: "ONLINE", label: "Paid online" },
+                ].map(m => (
+                  <div key={m.key} className="flex items-center justify-between gap-6">
+                    <p className="text-sm font-medium">{m.label}</p>
+                    <Switch
+                      checked={methods.includes(m.key)}
+                      onCheckedChange={v =>
+                        setMethods(prev => (v ? [...prev, m.key] : prev.filter(x => x !== m.key)))
+                      }
+                    />
+                  </div>
+                ))}
               </CardContent>
             </Card>
 

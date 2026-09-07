@@ -54,9 +54,12 @@ const settingsCategories: SettingsCategory[] = [
     items: [
       // These were three labels for the same handful of fields on the business record:
       // one redirected to the staff page and two did nothing. They are one screen now.
+      // These were shortcuts into the working app — "Services & pricing" opened the
+      // catalogue, which is the job rather than the settings for it. Every item here is
+      // now a control that changes how booking behaves.
+      { label: "Online booking on/off", path: "booking-rules" },
+      { label: "Notice & how far ahead", path: "booking-rules" },
       { label: "Deposits & cancellations", path: "booking-rules" },
-      { label: "Opening hours", path: "business-hours" },
-      { label: "Services & pricing", path: "items-category" },
     ],
     color: "text-appointment-purple",
     bgColor: "bg-appointment-purple/10",
@@ -74,8 +77,10 @@ const settingsCategories: SettingsCategory[] = [
     // asked for Tax Settings to a sales list is worse than doing nothing.
     mainPath: "booking-rules",
     items: [
+      // "Sales & receipts" opened the POS. The till is not a setting; what it offers is.
+      { label: "Payment methods", path: "booking-rules" },
       { label: "Currency & tax", path: "booking-rules" },
-      { label: "Sales & receipts", path: "sales" },
+      { label: "Receipt footer", path: "branding" },
     ],
     color: "text-status-completed",
     bgColor: "bg-status-completed/10",
@@ -127,13 +132,13 @@ const settingsCategories: SettingsCategory[] = [
   {
     id: "online",
     title: "Online Presence",
-    description: "Manage your online booking page",
+    description: "How your salon appears to customers",
     icon: Globe,
     mainPath: "business",
     items: [
-      { label: "Salon profile & photo", path: "business" },
-      { label: "Reviews", path: "reviews" },
-      { label: "Referral programme", path: "referral-program" },
+      { label: "Salon profile", path: "business" },
+      { label: "Photo & branding", path: "branding" },
+      { label: "Online booking", path: "booking-rules" },
     ],
     color: "text-appointment-teal",
     bgColor: "bg-appointment-teal/10",
@@ -147,7 +152,7 @@ const settingsCategories: SettingsCategory[] = [
     mainPath: "staff",
     items: [
       { label: "Staff & roles", path: "staff" },
-      { label: "Working hours", path: "business-hours" },
+      { label: "Salon opening hours", path: "business-hours" },
     ],
     color: "text-appointment-green",
     bgColor: "bg-appointment-green/10",
