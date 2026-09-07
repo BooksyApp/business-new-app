@@ -88,6 +88,22 @@ export default function ClientsPage() {
   // anywhere — a salon could not see who was waiting, while notifyWaitingClients was
   // already emailing those people whenever a slot freed up.
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+
+  /**
+   * Somebody who booked elsewhere, or rang to say they no longer want it, used to stay on
+   * the list forever — and kept being emailed on every cancellation.
+   */
+  const removeFromWaitlist = async (id: number) => {
+    if (!businessId) return;
+    const previous = waitlist;
+    setWaitlist(prev => prev.filter(w => w.id !== id));
+    try {
+      await waitlistService.remove(businessId, id);
+    } catch (e) {
+      setWaitlist(previous);
+      toast.error(e instanceof Error ? e.message : "Could not remove them from the waitlist");
+    }
+  };
   useEffect(() => {
     if (!businessId) return;
     waitlistService
@@ -574,17 +590,42 @@ export default function ClientsPage() {
             ) : (
               <div className="divide-y divide-border/40">
                 {waitlist.map((w) => (
-                  <div key={w.id} className="flex items-center justify-between py-3">
-                    <div>
+                  <div key={w.id} className="flex items-center justify-between gap-4 py-3">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium">{w.clientName || w.clientEmail || "Client"}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground truncate">
                         {w.clientEmail}
                         {w.clientPhone ? ` • ${w.clientPhone}` : ""}
                       </p>
+                      {/* What they are actually waiting for. The panel showed a name and a
+                          date, so a salon ringing round had to guess the service. */}
+                      <p className="text-xs text-muted-foreground">
+                        {[w.serviceName, w.staffName ? `with ${w.staffName}` : null,
+                          w.preferredDate ? `prefers ${w.preferredDate}` : "any date"]
+                          .filter(Boolean)
+                          .join(" • ")}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {w.preferredDate ? `Prefers ${w.preferredDate}` : "Any date"}
-                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Already emailed, or still waiting: only one of them needs calling. */}
+                      {w.status === "NOTIFIED" ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-appointment-green/15 text-appointment-green font-medium">
+                          Told a slot opened
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                          Waiting
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-destructive"
+                        onClick={() => void removeFromWaitlist(w.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

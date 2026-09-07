@@ -16,12 +16,20 @@ export interface WaitlistEntry {
   clientPhone: string | null;
   preferredDate: string | null;
   status: string;
+  /** What they are waiting for, and who for. The list used to carry ids only. */
+  serviceName: string | null;
+  staffName: string | null;
   createdAt: string | null;
 }
 
 class WaitlistService {
   async listForBusiness(businessId: number): Promise<WaitlistEntry[]> {
     return apiClient.get<WaitlistEntry[]>(`/waitlist/business/${businessId}`);
+  }
+
+  /** Take someone off the list — booked elsewhere, or no longer waiting. */
+  async remove(businessId: number, id: number): Promise<void> {
+    return apiClient.delete<void>(`/waitlist/business/${businessId}/${id}`);
   }
 }
 
