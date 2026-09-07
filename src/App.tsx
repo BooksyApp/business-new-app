@@ -28,6 +28,7 @@ const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const SetupPage = lazy(() => import("./pages/SetupPage"));
 const MarketingPage = lazy(() => import("./pages/MarketingPage"));
 const ReferralProgramPage = lazy(() => import("./pages/ReferralProgramPage"));
+const MembershipsPage = lazy(() => import("./pages/MembershipsPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
@@ -155,6 +156,7 @@ const App = () => (
               <Route path="add-addon" element={<Suspense fallback={<PageLoader />}><AddAddonPage /></Suspense>} />
               <Route path="marketing" element={<Suspense fallback={<PageLoader />}><MarketingPage /></Suspense>} />
               <Route path="referral-program" element={<Suspense fallback={<PageLoader />}><ReferralProgramPage /></Suspense>} />
+              <Route path="memberships" element={<Suspense fallback={<PageLoader />}><MembershipsPage /></Suspense>} />
               <Route path="contacts" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
               <Route path="staff" element={<Suspense fallback={<PageLoader />}><StaffPage /></Suspense>} />
