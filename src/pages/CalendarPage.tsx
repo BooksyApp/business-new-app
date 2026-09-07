@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { format, addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, isToday, getDay, parse } from "date-fns";
@@ -52,6 +53,8 @@ import { useNavigation } from "@/utils/navigationUtils";
 interface AppointmentWithDate extends Appointment {
   date: Date;
   apiId?: number;
+  /** Carries the "requested by client" flag the booking form writes into the notes. */
+  notes?: string;
 }
 
 // Convert hook appointments to component format
@@ -64,6 +67,8 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     endTime: apt.endTime,
     staffId: apt.staffId,
     color: apt.color as any,
+    // Needed on the block itself: the "requested by client" flag lives in the notes.
+    notes: apt.notes,
     date: apt.date,
     apiId: apt.apiId,
     status: apt.status,   // #30
@@ -639,12 +644,30 @@ export default function CalendarPage() {
     }
   }, [isNewAppointmentOpen]);
 
-  // Load clients when form opens
+  // Loaded on mount, not only when the booking form opens: the calendar blocks need each
+  // client's visit count to say who is new and who is a regular.
   useEffect(() => {
-    if (isNewAppointmentOpen) {
-      loadClients();
+    loadClients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, isNewAppointmentOpen]);
+
+  /** Visits per client name, for the new/regular badges. */
+  const visitsByClient = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of clients) {
+      const name = `${c.firstName} ${c.lastName || ""}`.trim().toLowerCase();
+      if (name) map.set(name, c.totalVisits ?? 0);
     }
-  }, [isNewAppointmentOpen]);
+    return map;
+  }, [clients]);
+
+  const blockVisuals = (apt: { clientName?: string; notes?: string }) => ({
+    colorClasses: clientColorClasses(apt.clientName),
+    tags: appointmentTags({
+      notes: apt.notes,
+      visits: apt.clientName ? visitsByClient.get(apt.clientName.trim().toLowerCase()) ?? null : null,
+    }),
+  });
 
   const loadClients = async () => {
     try {
@@ -1809,25 +1832,25 @@ export default function CalendarPage() {
                                 <div
                                   key={apt.id}
                                   onClick={() => handleAppointmentClick(apt)}
-                                  className={`
-                                    text-xs p-1.5 rounded cursor-pointer truncate
-                                    ${apt.color === "green" ? "bg-green-500 text-white" : ""}
-                                    ${apt.color === "pink" ? "bg-pink-200 text-pink-900" : ""}
-                                    ${apt.color === "blue" ? "bg-blue-200 text-blue-900" : ""}
-                                    ${apt.color === "yellow" ? "bg-yellow-200 text-yellow-900" : ""}
-                                    ${apt.color === "coral" ? "bg-orange-200 text-orange-900" : ""}
-                                    ${apt.color === "purple" ? "bg-purple-200 text-purple-900" : ""}
-                                    ${apt.color === "teal" ? "bg-teal-200 text-teal-900" : ""}
-                                    ${apt.color === "orange" ? "bg-orange-200 text-orange-900" : ""}
-                                    hover:opacity-80
-                                  `}
+                                  className={`text-xs p-1.5 rounded cursor-pointer truncate border-l-4 hover:opacity-80 ${
+                                    blockVisuals(apt).colorClasses
+                                  }`}
                                   title={`${apt.startTime} - ${apt.endTime}: ${apt.service}`}
                                 >
                                   <div className="text-[10px] font-medium">
                                     {apt.startTime} - {apt.endTime}
                                   </div>
-                                  <div className="text-[10px] truncate font-semibold">
-                                    {apt.clientName}
+                                  <div className="flex items-center gap-1 text-[10px] font-semibold">
+                                    <span className="truncate">{apt.clientName}</span>
+                                    {blockVisuals(apt).tags.map((tag) => (
+                                      <span
+                                        key={tag.label}
+                                        title={tag.label}
+                                        className={`inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none ${tag.className}`}
+                                      >
+                                        {tag.icon}
+                                      </span>
+                                    ))}
                                   </div>
                                   <div className="text-[10px] truncate">
                                     {apt.service}
@@ -1933,25 +1956,25 @@ export default function CalendarPage() {
                                       <div
                                         key={apt.id}
                                         onClick={() => handleAppointmentClick(apt)}
-                                        className={`
-                                          text-xs p-1.5 rounded cursor-pointer
-                                          ${apt.color === "green" ? "bg-green-500 text-white" : ""}
-                                          ${apt.color === "pink" ? "bg-pink-200 text-pink-900" : ""}
-                                          ${apt.color === "blue" ? "bg-blue-200 text-blue-900" : ""}
-                                          ${apt.color === "yellow" ? "bg-yellow-200 text-yellow-900" : ""}
-                                          ${apt.color === "coral" ? "bg-orange-200 text-orange-900" : ""}
-                                          ${apt.color === "purple" ? "bg-purple-200 text-purple-900" : ""}
-                                          ${apt.color === "teal" ? "bg-teal-200 text-teal-900" : ""}
-                                          ${apt.color === "orange" ? "bg-orange-200 text-orange-900" : ""}
-                                          hover:opacity-80
-                                        `}
+                                        className={`text-xs p-1.5 rounded cursor-pointer border-l-4 hover:opacity-80 ${
+                                          blockVisuals(apt).colorClasses
+                                        }`}
                                         title={`${apt.startTime} - ${apt.endTime}: ${apt.service}`}
                                       >
                                         <div className="text-[10px] font-medium truncate">
                                           {apt.startTime} - {apt.endTime}
                                         </div>
-                                        <div className="text-[10px] truncate font-semibold">
-                                          {apt.clientName}
+                                        <div className="flex items-center gap-1 text-[10px] font-semibold">
+                                          <span className="truncate">{apt.clientName}</span>
+                                          {blockVisuals(apt).tags.map((tag) => (
+                                            <span
+                                              key={tag.label}
+                                              title={tag.label}
+                                              className={`inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none ${tag.className}`}
+                                            >
+                                              {tag.icon}
+                                            </span>
+                                          ))}
                                         </div>
                                         <div className="text-[10px] truncate">
                                           {apt.service}
