@@ -1,3 +1,5 @@
+import { Crown, Sparkles, Star, type LucideIcon } from "lucide-react";
+
 /**
  * How an appointment looks on the calendar.
  *
@@ -33,8 +35,8 @@ export function clientColorClasses(key: string | undefined | null): string {
 }
 
 export type AppointmentTag = {
-  /** A single character, so it survives a 10px block without wrapping. */
-  icon: string;
+  /** A lucide icon component. Drawn, not typed: a letter in a circle reads as text. */
+  Icon: LucideIcon;
   label: string;
   className: string;
 };
@@ -57,7 +59,7 @@ export function appointmentTags(input: {
   // is where it is read back from.
   if (input.notes && input.notes.includes("Requested by client")) {
     tags.push({
-      icon: "★",
+      Icon: Star,
       label: "Asked for this staff member",
       className: "bg-amber-500 text-white",
     });
@@ -65,9 +67,9 @@ export function appointmentTags(input: {
 
   if (input.visits != null) {
     if (input.visits <= 1) {
-      tags.push({ icon: "N", label: "New client", className: "bg-emerald-600 text-white" });
+      tags.push({ Icon: Sparkles, label: "New client", className: "bg-emerald-600 text-white" });
     } else if (input.visits >= 5) {
-      tags.push({ icon: "♥", label: "Regular client", className: "bg-rose-600 text-white" });
+      tags.push({ Icon: Crown, label: "Regular client", className: "bg-rose-600 text-white" });
     }
   }
 

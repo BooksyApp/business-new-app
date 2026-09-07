@@ -661,6 +661,9 @@ export default function CalendarPage() {
     return map;
   }, [clients]);
 
+  const visitsFor = (name?: string) =>
+    name ? visitsByClient.get(name.trim().toLowerCase()) ?? null : null;
+
   const blockVisuals = (apt: { clientName?: string; notes?: string }) => ({
     colorClasses: clientColorClasses(apt.clientName),
     tags: appointmentTags({
@@ -1664,7 +1667,8 @@ export default function CalendarPage() {
                                     }
                       }}
                     >
-                      <AppointmentBlock 
+                      <AppointmentBlock
+                                    visits={visitsFor(item.item.clientName)}
                                     appointment={item.item} 
                                     onClick={(e) => {
                                       // Only handle click if not dragging
@@ -1842,13 +1846,13 @@ export default function CalendarPage() {
                                   </div>
                                   <div className="flex items-center gap-1 text-[10px] font-semibold">
                                     <span className="truncate">{apt.clientName}</span>
-                                    {blockVisuals(apt).tags.map((tag) => (
+                                    {blockVisuals(apt).tags.map(({ Icon, label, className }) => (
                                       <span
-                                        key={tag.label}
-                                        title={tag.label}
-                                        className={`inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none ${tag.className}`}
+                                        key={label}
+                                        title={label}
+                                        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${className}`}
                                       >
-                                        {tag.icon}
+                                        <Icon size={10} strokeWidth={2.5} />
                                       </span>
                                     ))}
                                   </div>
@@ -1966,13 +1970,13 @@ export default function CalendarPage() {
                                         </div>
                                         <div className="flex items-center gap-1 text-[10px] font-semibold">
                                           <span className="truncate">{apt.clientName}</span>
-                                          {blockVisuals(apt).tags.map((tag) => (
+                                          {blockVisuals(apt).tags.map(({ Icon, label, className }) => (
                                             <span
-                                              key={tag.label}
-                                              title={tag.label}
-                                              className={`inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[8px] leading-none ${tag.className}`}
+                                              key={label}
+                                              title={label}
+                                              className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${className}`}
                                             >
-                                              {tag.icon}
+                                              <Icon size={10} strokeWidth={2.5} />
                                             </span>
                                           ))}
                                         </div>
@@ -2055,7 +2059,8 @@ export default function CalendarPage() {
                   }}
                   className="cursor-pointer"
                 >
-                  <AppointmentBlock 
+                  <AppointmentBlock
+                    visits={visitsFor(apt.clientName)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);
@@ -2102,7 +2107,8 @@ export default function CalendarPage() {
                   }}
                   className="cursor-pointer"
                 >
-                  <AppointmentBlock 
+                  <AppointmentBlock
+                    visits={visitsFor(apt.clientName)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);

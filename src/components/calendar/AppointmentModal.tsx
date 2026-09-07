@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, User, Edit, Trash2, ArrowRight, Calendar as CalendarIcon, ChevronDown, XCircle, CheckCircle2, UserX } from "lucide-react";
 import type { Appointment, Staff } from "./AppointmentBlock";
 import { appointmentService, type Appointment as ApiAppointment } from "@/services/appointmentService";
+import { clientService, type Client } from "@/services/clientService";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, parse } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -46,6 +49,48 @@ export function AppointmentModal({
   // second call, get rejected by BookingStateMachine, and show an error for an action
   // that actually succeeded.
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  // The client was a read-only text box, so a booking taken under the wrong name — or a
+  // walk-in typed in by hand — could never be attached to the real client record, and
+  // everything keyed off that record (history, loyalty, memberships) stayed empty.
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
+  const [savingClient, setSavingClient] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !appointment?.apiId) return;
+    clientService
+      .getClientsByBusiness((fullAppointment?.businessId ?? 0) || 0)
+      .then(setClients)
+      .catch(() => setClients([]));
+  }, [isOpen, appointment?.apiId, fullAppointment?.businessId]);
+
+  const reassignClient = async (client: Client) => {
+    if (!appointment?.apiId || !fullAppointment) return;
+    setSavingClient(true);
+    try {
+      const updated = await appointmentService.updateAppointment(appointment.apiId, {
+        businessId: fullAppointment.businessId,
+        staffId: fullAppointment.staffId,
+        serviceId: fullAppointment.serviceId,
+        appointmentDate: fullAppointment.appointmentDate,
+        startTime: fullAppointment.startTime,
+        endTime: fullAppointment.endTime,
+        clientId: client.id,
+        clientName: `${client.firstName} ${client.lastName || ""}`.trim(),
+        clientPhone: client.phone,
+        clientEmail: client.email,
+        notes: fullAppointment.notes,
+        price: fullAppointment.price,
+      } as never);
+      setFullAppointment(updated);
+      setClientPickerOpen(false);
+      toast.success("Client updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not change the client");
+    } finally {
+      setSavingClient(false);
+    }
+  };
 
   const runLifecycle = async (action: "confirm" | "no-show") => {
     if (!appointment?.apiId) return;
@@ -101,6 +146,20 @@ export function AppointmentModal({
   const status = appointmentData.status || "PENDING";
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+  const staffName = appointmentData.staffName || staff?.name || "Unassigned";
+  const serviceName = appointmentData.serviceName || appointment.service;
+  const startTime = appointmentData.startTime || appointment.startTime;
+  const endTime = appointmentData.endTime || appointment.endTime;
+  const durationMinutes = (() => {
+    const toMinutes = (t: string) => {
+      const [h, m] = String(t).split(":").map(Number);
+      return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : null;
+    };
+    const a = toMinutes(startTime);
+    const b = toMinutes(endTime);
+    return a != null && b != null && b > a ? b - a : null;
+  })();
+  const selectedClient = clients.find((c) => c.id === appointmentData.clientId);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -126,30 +185,62 @@ export function AppointmentModal({
           </div>
         </div>
 
-        {/* Client Selection */}
+        {/* Client */}
         <div className="px-4 py-3 border-b border-gray-200 shrink-0">
           <div className="space-y-2">
             <Label className="text-xs">Client</Label>
-            <Input
-              value={appointment.clientName}
-              readOnly
-              className="h-8 text-xs bg-gray-50"
-            />
+            <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={savingClient}
+                  className="h-8 w-full justify-between text-xs font-normal"
+                >
+                  <span className="truncate">
+                    {appointmentData.clientName || appointment.clientName || "Select a client"}
+                  </span>
+                  <ChevronDown className="ml-1 h-3 w-3 shrink-0" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[420px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search clients..." className="text-xs" />
+                  <CommandList>
+                    <CommandEmpty>No client found.</CommandEmpty>
+                    <CommandGroup>
+                      {clients.map((client) => (
+                        <CommandItem
+                          key={client.id}
+                          value={`${client.firstName} ${client.lastName || ""} ${client.email || ""} ${client.phone || ""}`}
+                          onSelect={() => void reassignClient(client)}
+                        >
+                          <div className="flex w-full items-center justify-between gap-2">
+                            <span className="truncate">
+                              {client.firstName} {client.lastName}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-muted-foreground">
+                              {client.phone || client.email || ""}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <div className="grid grid-cols-2 gap-2">
-              <Input
-                value={clientPhone}
-                placeholder="Phone"
-                readOnly
-                className="h-8 text-xs bg-gray-50"
-              />
-              <Input
-                value={clientEmail}
-                placeholder="Email"
-                type="email"
-                readOnly
-                className="h-8 text-xs bg-gray-50"
-              />
+              <Input value={clientPhone} placeholder="Phone" readOnly className="h-8 text-xs bg-gray-50" />
+              <Input value={clientEmail} placeholder="Email" readOnly className="h-8 text-xs bg-gray-50" />
             </div>
+            {selectedClient && (
+              // What the salon actually wants to know before this person walks in.
+              <p className="text-[11px] text-muted-foreground">
+                {selectedClient.totalVisits ?? 0} visit{(selectedClient.totalVisits ?? 0) === 1 ? "" : "s"}
+                {selectedClient.totalVisits != null && selectedClient.totalVisits <= 1 ? " · new client" : ""}
+                {selectedClient.totalVisits != null && selectedClient.totalVisits >= 5 ? " · regular" : ""}
+              </p>
+            )}
           </div>
         </div>
 
@@ -182,13 +273,52 @@ export function AppointmentModal({
           </div>
 
           {/* Status Badges */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="text-xs">
               Status: {status}
             </Badge>
             <Badge variant="outline" className="text-xs">
               Payment: {paymentStatus}
             </Badge>
+            {notes.includes("Requested by client") && (
+              <Badge className="bg-amber-500 text-xs text-white">Asked for {staffName}</Badge>
+            )}
+          </div>
+
+          {/* The facts that were missing: who is doing it, how long it takes, what it
+              costs, and when it is. They were all in the payload and none were shown. */}
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border p-3 text-xs">
+            <div>
+              <p className="text-muted-foreground">Staff</p>
+              <p className="font-medium">{staffName}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Service</p>
+              <p className="font-medium">{serviceName}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">When</p>
+              <p className="font-medium">
+                {appointmentDate
+                  ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM")
+                  : "—"}{" "}
+                {startTime}–{endTime}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Duration</p>
+              <p className="font-medium">{durationMinutes != null ? `${durationMinutes} min` : "—"}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Price</p>
+              <p className="font-medium">
+                {price} {currencySymbol()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Booking ref</p>
+              <p className="font-medium">#{appointment.apiId ?? appointment.id}</p>
+            </div>
           </div>
 
           {/* Service Selection */}

@@ -1,3 +1,4 @@
+import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { cn } from "@/lib/utils";
 
 export type AppointmentColor = 
@@ -41,18 +42,9 @@ export interface Staff {
 interface AppointmentBlockProps {
   appointment: Appointment;
   onClick?: (e?: React.MouseEvent) => void;
+  /** Total visits this client has had, so the block can mark new and regular clients. */
+  visits?: number | null;
 }
-
-const colorClasses: Record<AppointmentColor, string> = {
-  pink: "bg-appointment-pink border-l-[hsl(340,70%,55%)]",
-  yellow: "bg-appointment-yellow border-l-[hsl(45,80%,50%)]",
-  blue: "bg-appointment-blue border-l-[hsl(200,70%,55%)]",
-  green: "bg-green-500 text-white border-l-green-600",
-  coral: "bg-appointment-coral border-l-[hsl(16,75%,55%)]",
-  purple: "bg-appointment-purple border-l-[hsl(270,50%,60%)]",
-  teal: "bg-appointment-teal border-l-[hsl(175,50%,45%)]",
-  orange: "bg-appointment-orange border-l-[hsl(30,80%,50%)]",
-};
 
 // Check if a color is a hex color
 const isHexColor = (color: string): boolean => {
@@ -78,9 +70,16 @@ const shouldUseWhiteText = (hexColor: string): boolean => {
   return luminance < 0.5; // Use white text if background is dark
 };
 
-export function AppointmentBlock({ appointment, onClick }: AppointmentBlockProps) {
-  const isHex = isHexColor(appointment.color);
-  const useWhiteText = isHex ? shouldUseWhiteText(appointment.color) : appointment.color === "green";
+export function AppointmentBlock({ appointment, onClick, visits }: AppointmentBlockProps) {
+  // Colour is the client's, always. It used to come from the backend's `color` field —
+  // a hex per service or staff member — so every appointment for the same service looked
+  // identical and you could not tell two clients apart at a glance. A hex is only used
+  // when there is no client to colour by at all.
+  const hasClient = Boolean(appointment.clientName?.trim());
+  const isHex = !hasClient && isHexColor(appointment.color);
+  const clientColors = clientColorClasses(appointment.clientName);
+  const useWhiteText = isHex ? shouldUseWhiteText(appointment.color) : false;
+  const tags = appointmentTags({ notes: appointment.notes, visits });
   
   return (
     <div
@@ -111,7 +110,7 @@ export function AppointmentBlock({ appointment, onClick }: AppointmentBlockProps
         "overflow-hidden",
         "group relative backdrop-blur-sm",
         "flex items-center",
-        !isHex && colorClasses[appointment.color as AppointmentColor]
+        !isHex && clientColors
       )}
       style={isHex ? {
         backgroundColor: appointment.color,
@@ -138,10 +137,25 @@ export function AppointmentBlock({ appointment, onClick }: AppointmentBlockProps
         {/* Client name - inline, priority */}
         <span className={cn(
           "font-bold text-[11px] leading-tight truncate flex-1 min-w-0",
-          useWhiteText ? "text-white" : "text-foreground drop-shadow-sm"
+          useWhiteText ? "text-white" : "drop-shadow-sm"
         )}>
           {appointment.clientName}
         </span>
+
+        {/* Three facts worth having without opening the appointment: did they ask for this
+            person, is it their first visit, are they a regular. */}
+        {tags.map(({ Icon, label, className }) => (
+          <span
+            key={label}
+            title={label}
+            className={cn(
+              "inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full",
+              className
+            )}
+          >
+            <Icon size={10} strokeWidth={2.5} />
+          </span>
+        ))}
         
         {/* Master/Staff name - inline */}
         {appointment.staffName && (
