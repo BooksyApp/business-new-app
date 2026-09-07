@@ -7,6 +7,7 @@ import {
   Clock as ClockIcon,
   Building2,
   Star,
+  Gift,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -324,6 +325,9 @@ const navItems: NavItem[] = [
   // The route and the page have existed since #299 with nothing linking to them, so a
   // salon could collect reviews and had no way to read one.
   { icon: Star, label: "Reviews", path: "/reviews" },
+  // Same as Reviews: the page and route existed (#32) with nothing linking to them, so a
+  // salon could not reach its own referral programme.
+  { icon: Gift, label: "Referrals", path: "/referral-program" },
   { icon: StaffIcon, label: "Staff", path: "/staff" },
   { icon: BusinessIcon, label: "Business", path: "/business" },
   { icon: ClockIcon, label: "Hours", path: "/business-hours" },
