@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { referralService, ReferralCode, ReferralAnalytics, ReferralUsage } from "@/services/referralService";
+import { referralService, type PlatformReferral, ReferralCode, ReferralAnalytics, ReferralUsage } from "@/services/referralService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useNavigation } from "@/utils/navigationUtils";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ export default function ReferralProgramPage() {
   const businessId = useBusinessId();
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
   const { getPath } = useNavigation();
+  const [myCode, setMyCode] = useState<PlatformReferral | null>(null);
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<ReferralCode | null>(null);
   const [analytics, setAnalytics] = useState<ReferralAnalytics | null>(null);
@@ -38,6 +39,12 @@ export default function ReferralProgramPage() {
 
   useEffect(() => {
     loadData();
+    // Independent of the salon's programme: the account's own code exists either way, so
+    // a business with no scheme still sees something to share.
+    referralService
+      .getMyPlatformCode()
+      .then(setMyCode)
+      .catch(() => setMyCode(null));
   }, [businessId]);
 
   const loadData = async () => {
@@ -129,6 +136,32 @@ export default function ReferralProgramPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* The account's own code, above the salon's programme: every registered person
+            has one, including an owner who runs no scheme of their own. */}
+        {myCode && (
+          <Card>
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+              <div>
+                <p className="text-sm text-muted-foreground">Your booqi referral code</p>
+                <p className="font-mono text-2xl font-semibold tracking-wider">{myCode.code}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {myCode.qualified} booked · {myCode.pending} invited
+                  {myCode.pointsEarned > 0 ? ` · ${myCode.pointsEarned} points earned` : ""}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void navigator.clipboard.writeText(myCode.code);
+                  toast.success("Referral code copied to clipboard!");
+                }}
+              >
+                Copy code
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />

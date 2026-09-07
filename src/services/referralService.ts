@@ -63,7 +63,26 @@ export interface CreateReferralCodeRequest {
   expirationDays?: number;
 }
 
+export interface PlatformReferral {
+  code: string;
+  referrerPoints: number;
+  newUserPoints: number;
+  pending: number;
+  qualified: number;
+  pointsEarned: number;
+  invites: { name: string; status: string; reward_points: number }[];
+}
+
 class ReferralService {
+  /**
+   * The signed-in account's own booqi code. Every registered person has one — this is the
+   * platform programme, not the salon's, so it needs no businessId and works for an owner
+   * who has not set up a referral scheme of their own.
+   */
+  async getMyPlatformCode(): Promise<PlatformReferral> {
+    return apiClient.get<PlatformReferral>("/referral/me");
+  }
+
   /**
    * Get all referral codes for a business
    */
