@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { businessService } from "@/services/businessService";
+import { getCurrentBusinessId } from "@/config/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,16 +112,40 @@ export default function PaymentMethodPage({
     { amount: subtotal * 0.10, percent: 10, label: "10%" },
   ];
 
-  const paymentMethods = [
-    { id: "cash", name: "Cash", icon: Hand },
-    { id: "card-terminal", name: "Card", icon: CreditCard },
-    { id: "split", name: "Split payment", icon: Split },
+  // What this salon said it accepts (Setup > Booking policy). The till used to offer
+  // cash and card to everyone regardless — a salon that takes no cash still had a Cash
+  // button, and pressing it recorded a payment that never happened.
+  const [accepted, setAccepted] = useState<string[]>(["CASH", "CARD"]);
+  useEffect(() => {
+    const businessId = getCurrentBusinessId();
+    if (!businessId) return;
+    businessService
+      .getBusiness(businessId)
+      .then(b =>
+        setAccepted((b.acceptedPaymentMethods ?? "CASH,CARD").split(",").map(m => m.trim()).filter(Boolean))
+      )
+      // Unknown means offer both, which is what happened before the setting existed.
+      .catch(() => setAccepted(["CASH", "CARD"]));
+  }, []);
+
+  const allMethods = [
+    { id: "cash", name: "Cash", icon: Hand, requires: "CASH" },
+    { id: "card-terminal", name: "Card", icon: CreditCard, requires: "CARD" },
+    { id: "split", name: "Split payment", icon: Split, requires: "SPLIT" },
     // Disabled payment methods
     // { id: "check", name: "Check", icon: FileText },
     // { id: "membership", name: "Membership", icon: UserCircle },
     // { id: "gift-card", name: "Gift Card", icon: Gift },
     // { id: "package", name: "Package", icon: Package },
   ];
+
+  // Split needs both halves to be accepted; offering it with one of them off would let a
+  // salon record cash it does not take.
+  const paymentMethods = allMethods.filter(m =>
+    m.requires === "SPLIT"
+      ? accepted.includes("CASH") && accepted.includes("CARD")
+      : accepted.includes(m.requires)
+  );
 
   const total = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
   const change = paymentAmount > total ? paymentAmount - total : 0;
