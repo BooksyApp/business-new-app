@@ -386,7 +386,13 @@ export default function HomePage() {
                   {business.address && (
                     <p className="text-sm text-muted-foreground">{business.address}</p>
                   )}
-                  <Button className="w-full mt-4" variant="outline">
+                  {/* The only action on a business card, and it did nothing — the card
+                      listed a salon you could not open. */}
+                  <Button
+                    className="w-full mt-4"
+                    variant="outline"
+                    onClick={() => navigate(`/${business.id}/calendar`)}
+                  >
                     Manage Business
                   </Button>
                 </CardContent>
