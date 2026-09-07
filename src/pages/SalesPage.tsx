@@ -29,10 +29,19 @@ const filterAndSortUnsettledAppointments = (appointments: Appointment[]): Appoin
     .filter(apt => {
       // Check if appointment is for today
       const aptDate = format(new Date(apt.appointmentDate), 'yyyy-MM-dd');
+      // payment_status had no default and nothing set it on create, so every ordinary
+      // booking came back null and this list was permanently empty (fixed in V77, but a
+      // null is still the honest "nobody has said this is paid" and belongs here).
+      // PENDING_DEPOSIT is money owed too. PARTIALLY_REFUNDED was in the old condition
+      // and is not a value chk_payment_status allows, so it could never have matched.
+      const unpaid =
+        apt.paymentStatus == null ||
+        apt.paymentStatus === 'PENDING' ||
+        apt.paymentStatus === 'PENDING_DEPOSIT';
       return aptDate === today &&
-        apt.status !== 'CANCELLED' && 
+        apt.status !== 'CANCELLED' &&
         apt.status !== 'NO_SHOW' &&
-        (apt.paymentStatus === 'PENDING' || apt.paymentStatus === 'PARTIALLY_REFUNDED');
+        unpaid;
     })
     .sort((a, b) => {
       // Compare start times (HH:mm format)
@@ -137,6 +146,7 @@ export default function SalesPage() {
   const [quickSaleItems, setQuickSaleItems] = useState<QuickSaleItem[]>([]);
   const [loadingQuickSale, setLoadingQuickSale] = useState(false);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [appointmentsError, setAppointmentsError] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null);
   const [selectedAppointmentStaffId, setSelectedAppointmentStaffId] = useState<number | null>(null);
@@ -228,6 +238,7 @@ export default function SalesPage() {
       
       try {
         setLoadingAppointments(true);
+        setAppointmentsError(false);
         const today = new Date();
         const appointments = await appointmentService.getAppointmentsByBusiness(businessId, today);
         
@@ -245,7 +256,10 @@ export default function SalesPage() {
         const unsettledAppointments = filterAndSortUnsettledAppointments(enrichedAppointments);
         setTodayAppointments(unsettledAppointments);
       } catch (error) {
+        // A failed load must not read as "everything is settled" — that is the one thing
+        // this page must never be wrong about.
         console.error('Failed to load today\'s appointments:', error);
+        setAppointmentsError(true);
         setTodayAppointments([]);
       } finally {
         setLoadingAppointments(false);
@@ -286,10 +300,14 @@ export default function SalesPage() {
             }
             
             // Check if appointment matches the unsettled criteria
-            const isUnsettled = 
-              enrichedAppointment.status !== 'CANCELLED' && 
+            // Same rule as filterAndSortUnsettledAppointments above — the two drifting
+            // apart is how a live-updated row survives a reload that then drops it.
+            const isUnsettled =
+              enrichedAppointment.status !== 'CANCELLED' &&
               enrichedAppointment.status !== 'NO_SHOW' &&
-              (enrichedAppointment.paymentStatus === 'PENDING' || enrichedAppointment.paymentStatus === 'PARTIALLY_REFUNDED');
+              (enrichedAppointment.paymentStatus == null ||
+                enrichedAppointment.paymentStatus === 'PENDING' ||
+                enrichedAppointment.paymentStatus === 'PENDING_DEPOSIT');
 
             // Find if appointment already exists in the list
             const existingIndex = prevAppointments.findIndex(apt => apt.id === enrichedAppointment.id);
@@ -1046,11 +1064,19 @@ export default function SalesPage() {
                     <div className="flex items-center justify-center h-64">
                       <p className="text-gray-500">Loading appointments...</p>
                     </div>
+                  ) : appointmentsError ? (
+                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                      <p className="text-gray-900 font-medium mb-2">Could not load today's appointments</p>
+                      <p className="text-sm text-gray-500">
+                        This is not the same as nothing being owed. Check your connection and reload.
+                      </p>
+                    </div>
                   ) : todayAppointments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <p className="text-gray-900 font-medium mb-2">No appointments for today</p>
+                      <p className="text-gray-900 font-medium mb-2">Nothing left to settle today</p>
                       <p className="text-sm text-gray-500">
-                        All appointments for today have been settled or there are no appointments scheduled.
+                        Every appointment today is either paid or not yet booked. Click a row here to add it
+                        to the basket and take payment.
                       </p>
                     </div>
                   ) : (

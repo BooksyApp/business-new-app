@@ -18,7 +18,11 @@ export interface Appointment {
   // #30: IN_PROGRESS was contract drift — no Java code produces it and
   // chk_appointment_status (V1/V22) rejects it, so it could never arrive.
   status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-  paymentStatus: 'PENDING' | 'PAID' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+  // chk_payment_status allows PENDING, PENDING_DEPOSIT, PAID, REFUNDED, WAIVED or null.
+  // This union had PARTIALLY_REFUNDED, which the database has never accepted, and was
+  // missing both PENDING_DEPOSIT and the null that every pre-V77 booking actually holds —
+  // so the one screen filtering on it could not match anything.
+  paymentStatus: 'PENDING' | 'PENDING_DEPOSIT' | 'PAID' | 'REFUNDED' | 'WAIVED' | null;
   price?: number;
   color?: string;
   notes?: string;
