@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
+import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
 
@@ -535,6 +536,37 @@ export default function CalendarPage() {
   } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    waitlistService
+      .getByBusiness(businessId)
+      .then(rows => setWaitlist(rows.filter(w => w.status !== "CANCELLED")))
+      // A failed waitlist fetch must not take the calendar down with it.
+      .catch(() => setWaitlist([]));
+  }, [businessId]);
+
+  /**
+   * Opens the booking form with this person filled in, on the day they asked for. Not
+   * drag-and-drop: the slot is the salon's judgement — which staff member, how long,
+   * whether it fits around the next booking — and a drop target cannot ask any of that.
+   */
+  const placeFromWaitlist = (entry: WaitlistEntry) => {
+    if (entry.preferredDate) setCurrentDate(new Date(entry.preferredDate));
+    setAppointmentForm(prev => ({
+      ...prev,
+      clientId: "",
+      clientName: entry.clientName || "",
+      clientEmail: entry.clientEmail || "",
+      clientPhone: entry.clientPhone || "",
+      serviceId: entry.serviceId ? String(entry.serviceId) : "",
+      staffId: entry.staffId ? String(entry.staffId) : "",
+      date: entry.preferredDate || format(currentDate, "yyyy-MM-dd"),
+      notes: "From the waiting list",
+    }));
+    setIsNewAppointmentOpen(true);
+  };
   const [isAddReservationOpen, setIsAddReservationOpen] = useState(false);
   const [reservationForm, setReservationForm] = useState({
     staffId: "",
@@ -916,6 +948,36 @@ export default function CalendarPage() {
             </div>
           </div>
           
+          {/* The waitlist, where the slots are. It lived only on the Clients page, so a
+              salon looking at a gap in today's calendar had no idea somebody was waiting
+              for exactly that. Clicking one opens the booking form with them filled in;
+              the salon then picks the slot, which is the part only they can decide. */}
+          {waitlist.length > 0 && (
+            <div className="px-4 py-2 border-b border-gray-200 bg-amber-50/60">
+              <div className="flex items-center gap-2 overflow-x-auto">
+                <span className="text-xs font-semibold text-amber-900 shrink-0">
+                  Waiting ({waitlist.length})
+                </span>
+                {waitlist.map(w => (
+                  <button
+                    key={w.id}
+                    onClick={() => placeFromWaitlist(w)}
+                    className="shrink-0 flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1 text-xs hover:border-amber-500 transition-colors"
+                    title={`Book ${w.clientName || w.clientEmail} in`}
+                  >
+                    <span className="font-medium">{w.clientName || w.clientEmail || "Client"}</span>
+                    <span className="text-muted-foreground">
+                      {[w.serviceName, w.preferredDate].filter(Boolean).join(" · ") || "any date"}
+                    </span>
+                    {w.status === "NOTIFIED" ? (
+                      <span className="text-[10px] text-green-700">told</span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Loading State */}
           {loading && (
             <div className="flex-1 flex items-center justify-center">
