@@ -704,6 +704,7 @@ export default function SalesPage() {
               tipPercent: paymentData.tipPercent,
               paymentMethod: paymentMethodMap[paymentData.paymentMethod] || 'CASH',
               paymentAmount: paymentData.amount,
+              giftCardCode: paymentData.giftCardCode,
               splitCashAmount: paymentData.splitCashAmount,
               splitCardAmount: paymentData.splitCardAmount,
               appointmentId: selectedAppointmentId || undefined,

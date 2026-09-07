@@ -21,6 +21,18 @@ export interface BusinessRequest {
   logoUrl?: string;
   brandColor?: string;
   receiptFooter?: string;
+  /** Booking policy — see booksy-backend V81. Each changes real behaviour. */
+  onlineBookingEnabled?: boolean;
+  minBookingNoticeMinutes?: number;
+  maxBookingDaysAhead?: number;
+  /** Comma-separated: any of CASH, CARD, ONLINE. */
+  acceptedPaymentMethods?: string;
+  /** Booking policy — see booksy-backend V81. Each changes real behaviour. */
+  onlineBookingEnabled?: boolean;
+  minBookingNoticeMinutes?: number;
+  maxBookingDaysAhead?: number;
+  /** Comma-separated: any of CASH, CARD, ONLINE. */
+  acceptedPaymentMethods?: string;
   /** Branding: a URL, since this system has no file storage. */
   logoUrl?: string;
   brandColor?: string;
