@@ -26,6 +26,9 @@ export interface Appointment {
   price?: number;
   color?: string;
   notes?: string;
+  /** What the customer said they would pay with when booking: SALON, GIFT_CARD, WALLET. */
+  paymentPreference?: string | null;
+  giftCardCode?: string | null;
 }
 
 export interface CreateAppointmentRequest {

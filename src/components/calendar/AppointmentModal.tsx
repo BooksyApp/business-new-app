@@ -316,6 +316,16 @@ export function AppointmentModal({
               </p>
             </div>
             <div>
+              <p className="text-muted-foreground">Paying with</p>
+              <p className="font-medium">
+                {appointmentData.paymentPreference === "GIFT_CARD"
+                  ? `Gift card${appointmentData.giftCardCode ? ` ${appointmentData.giftCardCode}` : ""}`
+                  : appointmentData.paymentPreference === "WALLET"
+                    ? "Their wallet"
+                    : "At the salon"}
+              </p>
+            </div>
+            <div>
               <p className="text-muted-foreground">Booking ref</p>
               <p className="font-medium">#{appointment.apiId ?? appointment.id}</p>
             </div>
