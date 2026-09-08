@@ -4,7 +4,6 @@ import { currencySymbol } from "@/lib/currency";
 import type { ClientAppointmentRow } from "@/services/clientService";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { CalendarCheck, Coins, Star, UserPlus, Users } from "lucide-react";
-import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { loyaltyService } from "@/services/growthService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -58,6 +57,24 @@ export default function ClientsPage() {
   // rather than on the Marketing page with the other growth features.
   const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
 
+  /**
+   * Do they already have a booqi account?
+   *
+   * An accepted invitation is proof, and so is any visit at all: someone who has been
+   * here is a client, not a lead to chase.
+   */
+  const hasAccount = (client: ClientWithStats) => {
+    if (client.id < 0 || client.status === "PENDING") return false;
+    try {
+      const invitation = getClientInvitation(client.id);
+      if (invitation?.status === "ACCEPTED") return true;
+      if (invitation?.status === "PENDING") return false;
+    } catch {
+      // No invitation record is not an answer either way; fall through to their visits.
+    }
+    return (client.totalVisits ?? 0) > 0 || client.status === "ACTIVE";
+  };
+
   const loadVisits = (clientId: number) => {
     setClientVisits(null);
     if (!businessId || !clientId) return;
@@ -99,33 +116,13 @@ export default function ClientsPage() {
   });
   const businessId = useBusinessId();
 
-  // #45: the waitlist existed end to end on the backend and had no frontend surface
-  // anywhere — a salon could not see who was waiting, while notifyWaitingClients was
-  // already emailing those people whenever a slot freed up.
-  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
 
   /**
    * Somebody who booked elsewhere, or rang to say they no longer want it, used to stay on
    * the list forever — and kept being emailed on every cancellation.
    */
-  const removeFromWaitlist = async (id: number) => {
-    if (!businessId) return;
-    const previous = waitlist;
-    setWaitlist(prev => prev.filter(w => w.id !== id));
-    try {
-      await waitlistService.remove(businessId, id);
-    } catch (e) {
-      setWaitlist(previous);
-      toast.error(e instanceof Error ? e.message : "Could not remove them from the waitlist");
-    }
-  };
   useEffect(() => {
     if (!businessId) return;
-    waitlistService
-      .listForBusiness(businessId)
-      .then((data) => setWaitlist((data || []).filter((w) => w.status === "WAITING")))
-      // A failed waitlist fetch must not take the clients table down.
-      .catch(() => setWaitlist([]));
   }, [businessId]);
   const { services } = useServices(businessId);
   const { staff } = useStaff(businessId);
@@ -581,11 +578,14 @@ export default function ClientsPage() {
                                 <Clock className="h-3.5 w-3.5" />
                                 Pending
                               </Button>
-                            ) : (
-                              <Button 
-                                variant="ghost" 
+                            ) : hasAccount(client) ? null : (
+                              /* Invite is for someone with no account yet. A client who
+                                 books through the app already has one, so offering to
+                                 invite them says the salon does not know who they are. */
+                              <Button
+                                variant="ghost"
                                 size="sm"
-                                className="h-7 text-xs gap-1.5 hover:bg-accent/10 hover:text-accent transition-all"
+                                className="h-7 gap-1.5 text-xs hover:bg-accent/10 hover:text-accent"
                                 onClick={(e) => {
                                   // #22: the row opens the detail dialog now.
                                   e.stopPropagation();
@@ -633,63 +633,6 @@ export default function ClientsPage() {
           </CardContent>
         </Card>
 
-        {/* #45: who is waiting for a slot at this business. */}
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle className="text-lg">Waitlist</CardTitle>
-            <CardDescription>
-              Clients waiting for a slot. They are emailed automatically when a booking is
-              cancelled and frees one up.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {waitlist.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nobody is waiting right now.</p>
-            ) : (
-              <div className="divide-y divide-border/40">
-                {waitlist.map((w) => (
-                  <div key={w.id} className="flex items-center justify-between gap-4 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{w.clientName || w.clientEmail || "Client"}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {w.clientEmail}
-                        {w.clientPhone ? ` • ${w.clientPhone}` : ""}
-                      </p>
-                      {/* What they are actually waiting for. The panel showed a name and a
-                          date, so a salon ringing round had to guess the service. */}
-                      <p className="text-xs text-muted-foreground">
-                        {[w.serviceName, w.staffName ? `with ${w.staffName}` : null,
-                          w.preferredDate ? `prefers ${w.preferredDate}` : "any date"]
-                          .filter(Boolean)
-                          .join(" • ")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {/* Already emailed, or still waiting: only one of them needs calling. */}
-                      {w.status === "NOTIFIED" ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-appointment-green/15 text-appointment-green font-medium">
-                          Told a slot opened
-                        </span>
-                      ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
-                          Waiting
-                        </span>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs text-destructive"
-                        onClick={() => void removeFromWaitlist(w.id)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Send Invitation Dialog */}
@@ -1072,7 +1015,15 @@ export default function ClientsPage() {
               </div>
 
               <div>
-                <p className="mb-2 text-sm font-medium">Visits at your salon</p>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium">History at your salon</p>
+                  {clientVisits && clientVisits.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {clientVisits.length} booking{clientVisits.length === 1 ? "" : "s"} · first on{" "}
+                      {clientVisits[clientVisits.length - 1].appointment_date}
+                    </p>
+                  )}
+                </div>
                 {clientVisits === null ? (
                   <p className="text-sm text-muted-foreground">Loading…</p>
                 ) : clientVisits.length === 0 ? (
@@ -1081,33 +1032,63 @@ export default function ClientsPage() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {clientVisits.map((v) => (
-                      <div
-                        key={v.id}
-                        className={`flex flex-wrap items-center gap-3 rounded-lg border-l-4 border bg-white p-3 text-sm ${
-                          v.status === "CANCELLED"
-                            ? "border-l-rose-400"
-                            : v.status === "NO_SHOW"
-                              ? "border-l-amber-400"
-                              : "border-l-emerald-400"
-                        }`}
-                      >
-                        <span className="w-24 shrink-0 font-medium">{v.appointment_date}</span>
-                        <span className="w-20 shrink-0 text-muted-foreground">
-                          {String(v.start_time).slice(0, 5)}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">
-                          {v.service_name || "Service"}
-                          {v.staff_name ? ` · ${v.staff_name}` : ""}
-                        </span>
-                        <span className="shrink-0 text-muted-foreground">
-                          {v.price != null ? `${v.price} ${currencySymbol()}` : ""}
-                        </span>
-                        <Badge variant="outline" className="shrink-0 text-[10px]">
-                          {v.status}
-                        </Badge>
-                      </div>
-                    ))}
+                    {clientVisits.map((v) => {
+                      const tone =
+                        v.status === "CANCELLED"
+                          ? "border-l-rose-400"
+                          : v.status === "NO_SHOW"
+                            ? "border-l-amber-400"
+                            : v.status === "PENDING"
+                              ? "border-l-slate-300"
+                              : "border-l-emerald-400";
+                      return (
+                        <div key={v.id} className={`rounded-lg border border-l-4 bg-white p-3 ${tone}`}>
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">
+                                {v.service_name || "Service"}
+                                {v.staff_name ? (
+                                  <span className="font-normal text-muted-foreground"> with {v.staff_name}</span>
+                                ) : null}
+                              </p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {v.appointment_date} · {String(v.start_time).slice(0, 5)}–
+                                {String(v.end_time).slice(0, 5)}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <p className="text-sm font-semibold">
+                                {v.price != null ? `${v.price} ${currencySymbol()}` : "—"}
+                              </p>
+                              <div className="mt-1 flex justify-end gap-1">
+                                <Badge variant="outline" className="text-[10px]">
+                                  {v.status}
+                                </Badge>
+                                {/* Whether it was actually paid for is half the history. */}
+                                {v.payment_status && (
+                                  <Badge
+                                    className={`text-[10px] ${
+                                      v.payment_status === "PAID"
+                                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
+                                        : "bg-slate-100 text-slate-700 hover:bg-slate-100"
+                                    }`}
+                                  >
+                                    {v.payment_status}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {/* What the client asked for when booking. It was recorded and
+                              never shown anywhere the salon would look. */}
+                          {v.notes && (
+                            <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
+                              {v.notes}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
