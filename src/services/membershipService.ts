@@ -132,4 +132,72 @@ class LoyaltyCardService {
 
 export const loyaltyCardService = new LoyaltyCardService();
 
+export interface LoyaltyCard {
+  id: number;
+  name: string;
+  visits_required: number;
+  reward_service_id: number | null;
+  reward_service_name: string | null;
+  valid_until: string | null;
+  active: boolean;
+  expired: boolean;
+  holders: number;
+  rewards_waiting: number;
+  rewards_used: number;
+}
+
+export interface CardHolder {
+  id: number;
+  client_id: number;
+  client_name: string;
+  email: string | null;
+  phone: string | null;
+  stamps: number;
+  rewards_available: number;
+  rewards_used: number;
+}
+
+/**
+ * Stamp cards. A card is a row, not a setting: a salon runs several a year, each with its
+ * own reward and closing date, and wants to see the ones it has already run.
+ */
+class LoyaltyCardsService {
+  list(businessId: number): Promise<LoyaltyCard[]> {
+    return apiClient.get<LoyaltyCard[]>(`/businesses/${businessId}/loyalty-cards`);
+  }
+
+  /** Creating a card gives it to every client on the books straight away. */
+  create(
+    businessId: number,
+    input: { name: string; visitsRequired: number; rewardServiceId?: number | null; validUntil?: string | null }
+  ): Promise<LoyaltyCard & { assignedTo: number }> {
+    return apiClient.post<LoyaltyCard & { assignedTo: number }>(
+      `/businesses/${businessId}/loyalty-cards`,
+      input
+    );
+  }
+
+  /** Ends a card. What people already earned stays earned. */
+  deactivate(businessId: number, cardId: number): Promise<void> {
+    return apiClient.delete<void>(`/businesses/${businessId}/loyalty-cards/${cardId}`);
+  }
+
+  holders(businessId: number, cardId: number): Promise<CardHolder[]> {
+    return apiClient.get<CardHolder[]>(`/businesses/${businessId}/loyalty-cards/${cardId}/holders`);
+  }
+
+  addHolder(businessId: number, cardId: number, clientId: number) {
+    return apiClient.post(`/businesses/${businessId}/loyalty-cards/${cardId}/holders/${clientId}`, {});
+  }
+
+  stamp(businessId: number, cardId: number, clientId: number, delta = 1) {
+    return apiClient.post(
+      `/businesses/${businessId}/loyalty-cards/${cardId}/holders/${clientId}/stamp`,
+      { delta }
+    );
+  }
+}
+
+export const loyaltyCardsService = new LoyaltyCardsService();
+
 export const loyaltySettingsService = new LoyaltySettingsService();
