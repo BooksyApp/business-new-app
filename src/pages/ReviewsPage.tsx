@@ -1,4 +1,5 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,7 +118,7 @@ export default function ReviewsPage() {
     <AppLayout>
       <PageHeader
         title="Reviews"
-        subtitle="Monitor and respond to client feedback"
+        subtitle="What clients said, and what you said back"
         actions={
           <Button 
             variant="outline"
@@ -134,8 +135,8 @@ export default function ReviewsPage() {
             {requesting
               ? "Sending…"
               : requestCount > 0
-                ? `Request Reviews (${requestCount})`
-                : "Request Reviews"}
+                ? `Ask ${requestCount} client${requestCount === 1 ? "" : "s"} for a review`
+                : "Everyone has been asked"}
           </Button>
         }
       />
@@ -146,11 +147,23 @@ export default function ReviewsPage() {
           {/* Enhanced Rating Summary */}
           <Card className="lg:col-span-1 bg-white">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-bold">Overall Rating</CardTitle>
+              <CardTitle className="text-base font-semibold">Overall rating</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4 mb-6">
-                <span className="text-5xl font-bold bg-gradient-to-br from-accent to-purple-600 bg-clip-text text-transparent">
+                {/* Coloured by the score, not by the brand: a 2.1 printed in the same
+                    handsome gradient as a 4.9 tells the owner nothing. */}
+                <span
+                  className={`text-5xl font-bold ${
+                    (summary.average ?? 0) >= 4
+                      ? "text-emerald-600"
+                      : (summary.average ?? 0) >= 3
+                        ? "text-amber-600"
+                        : summary.average != null
+                          ? "text-rose-600"
+                          : "text-muted-foreground"
+                  }`}
+                >
                   {summary.average != null ? summary.average.toFixed(1) : "—"}
                 </span>
                 <div>
@@ -163,10 +176,21 @@ export default function ReviewsPage() {
               <div className="space-y-2.5">
                 {breakdown.map((item) => (
                   <div key={item.stars} className="flex items-center gap-3">
-                    <span className="text-sm font-semibold w-4">{item.stars}</span>
-                    <Star size={12} className="fill-appointment-yellow text-appointment-yellow" />
-                    <Progress value={item.percent} className="flex-1 h-2.5" />
-                    <span className="text-sm text-muted-foreground font-medium w-8">{item.count}</span>
+                    <span className="w-4 text-sm font-semibold">{item.stars}</span>
+                    <Star size={12} className="fill-amber-400 text-amber-400" />
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          item.stars >= 4
+                            ? "bg-emerald-500"
+                            : item.stars === 3
+                              ? "bg-amber-500"
+                              : "bg-rose-500"
+                        }`}
+                        style={{ width: `${item.percent}%` }}
+                      />
+                    </div>
+                    <span className="w-8 text-sm font-medium text-muted-foreground">{item.count}</span>
                   </div>
                 ))}
               </div>
@@ -177,8 +201,8 @@ export default function ReviewsPage() {
           <Card className="lg:col-span-2 bg-white">
             <CardHeader className="pb-4">
               <div>
-                <CardTitle className="text-lg font-bold">Review Insights</CardTitle>
-                <CardDescription className="mt-1">Performance trends this month</CardDescription>
+                <CardTitle className="text-base font-semibold">This month</CardTitle>
+                <CardDescription className="mt-1">Counted from the reviews below</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -209,12 +233,12 @@ export default function ReviewsPage() {
         <Card className="bg-white">
           <CardHeader className="pb-4">
             <div>
-              <CardTitle className="text-lg font-bold">Recent Reviews</CardTitle>
-              <CardDescription className="mt-1">Latest feedback from your clients</CardDescription>
+              <CardTitle className="text-base font-semibold">Recent reviews</CardTitle>
+              <CardDescription className="mt-1">Newest first · reply to answer publicly</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="space-y-3">
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading reviews…</p>
               ) : reviews.length === 0 ? (
@@ -225,42 +249,69 @@ export default function ReviewsPage() {
                 />
               ) : null}
               {reviews.map((review, index) => (
-                <div 
-                  key={review.id} 
-                  className="border-b border-border/60 pb-6 last:border-0 last:pb-0"
+                <div
+                  key={review.id}
+                  // A card per review, with the score carried in colour: a page of
+                  // identical grey paragraphs gives no clue which one needs answering.
+                  className={`rounded-xl border-l-4 bg-white p-4 shadow-sm ${
+                    review.rating >= 4
+                      ? "border-l-emerald-500"
+                      : review.rating === 3
+                        ? "border-l-amber-500"
+                        : "border-l-rose-500"
+                  }`}
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <Avatar className="ring-2 ring-background">
-                        <AvatarFallback className="bg-gradient-to-br from-accent/20 to-purple-600/20 text-foreground font-semibold">
+                        <AvatarFallback
+                          className={`font-semibold ${clientColorClasses(review.authorName || "customer")}`}
+                        >
                           {(review.authorName || "C").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="min-w-0">
                         {/* The API carries the reviewer's first name now (user_id was
                             never recorded before, so nobody could be named). */}
-                        <p className="font-semibold text-sm">{review.authorName || "A customer"}</p>
-                        <p className="text-xs text-muted-foreground font-medium">
-                          {review.staffId ? `Staff #${review.staffId}` : "No staff recorded"}
+                        <p className="truncate text-sm font-semibold">{review.authorName || "A customer"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}
+                          {review.staffId ? ` · Staff #${review.staffId}` : ""}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          review.rating >= 4
+                            ? "bg-emerald-100 text-emerald-800"
+                            : review.rating === 3
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-rose-100 text-rose-800"
+                        }`}
+                      >
+                        {review.rating.toFixed(1)}
+                      </span>
                       <StarRating rating={review.rating} />
-                      <p className="text-xs text-muted-foreground font-medium mt-1">
-                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}
-                      </p>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-                    {review.comment || <span className="italic">Rating only, no comment</span>}
+                  {/* A review nobody has answered is the one thing this page is for. */}
+                  {!review.reply && review.rating <= 3 && replyingTo !== review.id && (
+                    <p className="mb-2 inline-block rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
+                      Needs a reply
+                    </p>
+                  )}
+                  <p className="mb-3 text-sm leading-relaxed">
+                    {review.comment || (
+                      <span className="italic text-muted-foreground">Rating only, no comment</span>
+                    )}
                   </p>
                   {/* Answering a review in public is how a bad one stops being the last
                       word on it. The button did nothing until now. */}
                   {review.reply && replyingTo !== review.id ? (
-                    <div className="rounded-lg border border-border/60 bg-muted/40 p-3">
-                      <p className="text-xs font-semibold text-foreground mb-1">Your reply</p>
+                    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                      <p className="mb-1 text-xs font-semibold text-violet-900">Your reply</p>
                       <p className="text-sm text-muted-foreground leading-relaxed">{review.reply}</p>
                       <Button
                         variant="ghost"
