@@ -290,10 +290,12 @@ const GlobeIcon = ({ className, size = 24 }: { className?: string; size?: number
   );
 };
 
-interface NavItem {
+export interface NavItem {
   icon: React.ElementType;
   label: string;
   path: string;
+  /** One line saying what the page is for, shown on the section page. */
+  description?: string;
 }
 
 /**
@@ -304,9 +306,10 @@ interface NavItem {
  * along the rail reading tooltips. A group opens a panel with its pages named, which is
  * the only way a nav this size stays learnable.
  */
-interface NavGroup {
+export interface NavGroup {
   icon: React.ElementType;
   label: string;
+  slug: string;
   /** Groups with one destination navigate straight there. */
   path?: string;
   items?: NavItem[];
@@ -326,52 +329,60 @@ const languages = [
   { code: "zh-CN", name: "Simplified Chinese", flag: "🇨🇳" },
 ];
 
-const navGroups: NavGroup[] = [
-  { icon: CalendarIcon, label: "Calendar", path: "/calendar" },
+/**
+ * The nav, in one place. The rail and the section pages both read it, so a page cannot
+ * exist in one and be missing from the other — which is how half these screens ended up
+ * unreachable.
+ */
+export const navGroups: NavGroup[] = [
+  { icon: CalendarIcon, label: "Calendar", slug: "calendar", path: "/calendar" },
   {
     icon: TaskIcon,
     label: "Sales",
+    slug: "sales",
     items: [
-      { icon: TaskIcon, label: "Till", path: "/sales" },
-      { icon: AnalyticsIcon, label: "Analytics", path: "/analytics" },
+      { icon: TaskIcon, label: "Till", path: "/sales", description: "Ring up a visit, take payment, see today's takings" },
+      { icon: AnalyticsIcon, label: "Analytics", path: "/analytics", description: "Revenue, bookings and client trends over time" },
     ],
   },
   {
     icon: Users,
     label: "Clients",
+    slug: "clients",
     items: [
-      { icon: Users, label: "All clients", path: "/clients" },
-      { icon: Star, label: "Reviews", path: "/reviews" },
-      { icon: Gift, label: "Referrals", path: "/referral-program" },
-      { icon: MarketingIcon, label: "Marketing", path: "/marketing" },
-      // Hidden until memberships are ready to sell.
-      // { icon: BadgeCheck, label: "Memberships", path: "/memberships" },
+      { icon: Users, label: "All clients", path: "/clients", description: "Everyone who has booked, with their history and spend" },
+      { icon: Star, label: "Reviews", path: "/reviews", description: "Read feedback, reply to it, ask for more" },
+      { icon: Gift, label: "Referrals", path: "/referral-program", description: "Your code, and the clients your clients bring in" },
+      { icon: MarketingIcon, label: "Marketing", path: "/marketing", description: "Campaigns and promo codes" },
     ],
   },
   {
     icon: ItemCategoryIcon,
     label: "Catalogue",
+    slug: "catalogue",
     items: [
-      { icon: ItemCategoryIcon, label: "Services", path: "/items-category" },
-      { icon: Package, label: "Add-ons", path: "/addons" },
-      // #26: not add-on management — real stock, with SKUs and reorder levels.
-      { icon: Package, label: "Inventory", path: "/inventory" },
+      { icon: ItemCategoryIcon, label: "Services", path: "/items-category", description: "What you sell, how long it takes, what it costs" },
+      { icon: Package, label: "Add-ons", path: "/addons", description: "Extras a client can add to a booking" },
+      // #26: real stock with SKUs and reorder levels, not add-on management.
+      { icon: Package, label: "Inventory", path: "/inventory", description: "Stock levels and reorder points" },
     ],
   },
   {
     icon: StaffIcon,
     label: "Team",
+    slug: "team",
     items: [
-      { icon: StaffIcon, label: "Staff", path: "/staff" },
-      { icon: ClockIcon, label: "Opening hours", path: "/business-hours" },
+      { icon: StaffIcon, label: "Staff", path: "/staff", description: "Who works here, what they do, their commission" },
+      { icon: ClockIcon, label: "Opening hours", path: "/business-hours", description: "When the salon is open and when it is closed" },
     ],
   },
   {
     icon: SettingsIcon,
     label: "Business",
+    slug: "business",
     items: [
-      { icon: BusinessIcon, label: "Business profile", path: "/business" },
-      { icon: SettingsIcon, label: "Settings", path: "/setup" },
+      { icon: BusinessIcon, label: "Business profile", path: "/business", description: "Name, address, photos — what customers see" },
+      { icon: SettingsIcon, label: "Settings", path: "/setup", description: "Booking rules, payments, notifications, branding" },
     ],
   },
 ];
@@ -382,7 +393,6 @@ export function Sidebar() {
   const businessId = useBusinessId();
   const [selectedLanguage, setSelectedLanguage] = useState("pl");
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   // #9 (salon-hub QA): there was no owner-identity element in the sidebar at all — the
   // circle in its place was a dead "theme selector" (no onClick, never wired to
@@ -459,7 +469,9 @@ export function Sidebar() {
           scrolling, so there is nothing to scroll. */}
       <nav className="flex-1 flex flex-col items-center py-2 gap-0.5 overflow-visible relative">
         {navGroups.map((group) => {
-          const paths = group.items ? group.items.map((i) => getPath(i.path)) : [getPath(group.path!)];
+          const paths = group.items
+            ? [...group.items.map((i) => getPath(i.path)), getPath(`/section/${group.slug}`)]
+            : [getPath(group.path!)];
           const isActive = paths.some(
             (full) =>
               location.pathname === full ||
@@ -467,86 +479,31 @@ export function Sidebar() {
               (full === getPath("/business") && location.pathname === `/${businessId}`)
           );
           const Icon = group.icon;
-          const open = openGroup === group.label;
 
           return (
             <div
               key={group.label}
               className="relative w-full flex justify-center"
-              onMouseEnter={() => group.items && setOpenGroup(group.label)}
-              onMouseLeave={() => group.items && setOpenGroup(null)}
             >
-              {/* A group opens its list; only a group with a single destination navigates.
-                  Navigating on click meant the sub-pages could never be reached — the
-                  panel vanished with the page change before it could be clicked. */}
-              {group.items ? (
-                <button
-                  type="button"
-                  aria-label={group.label}
-                  aria-expanded={open}
-                  onClick={() => setOpenGroup(open ? null : group.label)}
+              {/* One click, one page. A hover flyout meant the destinations only existed
+                  while the pointer was on them; the section page keeps them somewhere. */}
+              <NavLink
+                to={group.path ? getPath(group.path) : getPath(`/section/${group.slug}`)}
+                aria-label={group.label}
+                className={cn(
+                  "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
+                  !isActive && "hover:bg-white/5"
+                )}
+              >
+                {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
+                <Icon
+                  size={23}
                   className={cn(
-                    "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
-                    !isActive && "hover:bg-white/5",
-                    open && "bg-white/10"
+                    "transition-colors",
+                    isActive ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
                   )}
-                >
-                  {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
-                  <Icon
-                    size={23}
-                    className={cn(
-                      "transition-colors",
-                      isActive || open ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
-                    )}
-                  />
-                </button>
-              ) : (
-                <NavLink
-                  to={getPath(group.path!)}
-                  aria-label={group.label}
-                  onClick={() => setOpenGroup(null)}
-                  className={cn(
-                    "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
-                    !isActive && "hover:bg-white/5"
-                  )}
-                >
-                  {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
-                  <Icon
-                    size={23}
-                    className={cn(
-                      "transition-colors",
-                      isActive ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
-                    )}
-                  />
-                </NavLink>
-              )}
-
-              {group.items && open && (
-                <div className="absolute left-[60px] top-0 z-50 min-w-[210px] rounded-xl border border-[#2a2a2a] bg-[#1f1f1f] p-1.5 pl-2 shadow-2xl before:absolute before:-left-3 before:top-0 before:h-full before:w-3 before:content-['']">
-                  <p className="px-3 pb-1.5 pt-1 text-[10px] uppercase tracking-wider text-white/35">
-                    {group.label}
-                  </p>
-                  {group.items.map((item) => {
-                    const full = getPath(item.path);
-                    const on = location.pathname === full || location.pathname.startsWith(full + "/");
-                    const ItemIcon = item.icon;
-                    return (
-                      <NavLink
-                        key={item.path}
-                        to={full}
-                        onClick={() => setOpenGroup(null)}
-                        className={cn(
-                          "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
-                          on ? "bg-white/10 text-white" : "text-white/65 hover:bg-white/5 hover:text-white"
-                        )}
-                      >
-                        <ItemIcon size={16} className="shrink-0 opacity-80" />
-                        {item.label}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
+                />
+              </NavLink>
             </div>
           );
         })}
