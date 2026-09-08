@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { currencySymbol } from "@/lib/currency";
+import { money, pct } from "@/lib/utils";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,8 @@ import {
   Timer,
   ArrowRight,
   Gift,
-  LineChart
+  LineChart,
+  Repeat
 } from "lucide-react";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import {
@@ -46,6 +48,7 @@ import { format, subDays } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import OverviewTab from "@/components/analytics/OverviewTab";
+import { BarList, Insights, Metric } from "@/components/analytics/AnalyticsBits";
 import RevenueTab from "@/components/analytics/RevenueTab";
 import BookingsTab from "@/components/analytics/BookingsTab";
 import ClientsTab from "@/components/analytics/ClientsTab";
@@ -247,6 +250,19 @@ export default function AnalyticsPage() {
       </AppLayout>
     );
   }
+
+  // Worked out once, so a tab can say which day or hour is the one to act on rather than
+  // handing the owner a table and letting them find it.
+  const worstCancelDay = (cancellations?.cancellationsByDay ?? []).reduce(
+    (a: { date: string; cancellations: number } | null, b: { date: string; cancellations: number }) =>
+      !a || b.cancellations > a.cancellations ? b : a,
+    null
+  );
+  const hours = peakHours?.peakHours ?? [];
+  const busiestHour = hours.length ? hours.reduce((a, b) => (b.bookings > a.bookings ? b : a)) : null;
+  const quietestHour = hours.length ? hours.reduce((a, b) => (b.bookings < a.bookings ? b : a)) : null;
+  const methods = paymentMethods?.paymentMethods ?? [];
+  const topPaymentMethod = methods.length ? methods.reduce((a, b) => (b.revenue > a.revenue ? b : a)) : null;
 
   return (
     <AppLayout>
@@ -489,42 +505,49 @@ export default function AnalyticsPage() {
 
           <TabsContent value="cancellations" className="mt-0">
             {cancellations ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Cancellation Analytics</CardTitle>
-                    <CardDescription>Cancellation summary</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="mb-6">
-                      <p className="text-sm text-muted-foreground">Total Cancellations</p>
-                      <p className="text-2xl font-bold">{cancellations.totalCancellations}</p>
-                    </div>
-                    {cancellations.cancellationsByDay && cancellations.cancellationsByDay.length > 0 && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b text-left text-muted-foreground">
-                              <th className="pb-2 font-medium">Date</th>
-                              <th className="pb-2 font-medium">Cancellations</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {cancellations.cancellationsByDay.map((item, idx) => (
-                              <tr key={idx} className="border-b hover:bg-muted/50">
-                                <td className="py-2">{item.date}</td>
-                                <td className="py-2">{item.cancellations}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    ...(cancellations.totalCancellations > 0 && overview?.totalBookings
+                      ? [{
+                          text: `${cancellations.totalCancellations} cancellations against ${overview.totalBookings} bookings — roughly ${money(cancellations.totalCancellations * (overview.averageTicket || 0))} ${currencySymbol()} of chair time nobody paid for.`,
+                          tone: "rose" as const,
+                        }]
+                      : []),
+                    ...(worstCancelDay
+                      ? [{
+                          text: `${worstCancelDay.date} lost the most: ${worstCancelDay.cancellations} bookings. Worth checking what was in the diary that day.`,
+                          tone: "amber" as const,
+                        }]
+                      : []),
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric icon={XCircle} label="Cancellations" value={cancellations.totalCancellations} tone="rose" />
+                  <Metric
+                    icon={TrendingDown}
+                    label="Share of bookings"
+                    value={overview?.totalBookings ? `${Math.round((cancellations.totalCancellations / overview.totalBookings) * 100)}%` : "—"}
+                    tone="amber"
+                  />
+                  <Metric
+                    icon={DollarSign}
+                    label="Revenue lost"
+                    value={`${money(cancellations.totalCancellations * (overview?.averageTicket || 0))} ${currencySymbol()}`}
+                    hint="At your average ticket"
+                    tone="slate"
+                  />
+                </div>
+                <BarList
+                  title="Cancellations by day"
+                  description="The tallest bars are the days to look at."
+                  tone="rose"
+                  rows={(cancellations.cancellationsByDay ?? []).map((d) => ({ label: d.date, value: d.cancellations }))}
+                  emptyText="No cancellations in this period. "
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -532,46 +555,53 @@ export default function AnalyticsPage() {
 
           <TabsContent value="peak-hours" className="mt-0">
             {peakHours ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Peak Hours Analytics</CardTitle>
-                    <CardDescription>Busiest hours and booking distribution</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="mb-6">
-                      <p className="text-sm text-muted-foreground">Busiest Hour</p>
-                      <p className="text-2xl font-bold">
-                        {peakHours.peakHours && peakHours.peakHours.length > 0
-                          ? `${String(peakHours.peakHours[0].hour).padStart(2, '0')}:00`
-                          : "N/A"}
-                      </p>
-                    </div>
-                    {peakHours.peakHours && peakHours.peakHours.length > 0 && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b text-left text-muted-foreground">
-                              <th className="pb-2 font-medium">Hour</th>
-                              <th className="pb-2 font-medium">Bookings</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {peakHours.peakHours.map((item, idx) => (
-                              <tr key={idx} className="border-b hover:bg-muted/50">
-                                <td className="py-2">{String(item.hour).padStart(2, '0')}:00</td>
-                                <td className="py-2">{item.bookings}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={
+                    busiestHour
+                      ? [
+                          {
+                            text: `${String(busiestHour.hour).padStart(2, "0")}:00 is your busiest hour with ${busiestHour.bookings} bookings. Staff it first.`,
+                            tone: "sky" as const,
+                          },
+                          ...(quietestHour && quietestHour.hour !== busiestHour.hour
+                            ? [{
+                                text: `${String(quietestHour.hour).padStart(2, "0")}:00 is the quietest with ${quietestHour.bookings}. A promotion belongs here, not at your busiest time.`,
+                                tone: "amber" as const,
+                              }]
+                            : []),
+                        ]
+                      : []
+                  }
+                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Metric
+                    icon={Clock}
+                    label="Busiest hour"
+                    value={busiestHour ? `${String(busiestHour.hour).padStart(2, "0")}:00` : "—"}
+                    hint={busiestHour ? `${busiestHour.bookings} bookings` : undefined}
+                    tone="sky"
+                  />
+                  <Metric
+                    icon={Clock}
+                    label="Quietest hour"
+                    value={quietestHour ? `${String(quietestHour.hour).padStart(2, "0")}:00` : "—"}
+                    hint={quietestHour ? `${quietestHour.bookings} bookings` : undefined}
+                    tone="amber"
+                  />
+                </div>
+                <BarList
+                  title="Bookings by hour"
+                  description="When the chairs are actually full."
+                  tone="sky"
+                  rows={(peakHours.peakHours ?? []).map((h) => ({
+                    label: `${String(h.hour).padStart(2, "0")}:00`,
+                    value: h.bookings,
+                  }))}
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -579,32 +609,46 @@ export default function AnalyticsPage() {
 
           <TabsContent value="customer-retention" className="mt-0">
             {customerRetention ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Customer Retention Analytics</CardTitle>
-                    <CardDescription>Customer retention and repeat visit analysis</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Retention Rate</p>
-                        <p className="text-2xl font-bold">{customerRetention.retentionRate?.toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Clients</p>
-                        <p className="text-2xl font-bold">{customerRetention.totalClients}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Returning Clients</p>
-                        <p className="text-2xl font-bold">{customerRetention.returningClients}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text:
+                        (customerRetention.retentionRate ?? 0) >= 50
+                          ? `${pct(customerRetention.retentionRate)}% of clients came back. Repeat custom is carrying the salon — protect it before chasing new names.`
+                          : `Only ${pct(customerRetention.retentionRate)}% came back. Every month starts from nearly zero, which is the most expensive way to run a salon.`,
+                      tone: (customerRetention.retentionRate ?? 0) >= 50 ? ("emerald" as const) : ("rose" as const),
+                    },
+                    {
+                      text: `${customerRetention.totalClients - customerRetention.returningClients} clients visited once and have not been back. That is the list worth a message.`,
+                      tone: "amber" as const,
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric
+                    icon={Repeat}
+                    label="Retention rate"
+                    value={`${pct(customerRetention.retentionRate)}%`}
+                    tone={(customerRetention.retentionRate ?? 0) >= 50 ? "emerald" : "rose"}
+                  />
+                  <Metric icon={Users} label="Total clients" value={customerRetention.totalClients} tone="violet" />
+                  <Metric icon={UserCheck} label="Came back" value={customerRetention.returningClients} tone="emerald" />
+                </div>
+                <BarList
+                  title="Who is coming back"
+                  tone="emerald"
+                  rows={[
+                    { label: "Returning clients", value: customerRetention.returningClients },
+                    {
+                      label: "One visit only",
+                      value: Math.max(0, customerRetention.totalClients - customerRetention.returningClients),
+                    },
+                  ]}
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -612,32 +656,44 @@ export default function AnalyticsPage() {
 
           <TabsContent value="profitability" className="mt-0">
             {profitability ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profitability Analytics</CardTitle>
-                    <CardDescription>Profit and revenue metrics</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Revenue</p>
-                        <p className="text-2xl font-bold">{profitability.totalRevenue?.toFixed(2)} {currencySymbol()}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Estimated Profit</p>
-                        <p className="text-2xl font-bold">{profitability.estimatedProfit?.toFixed(2)} {currencySymbol()}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Profit Margin</p>
-                        <p className="text-2xl font-bold">{profitability.profitMargin?.toFixed(1)}%</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text: `Of ${money(profitability.totalRevenue)} ${currencySymbol()} taken, roughly ${money(profitability.estimatedProfit)} ${currencySymbol()} is yours after costs — a ${pct(profitability.profitMargin)}% margin.`,
+                      tone: (profitability.profitMargin ?? 0) >= 30 ? ("emerald" as const) : ("amber" as const),
+                    },
+                    {
+                      text: "This is an estimate from staff cost and commission. It does not know your rent, stock or bills.",
+                      tone: "slate" as const,
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric icon={DollarSign} label="Revenue" value={`${money(profitability.totalRevenue)} ${currencySymbol()}`} tone="sky" />
+                  <Metric icon={TrendingUp} label="Estimated profit" value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="emerald" />
+                  <Metric
+                    icon={Target}
+                    label="Margin"
+                    value={`${pct(profitability.profitMargin)}%`}
+                    tone={(profitability.profitMargin ?? 0) >= 30 ? "emerald" : "amber"}
+                  />
+                </div>
+                <BarList
+                  title="Where the money goes"
+                  tone="emerald"
+                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
+                  rows={[
+                    { label: "Kept (estimated profit)", value: profitability.estimatedProfit ?? 0 },
+                    {
+                      label: "Costs (staff and commission)",
+                      value: Math.max(0, (profitability.totalRevenue ?? 0) - (profitability.estimatedProfit ?? 0)),
+                    },
+                  ]}
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -645,64 +701,33 @@ export default function AnalyticsPage() {
 
           <TabsContent value="payment-methods" className="mt-0">
             {paymentMethods ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Payment Method Analytics</CardTitle>
-                    <CardDescription>Payment methods breakdown</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Most Popular Method</p>
-                        <p className="text-2xl font-bold">
-                          {paymentMethods.paymentMethods && paymentMethods.paymentMethods.length > 0
-                            ? paymentMethods.paymentMethods.reduce((max, item) =>
-                                item.transactions > max.transactions ? item : max
-                              ).method
-                            : "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Highest Value Method</p>
-                        <p className="text-2xl font-bold">
-                          {paymentMethods.paymentMethods && paymentMethods.paymentMethods.length > 0
-                            ? paymentMethods.paymentMethods.reduce((max, item) =>
-                                item.revenue > max.revenue ? item : max
-                              ).method
-                            : "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                    {paymentMethods.paymentMethods && paymentMethods.paymentMethods.length > 0 && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b text-left text-muted-foreground">
-                              <th className="pb-2 font-medium">Method</th>
-                              <th className="pb-2 font-medium">Transactions</th>
-                              <th className="pb-2 font-medium">Revenue</th>
-                              <th className="pb-2 font-medium">Percentage</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {paymentMethods.paymentMethods.map((item, idx) => (
-                              <tr key={idx} className="border-b hover:bg-muted/50">
-                                <td className="py-2">{item.method}</td>
-                                <td className="py-2">{item.transactions}</td>
-                                <td className="py-2">{item.revenue.toFixed(2)} {currencySymbol()}</td>
-                                <td className="py-2">{item.percentage?.toFixed(1)}%</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={
+                    topPaymentMethod
+                      ? [
+                          {
+                            text: `${topPaymentMethod.paymentMethod} takes ${pct(topPaymentMethod.percentage)}% of your revenue across ${topPaymentMethod.transactions} transactions.`,
+                            tone: "sky" as const,
+                          },
+                        ]
+                      : []
+                  }
+                />
+                <BarList
+                  title="Revenue by payment method"
+                  description="What the till is actually taking."
+                  tone="sky"
+                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
+                  rows={(paymentMethods.paymentMethods ?? []).map((m) => ({
+                    label: m.paymentMethod,
+                    value: m.revenue,
+                    detail: `${m.transactions} · ${pct(m.percentage)}%`,
+                  }))}
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -710,28 +735,35 @@ export default function AnalyticsPage() {
 
           <TabsContent value="seasonal" className="mt-0">
             {seasonal ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Seasonal Analytics</CardTitle>
-                    <CardDescription>Monthly trends and seasonal patterns</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Best Month</p>
-                        <p className="text-2xl font-bold">{seasonal.bestMonth || "N/A"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Worst Month</p>
-                        <p className="text-2xl font-bold">{seasonal.worstMonth || "N/A"}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    ...(seasonal.bestMonth
+                      ? [{
+                          text: `${seasonal.bestMonth} is your strongest month and ${seasonal.worstMonth ?? "the quietest"} your weakest. Staff and stock for the first; run offers in the second.`,
+                          tone: "sky" as const,
+                        }]
+                      : []),
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Metric icon={TrendingUp} label="Best month" value={seasonal.bestMonth || "—"} tone="emerald" />
+                  <Metric icon={TrendingDown} label="Weakest month" value={seasonal.worstMonth || "—"} tone="amber" />
+                </div>
+                <BarList
+                  title="Revenue by month"
+                  description="The shape of your year."
+                  tone="sky"
+                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
+                  rows={(seasonal.monthlyData ?? seasonal.monthlyRevenue ?? []).map((m: { month?: string; period?: string; revenue: number }) => ({
+                    label: m.month ?? m.period ?? "",
+                    value: m.revenue,
+                  }))}
+                  emptyText="Not enough history yet — a year of takings is what makes this readable."
+                />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -739,32 +771,31 @@ export default function AnalyticsPage() {
 
           <TabsContent value="service-duration" className="mt-0">
             {serviceDuration ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Service Duration Analytics</CardTitle>
-                    <CardDescription>Service duration efficiency</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Avg Scheduled Duration</p>
-                        <p className="text-2xl font-bold">{serviceDuration.averageScheduledDuration?.toFixed(0)} min</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Avg Actual Duration</p>
-                        <p className="text-2xl font-bold">{serviceDuration.averageActualDuration?.toFixed(0)} min</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Duration Efficiency</p>
-                        <p className="text-2xl font-bold">{serviceDuration.durationEfficiency?.toFixed(1)}%</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text:
+                        (serviceDuration.durationEfficiency ?? 100) < 95
+                          ? `Appointments run about ${Math.abs(Math.round((serviceDuration.averageActualDuration ?? 0) - (serviceDuration.averageScheduledDuration ?? 0)))} minutes over what you book them for. Every one of those pushes the next client back.`
+                          : "Appointments finish close to the time you book them for, so the diary is realistic.",
+                      tone: (serviceDuration.durationEfficiency ?? 100) < 95 ? ("amber" as const) : ("emerald" as const),
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric icon={Clock} label="Booked for" value={`${Math.round(serviceDuration.averageScheduledDuration ?? 0)} min`} tone="sky" />
+                  <Metric icon={Timer} label="Actually takes" value={`${Math.round(serviceDuration.averageActualDuration ?? 0)} min`} tone="violet" />
+                  <Metric
+                    icon={Target}
+                    label="On time"
+                    value={`${pct(serviceDuration.durationEfficiency)}%`}
+                    tone={(serviceDuration.durationEfficiency ?? 100) >= 95 ? "emerald" : "amber"}
+                  />
+                </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
@@ -772,28 +803,38 @@ export default function AnalyticsPage() {
 
           <TabsContent value="wait-times" className="mt-0">
             {waitTimes ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Wait Time Analytics</CardTitle>
-                    <CardDescription>Average wait times and gaps</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Average Wait Time</p>
-                        <p className="text-2xl font-bold">{waitTimes.averageWaitTime?.toFixed(1)} min</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Average Gap Time</p>
-                        <p className="text-2xl font-bold">{waitTimes.averageGapTime?.toFixed(1)} min</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text: `Clients wait about ${pct(waitTimes.averageWaitTime)} minutes past their time.`,
+                      tone: (waitTimes.averageWaitTime ?? 0) > 10 ? ("rose" as const) : ("emerald" as const),
+                    },
+                    {
+                      text: `Chairs sit empty about ${pct(waitTimes.averageGapTime)} minutes between bookings — that gap is unsold time, not a break unless you meant it to be.`,
+                      tone: "amber" as const,
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Metric
+                    icon={Clock}
+                    label="Average wait"
+                    value={`${pct(waitTimes.averageWaitTime)} min`}
+                    hint="Past the booked start"
+                    tone={(waitTimes.averageWaitTime ?? 0) > 10 ? "rose" : "emerald"}
+                  />
+                  <Metric
+                    icon={Timer}
+                    label="Gap between bookings"
+                    value={`${pct(waitTimes.averageGapTime)} min`}
+                    hint="Unsold chair time"
+                    tone="amber"
+                  />
+                </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64">
+              <div className="flex h-64 items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
