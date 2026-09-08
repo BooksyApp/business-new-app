@@ -433,7 +433,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-50 h-screen w-[76px] bg-[#1a1a1a] border-r border-[#2a2a2a]/50 flex flex-col relative">
+      <aside className="fixed left-0 top-0 z-50 h-screen w-[72px] bg-[#1a1a1a] border-r border-[#2a2a2a]/50 flex flex-col relative">
         {/* Top Section - Language Selector */}
         <div className="flex flex-col items-center pt-4 pb-2 border-b border-[#2a2a2a]/50">
           <div className="relative group">
@@ -473,59 +473,31 @@ export function Sidebar() {
               onMouseEnter={() => group.items && setOpenGroup(group.label)}
               onMouseLeave={() => group.items && setOpenGroup(null)}
             >
-              {group.path ? (
-                <NavLink
-                  to={getPath(group.path)}
-                  aria-label={group.label}
+              {/* Icon only. The flyout names the pages; a label under every icon made the
+                  rail twice as tall and said the same thing twice. Clicking a group goes to
+                  its first page rather than doing nothing. */}
+              <NavLink
+                to={getPath(group.path ?? group.items![0].path)}
+                aria-label={group.label}
+                onClick={() => setOpenGroup(null)}
+                className={cn(
+                  "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
+                  !isActive && "hover:bg-white/5",
+                  open && "bg-white/5"
+                )}
+              >
+                {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
+                <Icon
+                  size={23}
                   className={cn(
-                    "group relative flex flex-col items-center justify-center w-14 h-14 rounded-lg transition-all duration-200 gap-0.5",
-                    !isActive && "hover:bg-white/5"
+                    "transition-colors",
+                    isActive ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
                   )}
-                >
-                  {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
-                  <Icon
-                    size={22}
-                    className={cn("transition-colors", isActive ? "text-[#f4f4f4]" : "text-[#7f8084]")}
-                  />
-                  {/* The label, always. A rail of unlabelled icons is a memory test. */}
-                  <span
-                    className={cn(
-                      "text-[9px] leading-none tracking-wide",
-                      isActive ? "text-[#f4f4f4]" : "text-[#7f8084]"
-                    )}
-                  >
-                    {group.label}
-                  </span>
-                </NavLink>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setOpenGroup(open ? null : group.label)}
-                  aria-label={group.label}
-                  aria-expanded={open}
-                  className={cn(
-                    "group relative flex flex-col items-center justify-center w-14 h-14 rounded-lg transition-all duration-200 gap-0.5",
-                    !isActive && "hover:bg-white/5"
-                  )}
-                >
-                  {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
-                  <Icon
-                    size={22}
-                    className={cn("transition-colors", isActive ? "text-[#f4f4f4]" : "text-[#7f8084]")}
-                  />
-                  <span
-                    className={cn(
-                      "text-[9px] leading-none tracking-wide",
-                      isActive ? "text-[#f4f4f4]" : "text-[#7f8084]"
-                    )}
-                  >
-                    {group.label}
-                  </span>
-                </button>
-              )}
+                />
+              </NavLink>
 
               {group.items && open && (
-                <div className="absolute left-[68px] top-0 z-50 min-w-[190px] rounded-xl border border-[#2a2a2a] bg-[#1f1f1f] p-1.5 shadow-2xl">
+                <div className="absolute left-[64px] top-0 z-50 min-w-[190px] rounded-xl border border-[#2a2a2a] bg-[#1f1f1f] p-1.5 shadow-2xl">
                   <p className="px-3 pb-1.5 pt-1 text-[10px] uppercase tracking-wider text-white/35">
                     {group.label}
                   </p>

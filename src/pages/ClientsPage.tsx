@@ -1,4 +1,7 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { clientColorClasses } from "@/lib/appointmentVisuals";
+import { EmptyState, StatCard } from "@/components/ui/stat-card";
+import { CalendarCheck, Star, UserPlus, Users } from "lucide-react";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { loyaltyService } from "@/services/growthService";
 import { currencySymbol } from "@/lib/currency";
@@ -277,6 +280,38 @@ export default function ClientsPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* The four numbers a salon actually opens this page for, above the table rather
+            than buried in eight columns of the same grey text. */}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard icon={Users} label="Clients" value={clients.length} tone="violet" />
+          <StatCard
+            icon={UserPlus}
+            label="New this month"
+            value={
+              clients.filter((c) => {
+                if (!c.createdAt) return false;
+                const d = new Date(c.createdAt);
+                const now = new Date();
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+              }).length
+            }
+            tone="emerald"
+          />
+          <StatCard
+            icon={Star}
+            label="Regulars"
+            value={clients.filter((c) => (c.totalVisits ?? 0) >= 5).length}
+            hint="5 visits or more"
+            tone="amber"
+          />
+          <StatCard
+            icon={CalendarCheck}
+            label="Total visits"
+            value={clients.reduce((n, c) => n + (c.totalVisits ?? 0), 0)}
+            tone="sky"
+          />
+        </div>
+
         {/* Enhanced Search and Filter */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -364,22 +399,28 @@ export default function ClientsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : filteredClients.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <User className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {searchQuery ? "No clients found" : "No clients yet"}
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  {searchQuery
-                    ? "Try adjusting your search query"
-                    : "Clients will appear here once they book an appointment with your business"}
-                </p>
-              </div>
+              <EmptyState
+                icon={Users}
+                title={searchQuery ? `Nothing matches "${searchQuery}"` : "No clients yet"}
+                body={
+                  searchQuery
+                    ? "Search runs over name, email and phone. Try part of one of those."
+                    : "Anyone who books lands here automatically. You can also add someone yourself."
+                }
+                action={
+                  searchQuery ? null : (
+                    <Button className="gap-2" onClick={() => setAddClientDialogOpen(true)}>
+                      <Plus size={16} />
+                      Add a client
+                    </Button>
+                  )
+                }
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-border/60 bg-gradient-to-r from-muted/50 to-muted/30">
+                    <tr className="border-b bg-muted/40">
                       <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Client</th>
                       <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Contact</th>
                       <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Visits</th>
@@ -398,23 +439,34 @@ export default function ClientsPage() {
                       // dialog the menu item opens.
                       <tr
                         key={client.id}
-                        className="border-b border-border/40 hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/10 transition-all duration-300 cursor-pointer group"
+                        className="border-b border-border/40 transition-colors hover:bg-violet-50/60 cursor-pointer group"
                         style={{ animationDelay: `${index * 30}ms` }}
                         onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="ring-2 ring-background group-hover:ring-accent/30 transition-all">
-                              <AvatarFallback className="bg-gradient-to-br from-accent/20 to-purple-600/20 text-foreground font-semibold">
+                            {/* The same colour this client has on the calendar, so the two
+                                screens agree about who is who. */}
+                            <Avatar className="ring-2 ring-background transition-all">
+                              <AvatarFallback
+                                className={`font-semibold ${clientColorClasses(
+                                  getFullName(client.firstName, client.lastName)
+                                )}`}
+                              >
                                 {getInitials(client.firstName, client.lastName)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-semibold text-sm">{getFullName(client.firstName, client.lastName)}</span>
-                                {client.totalVisits === 1 && (
-                                  <Badge className="bg-status-completed/10 text-status-completed text-[10px] px-1.5 py-0.5">
+                                {(client.totalVisits ?? 0) <= 1 && (
+                                  <Badge className="bg-emerald-600 text-[10px] px-1.5 py-0.5 text-white hover:bg-emerald-600">
                                     New
+                                  </Badge>
+                                )}
+                                {(client.totalVisits ?? 0) >= 5 && (
+                                  <Badge className="bg-rose-600 text-[10px] px-1.5 py-0.5 text-white hover:bg-rose-600">
+                                    Regular
                                   </Badge>
                                 )}
                                 {(() => {

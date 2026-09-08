@@ -10,7 +10,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="h-screen bg-background relative">
       <Sidebar />
-      <main className="absolute left-[76px] right-0 top-0 bottom-0 bg-[#fafafa] overflow-auto">
+      <main className="absolute left-[72px] right-0 top-0 bottom-0 bg-[#fafafa] overflow-auto">
         {children}
       </main>
     </div>
