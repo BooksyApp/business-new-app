@@ -13,16 +13,11 @@ import { Label } from "@/components/ui/label";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
-import {
-  productService,
-  type Product,
-  type StockMovement,
-} from "@/services/productService";
+import { productService, type Product } from "@/services/productService";
 import {
   AlertTriangle,
   Boxes,
   Coins,
-  History,
   Loader2,
   Minus,
   Package,
@@ -33,7 +28,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const EMPTY = { name: "", sku: "", brand: "", costPrice: "", salePrice: "", quantity: "0", reorderLevel: "0", unit: "" };
+const EMPTY = { name: "", sku: "", price: "", quantityOnHand: "0", lowStockThreshold: "5" };
 
 /**
  * Stock.
@@ -50,8 +45,7 @@ export default function InventoryPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
-  const [historyOf, setHistoryOf] = useState<Product | null>(null);
-  const [movements, setMovements] = useState<StockMovement[] | null>(null);
+
 
   const load = async () => {
     try {
@@ -77,12 +71,9 @@ export default function InventoryPage() {
       await productService.create(businessId, {
         name: form.name.trim(),
         sku: form.sku.trim() || undefined,
-        brand: form.brand.trim() || undefined,
-        costPrice: Number(form.costPrice) || 0,
-        salePrice: Number(form.salePrice) || 0,
-        quantity: Number(form.quantity) || 0,
-        reorderLevel: Number(form.reorderLevel) || 0,
-        unit: form.unit.trim() || undefined,
+        price: Number(form.price) || 0,
+        quantityOnHand: Number(form.quantityOnHand) || 0,
+        lowStockThreshold: Number(form.lowStockThreshold) || 0,
       });
       setForm(EMPTY);
       setAddOpen(false);
@@ -95,9 +86,19 @@ export default function InventoryPage() {
     }
   };
 
+  /** Counting a delivery in, or a bottle out. The server rejects a count below zero. */
   const move = async (product: Product, delta: number) => {
+    const next = product.quantityOnHand + delta;
+    if (next < 0) return;
     try {
-      await productService.move(businessId, product.id, delta, delta > 0 ? "DELIVERY" : "USED");
+      await productService.update(businessId, product.id, {
+        name: product.name,
+        sku: product.sku ?? undefined,
+        price: product.price,
+        quantityOnHand: next,
+        lowStockThreshold: product.lowStockThreshold,
+        isActive: product.isActive,
+      });
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update the count");
@@ -115,18 +116,13 @@ export default function InventoryPage() {
     }
   };
 
-  const openHistory = async (product: Product) => {
-    setHistoryOf(product);
-    setMovements(null);
-    setMovements(await productService.movements(businessId, product.id).catch(() => []));
-  };
 
   const filtered = products.filter((p) =>
-    [p.name, p.sku, p.brand].filter(Boolean).join(" ").toLowerCase().includes(query.toLowerCase())
+    [p.name, p.sku].filter(Boolean).join(" ").toLowerCase().includes(query.toLowerCase())
   );
-  const lowStock = products.filter((p) => p.low_stock && p.active);
-  const stockValue = products.reduce((n, p) => n + Number(p.cost_price ?? 0) * (p.quantity ?? 0), 0);
-  const units = products.reduce((n, p) => n + (p.quantity ?? 0), 0);
+  const lowStock = products.filter((p) => p.lowStock && p.isActive);
+  const stockValue = products.reduce((n, p) => n + Number(p.price ?? 0) * (p.quantityOnHand ?? 0), 0);
+  const units = products.reduce((n, p) => n + (p.quantityOnHand ?? 0), 0);
 
   return (
     <AppLayout>
@@ -149,7 +145,7 @@ export default function InventoryPage() {
             icon={Coins}
             label="Stock value"
             value={`${stockValue.toFixed(0)} ${currencySymbol()}`}
-            hint="At cost price"
+            hint="At sale price"
             tone="emerald"
           />
           <StatCard
@@ -165,7 +161,7 @@ export default function InventoryPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pl-10"
-            placeholder="Search by name, SKU or brand..."
+            placeholder="Search by name or SKU..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -181,7 +177,7 @@ export default function InventoryPage() {
             title={query ? `Nothing matches "${query}"` : "No products yet"}
             body={
               query
-                ? "Search runs over name, SKU and brand."
+                ? "Search runs over name and SKU."
                 : "Add what you keep on the shelf. You will be told when something drops to its reorder level."
             }
             action={
@@ -199,38 +195,38 @@ export default function InventoryPage() {
               <div
                 key={p.id}
                 className={`flex flex-wrap items-center gap-4 rounded-xl border border-l-4 bg-white p-4 ${
-                  !p.active ? "border-l-slate-300 opacity-60" : p.low_stock ? "border-l-rose-500" : "border-l-emerald-500"
+                  !p.isActive ? "border-l-slate-300 opacity-60" : p.lowStock ? "border-l-rose-500" : "border-l-emerald-500"
                 }`}
               >
                 <div className="min-w-[180px] flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{p.name}</p>
-                    {p.low_stock && p.active && (
+                    {p.lowStock && p.isActive && (
                       <Badge className="bg-rose-600 text-[10px] text-white hover:bg-rose-600">Reorder</Badge>
                     )}
-                    {!p.active && <Badge variant="secondary" className="text-[10px]">Inactive</Badge>}
+                    {!p.isActive && <Badge variant="secondary" className="text-[10px]">Inactive</Badge>}
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {[p.brand, p.sku ? `SKU ${p.sku}` : null].filter(Boolean).join(" · ") || "No SKU"}
+                    {p.sku ? `SKU ${p.sku}` : "No SKU"}
                   </p>
                 </div>
 
                 {/* The count, big, with the reorder level beside it — a number on its own
                     does not say whether it is a problem. */}
                 <div className="text-center">
-                  <p className={`text-2xl font-semibold ${p.low_stock ? "text-rose-600" : ""}`}>{p.quantity}</p>
+                  <p className={`text-2xl font-semibold ${p.lowStock ? "text-rose-600" : ""}`}>
+                    {p.quantityOnHand}
+                  </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {p.unit || "in stock"} · reorder at {p.reorder_level}
+                    in stock · reorder at {p.lowStockThreshold}
                   </p>
                 </div>
 
                 <div className="min-w-[110px] text-right text-sm">
                   <p className="font-medium">
-                    {Number(p.sale_price).toFixed(2)} {currencySymbol()}
+                    {Number(p.price).toFixed(2)} {currencySymbol()}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    cost {Number(p.cost_price).toFixed(2)}
-                  </p>
+                  <p className="text-xs text-muted-foreground">each</p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
@@ -239,9 +235,6 @@ export default function InventoryPage() {
                   </Button>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => void move(p, 1)}>
                     <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void openHistory(p)}>
-                    <History className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -262,7 +255,7 @@ export default function InventoryPage() {
         <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Add a product</DialogTitle>
-            <DialogDescription>The opening count is recorded as a delivery.</DialogDescription>
+            <DialogDescription>You will be warned when the count drops to the reorder level.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -270,32 +263,20 @@ export default function InventoryPage() {
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Shampoo 500ml" />
             </div>
             <div>
-              <Label className="text-xs">Brand</Label>
-              <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
-            </div>
-            <div>
               <Label className="text-xs">SKU</Label>
               <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Cost price</Label>
-              <Input type="number" min={0} step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Sale price</Label>
-              <Input type="number" min={0} step="0.01" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
+              <Label className="text-xs">Price</Label>
+              <Input type="number" min={0} step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             </div>
             <div>
               <Label className="text-xs">Quantity</Label>
-              <Input type="number" min={0} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+              <Input type="number" min={0} value={form.quantityOnHand} onChange={(e) => setForm({ ...form, quantityOnHand: e.target.value })} />
             </div>
             <div>
               <Label className="text-xs">Reorder at</Label>
-              <Input type="number" min={0} value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })} />
-            </div>
-            <div className="sm:col-span-2">
-              <Label className="text-xs">Unit</Label>
-              <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="bottles" />
+              <Input type="number" min={0} value={form.lowStockThreshold} onChange={(e) => setForm({ ...form, lowStockThreshold: e.target.value })} />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -305,36 +286,6 @@ export default function InventoryPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!historyOf} onOpenChange={(o) => !o && setHistoryOf(null)}>
-        <DialogContent className="sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle>{historyOf?.name}</DialogTitle>
-            <DialogDescription>Where the count came from, newest first.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[55vh] space-y-2 overflow-y-auto">
-            {movements === null ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : movements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No movements recorded.</p>
-            ) : (
-              movements.map((m, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
-                  <div className="min-w-0">
-                    <p className="font-medium">{m.reason}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {String(m.created_at).slice(0, 16).replace("T", " ")}
-                      {m.note ? ` · ${m.note}` : ""}
-                    </p>
-                  </div>
-                  <span className={`shrink-0 font-semibold ${m.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                    {m.delta > 0 ? `+${m.delta}` : m.delta}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 }

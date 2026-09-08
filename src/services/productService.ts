@@ -2,71 +2,52 @@ import { apiClient } from "@/config/api";
 
 export interface Product {
   id: number;
+  businessId: number;
   name: string;
   sku: string | null;
-  brand: string | null;
-  cost_price: number;
-  sale_price: number;
-  quantity: number;
-  reorder_level: number;
-  unit: string | null;
-  active: boolean;
-  low_stock: boolean;
-}
-
-export interface StockMovement {
-  delta: number;
-  reason: string;
-  note: string | null;
-  created_at: string;
+  price: number;
+  quantityOnHand: number;
+  lowStockThreshold: number;
+  isActive: boolean;
+  lowStock: boolean;
 }
 
 export interface ProductInput {
   name: string;
   sku?: string;
-  brand?: string;
-  costPrice?: number;
-  salePrice?: number;
-  quantity?: number;
-  reorderLevel?: number;
-  unit?: string;
-  active?: boolean;
+  price: number;
+  quantityOnHand: number;
+  lowStockThreshold: number;
+  isActive?: boolean;
 }
 
 /**
- * Stock, not add-ons.
+ * Retail stock — shampoo, styling products, anything with a SKU and a count.
  *
- * "Inventory" used to be the add-on editor with a different title — no SKU, no quantity,
- * no reorder level. This is the real thing: what the salon buys, counts and sells.
+ * The backend has had this since #290 (V59: products, quantity_on_hand, low stock
+ * threshold, and a decrementStock hook for sales). Nothing in the manager app called it:
+ * the page labelled "Inventory" was the add-on editor, so a salon could not see or count
+ * a single bottle.
  */
 class ProductService {
   list(businessId: number): Promise<Product[]> {
-    return apiClient.get<Product[]>(`/businesses/${businessId}/products`);
+    return apiClient.get<Product[]>(`/products/business/${businessId}`);
+  }
+
+  lowStock(businessId: number): Promise<Product[]> {
+    return apiClient.get<Product[]>(`/products/business/${businessId}/low-stock`);
   }
 
   create(businessId: number, input: ProductInput): Promise<Product> {
-    return apiClient.post<Product>(`/businesses/${businessId}/products`, input);
+    return apiClient.post<Product>(`/products/business/${businessId}`, input);
   }
 
-  update(businessId: number, id: number, input: Partial<ProductInput>): Promise<Product> {
-    return apiClient.put<Product>(`/businesses/${businessId}/products/${id}`, input);
+  update(businessId: number, id: number, input: ProductInput): Promise<Product> {
+    return apiClient.put<Product>(`/products/${id}/business/${businessId}`, input);
   }
 
   remove(businessId: number, id: number): Promise<void> {
-    return apiClient.delete<void>(`/businesses/${businessId}/products/${id}`);
-  }
-
-  movements(businessId: number, id: number): Promise<StockMovement[]> {
-    return apiClient.get<StockMovement[]>(`/businesses/${businessId}/products/${id}/movements`);
-  }
-
-  /** Moves stock and records why. The count is never set directly — see the server. */
-  move(businessId: number, id: number, delta: number, reason: string, note?: string): Promise<Product> {
-    return apiClient.post<Product>(`/businesses/${businessId}/products/${id}/movements`, {
-      delta,
-      reason,
-      note,
-    });
+    return apiClient.delete<void>(`/products/${id}/business/${businessId}`);
   }
 }
 
