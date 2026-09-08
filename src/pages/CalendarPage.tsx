@@ -2521,11 +2521,11 @@ export default function CalendarPage() {
             </div>
 
             {/* Booking mode: single / group / recurring */}
-            <div className="grid grid-cols-3 gap-1.5">
+            {/* Group and recurring are off for now. The machinery below stays — turning
+                either back on is putting its tab back, not rebuilding the flow. */}
+            <div className="grid grid-cols-1 gap-1.5">
               {([
                 { key: "single", label: "SINGLE", Icon: User },
-                { key: "group", label: "GROUP", Icon: Users },
-                { key: "recurring", label: "RECURRING", Icon: CalendarIcon },
               ] as const).map((m) => (
                 <Button
                   key={m.key}
