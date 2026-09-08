@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { EmptyState, StatCard } from "@/components/ui/stat-card";
+import { Coins, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -179,6 +181,26 @@ export default function ServicesPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* The three numbers that describe a menu: how much of it there is, how it is
+            organised, and what it costs. Reading them off a list of cards was the job
+            this page used to leave to the owner. */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatCard icon={Tag} label="Services" value={services.length} tone="violet" />
+          <StatCard icon={Layers} label="Categories" value={categories.length} tone="sky" />
+          <StatCard
+            icon={Coins}
+            label="Average price"
+            value={
+              services.length
+                ? `${Math.round(
+                    services.reduce((n, sv) => n + (Number(sv.price) || 0), 0) / services.length
+                  )} ${currencySymbol()}`
+                : "—"
+            }
+            tone="emerald"
+          />
+        </div>
+
         {/* Search and Filter */}
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-md">
@@ -213,21 +235,17 @@ export default function ServicesPage() {
 
         {/* Empty state */}
         {!loading && services.length === 0 && (
-          <Card className="border-border/60 shadow-sm">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="p-4 rounded-full bg-muted/30 mb-4">
-                <Tag className="h-10 w-10 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No services yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add your first service to start accepting bookings
-              </p>
+          <EmptyState
+            icon={Tag}
+            title="No services yet"
+            body="A service is what a customer books. Add one and it appears in the app straight away."
+            action={
               <Button onClick={() => setAddServiceOpen(true)} className="gap-2">
                 <Plus size={16} />
-                Add Service
+                Add service
               </Button>
-            </CardContent>
-          </Card>
+            }
+          />
         )}
 
         {/* Services grouped by category */}
@@ -236,7 +254,7 @@ export default function ServicesPage() {
             {grouped.map((group, catIndex) => (
               <Card
                 key={group.category?.id ?? "uncategorized"}
-                className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm"
+                className="overflow-hidden border-l-4 border-l-violet-500 bg-white transition-shadow hover:shadow-md"
                 style={{ animationDelay: `${catIndex * 100}ms` }}
               >
                 <CardHeader className="pb-4">

@@ -1,4 +1,5 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, ThumbsUp, MessageSquare, TrendingUp, Reply } from "lucide-react";
@@ -100,6 +101,18 @@ export default function ReviewsPage() {
 
   const breakdown = ratingBreakdown(reviews);
 
+  const now = new Date();
+  const newThisMonth = reviews.filter((r) => {
+    const d = new Date(r.createdAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  const positivePercent = reviews.length
+    ? Math.round((reviews.filter((r) => r.rating >= 4).length / reviews.length) * 100)
+    : 0;
+  const repliedPercent = reviews.length
+    ? Math.round((reviews.filter((r) => r.reply && r.reply.trim()).length / reviews.length) * 100)
+    : 0;
+
   return (
     <AppLayout>
       <PageHeader
@@ -131,7 +144,7 @@ export default function ReviewsPage() {
         {/* Enhanced Stats Overview */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Enhanced Rating Summary */}
-          <Card className="lg:col-span-1 border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
+          <Card className="lg:col-span-1 bg-white">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-bold">Overall Rating</CardTitle>
             </CardHeader>
@@ -161,7 +174,7 @@ export default function ReviewsPage() {
           </Card>
 
           {/* Enhanced Quick Stats */}
-          <Card className="lg:col-span-2 border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
+          <Card className="lg:col-span-2 bg-white">
             <CardHeader className="pb-4">
               <div>
                 <CardTitle className="text-lg font-bold">Review Insights</CardTitle>
@@ -169,29 +182,31 @@ export default function ReviewsPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* These three were hardcoded to +12, 92% and 100%: a salon with two
+                  one-star reviews and no replies was shown a perfect month. They are
+                  counted from the reviews on screen now. */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-5 rounded-xl bg-gradient-to-br from-status-completed/10 to-status-completed/5 border border-status-completed/20 hover:scale-105 transition-transform cursor-pointer">
-                  <TrendingUp className="h-7 w-7 mx-auto mb-2 text-status-completed" />
-                  <p className="text-3xl font-bold text-foreground">+12</p>
-                  <p className="text-sm text-muted-foreground font-medium mt-1">New Reviews</p>
-                </div>
-                <div className="text-center p-5 rounded-xl bg-gradient-to-br from-appointment-blue/10 to-appointment-blue/5 border border-appointment-blue/20 hover:scale-105 transition-transform cursor-pointer">
-                  <ThumbsUp className="h-7 w-7 mx-auto mb-2 text-appointment-blue" />
-                  <p className="text-3xl font-bold text-foreground">92%</p>
-                  <p className="text-sm text-muted-foreground font-medium mt-1">Positive</p>
-                </div>
-                <div className="text-center p-5 rounded-xl bg-gradient-to-br from-appointment-purple/10 to-appointment-purple/5 border border-appointment-purple/20 hover:scale-105 transition-transform cursor-pointer">
-                  <MessageSquare className="h-7 w-7 mx-auto mb-2 text-appointment-purple" />
-                  <p className="text-3xl font-bold text-foreground">100%</p>
-                  <p className="text-sm text-muted-foreground font-medium mt-1">Response Rate</p>
-                </div>
+                <StatCard icon={TrendingUp} label="New this month" value={newThisMonth} tone="emerald" />
+                <StatCard
+                  icon={ThumbsUp}
+                  label="Positive"
+                  value={reviews.length ? `${positivePercent}%` : "—"}
+                  hint="4 stars or more"
+                  tone="sky"
+                />
+                <StatCard
+                  icon={MessageSquare}
+                  label="Replied"
+                  value={reviews.length ? `${repliedPercent}%` : "—"}
+                  tone="violet"
+                />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Enhanced Recent Reviews */}
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
+        <Card className="bg-white">
           <CardHeader className="pb-4">
             <div>
               <CardTitle className="text-lg font-bold">Recent Reviews</CardTitle>
@@ -203,9 +218,11 @@ export default function ReviewsPage() {
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading reviews…</p>
               ) : reviews.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No reviews yet. They appear here as clients leave them.
-                </p>
+                <EmptyState
+                  icon={Star}
+                  title="No reviews yet"
+                  body="A customer can review a visit once it is done. Ask the people who have already been, using the button above."
+                />
               ) : null}
               {reviews.map((review, index) => (
                 <div 
