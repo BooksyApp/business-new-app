@@ -21,6 +21,7 @@ import { authService } from "@/services/authService";
 import { businessService } from "@/services/businessService";
 import { serviceService } from "@/services/serviceService";
 import { staffService } from "@/services/staffService";
+import { getPlatformSettings } from "@/services/platformService";
 
 interface RegistrationData {
   firstName: string;
@@ -74,6 +75,13 @@ interface RegistrationData {
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  // The back office can close business signups. Nothing read that setting, so the switch
+  // did nothing; this is the panel half of it.
+  const [signupsOpen, setSignupsOpen] = useState(true);
+
+  useEffect(() => {
+    getPlatformSettings().then((settings) => setSignupsOpen(settings.businessSignupsOpen));
+  }, []);
   const totalSteps = 6;
 
   const [formData, setFormData] = useState<RegistrationData>({
@@ -482,6 +490,26 @@ const RegistrationPage = () => {
       setIsRegistering(false);
     }
   };
+
+  if (!signupsOpen) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 px-6 text-center">
+        <div className="max-w-md">
+          <h1 className="text-2xl font-semibold text-gray-900">Signups are closed</h1>
+          <p className="mt-3 text-gray-600">
+            booqi is not taking new businesses at the moment. If you already have an account,
+            sign in instead.
+          </p>
+          <button
+            onClick={() => navigate("/login")}
+            className="mt-6 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white"
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
