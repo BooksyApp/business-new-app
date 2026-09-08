@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, Edit, Trash2, ArrowRight, Calendar as CalendarIcon, ChevronDown, XCircle, CheckCircle2, UserX, CreditCard } from "lucide-react";
+import { CheckCircle2, Clock, CreditCard, Edit, UserX, XCircle } from "lucide-react";
+import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
 import type { Appointment, Staff } from "./AppointmentBlock";
@@ -165,342 +164,212 @@ export function AppointmentModal({
   })();
   const selectedClient = clients.find((c) => c.id === appointmentData.clientId);
 
+  // Colour carries the state, so the panel reads at a glance instead of being scanned.
+  const statusTone: Record<string, { band: string; chip: string; label: string }> = {
+    PENDING: { band: "bg-amber-500", chip: "bg-amber-100 text-amber-900", label: "Awaiting confirmation" },
+    CONFIRMED: { band: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-900", label: "Confirmed" },
+    COMPLETED: { band: "bg-slate-500", chip: "bg-slate-200 text-slate-900", label: "Completed" },
+    CANCELLED: { band: "bg-red-500", chip: "bg-red-100 text-red-900", label: "Cancelled" },
+    NO_SHOW: { band: "bg-rose-600", chip: "bg-rose-100 text-rose-900", label: "No-show" },
+  };
+  const tone = statusTone[status] ?? statusTone.PENDING;
+  const paid = paymentStatus === "PAID";
+  const clientName = appointmentData.clientName || appointment.clientName || "Walk-in";
+  const initials = clientName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part: string) => part.charAt(0).toUpperCase())
+    .join("");
+  const visits = selectedClient?.totalVisits ?? null;
+  const requested = notes.includes("Requested by client");
+  // The salon typed nothing here; anything left is what the customer wrote when booking.
+  const customerNote = notes.replace("⭐ Requested by client", "").replace(/^\s*—\s*/, "").trim();
+
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="!max-w-none w-[500px] p-0 flex flex-col h-screen max-h-screen">
-        {/* Who, what, when — the three things the panel is about, said once at the top
-            instead of being spread across four read-only inputs further down. */}
-        <div className="border-b border-gray-200 px-4 py-3 shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold">
-                {appointmentData.clientName || appointment.clientName || "Walk-in"}
+      <SheetContent side="right" className="!max-w-none w-[460px] p-0 flex flex-col h-screen max-h-screen gap-0">
+        <div className={`h-1.5 w-full shrink-0 ${tone.band}`} />
+
+        <div className="flex items-center justify-between px-5 py-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone.chip}`}>{tone.label}</span>
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                paid ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-slate-700"
+              }`}
+            >
+              {paid ? "Paid" : "Unpaid"}
+            </span>
+          </div>
+          {loading && <span className="text-xs text-muted-foreground">Loading…</span>}
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-5 min-h-0">
+          {/* Who */}
+          <div className="rounded-xl border p-4">
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${clientColorClasses(
+                  clientName
+                )}`}
+              >
+                {initials || "?"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-semibold">{clientName}</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {visits != null && visits <= 1 && (
+                    <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">New client</Badge>
+                  )}
+                  {visits != null && visits >= 5 && (
+                    <Badge className="bg-rose-600 text-[10px] text-white hover:bg-rose-600">
+                      Regular · {visits} visits
+                    </Badge>
+                  )}
+                  {requested && (
+                    <Badge className="bg-amber-500 text-[10px] text-white hover:bg-amber-500">
+                      Asked for {staffName}
+                    </Badge>
+                  )}
+                </div>
+                <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                  {clientPhone && <p>{clientPhone}</p>}
+                  {clientEmail && <p className="truncate">{clientEmail}</p>}
+                </div>
+              </div>
+              <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" disabled={savingClient} className="h-7 shrink-0 text-xs">
+                    Change
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[380px] p-0" align="end">
+                  <Command>
+                    <CommandInput placeholder="Search clients..." className="text-xs" />
+                    <CommandList>
+                      <CommandEmpty>No client found.</CommandEmpty>
+                      <CommandGroup>
+                        {clients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={`${client.firstName} ${client.lastName || ""} ${client.email || ""} ${client.phone || ""}`}
+                            onSelect={() => void reassignClient(client)}
+                          >
+                            <div className="flex w-full items-center justify-between gap-2">
+                              <span className="truncate">
+                                {client.firstName} {client.lastName}
+                              </span>
+                              <span className="shrink-0 text-[10px] text-muted-foreground">
+                                {client.phone || client.email || ""}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* What, when, how much */}
+          <div className="rounded-xl border p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{serviceName}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">with {staffName}</p>
+              </div>
+              <p className="shrink-0 text-lg font-semibold">
+                {price} {currencySymbol()}
               </p>
-              <p className="truncate text-sm text-muted-foreground">
-                {serviceName} · {staffName}
-              </p>
-              <p className="mt-0.5 text-sm">
-                {appointmentDate
-                  ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM")
-                  : ""}{" "}
+            </div>
+            <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
+              <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="font-medium">
+                {appointmentDate ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM") : "—"}
+              </span>
+              <span className="text-muted-foreground">
                 {startTime}–{endTime}
                 {durationMinutes != null ? ` · ${durationMinutes} min` : ""}
-              </p>
+              </span>
             </div>
-            <div className="shrink-0 text-right">
-              <p className="text-lg font-semibold">
-                {price} {currencySymbol()}
-              </p>
-              {loading && <span className="text-xs text-gray-500">Loading…</span>}
-            </div>
-          </div>
-
-          {/* Everything a receptionist does from here, in one row, in the order it
-              happens: take the money, confirm they are coming, record that they did not. */}
-          {status !== "CANCELLED" && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {paymentStatus !== "PAID" && (
-                <Button
-                  size="sm"
-                  className="col-span-2 h-9 gap-1.5"
-                  onClick={() => {
-                    // Straight to the till with this booking already in the basket. It used
-                    // to mean leaving the calendar, opening Sales, and finding it again.
-                    navigate(getPath("sales"), { state: { appointmentId: appointment.apiId } });
-                    onClose();
-                  }}
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Take payment
-                </Button>
-              )}
-              {status === "PENDING" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={lifecycleBusy}
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => void runLifecycle("confirm")}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Confirm
-                </Button>
-              )}
-              {status !== "COMPLETED" && status !== "NO_SHOW" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={lifecycleBusy}
-                  className="h-8 gap-1.5 text-xs"
-                  onClick={() => void runLifecycle("no-show")}
-                >
-                  <UserX className="h-3.5 w-3.5" />
-                  No-show
-                </Button>
-              )}
-              {status !== "COMPLETED" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 border-red-600 text-xs text-red-600 hover:bg-red-50"
-                  onClick={() => setCancelDialogOpen(true)}
-                >
-                  <XCircle className="h-3.5 w-3.5" />
-                  Cancel
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Client */}
-        <div className="px-4 py-3 border-b border-gray-200 shrink-0">
-          <div className="space-y-2">
-            <Label className="text-xs">Client</Label>
-            <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={savingClient}
-                  className="h-8 w-full justify-between text-xs font-normal"
-                >
-                  <span className="truncate">
-                    {appointmentData.clientName || appointment.clientName || "Select a client"}
-                  </span>
-                  <ChevronDown className="ml-1 h-3 w-3 shrink-0" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[420px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search clients..." className="text-xs" />
-                  <CommandList>
-                    <CommandEmpty>No client found.</CommandEmpty>
-                    <CommandGroup>
-                      {clients.map((client) => (
-                        <CommandItem
-                          key={client.id}
-                          value={`${client.firstName} ${client.lastName || ""} ${client.email || ""} ${client.phone || ""}`}
-                          onSelect={() => void reassignClient(client)}
-                        >
-                          <div className="flex w-full items-center justify-between gap-2">
-                            <span className="truncate">
-                              {client.firstName} {client.lastName}
-                            </span>
-                            <span className="shrink-0 text-[10px] text-muted-foreground">
-                              {client.phone || client.email || ""}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <div className="grid grid-cols-2 gap-2">
-              <Input value={clientPhone} placeholder="Phone" readOnly className="h-8 text-xs bg-gray-50" />
-              <Input value={clientEmail} placeholder="Email" readOnly className="h-8 text-xs bg-gray-50" />
-            </div>
-            {selectedClient && (
-              // What the salon actually wants to know before this person walks in.
-              <p className="text-[11px] text-muted-foreground">
-                {selectedClient.totalVisits ?? 0} visit{(selectedClient.totalVisits ?? 0) === 1 ? "" : "s"}
-                {selectedClient.totalVisits != null && selectedClient.totalVisits <= 1 ? " · new client" : ""}
-                {selectedClient.totalVisits != null && selectedClient.totalVisits >= 5 ? " · regular" : ""}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 shrink-0">
-          <button className="px-3 py-2 text-xs font-medium border-b-2 border-gray-900 text-gray-900">
-            APPOINTMENT
-          </button>
-          <button className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900">
-            NOTES & INFO
-          </button>
-        </div>
-
-        {/* Form Content - Scrollable if needed */}
-        <div className="flex-1 p-4 space-y-3 overflow-y-auto min-h-0">
-          {/* Status Badges */}
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="text-xs">
-              Status: {status}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              Payment: {paymentStatus}
-            </Badge>
-            {notes.includes("Requested by client") && (
-              <Badge className="bg-amber-500 text-xs text-white">Asked for {staffName}</Badge>
-            )}
-          </div>
-
-          {/* The facts that were missing: who is doing it, how long it takes, what it
-              costs, and when it is. They were all in the payload and none were shown. */}
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2 rounded-md border p-3 text-xs">
-            <div>
-              <p className="text-muted-foreground">Staff</p>
-              <p className="font-medium">{staffName}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Service</p>
-              <p className="font-medium">{serviceName}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">When</p>
-              <p className="font-medium">
-                {appointmentDate
-                  ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM")
-                  : "—"}{" "}
-                {startTime}–{endTime}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Duration</p>
-              <p className="font-medium">{durationMinutes != null ? `${durationMinutes} min` : "—"}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Price</p>
-              <p className="font-medium">
-                {price} {currencySymbol()}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Paying with</p>
-              <p className="font-medium">
+            <div className="mt-3 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Paying with</span>
+              <span className="font-medium">
                 {appointmentData.paymentPreference === "GIFT_CARD"
                   ? `Gift card${appointmentData.giftCardCode ? ` ${appointmentData.giftCardCode}` : ""}`
                   : appointmentData.paymentPreference === "WALLET"
                     ? "Their wallet"
                     : "At the salon"}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Booking ref</p>
-              <p className="font-medium">#{appointment.apiId ?? appointment.id}</p>
-            </div>
-          </div>
-
-          {/* Service Selection */}
-          <div className="space-y-1">
-            <Label className="text-xs">Service</Label>
-            <div className="relative">
-              <Input
-                value={appointment.service}
-                readOnly
-                className="pr-8 h-8 text-xs bg-gray-50"
-              />
-            </div>
-          </div>
-
-          {/* Add-ons */}
-          <div className="space-y-1">
-            <Label className="text-xs">Add-ons</Label>
-            <div className="relative">
-              <Input
-                placeholder="Add-ons"
-                className="pr-8 cursor-pointer h-8 text-xs bg-gray-50"
-                readOnly
-              />
-              <ArrowRight className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Time Selection */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Start</Label>
-              <Input value={startTime} readOnly className="h-8 text-xs bg-gray-50" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">End</Label>
-              <Input value={endTime} readOnly className="h-8 text-xs bg-gray-50" />
-            </div>
-          </div>
-
-          {/* Staff Selection */}
-          <div className="space-y-1">
-            <Label className="text-xs">Staff</Label>
-            <Select value={appointment.staffId} disabled>
-              <SelectTrigger className="h-8 text-xs bg-gray-50">
-                <SelectValue placeholder={staffName} />
-              </SelectTrigger>
-              <SelectContent>
-                {staff && (
-                  <SelectItem value={staff.id}>
-                    {staff.name}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Notes */}
-          <div className="space-y-1">
-            <Label className="text-xs">Notes</Label>
-            <Textarea
-              value={notes}
-              placeholder="Add notes..."
-              readOnly
-              className="h-16 text-xs resize-none bg-gray-50"
-            />
-          </div>
-
-          {/* Financial Summary */}
-          <div className="pt-2 border-t border-gray-200 space-y-1.5">
-            <div className="flex justify-between items-center">
-              <Label className="text-xs font-medium">Total</Label>
-              <span className="text-xs font-semibold">
-                {price ? `${price.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
               </span>
             </div>
-            <div className="flex justify-between items-center">
-              <Label className="text-xs font-medium">To be paid</Label>
-              <span className="text-xs font-semibold">
-                {price ? `${price.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
-              </span>
+            <div className="mt-1 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Booking</span>
+              <span className="font-medium">#{appointment.apiId ?? appointment.id}</span>
             </div>
           </div>
+
+          {/* Only when there is something to read. An empty grey box is noise. */}
+          {customerNote && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs font-medium text-amber-900">Note from the client</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">{customerNote}</p>
+            </div>
+          )}
         </div>
 
-        {/* Footer Actions */}
-        {/* #30: the backend has supported confirm and no-show since V22, both guarded by
-            BookingStateMachine, but this footer offered only Cancel and Edit.
-            confirmAppointment() sat in appointmentService with zero callers, and a salon
-            had no way to record a no-show at all — the status that drives deposits and
-            client history. */}
-        <div className="px-4 py-3 border-t border-gray-200 flex flex-wrap gap-2 shrink-0">
-          {appointment?.apiId && appointment.status === "PENDING" && (
-            <Button variant="outline" className="flex-1 h-8 text-xs" disabled={lifecycleBusy}
-              onClick={() => runLifecycle("confirm")}>
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-              CONFIRM
+        {/* Everything you can do, at the bottom where actions live, one primary. */}
+        <div className="space-y-2 border-t px-5 py-4 shrink-0">
+          {status !== "CANCELLED" && !paid && (
+            <Button
+              className="h-11 w-full gap-2 text-sm"
+              onClick={() => {
+                // Straight to the till with this booking already in the basket.
+                navigate(getPath("sales"), { state: { appointmentId: appointment.apiId } });
+                onClose();
+              }}
+            >
+              <CreditCard className="h-4 w-4" />
+              Take payment · {price} {currencySymbol()}
             </Button>
           )}
-          {appointment?.apiId && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
-            <Button variant="outline" className="flex-1 h-8 text-xs" disabled={lifecycleBusy}
-              onClick={() => runLifecycle("no-show")}>
-              <UserX className="h-3.5 w-3.5 mr-1.5" />
-              NO-SHOW
+          <div className="grid grid-cols-3 gap-2">
+            {status === "PENDING" ? (
+              <Button
+                variant="outline"
+                className="h-9 gap-1.5 text-xs"
+                disabled={lifecycleBusy}
+                onClick={() => void runLifecycle("confirm")}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Confirm
+              </Button>
+            ) : (
+              <Button variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => onEdit(appointment)}>
+                <Edit className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="h-9 gap-1.5 text-xs"
+              disabled={lifecycleBusy || status === "CANCELLED" || status === "NO_SHOW"}
+              onClick={() => void runLifecycle("no-show")}
+            >
+              <UserX className="h-3.5 w-3.5" />
+              No-show
             </Button>
-          )}
-          <Button
-            variant="outline"
-            className="flex-1 h-8 text-xs"
-            onClick={() => setCancelDialogOpen(true)}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-            CANCEL
-          </Button>
-          <Button
-            className="flex-1 h-8 text-xs bg-gray-600 hover:bg-gray-700"
-            onClick={() => onEdit(appointment)}
-          >
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            EDIT
-          </Button>
+            <Button
+              variant="outline"
+              className="h-9 gap-1.5 border-red-200 text-xs text-red-600 hover:bg-red-50"
+              disabled={status === "CANCELLED"}
+              onClick={() => setCancelDialogOpen(true)}
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              Cancel
+            </Button>
+          </div>
         </div>
       </SheetContent>
 
