@@ -24,7 +24,24 @@ import { CalendarClock, Gift, Loader2, Minus, Plus, Stamp, Trophy } from "lucide
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const EMPTY = { name: "", visitsRequired: "5", rewardServiceId: "", validUntil: "" };
+/** Two-colour gradients the card is drawn with, kept in the app's own palette. */
+const CARD_THEMES = [
+  { name: "Purple", from: "#7a3cff", to: "#b18cff" },
+  { name: "Ocean", from: "#0ea5e9", to: "#67d3f8" },
+  { name: "Forest", from: "#059669", to: "#5eddb0" },
+  { name: "Sunset", from: "#f59e0b", to: "#fcd34d" },
+  { name: "Rose", from: "#e11d48", to: "#fb7185" },
+  { name: "Ink", from: "#1f2937", to: "#6b7280" },
+];
+
+const EMPTY = {
+  name: "",
+  visitsRequired: "5",
+  rewardServiceId: "",
+  validUntil: "",
+  colorFrom: CARD_THEMES[0].from,
+  colorTo: CARD_THEMES[0].to,
+};
 
 /**
  * Stamp cards: come N times before a date, one service is free.
@@ -77,6 +94,8 @@ export default function LoyaltyPage() {
         visitsRequired: Number(form.visitsRequired) || 0,
         rewardServiceId: form.rewardServiceId ? Number(form.rewardServiceId) : null,
         validUntil: form.validUntil || null,
+        colorFrom: form.colorFrom,
+        colorTo: form.colorTo,
       });
       setForm(EMPTY);
       toast.success(`Card created and given to ${created.assignedTo} clients`);
@@ -170,8 +189,48 @@ export default function LoyaltyPage() {
                 ))}
               </select>
             </div>
-            <div className="flex items-end">
-              <Button className="w-full gap-2" onClick={create} disabled={creating}>
+            {/* The card carries the salon's name in the customer's app, so the salon
+                picks how it looks. Colours only — free-form styling would let a salon make
+                its own card unreadable in an app it does not control. */}
+            <div className="md:col-span-4">
+              <Label className="text-xs">Card colour</Label>
+              <div className="mt-1.5 flex flex-wrap items-center gap-3">
+                {CARD_THEMES.map((theme) => {
+                  const on = form.colorFrom === theme.from;
+                  return (
+                    <button
+                      key={theme.name}
+                      type="button"
+                      title={theme.name}
+                      onClick={() => setForm({ ...form, colorFrom: theme.from, colorTo: theme.to })}
+                      className={`h-9 w-14 rounded-lg ring-offset-2 transition-all ${
+                        on ? "ring-2 ring-violet-500" : "hover:scale-105"
+                      }`}
+                      style={{ background: `linear-gradient(135deg, ${theme.from}, ${theme.to})` }}
+                    />
+                  );
+                })}
+                <div
+                  className="ml-auto flex h-16 w-48 flex-col justify-between rounded-xl p-3 text-white shadow-sm"
+                  style={{ background: `linear-gradient(135deg, ${form.colorFrom}, ${form.colorTo})` }}
+                >
+                  <span className="truncate text-xs font-semibold">
+                    {form.name || "Your card"}
+                  </span>
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(Number(form.visitsRequired) || 5, 8) }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-2.5 w-2.5 rounded-full ${i < 2 ? "bg-white" : "border border-white/60"}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="md:col-span-4 flex justify-end">
+              <Button className="gap-2" onClick={create} disabled={creating}>
                 <Plus size={16} />
                 {creating ? "Creating…" : "Create card"}
               </Button>
@@ -198,9 +257,17 @@ export default function LoyaltyPage() {
                 return (
                   <div
                     key={card.id}
-                    className={`rounded-xl border bg-white p-4 ${dead ? "opacity-70" : ""}`}
+                    className={`overflow-hidden rounded-xl border bg-white ${dead ? "opacity-70" : ""}`}
                   >
-                    <div className="flex items-start justify-between gap-2">
+                    <div
+                      className="h-1.5 w-full"
+                      style={{
+                        background: `linear-gradient(90deg, ${card.color_from ?? "#7a3cff"}, ${
+                          card.color_to ?? "#b18cff"
+                        })`,
+                      }}
+                    />
+                    <div className="flex items-start justify-between gap-2 p-4 pb-0">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{card.name}</p>
                         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -216,12 +283,12 @@ export default function LoyaltyPage() {
                       )}
                     </div>
 
-                    <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="mt-3 flex items-center gap-1.5 px-4 text-xs text-muted-foreground">
                       <CalendarClock size={14} />
                       {card.valid_until ? `Until ${card.valid_until}` : "No end date"}
                     </div>
 
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <div className="mt-3 flex flex-wrap gap-2 px-4 text-xs">
                       <span className="rounded-full bg-violet-50 px-2.5 py-1 font-medium text-violet-700">
                         {card.holders} holders
                       </span>
@@ -233,7 +300,7 @@ export default function LoyaltyPage() {
                       </span>
                     </div>
 
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex gap-2 p-4 pt-0">
                       <Button variant="outline" size="sm" className="flex-1" onClick={() => void openHolders(card)}>
                         Who is collecting
                       </Button>

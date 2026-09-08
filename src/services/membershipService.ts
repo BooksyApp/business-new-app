@@ -141,6 +141,9 @@ export interface LoyaltyCard {
   valid_until: string | null;
   active: boolean;
   expired: boolean;
+  color_from: string | null;
+  color_to: string | null;
+  icon: string | null;
   holders: number;
   rewards_waiting: number;
   rewards_used: number;
@@ -169,12 +172,27 @@ class LoyaltyCardsService {
   /** Creating a card gives it to every client on the books straight away. */
   create(
     businessId: number,
-    input: { name: string; visitsRequired: number; rewardServiceId?: number | null; validUntil?: string | null }
+    input: {
+      name: string;
+      visitsRequired: number;
+      rewardServiceId?: number | null;
+      validUntil?: string | null;
+      colorFrom?: string;
+      colorTo?: string;
+    }
   ): Promise<LoyaltyCard & { assignedTo: number }> {
     return apiClient.post<LoyaltyCard & { assignedTo: number }>(
       `/businesses/${businessId}/loyalty-cards`,
       input
     );
+  }
+
+  /** The card's look in the customer app. Colours only, so it stays readable. */
+  restyle(businessId: number, cardId: number, colorFrom: string, colorTo: string): Promise<LoyaltyCard> {
+    return apiClient.put<LoyaltyCard>(`/businesses/${businessId}/loyalty-cards/${cardId}/style`, {
+      colorFrom,
+      colorTo,
+    });
   }
 
   /** Ends a card. What people already earned stays earned. */

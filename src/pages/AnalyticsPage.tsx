@@ -156,42 +156,45 @@ export default function AnalyticsPage() {
         // Fetch tab-specific data
         const { startDate: sd, endDate: ed } = getDateRange();
         
-        if (activeTab === "revenue" && !revenue) {
-          setRevenue(await analysisService.getRevenueAnalytics(businessId, sd, ed));
-        } else if (activeTab === "bookings" && !bookings) {
-          setBookings(await analysisService.getBookingAnalytics(businessId, sd, ed));
-        } else if (activeTab === "clients" && !clients) {
-          setClients(await analysisService.getClientAnalytics(businessId, sd, ed));
-        } else if (activeTab === "services" && !services) {
-          setServices(await analysisService.getServiceAnalytics(businessId, sd, ed));
-        } else if (activeTab === "performance" && !performance) {
-          setPerformance(await analysisService.getPerformanceAnalytics(businessId, sd, ed));
-        } else if (activeTab === "cancellations" && !cancellations) {
-          setCancellations(await analysisService.getCancellationAnalytics(businessId, sd, ed));
-        } else if (activeTab === "peak-hours" && !peakHours) {
-          setPeakHours(await analysisService.getPeakHoursAnalytics(businessId, sd, ed));
-        } else if (activeTab === "customer-retention" && !customerRetention) {
-          setCustomerRetention(await analysisService.getCustomerRetentionAnalytics(businessId, sd, ed));
-        } else if (activeTab === "profitability" && !profitability) {
-          setProfitability(await analysisService.getProfitabilityAnalytics(businessId, sd, ed));
-        } else if (activeTab === "payment-methods" && !paymentMethods) {
-          setPaymentMethods(await analysisService.getPaymentMethodAnalytics(businessId, sd, ed));
-        } else if (activeTab === "seasonal" && !seasonal) {
-          setSeasonal(await analysisService.getSeasonalAnalytics(businessId, sd, ed));
-        } else if (activeTab === "service-duration" && !serviceDuration) {
-          setServiceDuration(await analysisService.getServiceDurationAnalytics(businessId, sd, ed));
-        } else if (activeTab === "wait-times" && !waitTimes) {
-          setWaitTimes(await analysisService.getWaitTimeAnalytics(businessId, sd, ed));
-        } else if (activeTab === "lead-time" && !leadTime) {
-          setLeadTime(await analysisService.getBookingLeadTimeAnalytics(businessId, sd, ed));
-        } else if (activeTab === "revenue-per-hour" && !revenuePerHour) {
-          setRevenuePerHour(await analysisService.getRevenuePerHourAnalytics(businessId, sd, ed));
-        } else if (activeTab === "acquisition" && !acquisition) {
-          setAcquisition(await analysisService.getCustomerAcquisitionAnalytics(businessId, sd, ed));
-        } else if (activeTab === "bundles" && !bundles) {
-          setBundles(await analysisService.getServiceBundleAnalytics(businessId, sd, ed));
-        } else if (activeTab === "forecast" && !forecast) {
-          setForecast(await analysisService.getGrowthForecastAnalytics(businessId, sd, ed));
+        // A group loads everything it shows. The old chain fetched one endpoint per
+        // tab, which is why half the sections rendered a spinner for ever once several
+        // of them lived on the same page.
+        const need = async <T,>(current: T | null, fetcher: () => Promise<T>, set: (v: T) => void) => {
+          if (current) return;
+          try {
+            set(await fetcher());
+          } catch {
+            // One failing section must not blank the rest of the group.
+          }
+        };
+
+        if (activeTab === "money") {
+          await Promise.all([
+            need(revenue, () => analysisService.getRevenueAnalytics(businessId, sd, ed), setRevenue),
+            need(profitability, () => analysisService.getProfitabilityAnalytics(businessId, sd, ed), setProfitability),
+            need(paymentMethods, () => analysisService.getPaymentMethodAnalytics(businessId, sd, ed), setPaymentMethods),
+            need(seasonal, () => analysisService.getSeasonalAnalytics(businessId, sd, ed), setSeasonal),
+          ]);
+        } else if (activeTab === "diary") {
+          await Promise.all([
+            need(bookings, () => analysisService.getBookingAnalytics(businessId, sd, ed), setBookings),
+            need(peakHours, () => analysisService.getPeakHoursAnalytics(businessId, sd, ed), setPeakHours),
+            need(cancellations, () => analysisService.getCancellationAnalytics(businessId, sd, ed), setCancellations),
+            need(serviceDuration, () => analysisService.getServiceDurationAnalytics(businessId, sd, ed), setServiceDuration),
+            need(waitTimes, () => analysisService.getWaitTimeAnalytics(businessId, sd, ed), setWaitTimes),
+          ]);
+        } else if (activeTab === "people") {
+          await Promise.all([
+            need(clients, () => analysisService.getClientAnalytics(businessId, sd, ed), setClients),
+            need(customerRetention, () => analysisService.getCustomerRetentionAnalytics(businessId, sd, ed), setCustomerRetention),
+            need(acquisition, () => analysisService.getCustomerAcquisitionAnalytics(businessId, sd, ed), setAcquisition),
+          ]);
+        } else if (activeTab === "team") {
+          await Promise.all([
+            need(services, () => analysisService.getServiceAnalytics(businessId, sd, ed), setServices),
+            need(performance, () => analysisService.getPerformanceAnalytics(businessId, sd, ed), setPerformance),
+            need(bundles, () => analysisService.getServiceBundleAnalytics(businessId, sd, ed), setBundles),
+          ]);
         }
       } catch (err) {
         if (currentFetchId !== fetchIdRef.current) return; // stale fetch — a newer one is in flight
@@ -207,15 +210,13 @@ export default function AnalyticsPage() {
     fetchData();
   }, [businessId, period, activeTab]);
 
+  /** Whether a group already has its data, so switching to it does not flash a spinner. */
   const tabDataMap: Record<string, unknown> = {
-    overview, revenue, bookings, clients, services,
-    performance, cancellations, "peak-hours": peakHours,
-    "customer-retention": customerRetention, profitability,
-    "payment-methods": paymentMethods, seasonal,
-    "service-duration": serviceDuration, "wait-times": waitTimes,
-    "lead-time": leadTime, "revenue-per-hour": revenuePerHour,
-    acquisition, bundles, forecast,
-    staff: overview?.staffPerformance,
+    overview,
+    money: revenue && profitability && paymentMethods,
+    diary: bookings && peakHours && cancellations,
+    people: clients && customerRetention,
+    team: services && performance,
   };
 
   const handleTabChange = (value: string) => {
@@ -298,86 +299,29 @@ export default function AnalyticsPage() {
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <div className="overflow-x-auto mb-6">
+            {/* Nineteen tabs, several of them one number each, and no order to them:
+                nobody reads a nav bar that long. Five groups, each answering a question a
+                salon actually asks, with the sections stacked inside. */}
             <TabsList className="inline-flex min-w-full bg-muted/50">
               <TabsTrigger value="overview" className="flex items-center gap-2 whitespace-nowrap">
                 <BarChart3 className="h-4 w-4" />
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="revenue" className="flex items-center gap-2 whitespace-nowrap">
+              <TabsTrigger value="money" className="flex items-center gap-2 whitespace-nowrap">
                 <DollarSign className="h-4 w-4" />
-                Revenue
+                Money
               </TabsTrigger>
-              <TabsTrigger value="bookings" className="flex items-center gap-2 whitespace-nowrap">
+              <TabsTrigger value="diary" className="flex items-center gap-2 whitespace-nowrap">
                 <Calendar className="h-4 w-4" />
-                Bookings
+                The diary
               </TabsTrigger>
-              <TabsTrigger value="clients" className="flex items-center gap-2 whitespace-nowrap">
+              <TabsTrigger value="people" className="flex items-center gap-2 whitespace-nowrap">
                 <Users className="h-4 w-4" />
                 Clients
               </TabsTrigger>
-              <TabsTrigger value="services" className="flex items-center gap-2 whitespace-nowrap">
-                <Package className="h-4 w-4" />
-                Services
-              </TabsTrigger>
-              <TabsTrigger value="staff" className="flex items-center gap-2 whitespace-nowrap">
+              <TabsTrigger value="team" className="flex items-center gap-2 whitespace-nowrap">
                 <UserCheck className="h-4 w-4" />
-                Staff
-              </TabsTrigger>
-              <TabsTrigger value="performance" className="flex items-center gap-2 whitespace-nowrap">
-                <Activity className="h-4 w-4" />
-                Performance
-              </TabsTrigger>
-              <TabsTrigger value="cancellations" className="flex items-center gap-2 whitespace-nowrap">
-                <XCircle className="h-4 w-4" />
-                Cancellations
-              </TabsTrigger>
-              <TabsTrigger value="peak-hours" className="flex items-center gap-2 whitespace-nowrap">
-                <Zap className="h-4 w-4" />
-                Peak Hours
-              </TabsTrigger>
-              <TabsTrigger value="customer-retention" className="flex items-center gap-2 whitespace-nowrap">
-                <Target className="h-4 w-4" />
-                Retention
-              </TabsTrigger>
-              <TabsTrigger value="profitability" className="flex items-center gap-2 whitespace-nowrap">
-                <TrendingUp className="h-4 w-4" />
-                Profitability
-              </TabsTrigger>
-              <TabsTrigger value="payment-methods" className="flex items-center gap-2 whitespace-nowrap">
-                <CreditCard className="h-4 w-4" />
-                Payments
-              </TabsTrigger>
-              <TabsTrigger value="seasonal" className="flex items-center gap-2 whitespace-nowrap">
-                <TrendingDown className="h-4 w-4" />
-                Seasonal
-              </TabsTrigger>
-              <TabsTrigger value="service-duration" className="flex items-center gap-2 whitespace-nowrap">
-                <Timer className="h-4 w-4" />
-                Duration
-              </TabsTrigger>
-              <TabsTrigger value="wait-times" className="flex items-center gap-2 whitespace-nowrap">
-                <Clock className="h-4 w-4" />
-                Wait Times
-              </TabsTrigger>
-              <TabsTrigger value="lead-time" className="flex items-center gap-2 whitespace-nowrap">
-                <ArrowRight className="h-4 w-4" />
-                Lead Time
-              </TabsTrigger>
-              <TabsTrigger value="revenue-per-hour" className="flex items-center gap-2 whitespace-nowrap">
-                <DollarSign className="h-4 w-4" />
-                Revenue/Hour
-              </TabsTrigger>
-              <TabsTrigger value="acquisition" className="flex items-center gap-2 whitespace-nowrap">
-                <Users className="h-4 w-4" />
-                Acquisition
-              </TabsTrigger>
-              <TabsTrigger value="bundles" className="flex items-center gap-2 whitespace-nowrap">
-                <Gift className="h-4 w-4" />
-                Bundles
-              </TabsTrigger>
-              <TabsTrigger value="forecast" className="flex items-center gap-2 whitespace-nowrap">
-                <LineChart className="h-4 w-4" />
-                Forecast
+                Team &amp; services
               </TabsTrigger>
             </TabsList>
           </div>
@@ -392,7 +336,12 @@ export default function AnalyticsPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="revenue" className="mt-0">
+          <TabsContent value="money" className="mt-0 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Revenue</h2>
+                <p className="text-xs text-muted-foreground">What came in, and when.</p>
+              </div>
             {revenue ? (
               <RevenueTab data={revenue} loading={loading} />
             ) : (
@@ -400,9 +349,139 @@ export default function AnalyticsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Profitability</h2>
+                <p className="text-xs text-muted-foreground">What is left after staff and commission.</p>
+              </div>
+            {profitability ? (
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text: `Of ${money(profitability.totalRevenue)} ${currencySymbol()} taken, roughly ${money(profitability.estimatedProfit)} ${currencySymbol()} is yours after costs — a ${pct(profitability.profitMargin)}% margin.`,
+                      tone: (profitability.profitMargin ?? 0) >= 30 ? ("emerald" as const) : ("amber" as const),
+                    },
+                    {
+                      text: "This is an estimate from staff cost and commission. It does not know your rent, stock or bills.",
+                      tone: "slate" as const,
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric icon={DollarSign} label="Revenue" value={`${money(profitability.totalRevenue)} ${currencySymbol()}`} tone="sky" />
+                  <Metric icon={TrendingUp} label="Estimated profit" value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="emerald" />
+                  <Metric
+                    icon={Target}
+                    label="Margin"
+                    value={`${pct(profitability.profitMargin)}%`}
+                    tone={(profitability.profitMargin ?? 0) >= 30 ? "emerald" : "amber"}
+                  />
+                </div>
+                <BarList
+                  title="Where the money goes"
+                  tone="emerald"
+                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
+                  rows={[
+                    { label: "Kept (estimated profit)", value: profitability.estimatedProfit ?? 0 },
+                    {
+                      label: "Costs (staff and commission)",
+                      value: Math.max(0, (profitability.totalRevenue ?? 0) - (profitability.estimatedProfit ?? 0)),
+                    },
+                  ]}
+                />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Payments</h2>
+                <p className="text-xs text-muted-foreground">How the money is being taken.</p>
+              </div>
+            {paymentMethods ? (
+              <div className="space-y-4">
+                <Insights
+                  items={
+                    topPaymentMethod
+                      ? [
+                          {
+                            text: `${topPaymentMethod.paymentMethod} takes ${pct(topPaymentMethod.percentage)}% of your revenue across ${topPaymentMethod.transactions} transactions.`,
+                            tone: "sky" as const,
+                          },
+                        ]
+                      : []
+                  }
+                />
+                <BarList
+                  title="Revenue by payment method"
+                  description="What the till is actually taking."
+                  tone="sky"
+                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
+                  rows={(paymentMethods.paymentMethods ?? []).map((m) => ({
+                    label: m.paymentMethod,
+                    value: m.revenue,
+                    detail: `${m.transactions} · ${pct(m.percentage)}%`,
+                  }))}
+                />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Across the year</h2>
+                <p className="text-xs text-muted-foreground">The shape of your season.</p>
+              </div>
+            {seasonal ? (
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    ...(seasonal.bestMonth
+                      ? [{
+                          text: `${seasonal.bestMonth} is your strongest month and ${seasonal.worstMonth ?? "the quietest"} your weakest. Staff and stock for the first; run offers in the second.`,
+                          tone: "sky" as const,
+                        }]
+                      : []),
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Metric icon={TrendingUp} label="Best month" value={seasonal.bestMonth || "—"} tone="emerald" />
+                  <Metric icon={TrendingDown} label="Weakest month" value={seasonal.worstMonth || "—"} tone="amber" />
+                </div>
+                <BarList
+                  title="Revenue by month"
+                  description="The shape of your year."
+                  tone="sky"
+                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
+                  rows={(seasonal.monthlyData ?? seasonal.monthlyRevenue ?? []).map((m: { month?: string; period?: string; revenue: number }) => ({
+                    label: m.month ?? m.period ?? "",
+                    value: m.revenue,
+                  }))}
+                  emptyText="Not enough history yet — a year of takings is what makes this readable."
+                />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
           </TabsContent>
 
-          <TabsContent value="bookings" className="mt-0">
+          <TabsContent value="diary" className="mt-0 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Bookings</h2>
+                <p className="text-xs text-muted-foreground">How full the diary is.</p>
+              </div>
             {bookings ? (
               <BookingsTab data={bookings} loading={loading} />
             ) : (
@@ -410,9 +489,196 @@ export default function AnalyticsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Peak hours</h2>
+                <p className="text-xs text-muted-foreground">When the chairs are busy, and when they are not.</p>
+              </div>
+            {peakHours ? (
+              <div className="space-y-4">
+                <Insights
+                  items={
+                    busiestHour
+                      ? [
+                          {
+                            text: `${String(busiestHour.hour).padStart(2, "0")}:00 is your busiest hour with ${busiestHour.bookings} bookings. Staff it first.`,
+                            tone: "sky" as const,
+                          },
+                          ...(quietestHour && quietestHour.hour !== busiestHour.hour
+                            ? [{
+                                text: `${String(quietestHour.hour).padStart(2, "0")}:00 is the quietest with ${quietestHour.bookings}. A promotion belongs here, not at your busiest time.`,
+                                tone: "amber" as const,
+                              }]
+                            : []),
+                        ]
+                      : []
+                  }
+                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Metric
+                    icon={Clock}
+                    label="Busiest hour"
+                    value={busiestHour ? `${String(busiestHour.hour).padStart(2, "0")}:00` : "—"}
+                    hint={busiestHour ? `${busiestHour.bookings} bookings` : undefined}
+                    tone="sky"
+                  />
+                  <Metric
+                    icon={Clock}
+                    label="Quietest hour"
+                    value={quietestHour ? `${String(quietestHour.hour).padStart(2, "0")}:00` : "—"}
+                    hint={quietestHour ? `${quietestHour.bookings} bookings` : undefined}
+                    tone="amber"
+                  />
+                </div>
+                <BarList
+                  title="Bookings by hour"
+                  description="When the chairs are actually full."
+                  tone="sky"
+                  rows={(peakHours.peakHours ?? []).map((h) => ({
+                    label: `${String(h.hour).padStart(2, "0")}:00`,
+                    value: h.bookings,
+                  }))}
+                />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Cancellations and no-shows</h2>
+                <p className="text-xs text-muted-foreground">The chair time nobody paid for.</p>
+              </div>
+            {cancellations ? (
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    ...(cancellations.totalCancellations > 0 && overview?.totalBookings
+                      ? [{
+                          text: `${cancellations.totalCancellations} cancellations against ${overview.totalBookings} bookings — roughly ${money(cancellations.totalCancellations * (overview.averageTicket || 0))} ${currencySymbol()} of chair time nobody paid for.`,
+                          tone: "rose" as const,
+                        }]
+                      : []),
+                    ...(worstCancelDay
+                      ? [{
+                          text: `${worstCancelDay.date} lost the most: ${worstCancelDay.cancellations} bookings. Worth checking what was in the diary that day.`,
+                          tone: "amber" as const,
+                        }]
+                      : []),
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric icon={XCircle} label="Cancellations" value={cancellations.totalCancellations} tone="rose" />
+                  <Metric
+                    icon={TrendingDown}
+                    label="Share of bookings"
+                    value={overview?.totalBookings ? `${Math.round((cancellations.totalCancellations / overview.totalBookings) * 100)}%` : "—"}
+                    tone="amber"
+                  />
+                  <Metric
+                    icon={DollarSign}
+                    label="Revenue lost"
+                    value={`${money(cancellations.totalCancellations * (overview?.averageTicket || 0))} ${currencySymbol()}`}
+                    hint="At your average ticket"
+                    tone="slate"
+                  />
+                </div>
+                <BarList
+                  title="Cancellations by day"
+                  description="The tallest bars are the days to look at."
+                  tone="rose"
+                  rows={(cancellations.cancellationsByDay ?? []).map((d) => ({ label: d.date, value: d.cancellations }))}
+                  emptyText="No cancellations in this period. "
+                />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Running to time</h2>
+                <p className="text-xs text-muted-foreground">Whether the diary matches reality.</p>
+              </div>
+            {serviceDuration ? (
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text:
+                        (serviceDuration.durationEfficiency ?? 100) < 95
+                          ? `Appointments run about ${Math.abs(Math.round((serviceDuration.averageActualDuration ?? 0) - (serviceDuration.averageScheduledDuration ?? 0)))} minutes over what you book them for. Every one of those pushes the next client back.`
+                          : "Appointments finish close to the time you book them for, so the diary is realistic.",
+                      tone: (serviceDuration.durationEfficiency ?? 100) < 95 ? ("amber" as const) : ("emerald" as const),
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric icon={Clock} label="Booked for" value={`${Math.round(serviceDuration.averageScheduledDuration ?? 0)} min`} tone="sky" />
+                  <Metric icon={Timer} label="Actually takes" value={`${Math.round(serviceDuration.averageActualDuration ?? 0)} min`} tone="violet" />
+                  <Metric
+                    icon={Target}
+                    label="On time"
+                    value={`${pct(serviceDuration.durationEfficiency)}%`}
+                    tone={(serviceDuration.durationEfficiency ?? 100) >= 95 ? "emerald" : "amber"}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            {waitTimes ? (
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text: `Clients wait about ${pct(waitTimes.averageWaitTime)} minutes past their time.`,
+                      tone: (waitTimes.averageWaitTime ?? 0) > 10 ? ("rose" as const) : ("emerald" as const),
+                    },
+                    {
+                      text: `Chairs sit empty about ${pct(waitTimes.averageGapTime)} minutes between bookings — that gap is unsold time, not a break unless you meant it to be.`,
+                      tone: "amber" as const,
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Metric
+                    icon={Clock}
+                    label="Average wait"
+                    value={`${pct(waitTimes.averageWaitTime)} min`}
+                    hint="Past the booked start"
+                    tone={(waitTimes.averageWaitTime ?? 0) > 10 ? "rose" : "emerald"}
+                  />
+                  <Metric
+                    icon={Timer}
+                    label="Gap between bookings"
+                    value={`${pct(waitTimes.averageGapTime)} min`}
+                    hint="Unsold chair time"
+                    tone="amber"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
           </TabsContent>
 
-          <TabsContent value="clients" className="mt-0">
+          <TabsContent value="people" className="mt-0 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Clients</h2>
+                <p className="text-xs text-muted-foreground">Who is coming in.</p>
+              </div>
             {clients ? (
               <ClientsTab data={clients} loading={loading} />
             ) : (
@@ -420,19 +686,101 @@ export default function AnalyticsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="services" className="mt-0">
-            {services ? (
-              <ServicesTab data={services} loading={loading} />
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Coming back</h2>
+                <p className="text-xs text-muted-foreground">Whether they return, which is the whole business.</p>
+              </div>
+            {customerRetention ? (
+              <div className="space-y-4">
+                <Insights
+                  items={[
+                    {
+                      text:
+                        (customerRetention.retentionRate ?? 0) >= 50
+                          ? `${pct(customerRetention.retentionRate)}% of clients came back. Repeat custom is carrying the salon — protect it before chasing new names.`
+                          : `Only ${pct(customerRetention.retentionRate)}% came back. Every month starts from nearly zero, which is the most expensive way to run a salon.`,
+                      tone: (customerRetention.retentionRate ?? 0) >= 50 ? ("emerald" as const) : ("rose" as const),
+                    },
+                    {
+                      text: `${customerRetention.totalClients - customerRetention.returningClients} clients visited once and have not been back. That is the list worth a message.`,
+                      tone: "amber" as const,
+                    },
+                  ]}
+                />
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Metric
+                    icon={Repeat}
+                    label="Retention rate"
+                    value={`${pct(customerRetention.retentionRate)}%`}
+                    tone={(customerRetention.retentionRate ?? 0) >= 50 ? "emerald" : "rose"}
+                  />
+                  <Metric icon={Users} label="Total clients" value={customerRetention.totalClients} tone="violet" />
+                  <Metric icon={UserCheck} label="Came back" value={customerRetention.returningClients} tone="emerald" />
+                </div>
+                <BarList
+                  title="Who is coming back"
+                  tone="emerald"
+                  rows={[
+                    { label: "Returning clients", value: customerRetention.returningClients },
+                    {
+                      label: "One visit only",
+                      value: Math.max(0, customerRetention.totalClients - customerRetention.returningClients),
+                    },
+                  ]}
+                />
+              </div>
+            ) : (
+              <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              </div>
+            )}
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Where they come from</h2>
+                <p className="text-xs text-muted-foreground">How new clients found you.</p>
+              </div>
+            {acquisition ? (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Customer Acquisition Analytics</CardTitle>
+                    <CardDescription>New customer metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">New Customers</p>
+                        <p className="text-2xl font-bold">{acquisition.newCustomers || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Avg First Visit Value</p>
+                        <p className="text-2xl font-bold">{acquisition.averageFirstVisitValue?.toFixed(2)} {currencySymbol()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Acquisition Cost</p>
+                        <p className="text-2xl font-bold">{acquisition.customerAcquisitionCost?.toFixed(2)} {currencySymbol()}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
+            </section>
           </TabsContent>
 
-          <TabsContent value="staff" className="mt-0">
+          <TabsContent value="team" className="mt-0 space-y-8">
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Staff</h2>
+                <p className="text-xs text-muted-foreground">Who is bringing in the work.</p>
+              </div>
             {overview?.staffPerformance ? (
               <StaffTab data={overview.staffPerformance} loading={loading} />
             ) : error ? (
@@ -445,10 +793,6 @@ export default function AnalyticsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
-          </TabsContent>
-
-          {/* New Analytics Tabs */}
-          <TabsContent value="performance" className="mt-0">
             {performance ? (
               <div className="space-y-6">
                 <Card>
@@ -501,441 +845,19 @@ export default function AnalyticsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="cancellations" className="mt-0">
-            {cancellations ? (
-              <div className="space-y-4">
-                <Insights
-                  items={[
-                    ...(cancellations.totalCancellations > 0 && overview?.totalBookings
-                      ? [{
-                          text: `${cancellations.totalCancellations} cancellations against ${overview.totalBookings} bookings — roughly ${money(cancellations.totalCancellations * (overview.averageTicket || 0))} ${currencySymbol()} of chair time nobody paid for.`,
-                          tone: "rose" as const,
-                        }]
-                      : []),
-                    ...(worstCancelDay
-                      ? [{
-                          text: `${worstCancelDay.date} lost the most: ${worstCancelDay.cancellations} bookings. Worth checking what was in the diary that day.`,
-                          tone: "amber" as const,
-                        }]
-                      : []),
-                  ]}
-                />
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={XCircle} label="Cancellations" value={cancellations.totalCancellations} tone="rose" />
-                  <Metric
-                    icon={TrendingDown}
-                    label="Share of bookings"
-                    value={overview?.totalBookings ? `${Math.round((cancellations.totalCancellations / overview.totalBookings) * 100)}%` : "—"}
-                    tone="amber"
-                  />
-                  <Metric
-                    icon={DollarSign}
-                    label="Revenue lost"
-                    value={`${money(cancellations.totalCancellations * (overview?.averageTicket || 0))} ${currencySymbol()}`}
-                    hint="At your average ticket"
-                    tone="slate"
-                  />
-                </div>
-                <BarList
-                  title="Cancellations by day"
-                  description="The tallest bars are the days to look at."
-                  tone="rose"
-                  rows={(cancellations.cancellationsByDay ?? []).map((d) => ({ label: d.date, value: d.cancellations }))}
-                  emptyText="No cancellations in this period. "
-                />
+            </section>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Services</h2>
+                <p className="text-xs text-muted-foreground">What sells, and what does not.</p>
               </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="peak-hours" className="mt-0">
-            {peakHours ? (
-              <div className="space-y-4">
-                <Insights
-                  items={
-                    busiestHour
-                      ? [
-                          {
-                            text: `${String(busiestHour.hour).padStart(2, "0")}:00 is your busiest hour with ${busiestHour.bookings} bookings. Staff it first.`,
-                            tone: "sky" as const,
-                          },
-                          ...(quietestHour && quietestHour.hour !== busiestHour.hour
-                            ? [{
-                                text: `${String(quietestHour.hour).padStart(2, "0")}:00 is the quietest with ${quietestHour.bookings}. A promotion belongs here, not at your busiest time.`,
-                                tone: "amber" as const,
-                              }]
-                            : []),
-                        ]
-                      : []
-                  }
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Metric
-                    icon={Clock}
-                    label="Busiest hour"
-                    value={busiestHour ? `${String(busiestHour.hour).padStart(2, "0")}:00` : "—"}
-                    hint={busiestHour ? `${busiestHour.bookings} bookings` : undefined}
-                    tone="sky"
-                  />
-                  <Metric
-                    icon={Clock}
-                    label="Quietest hour"
-                    value={quietestHour ? `${String(quietestHour.hour).padStart(2, "0")}:00` : "—"}
-                    hint={quietestHour ? `${quietestHour.bookings} bookings` : undefined}
-                    tone="amber"
-                  />
-                </div>
-                <BarList
-                  title="Bookings by hour"
-                  description="When the chairs are actually full."
-                  tone="sky"
-                  rows={(peakHours.peakHours ?? []).map((h) => ({
-                    label: `${String(h.hour).padStart(2, "0")}:00`,
-                    value: h.bookings,
-                  }))}
-                />
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="customer-retention" className="mt-0">
-            {customerRetention ? (
-              <div className="space-y-4">
-                <Insights
-                  items={[
-                    {
-                      text:
-                        (customerRetention.retentionRate ?? 0) >= 50
-                          ? `${pct(customerRetention.retentionRate)}% of clients came back. Repeat custom is carrying the salon — protect it before chasing new names.`
-                          : `Only ${pct(customerRetention.retentionRate)}% came back. Every month starts from nearly zero, which is the most expensive way to run a salon.`,
-                      tone: (customerRetention.retentionRate ?? 0) >= 50 ? ("emerald" as const) : ("rose" as const),
-                    },
-                    {
-                      text: `${customerRetention.totalClients - customerRetention.returningClients} clients visited once and have not been back. That is the list worth a message.`,
-                      tone: "amber" as const,
-                    },
-                  ]}
-                />
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Metric
-                    icon={Repeat}
-                    label="Retention rate"
-                    value={`${pct(customerRetention.retentionRate)}%`}
-                    tone={(customerRetention.retentionRate ?? 0) >= 50 ? "emerald" : "rose"}
-                  />
-                  <Metric icon={Users} label="Total clients" value={customerRetention.totalClients} tone="violet" />
-                  <Metric icon={UserCheck} label="Came back" value={customerRetention.returningClients} tone="emerald" />
-                </div>
-                <BarList
-                  title="Who is coming back"
-                  tone="emerald"
-                  rows={[
-                    { label: "Returning clients", value: customerRetention.returningClients },
-                    {
-                      label: "One visit only",
-                      value: Math.max(0, customerRetention.totalClients - customerRetention.returningClients),
-                    },
-                  ]}
-                />
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="profitability" className="mt-0">
-            {profitability ? (
-              <div className="space-y-4">
-                <Insights
-                  items={[
-                    {
-                      text: `Of ${money(profitability.totalRevenue)} ${currencySymbol()} taken, roughly ${money(profitability.estimatedProfit)} ${currencySymbol()} is yours after costs — a ${pct(profitability.profitMargin)}% margin.`,
-                      tone: (profitability.profitMargin ?? 0) >= 30 ? ("emerald" as const) : ("amber" as const),
-                    },
-                    {
-                      text: "This is an estimate from staff cost and commission. It does not know your rent, stock or bills.",
-                      tone: "slate" as const,
-                    },
-                  ]}
-                />
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={DollarSign} label="Revenue" value={`${money(profitability.totalRevenue)} ${currencySymbol()}`} tone="sky" />
-                  <Metric icon={TrendingUp} label="Estimated profit" value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="emerald" />
-                  <Metric
-                    icon={Target}
-                    label="Margin"
-                    value={`${pct(profitability.profitMargin)}%`}
-                    tone={(profitability.profitMargin ?? 0) >= 30 ? "emerald" : "amber"}
-                  />
-                </div>
-                <BarList
-                  title="Where the money goes"
-                  tone="emerald"
-                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
-                  rows={[
-                    { label: "Kept (estimated profit)", value: profitability.estimatedProfit ?? 0 },
-                    {
-                      label: "Costs (staff and commission)",
-                      value: Math.max(0, (profitability.totalRevenue ?? 0) - (profitability.estimatedProfit ?? 0)),
-                    },
-                  ]}
-                />
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="payment-methods" className="mt-0">
-            {paymentMethods ? (
-              <div className="space-y-4">
-                <Insights
-                  items={
-                    topPaymentMethod
-                      ? [
-                          {
-                            text: `${topPaymentMethod.paymentMethod} takes ${pct(topPaymentMethod.percentage)}% of your revenue across ${topPaymentMethod.transactions} transactions.`,
-                            tone: "sky" as const,
-                          },
-                        ]
-                      : []
-                  }
-                />
-                <BarList
-                  title="Revenue by payment method"
-                  description="What the till is actually taking."
-                  tone="sky"
-                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
-                  rows={(paymentMethods.paymentMethods ?? []).map((m) => ({
-                    label: m.paymentMethod,
-                    value: m.revenue,
-                    detail: `${m.transactions} · ${pct(m.percentage)}%`,
-                  }))}
-                />
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="seasonal" className="mt-0">
-            {seasonal ? (
-              <div className="space-y-4">
-                <Insights
-                  items={[
-                    ...(seasonal.bestMonth
-                      ? [{
-                          text: `${seasonal.bestMonth} is your strongest month and ${seasonal.worstMonth ?? "the quietest"} your weakest. Staff and stock for the first; run offers in the second.`,
-                          tone: "sky" as const,
-                        }]
-                      : []),
-                  ]}
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Metric icon={TrendingUp} label="Best month" value={seasonal.bestMonth || "—"} tone="emerald" />
-                  <Metric icon={TrendingDown} label="Weakest month" value={seasonal.worstMonth || "—"} tone="amber" />
-                </div>
-                <BarList
-                  title="Revenue by month"
-                  description="The shape of your year."
-                  tone="sky"
-                  formatValue={(v) => `${money(v)} ${currencySymbol()}`}
-                  rows={(seasonal.monthlyData ?? seasonal.monthlyRevenue ?? []).map((m: { month?: string; period?: string; revenue: number }) => ({
-                    label: m.month ?? m.period ?? "",
-                    value: m.revenue,
-                  }))}
-                  emptyText="Not enough history yet — a year of takings is what makes this readable."
-                />
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="service-duration" className="mt-0">
-            {serviceDuration ? (
-              <div className="space-y-4">
-                <Insights
-                  items={[
-                    {
-                      text:
-                        (serviceDuration.durationEfficiency ?? 100) < 95
-                          ? `Appointments run about ${Math.abs(Math.round((serviceDuration.averageActualDuration ?? 0) - (serviceDuration.averageScheduledDuration ?? 0)))} minutes over what you book them for. Every one of those pushes the next client back.`
-                          : "Appointments finish close to the time you book them for, so the diary is realistic.",
-                      tone: (serviceDuration.durationEfficiency ?? 100) < 95 ? ("amber" as const) : ("emerald" as const),
-                    },
-                  ]}
-                />
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={Clock} label="Booked for" value={`${Math.round(serviceDuration.averageScheduledDuration ?? 0)} min`} tone="sky" />
-                  <Metric icon={Timer} label="Actually takes" value={`${Math.round(serviceDuration.averageActualDuration ?? 0)} min`} tone="violet" />
-                  <Metric
-                    icon={Target}
-                    label="On time"
-                    value={`${pct(serviceDuration.durationEfficiency)}%`}
-                    tone={(serviceDuration.durationEfficiency ?? 100) >= 95 ? "emerald" : "amber"}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="wait-times" className="mt-0">
-            {waitTimes ? (
-              <div className="space-y-4">
-                <Insights
-                  items={[
-                    {
-                      text: `Clients wait about ${pct(waitTimes.averageWaitTime)} minutes past their time.`,
-                      tone: (waitTimes.averageWaitTime ?? 0) > 10 ? ("rose" as const) : ("emerald" as const),
-                    },
-                    {
-                      text: `Chairs sit empty about ${pct(waitTimes.averageGapTime)} minutes between bookings — that gap is unsold time, not a break unless you meant it to be.`,
-                      tone: "amber" as const,
-                    },
-                  ]}
-                />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Metric
-                    icon={Clock}
-                    label="Average wait"
-                    value={`${pct(waitTimes.averageWaitTime)} min`}
-                    hint="Past the booked start"
-                    tone={(waitTimes.averageWaitTime ?? 0) > 10 ? "rose" : "emerald"}
-                  />
-                  <Metric
-                    icon={Timer}
-                    label="Gap between bookings"
-                    value={`${pct(waitTimes.averageGapTime)} min`}
-                    hint="Unsold chair time"
-                    tone="amber"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="lead-time" className="mt-0">
-            {leadTime ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Booking Lead Time Analytics</CardTitle>
-                    <CardDescription>Time between booking and appointment</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Average Lead Time</p>
-                        <p className="text-2xl font-bold">{leadTime.averageLeadTime?.toFixed(1)} days</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Median Lead Time</p>
-                        <p className="text-2xl font-bold">{leadTime.medianLeadTime?.toFixed(1)} days</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+            {services ? (
+              <ServicesTab data={services} loading={loading} />
             ) : (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="revenue-per-hour" className="mt-0">
-            {revenuePerHour ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Revenue Per Hour Analytics</CardTitle>
-                    <CardDescription>Hourly revenue breakdown</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Average Revenue/Hour</p>
-                        <p className="text-2xl font-bold">{revenuePerHour.averageRevenuePerHour?.toFixed(2)} {currencySymbol()}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Best Hour</p>
-                        <p className="text-2xl font-bold">{revenuePerHour.bestPerformingHour || "N/A"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Peak Hour Revenue</p>
-                        <p className="text-2xl font-bold">{revenuePerHour.peakHourRevenue?.toFixed(2)} {currencySymbol()}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="acquisition" className="mt-0">
-            {acquisition ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Customer Acquisition Analytics</CardTitle>
-                    <CardDescription>New customer metrics</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">New Customers</p>
-                        <p className="text-2xl font-bold">{acquisition.newCustomers || 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Avg First Visit Value</p>
-                        <p className="text-2xl font-bold">{acquisition.averageFirstVisitValue?.toFixed(2)} {currencySymbol()}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Acquisition Cost</p>
-                        <p className="text-2xl font-bold">{acquisition.customerAcquisitionCost?.toFixed(2)} {currencySymbol()}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="bundles" className="mt-0">
             {bundles ? (
               <div className="space-y-6">
                 <Card>
@@ -970,36 +892,9 @@ export default function AnalyticsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
             )}
+            </section>
           </TabsContent>
 
-          <TabsContent value="forecast" className="mt-0">
-            {forecast ? (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Growth Forecast Analytics</CardTitle>
-                    <CardDescription>Revenue and booking forecasts</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Projected Revenue Growth</p>
-                        <p className="text-2xl font-bold">{forecast.projectedRevenueGrowth?.toFixed(1)}%</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Projected Booking Growth</p>
-                        <p className="text-2xl font-bold">{forecast.projectedBookingGrowth?.toFixed(1)}%</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            )}
-          </TabsContent>
         </Tabs>
       </div>
     </AppLayout>
