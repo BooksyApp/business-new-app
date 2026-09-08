@@ -1,10 +1,11 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
+import { currencySymbol } from "@/lib/currency";
+import type { ClientAppointmentRow } from "@/services/clientService";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
-import { CalendarCheck, Star, UserPlus, Users } from "lucide-react";
+import { CalendarCheck, Coins, Star, UserPlus, Users } from "lucide-react";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { loyaltyService } from "@/services/growthService";
-import { currencySymbol } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,11 +50,22 @@ export default function ClientsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [clientDetailOpen, setClientDetailOpen] = useState(false);
   const [detailClient, setDetailClient] = useState<ClientWithStats | null>(null);
+  // This salon's bookings with them, and nothing from anywhere else.
+  const [clientVisits, setClientVisits] = useState<ClientAppointmentRow[] | null>(null);
   // #28: LoyaltyController has served points per client all along with no caller, so a
   // salon could not see a client's balance — the loyalty scheme was invisible to the
   // people running it. Points are per (business, client), so this belongs on the client
   // rather than on the Marketing page with the other growth features.
   const [loyaltyPoints, setLoyaltyPoints] = useState<number | null>(null);
+
+  const loadVisits = (clientId: number) => {
+    setClientVisits(null);
+    if (!businessId || !clientId) return;
+    clientService
+      .getAppointmentsAtBusiness(businessId, clientId)
+      .then(setClientVisits)
+      .catch(() => setClientVisits([]));
+  };
 
   const loadLoyalty = (clientId: number) => {
     setLoyaltyPoints(null);
@@ -441,7 +453,7 @@ export default function ClientsPage() {
                         key={client.id}
                         className="border-b border-border/40 transition-colors hover:bg-violet-50/60 cursor-pointer group"
                         style={{ animationDelay: `${index * 30}ms` }}
-                        onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}
+                        onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); loadVisits(client.id); }}
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-3">
@@ -601,18 +613,12 @@ export default function ClientsPage() {
                               </DropdownMenuTrigger>
                               {/* #22: the row is clickable now, so the menu must not also
                                   open the detail dialog behind itself. */}
+                              {/* View only. A salon does not own the client's record — it
+                                  owns its own dealings with them — so editing and deleting
+                                  are gone rather than pretending ("coming soon"). */}
                               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}>
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); }}>
-                                  View Appointments
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => toast.info("Client deletion coming soon")}
-                                >
-                                  Delete
+                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); loadVisits(client.id); }}>
+                                  View details and visits
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1023,32 +1029,87 @@ export default function ClientsPage() {
           if (!open) setLoyaltyPoints(null);
         }}
       >
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[640px]">
           <DialogHeader>
-            <DialogTitle>Client Details</DialogTitle>
+            <DialogTitle>
+              {detailClient ? getFullName(detailClient.firstName, detailClient.lastName) : "Client"}
+            </DialogTitle>
             <DialogDescription>
-              {detailClient ? getFullName(detailClient.firstName, detailClient.lastName) : ""}
+              What this client has done at your salon. Read-only — their account is theirs.
             </DialogDescription>
           </DialogHeader>
           {detailClient && (
-            <div className="space-y-3 py-2">
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Email:</span><span>{detailClient.email || "N/A"}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Phone:</span><span>{detailClient.phone || "N/A"}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Status:</span><span>{detailClient.status || "Active"}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Total Visits:</span><span>{detailClient.totalVisits ?? 0}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Total Spent:</span><span>{formatCurrency(detailClient.totalSpent)}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Last Visit:</span><span>{formatDate(detailClient.lastVisitDate)}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Completed:</span><span>{detailClient.completedAppointments ?? 0}</span></div>
-              <div className="flex gap-2 text-sm"><span className="font-medium w-28">Cancelled:</span><span>{detailClient.cancelledAppointments ?? 0}</span></div>
-              <div className="flex gap-2 text-sm">
-                <span className="font-medium w-28">No-shows:</span>
-                <span>{detailClient.noShowAppointments ?? 0}</span>
-              </div>
-              <div className="flex gap-2 text-sm">
-                <span className="font-medium w-28">Loyalty:</span>
-                <span>
-                  {loyaltyPoints != null ? `${loyaltyPoints} points` : "—"}
+            <div className="max-h-[65vh] space-y-4 overflow-y-auto py-1">
+              <div className="flex items-center gap-3 rounded-xl border p-3">
+                <span
+                  className={`flex h-11 w-11 items-center justify-center rounded-full font-semibold ${clientColorClasses(
+                    getFullName(detailClient.firstName, detailClient.lastName)
+                  )}`}
+                >
+                  {getInitials(detailClient.firstName, detailClient.lastName)}
                 </span>
+                <div className="min-w-0 text-sm">
+                  <p className="truncate">{detailClient.email || "No email"}</p>
+                  <p className="truncate text-muted-foreground">{detailClient.phone || "No phone"}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <StatCard icon={CalendarCheck} label="Visits" value={detailClient.totalVisits ?? 0} tone="violet" />
+                <StatCard icon={Coins} label="Spent" value={formatCurrency(detailClient.totalSpent)} tone="emerald" />
+                <StatCard
+                  icon={XCircle}
+                  label="Cancelled"
+                  value={detailClient.cancelledAppointments ?? 0}
+                  tone={(detailClient.cancelledAppointments ?? 0) > 0 ? "amber" : "slate"}
+                />
+                <StatCard
+                  icon={Star}
+                  label="Points"
+                  value={loyaltyPoints != null ? loyaltyPoints : "—"}
+                  tone="sky"
+                />
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-medium">Visits at your salon</p>
+                {clientVisits === null ? (
+                  <p className="text-sm text-muted-foreground">Loading…</p>
+                ) : clientVisits.length === 0 ? (
+                  <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    No bookings with you yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {clientVisits.map((v) => (
+                      <div
+                        key={v.id}
+                        className={`flex flex-wrap items-center gap-3 rounded-lg border-l-4 border bg-white p-3 text-sm ${
+                          v.status === "CANCELLED"
+                            ? "border-l-rose-400"
+                            : v.status === "NO_SHOW"
+                              ? "border-l-amber-400"
+                              : "border-l-emerald-400"
+                        }`}
+                      >
+                        <span className="w-24 shrink-0 font-medium">{v.appointment_date}</span>
+                        <span className="w-20 shrink-0 text-muted-foreground">
+                          {String(v.start_time).slice(0, 5)}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {v.service_name || "Service"}
+                          {v.staff_name ? ` · ${v.staff_name}` : ""}
+                        </span>
+                        <span className="shrink-0 text-muted-foreground">
+                          {v.price != null ? `${v.price} ${currencySymbol()}` : ""}
+                        </span>
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          {v.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

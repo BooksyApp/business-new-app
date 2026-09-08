@@ -59,7 +59,30 @@ export interface Client {
   updatedAt: string | null;
 }
 
+export interface ClientAppointmentRow {
+  id: number;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  payment_status: string | null;
+  price: number | null;
+  notes: string | null;
+  service_name: string | null;
+  staff_name: string | null;
+}
+
 class ClientService {
+  /**
+   * This client's visits at THIS salon. Scoped by business on the server, so a client who
+   * also goes elsewhere does not bring those visits with them.
+   */
+  async getAppointmentsAtBusiness(businessId: number, clientId: number): Promise<ClientAppointmentRow[]> {
+    return apiClient.get<ClientAppointmentRow[]>(
+      `/businesses/${businessId}/clients/${clientId}/appointments`
+    );
+  }
+
   /**
    * Get clients who have booked appointments for a business
    */
