@@ -187,7 +187,7 @@ export function AppointmentModal({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="!max-w-none w-[460px] p-0 flex flex-col h-screen max-h-screen gap-0">
+      <SheetContent side="right" className="!max-w-none w-[620px] p-0 flex flex-col h-screen max-h-screen gap-0">
         <div className={`h-1.5 w-full shrink-0 ${tone.band}`} />
 
         <div className="flex items-center justify-between px-5 py-3 shrink-0">

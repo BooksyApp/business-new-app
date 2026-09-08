@@ -298,6 +298,10 @@ export default function SalesPage() {
             );
             setSelectedAppointmentId(target.id);
             setSelectedAppointmentStaffId(target.staffId || null);
+            // Straight to the till. "Take payment" means take payment — landing on the
+            // settle list and making the cashier find the booking again is the step this
+            // was meant to remove.
+            setShowPaymentMethod(true);
             const match = clients.find(
               (c) =>
                 (target.clientId != null && c.id === target.clientId) ||
