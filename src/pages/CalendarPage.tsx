@@ -559,6 +559,7 @@ export default function CalendarPage() {
 
   /** Which waiting client this booking is for, so the card leaves the column when it is booked. */
   const [placingEntryId, setPlacingEntryId] = useState<number | null>(null);
+  const [calendarSearch, setCalendarSearch] = useState("");
 
   /**
    * Opens the booking form with this person filled in, on the day they asked for. Not
@@ -917,16 +918,69 @@ export default function CalendarPage() {
   const goToNextWeek = () => setWeekViewDate(addWeeks(weekViewDate, 1));
 
   // Get appointments for a specific date
+  /**
+   * The search box was an input with no state and no handler — you could type in it and
+   * the calendar did not move. It filters what the grid draws now: client, service or
+   * staff member.
+   */
+  const matchesSearch = (apt: AppointmentWithDate) => {
+    const q = calendarSearch.trim().toLowerCase();
+    if (!q) return true;
+    return [apt.clientName, apt.service, apt.staffName]
+      .filter(Boolean)
+      .some(v => String(v).toLowerCase().includes(q));
+  };
+
   const getAppointmentsForDate = (date: Date): AppointmentWithDate[] => {
-    return appointments.filter(apt => isSameDay(apt.date, date));
+    return appointments.filter(apt => isSameDay(apt.date, date) && matchesSearch(apt));
   };
 
   // Get appointments for a specific date and staff
   const getAppointmentsForDateAndStaff = (date: Date, staffId: string): AppointmentWithDate[] => {
-    return appointments.filter(apt => isSameDay(apt.date, date) && apt.staffId === staffId);
+    return appointments.filter(
+      apt => isSameDay(apt.date, date) && apt.staffId === staffId && matchesSearch(apt)
+    );
   };
 
   // Get week days (Monday to Sunday)
+  /**
+   * What is waiting on the salon today, in one list.
+   *
+   * The bell had no handler at all. This is not a notification feed — it is the three
+   * things on this day that need a decision: a booking nobody has confirmed, someone
+   * who came and has not paid, and people waiting for a slot.
+   */
+  const attention = useMemo(() => {
+    const todays = appointments.filter(apt => isSameDay(apt.date, currentDate));
+    const items: { label: string; detail: string; tone: string; onClick: () => void }[] = [];
+
+    for (const apt of todays.filter(a => a.status === "PENDING")) {
+      items.push({
+        label: `Confirm ${apt.clientName || "booking"}`,
+        detail: `${apt.startTime} · ${apt.service}`,
+        tone: "bg-amber-500",
+        onClick: () => handleAppointmentClick(apt),
+      });
+    }
+    for (const apt of todays.filter(a => a.status === "COMPLETED")) {
+      items.push({
+        label: `Take payment · ${apt.clientName || "client"}`,
+        detail: `${apt.startTime} · ${apt.service}`,
+        tone: "bg-emerald-500",
+        onClick: () => handleAppointmentClick(apt),
+      });
+    }
+    for (const w of waitlist) {
+      items.push({
+        label: `${w.clientName || w.clientEmail || "Client"} is waiting`,
+        detail: [w.serviceName, w.preferredDate || "any date"].filter(Boolean).join(" · "),
+        tone: "bg-violet-500",
+        onClick: () => placeFromWaitlist(w),
+      });
+    }
+    return items;
+  }, [appointments, currentDate, waitlist]);
+
   const getWeekDays = (date: Date): Date[] => {
     const start = startOfWeek(date, { weekStartsOn: 1 }); // Monday
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -1256,20 +1310,76 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button aria-label="Settings" variant="ghost" size="icon" className="h-8 w-8">
+          {/* All three were dead: no onClick, no state, no handler. */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button aria-label="Needs attention" variant="ghost" size="icon" className="relative h-8 w-8">
+                <Bell size={18} />
+                {attention.length > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
+                    {attention.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[320px] p-0">
+              <div className="border-b px-3 py-2">
+                <p className="text-sm font-medium">Needs attention</p>
+                <p className="text-xs text-muted-foreground">Today, from this calendar</p>
+              </div>
+              {attention.length === 0 ? (
+                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  Nothing waiting on you.
+                </p>
+              ) : (
+                <div className="max-h-[320px] overflow-y-auto">
+                  {attention.map((item, i) => (
+                    <button
+                      key={i}
+                      onClick={item.onClick}
+                      className="flex w-full items-start gap-2 border-b px-3 py-2 text-left last:border-0 hover:bg-muted/50"
+                    >
+                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.tone}`} />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm">{item.label}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{item.detail}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          <Button
+            aria-label="Calendar settings"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => navigate(getPath("/booking-rules"))}
+          >
             <Settings size={18} />
           </Button>
-          <Button aria-label="Notifications" variant="ghost" size="icon" className="h-8 w-8">
-                <Bell size={18} />
-          </Button>
-              <div className="flex items-center gap-2 border border-border rounded-md px-2 h-8">
-                <Search size={16} className="text-muted-foreground" />
-                <input 
-                  type="text" 
-                  placeholder="" 
-                  className="w-32 border-0 outline-none text-sm bg-transparent"
-                />
-              </div>
+
+          <div className="flex h-8 items-center gap-2 rounded-md border border-border px-2">
+            <Search size={16} className="text-muted-foreground" />
+            <input
+              type="text"
+              value={calendarSearch}
+              onChange={(e) => setCalendarSearch(e.target.value)}
+              placeholder="Find a client…"
+              className="w-36 border-0 bg-transparent text-sm outline-none"
+            />
+            {calendarSearch && (
+              <button
+                onClick={() => setCalendarSearch("")}
+                aria-label="Clear search"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
