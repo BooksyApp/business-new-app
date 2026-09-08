@@ -546,7 +546,7 @@ export default function CalendarPage() {
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
 
-  useEffect(() => {
+  const reloadWaitlist = useCallback(() => {
     if (!businessId) return;
     waitlistService
       .listForBusiness(businessId)
@@ -554,6 +554,11 @@ export default function CalendarPage() {
       // A failed waitlist fetch must not take the calendar down with it.
       .catch(() => setWaitlist([]));
   }, [businessId]);
+
+  useEffect(reloadWaitlist, [reloadWaitlist]);
+
+  /** Which waiting client this booking is for, so the card leaves the column when it is booked. */
+  const [placingEntryId, setPlacingEntryId] = useState<number | null>(null);
 
   /**
    * Opens the booking form with this person filled in, on the day they asked for. Not
@@ -587,6 +592,7 @@ export default function CalendarPage() {
       notes: "From the waiting list",
     }));
     setDraggingEntry(null);
+    setPlacingEntryId(entry.id);
     setIsNewAppointmentOpen(true);
   };
 
@@ -603,6 +609,7 @@ export default function CalendarPage() {
       date: entry.preferredDate || format(currentDate, "yyyy-MM-dd"),
       notes: "From the waiting list",
     }));
+    setPlacingEntryId(entry.id);
     setIsNewAppointmentOpen(true);
   };
   const [isAddReservationOpen, setIsAddReservationOpen] = useState(false);
@@ -3116,6 +3123,14 @@ export default function CalendarPage() {
                       await updateAppointmentAPI(editingAppointmentId, appointmentData);
                     } else {
                       await createAppointmentAPI(appointmentData);
+                      // The server closes the waitlist entry on the booking's own email,
+                      // but the column is a snapshot taken when the page loaded — so it
+                      // kept showing someone who had just been booked in.
+                      if (placingEntryId != null) {
+                        setWaitlist(prev => prev.filter(w => w.id !== placingEntryId));
+                        setPlacingEntryId(null);
+                      }
+                      reloadWaitlist();
                     }
                     setIsNewAppointmentOpen(false);
                     setEditingAppointmentId(null);
