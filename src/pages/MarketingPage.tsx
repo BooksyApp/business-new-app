@@ -400,7 +400,7 @@ export default function MarketingPage() {
                   if (tool.key === "REFERRAL") {
                     navigate(getPath("/referral-program"));
                   } else if (tool.key === "LOYALTY") {
-                    navigate(getPath("/memberships"));
+                    navigate(getPath("/loyalty"));
                   } else {
                     // Set the channel and put the cursor in the form, rather than leaving
                     // the owner to find the same choice again in a dropdown below.

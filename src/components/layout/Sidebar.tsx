@@ -354,6 +354,7 @@ export const navGroups: NavGroup[] = [
       { icon: Star, label: "Reviews", path: "/reviews", description: "Read feedback, reply to it, ask for more" },
       { icon: Gift, label: "Referrals", path: "/referral-program", description: "Your code, and the clients your clients bring in" },
       { icon: MarketingIcon, label: "Marketing", path: "/marketing", description: "Campaigns and promo codes" },
+      { icon: Star, label: "Loyalty", path: "/loyalty", description: "Come N times, one service free — and who is collecting" },
     ],
   },
   {

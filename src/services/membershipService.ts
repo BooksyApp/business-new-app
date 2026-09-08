@@ -97,4 +97,39 @@ class LoyaltySettingsService {
   }
 }
 
+export interface LoyaltyCardHolder {
+  client_id: number;
+  client_name: string;
+  email: string | null;
+  phone: string | null;
+  visits_count: number;
+  rewards_available: number;
+  rewards_used: number;
+  points_balance: number;
+}
+
+class LoyaltyCardService {
+  holders(businessId: number): Promise<LoyaltyCardHolder[]> {
+    return apiClient.get<LoyaltyCardHolder[]>(`/businesses/${businessId}/loyalty-card/clients`);
+  }
+
+  /** Puts a client on the card. Idempotent. */
+  add(businessId: number, clientId: number): Promise<{ added: boolean }> {
+    return apiClient.post<{ added: boolean }>(
+      `/businesses/${businessId}/loyalty-card/clients/${clientId}`,
+      {}
+    );
+  }
+
+  /** A stamp added or removed by hand — a visit taken on paper, or one added in error. */
+  stamp(businessId: number, clientId: number, delta = 1) {
+    return apiClient.post<{ visits: number; visitsForReward: number; rewardsAvailable: number }>(
+      `/businesses/${businessId}/loyalty-card/clients/${clientId}/stamp`,
+      { delta }
+    );
+  }
+}
+
+export const loyaltyCardService = new LoyaltyCardService();
+
 export const loyaltySettingsService = new LoyaltySettingsService();
