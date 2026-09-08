@@ -174,6 +174,8 @@ export function AppointmentModal({
   };
   const tone = statusTone[status] ?? statusTone.PENDING;
   const paid = paymentStatus === "PAID";
+  /** Nothing can be done to it any more: the money is in, or it was called off. */
+  const settled = paid || status === "CANCELLED";
   const clientName = appointmentData.clientName || appointment.clientName || "Walk-in";
   const initials = clientName
     .split(/\s+/)
@@ -319,9 +321,17 @@ export function AppointmentModal({
           )}
         </div>
 
-        {/* Everything you can do, at the bottom where actions live, one primary. */}
+        {/* Everything you can do, at the bottom where actions live, one primary.
+            A paid appointment is settled: cancelling, editing or marking a no-show after
+            the money is taken would leave the till and the diary disagreeing. A cancelled
+            one is over, so there is nothing to do to it either. */}
         <div className="space-y-2 border-t px-5 py-4 shrink-0">
-          {status !== "CANCELLED" && !paid && (
+          {settled ? (
+            <p className="text-center text-sm text-muted-foreground">
+              {paid ? "Paid and settled — nothing left to change." : "This appointment was cancelled."}
+            </p>
+          ) : null}
+          {!settled && !paid && (
             <Button
               className="h-11 w-full gap-2 text-sm"
               onClick={() => {
@@ -334,6 +344,7 @@ export function AppointmentModal({
               Take payment · {price} {currencySymbol()}
             </Button>
           )}
+          {!settled && (
           <div className="grid grid-cols-3 gap-2">
             {status === "PENDING" ? (
               <Button
@@ -354,7 +365,7 @@ export function AppointmentModal({
             <Button
               variant="outline"
               className="h-9 gap-1.5 text-xs"
-              disabled={lifecycleBusy || status === "CANCELLED" || status === "NO_SHOW"}
+              disabled={lifecycleBusy || status === "NO_SHOW"}
               onClick={() => void runLifecycle("no-show")}
             >
               <UserX className="h-3.5 w-3.5" />
@@ -363,13 +374,13 @@ export function AppointmentModal({
             <Button
               variant="outline"
               className="h-9 gap-1.5 border-red-200 text-xs text-red-600 hover:bg-red-50"
-              disabled={status === "CANCELLED"}
               onClick={() => setCancelDialogOpen(true)}
             >
               <XCircle className="h-3.5 w-3.5" />
               Cancel
             </Button>
           </div>
+          )}
         </div>
       </SheetContent>
 
