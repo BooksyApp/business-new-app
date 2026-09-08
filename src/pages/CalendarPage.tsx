@@ -560,6 +560,36 @@ export default function CalendarPage() {
    * drag-and-drop: the slot is the salon's judgement — which staff member, how long,
    * whether it fits around the next booking — and a drop target cannot ask any of that.
    */
+  /**
+   * Dropping a waiting client onto a staff column at a time.
+   *
+   * The strip could only open a blank booking form and leave the salon to pick the slot
+   * again — the one thing they were already looking at when they saw the gap. Dragging the
+   * card onto the gap says who, when and with whom in one gesture.
+   */
+  const [draggingEntry, setDraggingEntry] = useState<WaitlistEntry | null>(null);
+
+  const dropOnSlot = (entry: WaitlistEntry, staffId: string, startTime: string) => {
+    const duration = entry.serviceId ? serviceDuration(String(entry.serviceId)) : 30;
+    const [h, m] = startTime.split(":").map(Number);
+    const end = new Date(0, 0, 0, h, m + duration);
+    setAppointmentForm(prev => ({
+      ...prev,
+      clientId: "",
+      clientName: entry.clientName || "",
+      clientEmail: entry.clientEmail || "",
+      clientPhone: entry.clientPhone || "",
+      serviceId: entry.serviceId ? String(entry.serviceId) : "",
+      staffId,
+      date: format(currentDate, "yyyy-MM-dd"),
+      startTime,
+      endTime: `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
+      notes: "From the waiting list",
+    }));
+    setDraggingEntry(null);
+    setIsNewAppointmentOpen(true);
+  };
+
   const placeFromWaitlist = (entry: WaitlistEntry) => {
     if (entry.preferredDate) setCurrentDate(new Date(entry.preferredDate));
     setAppointmentForm(prev => ({
@@ -1007,26 +1037,54 @@ export default function CalendarPage() {
               for exactly that. Clicking one opens the booking form with them filled in;
               the salon then picks the slot, which is the part only they can decide. */}
           {waitlist.length > 0 && (
-            <div className="px-4 py-2 border-b border-gray-200 bg-amber-50/60">
-              <div className="flex items-center gap-2 overflow-x-auto">
-                <span className="text-xs font-semibold text-amber-900 shrink-0">
-                  Waiting ({waitlist.length})
+            <div className="border-b border-amber-200 bg-amber-50/70 px-4 py-3">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-amber-900">
+                  Waiting · {waitlist.length}
                 </span>
+                <span className="text-xs text-amber-800/70">
+                  Drag someone onto a gap to book them in
+                </span>
+              </div>
+              <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
                 {waitlist.map(w => (
-                  <button
+                  <div
                     key={w.id}
+                    draggable
+                    onDragStart={() => setDraggingEntry(w)}
+                    onDragEnd={() => setDraggingEntry(null)}
                     onClick={() => placeFromWaitlist(w)}
-                    className="shrink-0 flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1 text-xs hover:border-amber-500 transition-colors"
-                    title={`Book ${w.clientName || w.clientEmail} in`}
+                    title={`Drag onto a slot, or click to pick one`}
+                    className={`w-[190px] shrink-0 cursor-grab rounded-xl border bg-white p-2.5 shadow-sm transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md ${
+                      draggingEntry?.id === w.id ? "opacity-50" : "border-amber-200"
+                    }`}
                   >
-                    <span className="font-medium">{w.clientName || w.clientEmail || "Client"}</span>
-                    <span className="text-muted-foreground">
-                      {[w.serviceName, w.preferredDate].filter(Boolean).join(" · ") || "any date"}
-                    </span>
-                    {w.status === "NOTIFIED" ? (
-                      <span className="text-[10px] text-green-700">told</span>
-                    ) : null}
-                  </button>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${clientColorClasses(
+                          w.clientName || w.clientEmail || "client"
+                        )}`}
+                      >
+                        {(w.clientName || w.clientEmail || "C").charAt(0).toUpperCase()}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-xs font-medium">
+                        {w.clientName || w.clientEmail || "Client"}
+                      </p>
+                      {w.status === "NOTIFIED" && (
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800">
+                          told
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
+                      {w.serviceName || "Any service"}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {[w.staffName ? `with ${w.staffName}` : null, w.preferredDate || "any date"]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1378,6 +1436,17 @@ export default function CalendarPage() {
                     <div 
                       className="relative select-none" 
                       style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
+                      onDragOver={(e) => {
+                        // Only while a waiting client is in hand; otherwise the grid's own
+                        // drag behaviour is untouched.
+                        if (draggingEntry) e.preventDefault();
+                      }}
+                      onDrop={(e) => {
+                        if (!draggingEntry) return;
+                        e.preventDefault();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        dropOnSlot(draggingEntry, staff.id, getTimeFromPosition(e.clientY - rect.top, SLOT_HEIGHT));
+                      }}
                       onMouseDown={(e) => {
                         // Allow selection even if clicking on or near appointments
                         // Only prevent if clicking directly on appointment content
