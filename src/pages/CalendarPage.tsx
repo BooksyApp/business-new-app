@@ -1036,60 +1036,6 @@ export default function CalendarPage() {
               salon looking at a gap in today's calendar had no idea somebody was waiting
               for exactly that. Clicking one opens the booking form with them filled in;
               the salon then picks the slot, which is the part only they can decide. */}
-          {waitlist.length > 0 && (
-            <div className="border-b border-amber-200 bg-amber-50/70 px-4 py-3">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-amber-900">
-                  Waiting · {waitlist.length}
-                </span>
-                <span className="text-xs text-amber-800/70">
-                  Drag someone onto a gap to book them in
-                </span>
-              </div>
-              <div className="flex items-stretch gap-2 overflow-x-auto pb-1">
-                {waitlist.map(w => (
-                  <div
-                    key={w.id}
-                    draggable
-                    onDragStart={() => setDraggingEntry(w)}
-                    onDragEnd={() => setDraggingEntry(null)}
-                    onClick={() => placeFromWaitlist(w)}
-                    title={`Drag onto a slot, or click to pick one`}
-                    className={`w-[190px] shrink-0 cursor-grab rounded-xl border bg-white p-2.5 shadow-sm transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md ${
-                      draggingEntry?.id === w.id ? "opacity-50" : "border-amber-200"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${clientColorClasses(
-                          w.clientName || w.clientEmail || "client"
-                        )}`}
-                      >
-                        {(w.clientName || w.clientEmail || "C").charAt(0).toUpperCase()}
-                      </span>
-                      <p className="min-w-0 flex-1 truncate text-xs font-medium">
-                        {w.clientName || w.clientEmail || "Client"}
-                      </p>
-                      {w.status === "NOTIFIED" && (
-                        <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800">
-                          told
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
-                      {w.serviceName || "Any service"}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {[w.staffName ? `with ${w.staffName}` : null, w.preferredDate || "any date"]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Loading State */}
           {loading && (
             <div className="flex-1 flex items-center justify-center">
@@ -1404,6 +1350,64 @@ export default function CalendarPage() {
 
             {/* Staff Columns */}
         <div className="flex flex-1">
+              {/* The waiting list, as the first column of the calendar. It sat above the
+                  grid as a strip, which is the wrong shape for the job: a salon looks at a
+                  gap in a staff member's day and wants to drag somebody into it, and the
+                  people who could fill it belong beside the gaps, not over them. */}
+              {waitlist.length > 0 && (
+                <div className="w-[210px] shrink-0 border-r border-amber-200 bg-amber-50/60">
+                  <div className="sticky top-0 z-10 border-b border-amber-200 bg-amber-50 px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
+                      Waiting · {waitlist.length}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-amber-800/70">
+                      Drag onto a gap to book them in
+                    </p>
+                  </div>
+                  <div className="space-y-2 p-2">
+                    {waitlist.map((w) => (
+                      <div
+                        key={w.id}
+                        draggable
+                        onDragStart={() => setDraggingEntry(w)}
+                        onDragEnd={() => setDraggingEntry(null)}
+                        onClick={() => placeFromWaitlist(w)}
+                        title="Drag onto a slot, or click to pick one"
+                        className={`cursor-grab rounded-xl border bg-white p-2.5 shadow-sm transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md ${
+                          draggingEntry?.id === w.id ? "opacity-50" : "border-amber-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${clientColorClasses(
+                              w.clientName || w.clientEmail || "client"
+                            )}`}
+                          >
+                            {(w.clientName || w.clientEmail || "C").charAt(0).toUpperCase()}
+                          </span>
+                          <p className="min-w-0 flex-1 truncate text-xs font-medium">
+                            {w.clientName || w.clientEmail || "Client"}
+                          </p>
+                          {w.status === "NOTIFIED" && (
+                            <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800">
+                              told
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
+                          {w.serviceName || "Any service"}
+                        </p>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {[w.staffName ? `with ${w.staffName}` : null, w.preferredDate || "any date"]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {staff.map((staff) => {
                 const dayAppointments = getAppointmentsForDate(currentDate);
                 const staffAppointments = getAppointmentsForStaff(dayAppointments, staff.id);
