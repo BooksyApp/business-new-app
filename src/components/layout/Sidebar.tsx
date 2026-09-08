@@ -454,7 +454,10 @@ export function Sidebar() {
         <div className="w-full h-px bg-[#2a2a2a]/50"></div>
 
       {/* Main Navigation — grouped, with a flyout naming each group's pages */}
-      <nav className="flex-1 flex flex-col items-center py-2 gap-0.5 overflow-y-auto overflow-x-visible relative">
+      {/* No overflow on either axis: a scroll container clips absolutely-positioned children,
+          which is why the flyout was rendering and never visible. Six groups fit without
+          scrolling, so there is nothing to scroll. */}
+      <nav className="flex-1 flex flex-col items-center py-2 gap-0.5 overflow-visible relative">
         {navGroups.map((group) => {
           const paths = group.items ? group.items.map((i) => getPath(i.path)) : [getPath(group.path!)];
           const isActive = paths.some(
