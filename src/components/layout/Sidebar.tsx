@@ -473,31 +473,53 @@ export function Sidebar() {
               onMouseEnter={() => group.items && setOpenGroup(group.label)}
               onMouseLeave={() => group.items && setOpenGroup(null)}
             >
-              {/* Icon only. The flyout names the pages; a label under every icon made the
-                  rail twice as tall and said the same thing twice. Clicking a group goes to
-                  its first page rather than doing nothing. */}
-              <NavLink
-                to={getPath(group.path ?? group.items![0].path)}
-                aria-label={group.label}
-                onClick={() => setOpenGroup(null)}
-                className={cn(
-                  "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
-                  !isActive && "hover:bg-white/5",
-                  open && "bg-white/5"
-                )}
-              >
-                {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
-                <Icon
-                  size={23}
+              {/* A group opens its list; only a group with a single destination navigates.
+                  Navigating on click meant the sub-pages could never be reached — the
+                  panel vanished with the page change before it could be clicked. */}
+              {group.items ? (
+                <button
+                  type="button"
+                  aria-label={group.label}
+                  aria-expanded={open}
+                  onClick={() => setOpenGroup(open ? null : group.label)}
                   className={cn(
-                    "transition-colors",
-                    isActive ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
+                    "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
+                    !isActive && "hover:bg-white/5",
+                    open && "bg-white/10"
                   )}
-                />
-              </NavLink>
+                >
+                  {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
+                  <Icon
+                    size={23}
+                    className={cn(
+                      "transition-colors",
+                      isActive || open ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
+                    )}
+                  />
+                </button>
+              ) : (
+                <NavLink
+                  to={getPath(group.path!)}
+                  aria-label={group.label}
+                  onClick={() => setOpenGroup(null)}
+                  className={cn(
+                    "group relative flex items-center justify-center w-12 h-12 rounded-lg transition-all duration-200",
+                    !isActive && "hover:bg-white/5"
+                  )}
+                >
+                  {isActive && <div className="absolute left-[-12px] top-0 bottom-0 w-1 bg-[#f4f4f4]" />}
+                  <Icon
+                    size={23}
+                    className={cn(
+                      "transition-colors",
+                      isActive ? "text-[#f4f4f4]" : "text-[#7f8084] group-hover:text-white/80"
+                    )}
+                  />
+                </NavLink>
+              )}
 
               {group.items && open && (
-                <div className="absolute left-[64px] top-0 z-50 min-w-[190px] rounded-xl border border-[#2a2a2a] bg-[#1f1f1f] p-1.5 shadow-2xl">
+                <div className="absolute left-[60px] top-0 z-50 min-w-[210px] rounded-xl border border-[#2a2a2a] bg-[#1f1f1f] p-1.5 pl-2 shadow-2xl before:absolute before:-left-3 before:top-0 before:h-full before:w-3 before:content-['']">
                   <p className="px-3 pb-1.5 pt-1 text-[10px] uppercase tracking-wider text-white/35">
                     {group.label}
                   </p>
