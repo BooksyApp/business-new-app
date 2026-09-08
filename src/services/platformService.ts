@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import { API_BASE_URL } from '@/config/api';
 
 /**
@@ -17,6 +19,8 @@ export interface PlatformSettings {
   businessSignupsOpen: boolean;
   defaultMap: { lat: number; lng: number; zoom: number };
   countries: { code: string; name: string; currency: string }[];
+  /** Which features the platform has switched on for this panel. */
+  flags: Record<string, boolean>;
 }
 
 export const PLATFORM_DEFAULTS: PlatformSettings = {
@@ -30,6 +34,7 @@ export const PLATFORM_DEFAULTS: PlatformSettings = {
   businessSignupsOpen: true,
   defaultMap: { lat: 50.0614, lng: 19.9366, zoom: 12 },
   countries: [],
+  flags: {},
 };
 
 /** Never rejects: a salon mid-shift must not lose its panel because this call failed. */
@@ -41,4 +46,33 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   } catch {
     return PLATFORM_DEFAULTS;
   }
+}
+
+/**
+ * The flags, cached for the life of the tab.
+ *
+ * Every screen wants the same answer and it does not change while somebody is working a
+ * shift, so one request serves the whole session. Anything the platform did not mention
+ * keeps the behaviour the panel shipped with — a network failure must not remove features
+ * from a salon mid-shift.
+ */
+let cached: Promise<PlatformSettings> | null = null;
+
+export function platformSettings(): Promise<PlatformSettings> {
+  if (!cached) cached = getPlatformSettings();
+  return cached;
+}
+
+export function useFeatureFlags(): Record<string, boolean> {
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let live = true;
+    platformSettings().then((settings) => {
+      if (live) setFlags(settings.flags ?? {});
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return flags;
 }

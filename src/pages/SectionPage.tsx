@@ -1,5 +1,5 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
-import { navGroups } from "@/components/layout/Sidebar";
+import { useVisibleNavGroups } from "@/components/layout/Sidebar";
 import { useNavigation } from "@/utils/navigationUtils";
 import { ChevronRight } from "lucide-react";
 import { Navigate, NavLink, useParams } from "react-router-dom";
@@ -21,7 +21,8 @@ const TONES = [
 export default function SectionPage() {
   const { section } = useParams<{ section: string }>();
   const { getPath } = useNavigation();
-  const group = navGroups.find((g) => g.slug === section);
+  // The same filtered list the rail uses, so a switched-off page is missing from both.
+  const group = useVisibleNavGroups().find((g) => g.slug === section);
 
   if (!group || !group.items) return <Navigate to={getPath("/calendar")} replace />;
 

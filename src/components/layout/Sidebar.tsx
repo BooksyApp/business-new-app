@@ -1,4 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+
+import { useFeatureFlags } from "@/services/platformService";
 import {
   Users,
   Package,
@@ -296,6 +298,13 @@ export interface NavItem {
   path: string;
   /** One line saying what the page is for, shown on the section page. */
   description?: string;
+  /**
+   * The platform flag this page needs, if any.
+   *
+   * A feature the platform has switched off should not be a menu item that leads to an
+   * empty screen — and switching it back on should not need a release.
+   */
+  flag?: string;
 }
 
 /**
@@ -352,9 +361,9 @@ export const navGroups: NavGroup[] = [
     items: [
       { icon: Users, label: "All clients", path: "/clients", description: "Everyone who has booked, with their history and spend" },
       { icon: Star, label: "Reviews", path: "/reviews", description: "Read feedback, reply to it, ask for more" },
-      { icon: Gift, label: "Referrals", path: "/referral-program", description: "Your code, and the clients your clients bring in" },
+      { icon: Gift, label: "Referrals", path: "/referral-program", description: "Your code, and the clients your clients bring in", flag: "platform_referral" },
       { icon: MarketingIcon, label: "Marketing", path: "/marketing", description: "Campaigns and promo codes" },
-      { icon: Star, label: "Loyalty", path: "/loyalty", description: "Come N times, one service free — and who is collecting" },
+      { icon: Star, label: "Loyalty", path: "/loyalty", description: "Come N times, one service free — and who is collecting", flag: "loyalty_cards" },
     ],
   },
   {
@@ -385,6 +394,21 @@ export const navGroups: NavGroup[] = [
     ],
   },
 ];
+
+/**
+ * The nav with the switched-off features removed.
+ *
+ * Both the rail and the section pages read this rather than `navGroups` directly, so a
+ * page the platform has turned off cannot be reachable from one and missing from the
+ * other — which is exactly how half these screens became unreachable the first time.
+ */
+export function useVisibleNavGroups(): NavGroup[] {
+  const flags = useFeatureFlags();
+  const on = (flag?: string) => !flag || flags[flag] !== false;
+  return navGroups
+    .map((group) => (group.items ? { ...group, items: group.items.filter((item) => on(item.flag)) } : group))
+    .filter((group) => !group.items || group.items.length > 0);
+}
 
 export function Sidebar() {
   const location = useLocation();
