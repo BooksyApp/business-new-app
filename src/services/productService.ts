@@ -1,53 +1,72 @@
 import { apiClient } from "@/config/api";
 
-/**
- * #26/#44: ProductController has had list, low-stock, create, update and delete all
- * along — with SKU, quantity on hand, a low-stock threshold and a computed lowStock
- * flag — and nothing on the client ever called it. The sidebar's "Inventory" link
- * opened add-on service management instead, so a salon owner looking for retail stock
- * found something else entirely.
- */
 export interface Product {
   id: number;
-  businessId: number;
   name: string;
   sku: string | null;
-  price: number;
-  quantityOnHand: number;
-  lowStockThreshold: number;
-  isActive: boolean;
-  /** Computed server-side: quantityOnHand <= lowStockThreshold. */
-  lowStock: boolean;
+  brand: string | null;
+  cost_price: number;
+  sale_price: number;
+  quantity: number;
+  reorder_level: number;
+  unit: string | null;
+  active: boolean;
+  low_stock: boolean;
 }
 
-export interface ProductRequest {
+export interface StockMovement {
+  delta: number;
+  reason: string;
+  note: string | null;
+  created_at: string;
+}
+
+export interface ProductInput {
   name: string;
   sku?: string;
-  price: number;
-  quantityOnHand: number;
-  lowStockThreshold: number;
-  isActive?: boolean;
+  brand?: string;
+  costPrice?: number;
+  salePrice?: number;
+  quantity?: number;
+  reorderLevel?: number;
+  unit?: string;
+  active?: boolean;
 }
 
+/**
+ * Stock, not add-ons.
+ *
+ * "Inventory" used to be the add-on editor with a different title — no SKU, no quantity,
+ * no reorder level. This is the real thing: what the salon buys, counts and sells.
+ */
 class ProductService {
-  async list(businessId: number): Promise<Product[]> {
-    return apiClient.get<Product[]>(`/products/business/${businessId}`);
+  list(businessId: number): Promise<Product[]> {
+    return apiClient.get<Product[]>(`/businesses/${businessId}/products`);
   }
 
-  async lowStock(businessId: number): Promise<Product[]> {
-    return apiClient.get<Product[]>(`/products/business/${businessId}/low-stock`);
+  create(businessId: number, input: ProductInput): Promise<Product> {
+    return apiClient.post<Product>(`/businesses/${businessId}/products`, input);
   }
 
-  async create(businessId: number, body: ProductRequest): Promise<Product> {
-    return apiClient.post<Product>(`/products/business/${businessId}`, body);
+  update(businessId: number, id: number, input: Partial<ProductInput>): Promise<Product> {
+    return apiClient.put<Product>(`/businesses/${businessId}/products/${id}`, input);
   }
 
-  async update(id: number, businessId: number, body: Partial<ProductRequest>): Promise<Product> {
-    return apiClient.put<Product>(`/products/${id}/business/${businessId}`, body);
+  remove(businessId: number, id: number): Promise<void> {
+    return apiClient.delete<void>(`/businesses/${businessId}/products/${id}`);
   }
 
-  async remove(id: number, businessId: number): Promise<void> {
-    return apiClient.delete<void>(`/products/${id}/business/${businessId}`);
+  movements(businessId: number, id: number): Promise<StockMovement[]> {
+    return apiClient.get<StockMovement[]>(`/businesses/${businessId}/products/${id}/movements`);
+  }
+
+  /** Moves stock and records why. The count is never set directly — see the server. */
+  move(businessId: number, id: number, delta: number, reason: string, note?: string): Promise<Product> {
+    return apiClient.post<Product>(`/businesses/${businessId}/products/${id}/movements`, {
+      delta,
+      reason,
+      note,
+    });
   }
 }
 

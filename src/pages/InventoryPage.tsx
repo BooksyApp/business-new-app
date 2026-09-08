@@ -1,379 +1,337 @@
-import { useState } from "react";
-import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Package, TrendingUp, Pencil, Trash2, Loader2, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useAddons } from "@/hooks/useAddons";
-import { useBusinessId } from "@/hooks/useBusinessId";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Addon } from "@/services/addonService";
+import { EmptyState, StatCard } from "@/components/ui/stat-card";
+import { useBusinessId } from "@/hooks/useBusinessId";
+import { currencySymbol } from "@/lib/currency";
+import {
+  productService,
+  type Product,
+  type StockMovement,
+} from "@/services/productService";
+import {
+  AlertTriangle,
+  Boxes,
+  Coins,
+  History,
+  Loader2,
+  Minus,
+  Package,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
+const EMPTY = { name: "", sku: "", brand: "", costPrice: "", salePrice: "", quantity: "0", reorderLevel: "0", unit: "" };
+
+/**
+ * Stock.
+ *
+ * This page used to be the add-on editor under a different title, so a salon opening
+ * Inventory to see how much shampoo was left got a list of upgrades it could add to a
+ * haircut. Add-ons still live on their own page; this counts things.
+ */
 export default function InventoryPage() {
   const businessId = useBusinessId();
-  const { addons, loading, createAddon, updateAddon, deleteAddon } = useAddons(businessId);
-
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Add addon dialog
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", price: "", priceType: "FIXED" as "FIXED" | "FROM" | "RANGE" });
+  const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [historyOf, setHistoryOf] = useState<Product | null>(null);
+  const [movements, setMovements] = useState<StockMovement[] | null>(null);
 
-  // Edit addon dialog
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingAddon, setEditingAddon] = useState<Addon | null>(null);
+  const load = async () => {
+    try {
+      setLoading(true);
+      setProducts(await productService.list(businessId).catch(() => []));
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filtered = addons.filter(a =>
-    !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
 
-  const totalValue = addons.reduce((sum, a) => sum + (a.price ?? 0), 0);
-  const activeCount = addons.filter(a => a.isActive).length;
-
-  const handleAdd = async () => {
-    if (!form.name.trim()) return;
+  const create = async () => {
+    if (!form.name.trim()) {
+      toast.error("Give the product a name");
+      return;
+    }
     setSaving(true);
     try {
-      await createAddon({
+      await productService.create(businessId, {
         name: form.name.trim(),
-        description: form.description || undefined,
-        price: form.price ? Number(form.price) : undefined,
-        priceType: form.priceType,
+        sku: form.sku.trim() || undefined,
+        brand: form.brand.trim() || undefined,
+        costPrice: Number(form.costPrice) || 0,
+        salePrice: Number(form.salePrice) || 0,
+        quantity: Number(form.quantity) || 0,
+        reorderLevel: Number(form.reorderLevel) || 0,
+        unit: form.unit.trim() || undefined,
       });
+      setForm(EMPTY);
       setAddOpen(false);
-      setForm({ name: "", description: "", price: "", priceType: "FIXED" });
+      toast.success("Product added");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add it");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = async () => {
-    if (!editingAddon) return;
-    setSaving(true);
+  const move = async (product: Product, delta: number) => {
     try {
-      await updateAddon(editingAddon.id, {
-        name: editingAddon.name,
-        description: editingAddon.description,
-        price: editingAddon.price,
-        priceType: editingAddon.priceType,
-        isActive: editingAddon.isActive,
-      });
-      setEditOpen(false);
-      setEditingAddon(null);
-    } finally {
-      setSaving(false);
+      await productService.move(businessId, product.id, delta, delta > 0 ? "DELIVERY" : "USED");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update the count");
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Delete addon "${name}"?`)) return;
-    await deleteAddon(id);
+  const remove = async (product: Product) => {
+    if (!confirm(`Delete ${product.name}? Its stock history goes with it.`)) return;
+    try {
+      await productService.remove(businessId, product.id);
+      toast.success(`${product.name} deleted`);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete it");
+    }
   };
+
+  const openHistory = async (product: Product) => {
+    setHistoryOf(product);
+    setMovements(null);
+    setMovements(await productService.movements(businessId, product.id).catch(() => []));
+  };
+
+  const filtered = products.filter((p) =>
+    [p.name, p.sku, p.brand].filter(Boolean).join(" ").toLowerCase().includes(query.toLowerCase())
+  );
+  const lowStock = products.filter((p) => p.low_stock && p.active);
+  const stockValue = products.reduce((n, p) => n + Number(p.cost_price ?? 0) * (p.quantity ?? 0), 0);
+  const units = products.reduce((n, p) => n + (p.quantity ?? 0), 0);
 
   return (
     <AppLayout>
       <PageHeader
-        title="Add-ons & Extras"
-        subtitle="Manage add-on services and extras that clients can book alongside main services"
+        title="Inventory"
+        subtitle="What you buy, count and sell"
         actions={
-          <Button
-            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all"
-            onClick={() => setAddOpen(true)}
-          >
+          <Button className="gap-2" onClick={() => setAddOpen(true)}>
             <Plus size={16} />
-            Add Extra
+            Add product
           </Button>
         }
       />
 
-      <div className="p-6 space-y-6">
-        {/* Quick Stats */}
-        <div className="grid gap-5 md:grid-cols-3">
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-card to-card/95 backdrop-blur-sm group">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Total Add-ons
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-appointment-blue/10 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                <Package className="h-5 w-5 text-appointment-blue" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : (
-                <div className="text-3xl font-bold text-foreground">{addons.length}</div>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-card to-card/95 backdrop-blur-sm group">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Active Add-ons
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-status-completed/10 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                <Tag className="h-5 w-5 text-status-completed" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : (
-                <div className="text-3xl font-bold text-status-completed">{activeCount}</div>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-card to-card/95 backdrop-blur-sm group">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Total Value
-              </CardTitle>
-              <div className="p-2.5 rounded-xl bg-appointment-purple/10 group-hover:scale-110 transition-transform duration-300 shadow-sm">
-                <TrendingUp className="h-5 w-5 text-appointment-purple" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              ) : (
-                <div className="text-3xl font-bold text-appointment-purple">{totalValue.toFixed(2)} {currencySymbol()}</div>
-              )}
-            </CardContent>
-          </Card>
+      <div className="space-y-6 p-6">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard icon={Package} label="Products" value={products.length} tone="violet" />
+          <StatCard icon={Boxes} label="Units in stock" value={units} tone="sky" />
+          <StatCard
+            icon={Coins}
+            label="Stock value"
+            value={`${stockValue.toFixed(0)} ${currencySymbol()}`}
+            hint="At cost price"
+            tone="emerald"
+          />
+          <StatCard
+            icon={AlertTriangle}
+            label="Running out"
+            value={lowStock.length}
+            hint={lowStock.length ? lowStock.map((p) => p.name).slice(0, 2).join(", ") : "Nothing to reorder"}
+            tone={lowStock.length ? "rose" : "slate"}
+          />
         </div>
 
-        {/* Search */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search add-ons..."
-              className="pl-10 border-border/60 focus:border-accent/50 transition-all"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-10"
+            placeholder="Search by name, SKU or brand..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && addons.length === 0 && (
-          <Card className="border-border/60 shadow-sm">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="p-4 rounded-full bg-muted/30 mb-4">
-                <Package className="h-10 w-10 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No add-ons yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add extras like hot towel, deep conditioning, or aromatherapy that clients can book alongside main services.
-              </p>
-              <Button onClick={() => setAddOpen(true)} className="gap-2">
-                <Plus size={16} />
-                Add Extra
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Add-ons Grid */}
-        {!loading && filtered.length > 0 && (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((addon, index) => (
-              <Card
-                key={addon.id}
-                className="border-border/60 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm group card-interactive"
-                style={{ animationDelay: `${index * 50}ms` }}
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title={query ? `Nothing matches "${query}"` : "No products yet"}
+            body={
+              query
+                ? "Search runs over name, SKU and brand."
+                : "Add what you keep on the shelf. You will be told when something drops to its reorder level."
+            }
+            action={
+              query ? null : (
+                <Button className="gap-2" onClick={() => setAddOpen(true)}>
+                  <Plus size={16} />
+                  Add product
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((p) => (
+              <div
+                key={p.id}
+                className={`flex flex-wrap items-center gap-4 rounded-xl border border-l-4 bg-white p-4 ${
+                  !p.active ? "border-l-slate-300 opacity-60" : p.low_stock ? "border-l-rose-500" : "border-l-emerald-500"
+                }`}
               >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-sm line-clamp-1">{addon.name}</h4>
-                        {!addon.isActive && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-muted-foreground shrink-0">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                      {addon.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{addon.description}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => { setEditingAddon(addon); setEditOpen(true); }}
-                      >
-                        <Pencil size={13} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(addon.id, addon.name)}
-                      >
-                        <Trash2 size={13} />
-                      </Button>
-                    </div>
+                <div className="min-w-[180px] flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{p.name}</p>
+                    {p.low_stock && p.active && (
+                      <Badge className="bg-rose-600 text-[10px] text-white hover:bg-rose-600">Reorder</Badge>
+                    )}
+                    {!p.active && <Badge variant="secondary" className="text-[10px]">Inactive</Badge>}
                   </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-border/60">
-                    <Badge variant="secondary" className="text-xs">
-                      {addon.priceType ?? "FIXED"}
-                    </Badge>
-                    <span className="font-bold text-status-completed text-base">
-                      {addon.price != null ? `${addon.price.toFixed(2)} ${currencySymbol()}` : "Price TBD"}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {[p.brand, p.sku ? `SKU ${p.sku}` : null].filter(Boolean).join(" · ") || "No SKU"}
+                  </p>
+                </div>
+
+                {/* The count, big, with the reorder level beside it — a number on its own
+                    does not say whether it is a problem. */}
+                <div className="text-center">
+                  <p className={`text-2xl font-semibold ${p.low_stock ? "text-rose-600" : ""}`}>{p.quantity}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {p.unit || "in stock"} · reorder at {p.reorder_level}
+                  </p>
+                </div>
+
+                <div className="min-w-[110px] text-right text-sm">
+                  <p className="font-medium">
+                    {Number(p.sale_price).toFixed(2)} {currencySymbol()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    cost {Number(p.cost_price).toFixed(2)}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => void move(p, -1)}>
+                    <Minus className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => void move(p, 1)}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => void openHistory(p)}>
+                    <History className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-600"
+                    onClick={() => void remove(p)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Add Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
-            <DialogTitle>Add Extra / Add-on</DialogTitle>
-            <DialogDescription>Create a new add-on service that clients can book alongside main services.</DialogDescription>
+            <DialogTitle>Add a product</DialogTitle>
+            <DialogDescription>The opening count is recorded as a delivery.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Name *</Label>
-              <Input
-                placeholder="e.g. Hot Towel, Deep Conditioning"
-                value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Name</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Shampoo 500ml" />
             </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                placeholder="Brief description"
-                value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              />
+            <div>
+              <Label className="text-xs">Brand</Label>
+              <Input value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Price ({currencySymbol()})</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g. 10.00"
-                  value={form.price}
-                  onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Price Type</Label>
-                <Select
-                  value={form.priceType}
-                  onValueChange={v => setForm(f => ({ ...f, priceType: v as "FIXED" | "FROM" | "RANGE" }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FIXED">Fixed</SelectItem>
-                    <SelectItem value="FROM">From</SelectItem>
-                    <SelectItem value="RANGE">Range</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label className="text-xs">SKU</Label>
+              <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Cost price</Label>
+              <Input type="number" min={0} step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Sale price</Label>
+              <Input type="number" min={0} step="0.01" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Quantity</Label>
+              <Input type="number" min={0} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Reorder at</Label>
+              <Input type="number" min={0} value={form.reorderLevel} onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Unit</Label>
+              <Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="bottles" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Extra
-            </Button>
+            <Button onClick={create} disabled={saving}>{saving ? "Adding…" : "Add product"}</Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={!!historyOf} onOpenChange={(o) => !o && setHistoryOf(null)}>
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Edit Add-on</DialogTitle>
+            <DialogTitle>{historyOf?.name}</DialogTitle>
+            <DialogDescription>Where the count came from, newest first.</DialogDescription>
           </DialogHeader>
-          {editingAddon && (
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={editingAddon.name}
-                  onChange={e => setEditingAddon(a => a ? { ...a, name: e.target.value } : a)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  value={editingAddon.description ?? ""}
-                  onChange={e => setEditingAddon(a => a ? { ...a, description: e.target.value } : a)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Price ({currencySymbol()})</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editingAddon.price ?? ""}
-                    onChange={e => setEditingAddon(a => a ? { ...a, price: e.target.value ? Number(e.target.value) : undefined } : a)}
-                  />
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto">
+            {movements === null ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : movements.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No movements recorded.</p>
+            ) : (
+              movements.map((m, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium">{m.reason}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {String(m.created_at).slice(0, 16).replace("T", " ")}
+                      {m.note ? ` · ${m.note}` : ""}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 font-semibold ${m.delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {m.delta > 0 ? `+${m.delta}` : m.delta}
+                  </span>
                 </div>
-                <div className="space-y-2">
-                  <Label>Price Type</Label>
-                  <Select
-                    value={editingAddon.priceType ?? "FIXED"}
-                    onValueChange={v => setEditingAddon(a => a ? { ...a, priceType: v as "FIXED" | "FROM" | "RANGE" } : a)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FIXED">Fixed</SelectItem>
-                      <SelectItem value="FROM">From</SelectItem>
-                      <SelectItem value="RANGE">Range</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={editingAddon.isActive}
-                  onChange={e => setEditingAddon(a => a ? { ...a, isActive: e.target.checked } : a)}
-                  className="h-4 w-4"
-                />
-                <Label htmlFor="isActive">Active (visible to clients)</Label>
-              </div>
-            </div>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleEdit} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+              ))
+            )}
           </div>
         </DialogContent>
       </Dialog>
