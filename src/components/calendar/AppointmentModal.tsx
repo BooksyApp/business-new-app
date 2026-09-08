@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, Edit, Trash2, ArrowRight, Calendar as CalendarIcon, ChevronDown, XCircle, CheckCircle2, UserX } from "lucide-react";
+import { Clock, User, Edit, Trash2, ArrowRight, Calendar as CalendarIcon, ChevronDown, XCircle, CheckCircle2, UserX, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useNavigation } from "@/utils/navigationUtils";
 import type { Appointment, Staff } from "./AppointmentBlock";
 import { appointmentService, type Appointment as ApiAppointment } from "@/services/appointmentService";
 import { clientService, type Client } from "@/services/clientService";
@@ -49,6 +51,8 @@ export function AppointmentModal({
   // second call, get rejected by BookingStateMachine, and show an error for an action
   // that actually succeeded.
   const [lifecycleBusy, setLifecycleBusy] = useState(false);
+  const navigate = useNavigate();
+  const { getPath } = useNavigation();
   // The client was a read-only text box, so a booking taken under the wrong name — or a
   // walk-in typed in by hand — could never be attached to the real client record, and
   // everything keyed off that record (history, loyalty, memberships) stayed empty.
@@ -164,25 +168,89 @@ export function AppointmentModal({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="!max-w-none w-[500px] p-0 flex flex-col h-screen max-h-screen">
-        {/* Header with Cancel button */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
-          <h2 className="text-base font-semibold">Appointment</h2>
-          <div className="flex items-center gap-2">
-            {loading && <span className="text-xs text-gray-500">Loading...</span>}
-            {status !== "CANCELLED" && status !== "COMPLETED" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1.5 text-red-600 border-red-600 hover:bg-red-50"
-                onClick={() => {
-                  setCancelDialogOpen(true);
-                }}
-              >
-                <XCircle className="h-3.5 w-3.5" />
-                Cancel
-              </Button>
-            )}
+        {/* Who, what, when — the three things the panel is about, said once at the top
+            instead of being spread across four read-only inputs further down. */}
+        <div className="border-b border-gray-200 px-4 py-3 shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold">
+                {appointmentData.clientName || appointment.clientName || "Walk-in"}
+              </p>
+              <p className="truncate text-sm text-muted-foreground">
+                {serviceName} · {staffName}
+              </p>
+              <p className="mt-0.5 text-sm">
+                {appointmentDate
+                  ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM")
+                  : ""}{" "}
+                {startTime}–{endTime}
+                {durationMinutes != null ? ` · ${durationMinutes} min` : ""}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-lg font-semibold">
+                {price} {currencySymbol()}
+              </p>
+              {loading && <span className="text-xs text-gray-500">Loading…</span>}
+            </div>
           </div>
+
+          {/* Everything a receptionist does from here, in one row, in the order it
+              happens: take the money, confirm they are coming, record that they did not. */}
+          {status !== "CANCELLED" && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {paymentStatus !== "PAID" && (
+                <Button
+                  size="sm"
+                  className="col-span-2 h-9 gap-1.5"
+                  onClick={() => {
+                    // Straight to the till with this booking already in the basket. It used
+                    // to mean leaving the calendar, opening Sales, and finding it again.
+                    navigate(getPath("sales"), { state: { appointmentId: appointment.apiId } });
+                    onClose();
+                  }}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Take payment
+                </Button>
+              )}
+              {status === "PENDING" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={lifecycleBusy}
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => void runLifecycle("confirm")}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Confirm
+                </Button>
+              )}
+              {status !== "COMPLETED" && status !== "NO_SHOW" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={lifecycleBusy}
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => void runLifecycle("no-show")}
+                >
+                  <UserX className="h-3.5 w-3.5" />
+                  No-show
+                </Button>
+              )}
+              {status !== "COMPLETED" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 border-red-600 text-xs text-red-600 hover:bg-red-50"
+                  onClick={() => setCancelDialogOpen(true)}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Cancel
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Client */}
@@ -256,22 +324,6 @@ export function AppointmentModal({
 
         {/* Form Content - Scrollable if needed */}
         <div className="flex-1 p-4 space-y-3 overflow-y-auto min-h-0">
-          {/* Date/Time Controls */}
-          <div className="flex gap-1.5">
-            <Button variant="outline" className="flex-1 justify-between h-8 text-xs px-2" disabled>
-              {appointmentDate ? format(parse(appointmentDate, 'yyyy-MM-dd', new Date()), 'MMM d, yyyy') : 'Today'}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-            <Button variant="outline" className="flex-1 h-8 text-xs px-2" disabled>
-              <User className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">GROUP</span>
-            </Button>
-            <Button variant="outline" className="flex-1 h-8 text-xs px-2" disabled>
-              <CalendarIcon className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">RECURRING</span>
-            </Button>
-          </div>
-
           {/* Status Badges */}
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="text-xs">

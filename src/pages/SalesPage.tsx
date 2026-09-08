@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { User, Plus, Trash2, ArrowLeft, Search, Receipt, CreditCard, X, Send, MoreVertical, Edit2, Save, Check, X as XIcon } from "lucide-react";
@@ -156,6 +156,10 @@ export default function SalesPage() {
   const [appointmentsError, setAppointmentsError] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null);
+  // Arriving from the calendar's "Take payment": open on the settle list with this
+  // booking already picked, instead of making the cashier find it again.
+  const location = useLocation();
+  const incomingAppointmentId = (location.state as { appointmentId?: number } | null)?.appointmentId;
   const [selectedAppointmentStaffId, setSelectedAppointmentStaffId] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
@@ -242,6 +246,10 @@ export default function SalesPage() {
       .catch(() => setSellableMemberships([]));
   }, [businessId, services, servicesLoading]);
 
+  useEffect(() => {
+    if (incomingAppointmentId) setActiveCategory("to-be-settled");
+  }, [incomingAppointmentId]);
+
   // Load today's appointments when "to-be-settled" category is active
   useEffect(() => {
     const loadTodayAppointments = async () => {
@@ -266,6 +274,38 @@ export default function SalesPage() {
         
         const unsettledAppointments = filterAndSortUnsettledAppointments(enrichedAppointments);
         setTodayAppointments(unsettledAppointments);
+
+        // Came here from the calendar to settle one specific booking: put it in the
+        // basket now, so "Take payment" lands on a ready checkout rather than a list.
+        if (incomingAppointmentId) {
+          const target = unsettledAppointments.find((a) => a.id === incomingAppointmentId);
+          if (target) {
+            setBasket((prev) =>
+              prev.some((b) => b.appointmentId === target.id)
+                ? prev
+                : [
+                    ...prev,
+                    {
+                      id: `appointment-${target.id}`,
+                      appointmentId: target.id,
+                      name: target.serviceName || "Service",
+                      price: String(target.price ?? 0),
+                      type: "service",
+                      serviceId: target.serviceId,
+                      duration: `${target.startTime} - ${target.endTime}`,
+                    },
+                  ]
+            );
+            setSelectedAppointmentId(target.id);
+            setSelectedAppointmentStaffId(target.staffId || null);
+            const match = clients.find(
+              (c) =>
+                (target.clientId != null && c.id === target.clientId) ||
+                (target.clientEmail && c.email?.toLowerCase() === target.clientEmail.toLowerCase())
+            );
+            if (match) setSelectedClient(match);
+          }
+        }
       } catch (error) {
         // A failed load must not read as "everything is settled" — that is the one thing
         // this page must never be wrong about.
@@ -1266,7 +1306,16 @@ export default function SalesPage() {
                                 serviceId: appointment.serviceId,
                               };
                               addToBasket(serviceItem);
-                              setSelectedClient(appointment.clientName || null);
+                              // The client record, not their name: everything at the till
+                              // that matters — points, memberships, history — is keyed by id.
+                              setSelectedClient(
+                                clients.find(
+                                  (c) =>
+                                    (appointment.clientId != null && c.id === appointment.clientId) ||
+                                    (appointment.clientEmail &&
+                                      c.email?.toLowerCase() === appointment.clientEmail.toLowerCase())
+                                ) ?? null
+                              );
                               setSelectedAppointmentId(appointment.id);
                               setSelectedAppointmentStaffId(appointment.staffId || null);
                             }}
