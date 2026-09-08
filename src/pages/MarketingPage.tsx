@@ -1,5 +1,7 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/stat-card";
+import { useNavigation } from "@/utils/navigationUtils";
+import { useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Megaphone, Percent, Ticket } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -32,39 +34,49 @@ import { useNavigate } from "react-router-dom";
 // invented revenue — on a screen an owner reads as their real marketing performance.
 // It comes from the API now.
 
+/**
+ * Four tiles that did nothing.
+ *
+ * Email, SMS and Loyalty had no onClick at all, and Referral navigated to a path with no
+ * businessId in it, so it went nowhere too. Each one now does the thing its title says:
+ * the two channels open the campaign form already set to that channel, and the other two
+ * go to the page that owns them.
+ */
 const marketingTools = [
-  { 
-    title: "Email Campaigns", 
-    description: "Send promotional emails to clients", 
+  {
+    key: "EMAIL" as const,
+    title: "Email campaign",
+    description: "Write one message and send it to a segment of clients",
     icon: Mail,
-    color: "bg-appointment-blue/10 text-appointment-blue",
-    borderColor: "border-appointment-blue/20"
+    tone: "bg-sky-50 text-sky-600",
   },
-  { 
-    title: "SMS Marketing", 
-    description: "Reach clients via text messages", 
+  {
+    key: "SMS" as const,
+    title: "SMS campaign",
+    description: "The same, by text. Only clients who agreed to SMS are included",
     icon: MessageSquare,
-    color: "bg-appointment-green/10 text-appointment-green",
-    borderColor: "border-appointment-green/20"
+    tone: "bg-emerald-50 text-emerald-600",
   },
-  { 
-    title: "Loyalty Program", 
-    description: "Reward returning customers", 
+  {
+    key: "LOYALTY" as const,
+    title: "Loyalty",
+    description: "Points per spend and the stamp card: come N times, one free",
     icon: Gift,
-    color: "bg-appointment-purple/10 text-appointment-purple",
-    borderColor: "border-appointment-purple/20"
+    tone: "bg-violet-50 text-violet-600",
   },
-  { 
-    title: "Referral System", 
-    description: "Encourage client referrals", 
+  {
+    key: "REFERRAL" as const,
+    title: "Referrals",
+    description: "Your booqi code and the clients your clients bring in",
     icon: Users,
-    color: "bg-appointment-coral/10 text-appointment-coral",
-    borderColor: "border-appointment-coral/20"
+    tone: "bg-amber-50 text-amber-600",
   },
 ];
 
 export default function MarketingPage() {
   const navigate = useNavigate();
+  const { getPath } = useNavigation();
+  const campaignFormRef = useRef<HTMLDivElement>(null);
   const businessId = getCurrentBusinessId();
 
   // #28: promo codes shipped complete on the backend (V24, PromoController) and were
@@ -380,22 +392,29 @@ export default function MarketingPage() {
           {marketingTools.map((tool, index) => {
             const Icon = tool.icon;
             return (
-              <Card 
-                key={tool.title} 
-                className={`border-border/60 shadow-sm hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer bg-gradient-to-br from-card to-card/95 backdrop-blur-sm group card-interactive ${tool.borderColor} hover:border-2`}
+              <Card
+                key={tool.key}
+                className="group cursor-pointer border bg-white transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => {
-                  if (tool.title === "Referral System") {
-                    navigate("/referral-program");
+                  if (tool.key === "REFERRAL") {
+                    navigate(getPath("/referral-program"));
+                  } else if (tool.key === "LOYALTY") {
+                    navigate(getPath("/memberships"));
+                  } else {
+                    // Set the channel and put the cursor in the form, rather than leaving
+                    // the owner to find the same choice again in a dropdown below.
+                    setCampaignForm((f) => ({ ...f, channel: tool.key }));
+                    campaignFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                   }
                 }}
               >
-                <CardContent className="p-6">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${tool.color} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                    <Icon className="h-6 w-6" />
+                <CardContent className="p-5">
+                  <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl ${tool.tone}`}>
+                    <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="font-bold text-base mb-1.5">{tool.title}</h3>
-                  <p className="text-sm text-muted-foreground font-medium">{tool.description}</p>
+                  <h3 className="text-sm font-semibold">{tool.title}</h3>
+                  <p className="mt-1 text-sm leading-snug text-muted-foreground">{tool.description}</p>
                 </CardContent>
               </Card>
             );
@@ -403,7 +422,7 @@ export default function MarketingPage() {
         </div>
 
         {/* #46: real campaigns. */}
-        <Card className="border-border/60">
+        <Card ref={campaignFormRef} className="mt-5 bg-white">
           <CardHeader>
             <CardTitle className="text-lg">Campaigns</CardTitle>
             <CardDescription>
