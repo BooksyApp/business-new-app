@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarCheck, CreditCard, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -106,14 +108,30 @@ export default function BookingRulesPage() {
 
   return (
     <AppLayout>
-      <PageHeader title="Booking policy" subtitle="Online booking, deposits, cancellations, payment and tax" />
+      <PageHeader title="Booking and payment policy" subtitle="The rules the app and the till follow" />
 
-      <div className="p-6 space-y-6 max-w-3xl">
+      <div className="max-w-4xl space-y-6 p-6">
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
         ) : (
-          <>
-            <Card>
+          <Tabs defaultValue="booking">
+            <TabsList>
+              <TabsTrigger value="booking" className="gap-2">
+                <CalendarCheck className="h-4 w-4" />
+                Online booking
+              </TabsTrigger>
+              <TabsTrigger value="deposits" className="gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                Deposits &amp; cancellations
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="gap-2">
+                <CreditCard className="h-4 w-4" />
+                Payments
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="deposits" className="space-y-4 pt-4">
+            <Card className="overflow-hidden border-l-4 border-l-amber-500 bg-white">
               <CardHeader><CardTitle className="text-base">Deposits and cancellations</CardTitle></CardHeader>
               <CardContent className="grid gap-5 md:grid-cols-3">
                 {field("depositPercent", "Deposit %", "Taken up front. A booking stays unconfirmed until it is paid. Leave empty for no deposit.", { type: "number", min: 0, max: 100, placeholder: "0" })}
@@ -122,7 +140,10 @@ export default function BookingRulesPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            </TabsContent>
+
+            <TabsContent value="booking" className="space-y-4 pt-4">
+            <Card className="overflow-hidden border-l-4 border-l-violet-500 bg-white">
               <CardHeader><CardTitle className="text-base">Online booking</CardTitle></CardHeader>
               <CardContent className="space-y-5">
                 <div className="flex items-start justify-between gap-6">
@@ -142,7 +163,10 @@ export default function BookingRulesPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            </TabsContent>
+
+            <TabsContent value="payments" className="space-y-4 pt-4">
+            <Card className="overflow-hidden border-l-4 border-l-emerald-500 bg-white">
               <CardHeader><CardTitle className="text-base">Payment methods</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground">
@@ -153,8 +177,10 @@ export default function BookingRulesPage() {
                   { key: "CARD", label: "Card in the salon" },
                   { key: "ONLINE", label: "Paid online" },
                   { key: "GIFT_CARD", label: "Gift card" },
-                  { key: "PACKAGE", label: "Package" },
-                  { key: "MEMBERSHIP", label: "Membership" },
+                  // Packages and memberships are not being sold yet; offering them at the
+                  // till would price a bill against something that cannot exist.
+                  // { key: "PACKAGE", label: "Package" },
+                  // { key: "MEMBERSHIP", label: "Membership" },
                 ].map(m => (
                   <div key={m.key} className="flex items-center justify-between gap-6">
                     <p className="text-sm font-medium">{m.label}</p>
@@ -169,15 +195,17 @@ export default function BookingRulesPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base">Money</CardTitle></CardHeader>
+            <Card className="overflow-hidden border-l-4 border-l-sky-500 bg-white">
+              <CardHeader><CardTitle className="text-base">Currency and tax</CardTitle></CardHeader>
               <CardContent className="grid gap-5 md:grid-cols-2">
                 {field("currency", "Currency", "Three-letter code, e.g. PLN or EUR. Every price in both apps is shown in it.", { maxLength: 3, placeholder: "PLN" })}
                 {field("taxRate", "Tax rate %", "Applied to sales on receipts.", { type: "number", min: 0, max: 100, step: "0.01", placeholder: "0" })}
               </CardContent>
             </Card>
 
-            <div className="flex items-center gap-3">
+            </TabsContent>
+
+            <div className="flex items-center gap-3 pt-2">
               <Button disabled={saving} onClick={() => void save()}>
                 {saving ? "Saving…" : "Save settings"}
               </Button>
@@ -188,7 +216,7 @@ export default function BookingRulesPage() {
                 </p>
               ) : null}
             </div>
-          </>
+          </Tabs>
         )}
       </div>
     </AppLayout>

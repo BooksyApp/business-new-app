@@ -41,9 +41,9 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Opening Hours", path: "business-hours" },
       { label: "Locations", path: "locations" },
     ],
-    color: "text-appointment-blue",
-    bgColor: "bg-appointment-blue/10",
-    borderColor: "border-appointment-blue/20",
+    color: "text-sky-600",
+    bgColor: "bg-sky-50",
+    borderColor: "border-l-sky-500",
   },
   {
     id: "booking",
@@ -60,10 +60,11 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Online booking on/off", path: "booking-rules" },
       { label: "Notice & how far ahead", path: "booking-rules" },
       { label: "Deposits & cancellations", path: "booking-rules" },
+      { label: "Opening hours", path: "business-hours" },
     ],
-    color: "text-appointment-purple",
-    bgColor: "bg-appointment-purple/10",
-    borderColor: "border-appointment-purple/20",
+    color: "text-violet-600",
+    bgColor: "bg-violet-50",
+    borderColor: "border-l-violet-500",
   },
   {
     id: "payments",
@@ -82,9 +83,9 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Currency & tax", path: "booking-rules" },
       { label: "Receipt footer", path: "branding" },
     ],
-    color: "text-status-completed",
-    bgColor: "bg-status-completed/10",
-    borderColor: "border-status-completed/20",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-l-emerald-500",
   },
   {
     id: "notifications",
@@ -97,9 +98,9 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Reminder timing", path: "notifications" },
       { label: "SMS & push", path: "notifications" },
     ],
-    color: "text-appointment-yellow",
-    bgColor: "bg-appointment-yellow/10",
-    borderColor: "border-appointment-yellow/20",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-l-amber-500",
   },
   {
     id: "branding",
@@ -112,9 +113,9 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Brand colour", path: "branding" },
       { label: "Receipt footer", path: "branding" },
     ],
-    color: "text-appointment-purple",
-    bgColor: "bg-appointment-purple/10",
-    borderColor: "border-appointment-purple/20",
+    color: "text-violet-600",
+    bgColor: "bg-violet-50",
+    borderColor: "border-l-violet-500",
   },
   {
     id: "security",
@@ -125,9 +126,9 @@ const settingsCategories: SettingsCategory[] = [
     items: [
       { label: "Change password", path: "security" },
     ],
-    color: "text-status-pending",
-    bgColor: "bg-status-pending/10",
-    borderColor: "border-status-pending/20",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-l-amber-500",
   },
   {
     id: "online",
@@ -140,9 +141,9 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Photo & branding", path: "branding" },
       { label: "Online booking", path: "booking-rules" },
     ],
-    color: "text-appointment-teal",
-    bgColor: "bg-appointment-teal/10",
-    borderColor: "border-appointment-teal/20",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-l-amber-500",
   },
   {
     id: "team",
@@ -154,9 +155,9 @@ const settingsCategories: SettingsCategory[] = [
       { label: "Staff & roles", path: "staff" },
       { label: "Salon opening hours", path: "business-hours" },
     ],
-    color: "text-appointment-green",
-    bgColor: "bg-appointment-green/10",
-    borderColor: "border-appointment-green/20",
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-l-amber-500",
   },
 ];
 
@@ -191,7 +192,7 @@ export default function SetupPage() {
     <AppLayout>
       <PageHeader
         title="Setup"
-        subtitle="Configure your salon settings and preferences"
+        subtitle="Everything that changes how the app and the till behave"
       />
 
       <div className="p-6">
@@ -206,7 +207,7 @@ export default function SetupPage() {
                 key={category.title}
                 ref={category.id === "business" ? businessCardRef : null}
                 onClick={() => handleCardClick(category)}
-                className={`border-border/60 shadow-sm hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm group card-interactive ${category.borderColor} hover:border-2 ${isFocused ? "ring-2 ring-appointment-blue/40 border-appointment-blue/50 shadow-lg" : ""} ${isClickable ? "cursor-pointer hover:scale-[1.01]" : "cursor-default"}`}
+                className={`group overflow-hidden border-l-4 bg-white transition-all hover:-translate-y-0.5 hover:shadow-md ${category.borderColor} ${isFocused ? "ring-2 ring-violet-300" : ""} ${isClickable ? "cursor-pointer" : "cursor-default"}`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <CardHeader className="pb-4">

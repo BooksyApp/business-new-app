@@ -372,10 +372,7 @@ export const navGroups: NavGroup[] = [
     icon: StaffIcon,
     label: "Team",
     slug: "team",
-    items: [
-      { icon: StaffIcon, label: "Staff", path: "/staff", description: "Who works here, what they do, their commission" },
-      { icon: ClockIcon, label: "Opening hours", path: "/business-hours", description: "When the salon is open and when it is closed" },
-    ],
+    path: "/staff",
   },
   {
     icon: SettingsIcon,
@@ -383,7 +380,8 @@ export const navGroups: NavGroup[] = [
     slug: "business",
     items: [
       { icon: BusinessIcon, label: "Business profile", path: "/business", description: "Name, address, photos — what customers see" },
-      { icon: SettingsIcon, label: "Settings", path: "/setup", description: "Booking rules, payments, notifications, branding" },
+      { icon: ClockIcon, label: "Opening hours", path: "/business-hours", description: "When the salon is open, and its closed days" },
+      { icon: SettingsIcon, label: "Settings", path: "/setup", description: "Booking rules, deposits, payments, notifications, branding" },
     ],
   },
 ];
