@@ -1,4 +1,7 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { StatCard } from "@/components/ui/stat-card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Megaphone, Percent, Ticket } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -255,7 +258,7 @@ export default function MarketingPage() {
     <AppLayout>
       <PageHeader
         title="Marketing"
-        subtitle="Grow your business with campaigns and promotions"
+        subtitle="Discount codes and messages to clients"
         actions={
           <Button className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all">
             <Plus size={16} />
@@ -265,6 +268,35 @@ export default function MarketingPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* Three numbers, so the page opens with an answer rather than four forms. */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <StatCard icon={Ticket} label="Active promo codes" value={promos.filter((c) => c.active).length} tone="violet" />
+          <StatCard icon={Megaphone} label="Campaigns" value={campaigns.length} tone="sky" />
+          <StatCard
+            icon={Percent}
+            label="Redemptions"
+            value={promos.reduce((n, c) => n + (c.uses ?? 0), 0)}
+            hint="Across every code"
+            tone="emerald"
+          />
+        </div>
+
+        {/* Two things live here, and they are different jobs: a code that discounts a
+            bill, and a message sent to clients. Gift cards moved to the till, where they
+            are actually sold. */}
+        <Tabs defaultValue="promos">
+          <TabsList>
+            <TabsTrigger value="promos" className="gap-2">
+              <Ticket className="h-4 w-4" />
+              Promo codes
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="gap-2">
+              <Megaphone className="h-4 w-4" />
+              Campaigns
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="promos" className="pt-4">
         {/* #28: real promo codes, backed by PromoController. */}
         <Card className="border-border/60">
           <CardHeader>
@@ -340,95 +372,9 @@ export default function MarketingPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
 
-        {/* #28: gift cards. */}
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle className="text-lg">Gift cards</CardTitle>
-            <CardDescription>
-              Issue a card and look one up by its code. The backend generates the code and
-              tracks the remaining balance.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Amount</Label>
-                <Input type="number" min="0" step="0.01" value={giftAmount} className="h-9 w-32"
-                  onChange={(e) => setGiftAmount(e.target.value)} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Recipient email (optional)</Label>
-                <Input type="email" value={giftEmail} className="h-9 w-60"
-                  onChange={(e) => setGiftEmail(e.target.value)} placeholder="client@example.com" />
-              </div>
-              <Button className="h-9" disabled={giftBusy} onClick={issueGiftCard}>ISSUE CARD</Button>
-            </div>
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Find by code</Label>
-                <Input value={giftLookupCode} className="h-9 w-48"
-                  onChange={(e) => setGiftLookupCode(e.target.value)} placeholder="GC-XXXX" />
-              </div>
-              <Button variant="outline" className="h-9" disabled={giftBusy} onClick={lookupGiftCard}>
-                LOOK UP
-              </Button>
-            </div>
-            {foundCard && (
-              <div className="rounded-lg border border-border/60 p-3 text-sm">
-                <p className="font-medium">{foundCard.code}</p>
-                <p className="text-muted-foreground">
-                  Balance {formatPrice(foundCard.balance)} of {formatPrice(foundCard.amount)}
-                  {foundCard.status ? ` • ${foundCard.status}` : ""}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* #28: service packages. */}
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle className="text-lg">Packages</CardTitle>
-            <CardDescription>Prepaid bundles of sessions a client buys up front.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Name</Label>
-                <Input value={pkgForm.name} className="h-9 w-52" placeholder="5x Haircut"
-                  onChange={(e) => setPkgForm((f) => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Sessions</Label>
-                <Input type="number" min="1" value={pkgForm.sessionsTotal} className="h-9 w-24"
-                  onChange={(e) => setPkgForm((f) => ({ ...f, sessionsTotal: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Price</Label>
-                <Input type="number" min="0" step="0.01" value={pkgForm.price} className="h-9 w-28"
-                  onChange={(e) => setPkgForm((f) => ({ ...f, price: e.target.value }))} />
-              </div>
-              <Button className="h-9" disabled={pkgBusy} onClick={createPackage}>CREATE PACKAGE</Button>
-            </div>
-            {packages.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No packages yet.</p>
-            ) : (
-              <div className="divide-y divide-border/40">
-                {packages.map((pk) => (
-                  <div key={pk.id} className="flex items-center justify-between py-2 text-sm">
-                    <span className="font-medium">{pk.name}</span>
-                    <span className="text-muted-foreground">
-                      {pk.sessions_total} sessions • {formatPrice(pk.price)}
-                      {pk.active === false ? " • inactive" : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
+          <TabsContent value="campaigns" className="pt-4">
         {/* Enhanced Marketing Tools */}
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {marketingTools.map((tool, index) => {
@@ -541,6 +487,8 @@ export default function MarketingPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
