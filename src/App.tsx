@@ -80,7 +80,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      {/* The manager app is served under /manage; the router has to agree or every link
+          points one level up at the public site. */}
+      <BrowserRouter basename="/manage">
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes - Login and Registration */}

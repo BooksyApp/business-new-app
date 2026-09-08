@@ -5,7 +5,11 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
+// The manager app moved off the root: srv1946733.hstgr.cloud now serves the public
+// site, and salon-hub lives under /manage. Assets are requested with that prefix, so the
+// build has to emit it.
 export default defineConfig(({ mode }) => ({
+  base: "/manage/",
   root: process.cwd(),
   publicDir: 'public',
   server: {
