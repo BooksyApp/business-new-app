@@ -24,6 +24,12 @@ export interface Appointment {
   // so the one screen filtering on it could not match anything.
   paymentStatus: 'PENDING' | 'PENDING_DEPOSIT' | 'PAID' | 'REFUNDED' | 'WAIVED' | null;
   price?: number;
+  /**
+   * What it would have cost without the salon's offer, recorded when the booking was
+   * priced. Undefined on most bookings; the calendar badges the ones where it is set, so
+   * a block still shows the offer it was taken on after that offer has ended.
+   */
+  listPrice?: number | null;
   color?: string;
   notes?: string;
   /** What the customer said they would pay with when booking: SALON, GIFT_CARD, WALLET. */
