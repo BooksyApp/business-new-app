@@ -10,6 +10,7 @@ import {
   Building2,
   Star,
   Gift,
+  Percent,
   BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -363,6 +364,7 @@ export const navGroups: NavGroup[] = [
       { icon: Star, label: "Reviews", path: "/reviews", description: "Read feedback, reply to it, ask for more" },
       { icon: Gift, label: "Referrals", path: "/referral-program", description: "Your code, and the clients your clients bring in", flag: "platform_referral" },
       { icon: MarketingIcon, label: "Marketing", path: "/marketing", description: "Campaigns and promo codes" },
+      { icon: Percent, label: "Offers", path: "/offers", description: "Cut a price — it shows on your card in the app and on the web" },
       { icon: Star, label: "Loyalty", path: "/loyalty", description: "Come N times, one service free — and who is collecting", flag: "loyalty_cards" },
     ],
   },

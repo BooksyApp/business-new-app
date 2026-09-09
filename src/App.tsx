@@ -27,6 +27,7 @@ const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const SetupPage = lazy(() => import("./pages/SetupPage"));
 const MarketingPage = lazy(() => import("./pages/MarketingPage"));
+const OffersPage = lazy(() => import("./pages/OffersPage"));
 const ReferralProgramPage = lazy(() => import("./pages/ReferralProgramPage"));
 const LoyaltyPage = lazy(() => import("./pages/MembershipsPage"));
 const SectionPage = lazy(() => import("./pages/SectionPage"));
@@ -158,6 +159,7 @@ const App = () => (
               <Route path="edit-combo-service/:id" element={<Suspense fallback={<PageLoader />}><AddComboServicePage /></Suspense>} />
               <Route path="add-addon" element={<Suspense fallback={<PageLoader />}><AddAddonPage /></Suspense>} />
               <Route path="marketing" element={<Suspense fallback={<PageLoader />}><MarketingPage /></Suspense>} />
+              <Route path="offers" element={<Suspense fallback={<PageLoader />}><OffersPage /></Suspense>} />
               <Route path="referral-program" element={<Suspense fallback={<PageLoader />}><ReferralProgramPage /></Suspense>} />
               <Route path="loyalty" element={<Suspense fallback={<PageLoader />}><LoyaltyPage /></Suspense>} />
               <Route path="section/:section" element={<Suspense fallback={<PageLoader />}><SectionPage /></Suspense>} />
