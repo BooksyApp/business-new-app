@@ -734,13 +734,33 @@ export default function CalendarPage() {
     return null;
   };
 
-  const blockVisuals = (apt: { clientName?: string; notes?: string; clientId?: number; clientEmail?: string }) => ({
+  const blockVisuals = (apt: {
+    clientName?: string;
+    notes?: string;
+    clientId?: number;
+    clientEmail?: string;
+    price?: number | string | null;
+    listPrice?: number | string | null;
+  }) => ({
     colorClasses: clientColorClasses(apt.clientName),
     tags: appointmentTags({
       notes: apt.notes,
       visits: visitsFor(apt),
+      // Recorded on the booking when it was priced, so a block still shows the offer it
+      // was taken on after the offer itself has ended.
+      discountPercent: discountOn(apt.price, apt.listPrice),
     }),
   });
+
+  /** What was taken off this booking, as a percentage, or null when nothing was. */
+  const discountOn = (price: unknown, listPrice: unknown): number | null => {
+    const paid = Number(price);
+    const listed = Number(listPrice);
+    if (!Number.isFinite(paid) || !Number.isFinite(listed) || listed <= paid || listed <= 0) {
+      return null;
+    }
+    return ((listed - paid) / listed) * 100;
+  };
 
   const loadClients = async () => {
     try {

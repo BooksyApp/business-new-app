@@ -208,7 +208,43 @@ export interface PaymentMethodsAnalytics {
   totalRevenue: number;
 }
 
+
+/** What the salon's offers cost it, and what they brought in. */
+export interface DiscountImpact {
+  totals: {
+    discounted_bookings: number;
+    bookings: number;
+    given_away: number;
+    discounted_revenue: number;
+    revenue: number;
+  } | null;
+  byMonth: { month: string; discounted_bookings: number; given_away: number; revenue: number }[];
+  byService: {
+    service: string;
+    bookings: number;
+    given_away: number;
+    revenue: number;
+    average_percent: number | null;
+  }[];
+  /** First visits in the period, and how many of them arrived on an offer. */
+  newClients: { on_offer: number; all_first_visits: number } | null;
+}
+
 export const analysisService = {
+  async getDiscountImpact(
+    businessId: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<DiscountImpact> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const queryString = params.toString();
+    return apiClient.get<DiscountImpact>(
+      `/analytics/business/${businessId}/discounts${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
   async getAnalyticsOverview(
     businessId: number,
     startDate?: string,

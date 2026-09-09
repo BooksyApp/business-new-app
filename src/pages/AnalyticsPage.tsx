@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { DiscountImpact } from "@/components/analytics/DiscountImpact";
 import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
@@ -337,6 +338,22 @@ export default function AnalyticsPage() {
           </TabsContent>
 
           <TabsContent value="money" className="mt-0 space-y-8">
+            {/* Before revenue, because a revenue figure means something different once you
+                know how much of it was bought with a discount. */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Offers</h2>
+                <p className="text-xs text-muted-foreground">
+                  What the cut prices cost you, and what they brought back.
+                </p>
+              </div>
+              <DiscountImpact
+                businessId={businessId}
+                startDate={getDateRange().startDate}
+                endDate={getDateRange().endDate}
+              />
+            </section>
+
             <section className="space-y-4">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Revenue</h2>

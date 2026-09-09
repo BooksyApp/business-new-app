@@ -1,4 +1,4 @@
-import { Crown, Sparkles, Star, type LucideIcon } from "lucide-react";
+import { Crown, Percent, Sparkles, Star, type LucideIcon } from "lucide-react";
 
 /**
  * How an appointment looks on the calendar.
@@ -52,8 +52,20 @@ export function appointmentTags(input: {
   notes?: string | null;
   /** Total visits this client has had, when known. */
   visits?: number | null;
+  /** The percentage off, when this booking was taken on an offer. */
+  discountPercent?: number | null;
 }): AppointmentTag[] {
   const tags: AppointmentTag[] = [];
+
+  // First, because it is the one that changes the number on the bill. A receptionist
+  // reading a block should not have to open it to find out why the price is short.
+  if (input.discountPercent != null && input.discountPercent > 0) {
+    tags.push({
+      Icon: Percent,
+      label: `${Math.round(input.discountPercent)}% off — booked on an offer`,
+      className: "bg-rose-500 text-white",
+    });
+  }
 
   // "Requested by client" is stored as a prefix on the notes by the booking form, so that
   // is where it is read back from.
