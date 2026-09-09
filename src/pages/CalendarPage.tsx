@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
+import { useFeatureFlags } from "@/services/platformService";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -544,6 +545,7 @@ export default function CalendarPage() {
   } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
+  const flags = useFeatureFlags();
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
 
   const reloadWaitlist = useCallback(() => {
@@ -1471,7 +1473,7 @@ export default function CalendarPage() {
                   grid as a strip, which is the wrong shape for the job: a salon looks at a
                   gap in a staff member's day and wants to drag somebody into it, and the
                   people who could fill it belong beside the gaps, not over them. */}
-              {waitlist.length > 0 && (
+              {flags.waitlist !== false && waitlist.length > 0 && (
                 <div className="w-[210px] shrink-0 border-r border-amber-200 bg-amber-50/60">
                   <div className="sticky top-0 z-10 border-b border-amber-200 bg-amber-50 px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">

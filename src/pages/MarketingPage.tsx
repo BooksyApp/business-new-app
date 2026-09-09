@@ -12,6 +12,7 @@ import { getCurrentBusinessId } from "@/config/api";
 import { formatPrice } from "@/lib/currency";
 import { promoService, type PromoCode } from "@/services/promoService";
 import { giftCardService, packageService, type GiftCard, type ServicePackage } from "@/services/growthService";
+import { useFeatureFlags } from "@/services/platformService";
 import { campaignService, type Campaign, type AudiencePreview } from "@/services/campaignService";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ const marketingTools = [
     description: "Points per spend and the stamp card: come N times, one free",
     icon: Gift,
     tone: "bg-violet-50 text-violet-600",
+    flag: "loyalty_cards",
   },
   {
     key: "REFERRAL" as const,
@@ -70,10 +72,12 @@ const marketingTools = [
     description: "Your booqi code and the clients your clients bring in",
     icon: Users,
     tone: "bg-amber-50 text-amber-600",
+    flag: "platform_referral",
   },
 ];
 
 export default function MarketingPage() {
+  const flags = useFeatureFlags();
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const campaignFormRef = useRef<HTMLDivElement>(null);
@@ -389,7 +393,13 @@ export default function MarketingPage() {
           <TabsContent value="campaigns" className="pt-4">
         {/* Enhanced Marketing Tools */}
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {marketingTools.map((tool, index) => {
+          {marketingTools
+            .filter((tool) => {
+              // Only some tools need a flag, so the union has it optional.
+              const flag = (tool as { flag?: string }).flag;
+              return !flag || flags[flag] !== false;
+            })
+            .map((tool, index) => {
             const Icon = tool.icon;
             return (
               <Card

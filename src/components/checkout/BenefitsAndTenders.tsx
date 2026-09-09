@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { currencySymbol } from "@/lib/currency";
 import type { SalePayment } from "@/services/paymentConfirmationService";
+import { useFeatureFlags } from "@/services/platformService";
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
 import { useEffect, useState } from "react";
 
@@ -28,6 +29,7 @@ interface Props {
  * cannot be used at all.
  */
 export function BenefitsAndTenders({ businessId, clientId, orderItems, total, onChange }: Props) {
+  const flags = useFeatureFlags();
   const [benefits, setBenefits] = useState<ClientBenefits | null>(null);
   const [coverage, setCoverage] = useState<Coverage>({});
   const [giftCode, setGiftCode] = useState("");
@@ -122,10 +124,19 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
           {orderItems.map((item) => {
             const options: Array<{ value: Coverage[string]; label: string; enabled: boolean }> = [
               { value: undefined, label: "Pay", enabled: true },
-              // Off for now: memberships and packages are not being offered yet, so the
-              // till must not price a bill against them.
-              { value: "MEMBERSHIP", label: "Membership", enabled: false && membershipCovers(item.serviceId) },
-              { value: "PACKAGE", label: "Package", enabled: false && packageCovers(item.serviceId) },
+              // The platform decides whether these exist. It was a literal `false` here, so
+              // a till could never price a bill against a membership however the back
+              // office was configured.
+              {
+                value: "MEMBERSHIP",
+                label: "Membership",
+                enabled: flags.memberships === true && membershipCovers(item.serviceId),
+              },
+              {
+                value: "PACKAGE",
+                label: "Package",
+                enabled: flags.packages === true && packageCovers(item.serviceId),
+              },
               {
                 value: "VISIT_REWARD",
                 label: "Free (earned)",
@@ -163,6 +174,10 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
+          {/* Taking a gift card the platform has switched off leaves the till holding a
+              tender the backend will refuse. */}
+          {flags.gift_cards !== false && (
+          <>
           <div>
             <label className="text-xs text-muted-foreground">Gift card code</label>
             <Input
@@ -186,6 +201,8 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
               placeholder="0"
             />
           </div>
+          </>
+          )}
           <div>
             <label className="text-xs text-muted-foreground">
               Points to spend (100 = 1 {currencySymbol()})
