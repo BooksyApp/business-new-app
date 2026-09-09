@@ -51,14 +51,31 @@ const BusinessOwnerRoute = lazy(() => import("./components/BusinessOwnerRoute"))
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Stale time: data is fresh for 5 minutes
-      staleTime: 5 * 60 * 1000,
-      // Cache time: keep unused data for 10 minutes
-      gcTime: 10 * 60 * 1000,
+      /**
+       * Never cached as fresh: every screen asks the server.
+       *
+       * This is a panel two people use at once — one on the till, one on the calendar,
+       * a third on their phone — so anything held locally is a guess about what somebody
+       * else has done since. It was five minutes, which meant an edit needed a hard
+       * refresh to believe, and that teaches a salon to distrust the whole app.
+       *
+       * The cache still exists: a cached answer paints instantly while the refetch runs,
+       * so screens do not flash empty. It just is never trusted as current.
+       */
+      staleTime: 0,
+      // Kept for that instant paint, not to avoid asking.
+      gcTime: 5 * 60 * 1000,
       // Retry failed requests
       retry: 2,
-      // Refetch on window focus (can be disabled for better performance)
-      refetchOnWindowFocus: false,
+      /**
+       * Coming back to the tab is the clearest signal that somebody has been away —
+       * often in another tab of this same panel, or on their phone. It was off "for
+       * performance", which bought a few requests and cost the salon its trust in what
+       * it was looking at.
+       */
+      refetchOnWindowFocus: true,
+      // Landing on a screen asks, every time.
+      refetchOnMount: "always",
       // Refetch on reconnect
       refetchOnReconnect: true,
     },

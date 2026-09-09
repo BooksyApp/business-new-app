@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
+import { Percent, Tag, TrendingDown, Users } from "lucide-react";
 import { toast } from "sonner";
 
+import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +44,14 @@ export default function OffersPage() {
   }, [businessId]);
 
   const running = (rows ?? []).filter((row) => row.running);
+  const best = running.length
+    ? Math.max(...running.map((r) => Number(r.discount_percent ?? 0)))
+    : 0;
+  // What a client saves on the deepest offer, which is more persuasive to a salon owner
+  // than the percentage — it is the number their client sees.
+  const bestSaving = running.length
+    ? Math.max(...running.map((r) => Number(r.price ?? 0) - Number(r.sale_price ?? 0)))
+    : 0;
 
   const act = (run: Promise<unknown>, message: string) => {
     setBusy(true);
@@ -55,90 +65,12 @@ export default function OffersPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Offers</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A cut price shows on your card in the app and on the web, with the old price struck
-          through. Clients see it without needing a code.
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Running now</p>
-            <p className="mt-1 text-2xl font-semibold">{running.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Best offer</p>
-            <p className="mt-1 text-2xl font-semibold">
-              {running.length > 0
-                ? `${Math.max(...running.map((r) => Number(r.discount_percent ?? 0)))}%`
-                : "—"}
-            </p>
-            <p className="text-xs text-muted-foreground">this is what the card shows</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Services</p>
-            <p className="mt-1 text-2xl font-semibold">{rows?.length ?? 0}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">A sale across the whole menu</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
-            <label className="block text-sm">
-              <span className="text-xs text-muted-foreground">Percent off</span>
-              <Input
-                value={allPercent}
-                onChange={(e) => setAllPercent(e.target.value)}
-                inputMode="numeric"
-                placeholder="20"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-xs text-muted-foreground">From</span>
-              <Input type="date" value={allFrom} onChange={(e) => setAllFrom(e.target.value)} />
-            </label>
-            <label className="block text-sm">
-              <span className="text-xs text-muted-foreground">Until (optional)</span>
-              <Input type="date" value={allTo} onChange={(e) => setAllTo(e.target.value)} />
-            </label>
-            <label className="block text-sm">
-              <span className="text-xs text-muted-foreground">Badge text (optional)</span>
-              <Input
-                value={allLabel}
-                onChange={(e) => setAllLabel(e.target.value)}
-                placeholder="New client price"
-              />
-            </label>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              disabled={busy || !allPercent.trim()}
-              onClick={() =>
-                act(
-                  discountService.setForAll(businessId, {
-                    percent: Number(allPercent),
-                    startsOn: allFrom || null,
-                    endsOn: allTo || null,
-                    label: allLabel || null,
-                  }),
-                  "The sale is on"
-                )
-              }
-            >
-              Put everything on offer
-            </Button>
+    <AppLayout>
+      <PageHeader
+        title="Offers"
+        subtitle="A cut price shows on your card in the app and on the web — no code needed"
+        actions={
+          running.length > 0 ? (
             <Button
               variant="outline"
               disabled={busy}
@@ -149,40 +81,163 @@ export default function OffersPage() {
             >
               End all offers
             </Button>
-            <p className="text-xs text-muted-foreground">
-              No end date means it runs until you stop it.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          ) : undefined
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">One service at a time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {rows === null ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : rows.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              You have no services yet.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {rows.map((row) => (
-                <ServiceRow
-                  key={row.id}
-                  row={row}
-                  businessId={businessId}
-                  busy={busy}
-                  onSaved={(message, promise) => act(promise, message)}
+      <div className="space-y-6 p-6">
+        {/* Colour carries the meaning: pink is the offer colour everywhere a client sees
+            it, so the salon learns the same association its clients do. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile
+            icon={Tag}
+            tone="bg-pink-50 text-pink-700"
+            label="Running now"
+            value={String(running.length)}
+            hint={running.length === 0 ? "nothing on offer" : "live on your card"}
+          />
+          <StatTile
+            icon={Percent}
+            tone="bg-violet-50 text-violet-700"
+            label="Best offer"
+            value={best > 0 ? `${best}%` : "—"}
+            hint="this is what the card shows"
+          />
+          <StatTile
+            icon={TrendingDown}
+            tone="bg-emerald-50 text-emerald-700"
+            label="Biggest saving"
+            value={bestSaving > 0 ? `${bestSaving.toFixed(0)} ${currencySymbol()}` : "—"}
+            hint="what a client saves"
+          />
+          <StatTile
+            icon={Users}
+            tone="bg-sky-50 text-sky-700"
+            label="Services"
+            value={String(rows?.length ?? 0)}
+            hint="on your menu"
+          />
+        </div>
+
+        <Card className="overflow-hidden border-pink-100">
+          <CardHeader className="border-b border-pink-100 bg-pink-50/60">
+            <CardTitle className="flex items-center gap-2 text-base text-pink-900">
+              <Percent className="h-4 w-4" />A sale across the whole menu
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-5">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <label className="block text-sm">
+                <span className="text-xs font-medium text-muted-foreground">Percent off</span>
+                <Input
+                  value={allPercent}
+                  onChange={(e) => setAllPercent(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="20"
                 />
-              ))}
+              </label>
+              <label className="block text-sm">
+                <span className="text-xs font-medium text-muted-foreground">From</span>
+                <Input type="date" value={allFrom} onChange={(e) => setAllFrom(e.target.value)} />
+              </label>
+              <label className="block text-sm">
+                <span className="text-xs font-medium text-muted-foreground">Until (optional)</span>
+                <Input type="date" value={allTo} onChange={(e) => setAllTo(e.target.value)} />
+              </label>
+              <label className="block text-sm">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Badge text (optional)
+                </span>
+                <Input
+                  value={allLabel}
+                  onChange={(e) => setAllLabel(e.target.value)}
+                  placeholder="New client price"
+                />
+              </label>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                className="bg-pink-600 hover:bg-pink-700"
+                disabled={busy || !allPercent.trim()}
+                onClick={() =>
+                  act(
+                    discountService.setForAll(businessId, {
+                      percent: Number(allPercent),
+                      startsOn: allFrom || null,
+                      endsOn: allTo || null,
+                      label: allLabel || null,
+                    }),
+                    "The sale is on"
+                  )
+                }
+              >
+                Put everything on offer
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                No end date means it runs until you stop it. Your past clients get one push
+                about it.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">One service at a time</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {rows === null ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : rows.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                You have no services yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {rows.map((row) => (
+                  <ServiceRow
+                    key={row.id}
+                    row={row}
+                    businessId={businessId}
+                    busy={busy}
+                    onSaved={(message, promise) => act(promise, message)}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+
+function StatTile({
+  icon: Icon,
+  tone,
+  label,
+  value,
+  hint,
+}: {
+  icon: typeof Percent;
+  tone: string;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-start gap-3 pt-6">
+        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-0.5 text-2xl font-semibold leading-none">{value}</p>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -204,7 +259,11 @@ function ServiceRow({
   const [label, setLabel] = useState(row.discount_label ?? "");
 
   return (
-    <div className="rounded-lg border p-3">
+    <div
+      className={`rounded-lg border p-3 transition-colors ${
+        row.running ? "border-pink-200 bg-pink-50/40" : "border-border"
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{row.name}</p>
@@ -214,7 +273,7 @@ function ServiceRow({
                 <span className="line-through">
                   {row.price} {currencySymbol()}
                 </span>{" "}
-                <span className="font-semibold text-foreground">
+                <span className="font-semibold text-pink-700">
                   {row.sale_price} {currencySymbol()}
                 </span>
               </>
@@ -229,7 +288,13 @@ function ServiceRow({
         </div>
 
         {row.discount_percent ? (
-          <Badge variant={row.running ? "default" : "secondary"}>
+          <Badge
+            className={
+              row.running
+                ? "bg-pink-600 hover:bg-pink-600"
+                : "bg-muted text-muted-foreground hover:bg-muted"
+            }
+          >
             {row.discount_label || `-${row.discount_percent}%`}
             {!row.running && " · not running"}
           </Badge>
@@ -256,11 +321,16 @@ function ServiceRow({
           </label>
           <label className="block text-sm">
             <span className="text-xs text-muted-foreground">Badge text</span>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={`-${percent || "20"}%`} />
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={`-${percent || "20"}%`}
+            />
           </label>
           <div className="flex items-end gap-2">
             <Button
               size="sm"
+              className="bg-pink-600 hover:bg-pink-700"
               disabled={busy || !percent.trim()}
               onClick={() => {
                 setOpen(false);
