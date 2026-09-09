@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Users } from "lucide-react";
+import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { useFeatureFlags } from "@/services/platformService";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { clientService, Client } from "@/services/clientService";
@@ -546,6 +547,7 @@ export default function CalendarPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const flags = useFeatureFlags();
+  const offers = useServiceOffers(businessId);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
 
   const reloadWaitlist = useCallback(() => {
@@ -755,8 +757,18 @@ export default function CalendarPage() {
     const s = services.find((x) => x.id.toString() === serviceId);
     return s?.durationMinutes || 30;
   };
-  const servicePrice = (serviceId: string): number | undefined =>
-    services.find((x) => x.id.toString() === serviceId)?.price;
+  /**
+   * What this booking will actually cost, offers applied.
+   *
+   * The catalogue carries the list price, and the backend re-prices the booking when it
+   * saves it — so a salon booking a service that is 20% off saw one number on the form
+   * and a different one on the appointment.
+   */
+  const servicePrice = (serviceId: string): number | undefined => {
+    const service = services.find((x) => x.id.toString() === serviceId);
+    if (!service) return undefined;
+    return offers.get(service.id)?.price ?? service.price;
+  };
   // Fold the "requested by client" flag into notes (no dedicated column yet).
   const withRequestedFlag = (notes: string, requested: boolean): string | undefined => {
     const tagged = requested ? ["⭐ Requested by client", notes].filter(Boolean).join(" — ") : notes;

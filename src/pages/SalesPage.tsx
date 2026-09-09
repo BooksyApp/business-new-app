@@ -10,6 +10,7 @@ import { useServices } from "@/hooks/useServices";
 import { useAddons } from "@/hooks/useAddons";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useStaff } from "@/hooks/useStaff";
+import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -110,12 +111,33 @@ interface QuickSaleItem {
   serviceId?: number;
 }
 
+/**
+ * What the till should charge for a service, offers applied.
+ *
+ * The backend re-prices every line on confirmation, so a till showing the list price while
+ * an offer runs disagrees with its own total — the salon finds out at the moment it takes
+ * the money, which is the worst moment.
+ */
+function servicePriceLabel(
+  service: { price?: number | null; priceType?: string | null; id: number },
+  offers: Map<number, { price: number; wasPrice?: number }>
+): string {
+  const offer = offers.get(service.id);
+  const payable = offer ? offer.price : service.price;
+  if (payable == null) return 'Price on request';
+  const shown = `${payable.toFixed(2)} ${currencySymbol()}`;
+  if (offer?.wasPrice != null) return `${shown} (was ${offer.wasPrice.toFixed(2)})`;
+  return service.priceType === 'FROM' ? `From ${shown}` : shown;
+}
+
 export default function SalesPage() {
   const navigate = useNavigate();
   const businessId = useBusinessId();
   const { services, loading: servicesLoading } = useServices(businessId);
   const { addons, loading: addonsLoading } = useAddons(businessId);
   const { staff } = useStaff(businessId);
+  // The catalogue carries the list price; this carries what the offer makes it today.
+  const offers = useServiceOffers(businessId);
   const [activeTab, setActiveTab] = useState("NEW SALES");
   const [activeCategory, setActiveCategory] = useState("quick-sale");
   
@@ -589,11 +611,7 @@ export default function SalesPage() {
         duration: service.durationMinutes 
           ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`.replace(/^0h /, '').replace(/ 0min$/, 'min')
           : 'N/A',
-        price: service.price 
-          ? `${service.price.toFixed(2)} ${currencySymbol()}`
-          : service.priceType === 'FROM' 
-            ? `From ${service.price?.toFixed(2) || '0.00'} ${currencySymbol()}`
-            : 'Price on request',
+        price: servicePriceLabel(service, offers),
         color: service.color || 'gray',
         type: (service.serviceType === 'COMBO' ? 'combo' : 'service') as 'service' | 'combo',
         serviceId: service.id,
@@ -998,11 +1016,7 @@ export default function SalesPage() {
                                   duration: service.durationMinutes 
                                     ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`.replace(/^0h /, '').replace(/ 0min$/, 'min')
                                     : 'N/A',
-                                  price: service.price 
-                                    ? `${service.price.toFixed(2)} ${currencySymbol()}`
-                                    : service.priceType === 'FROM' 
-                                      ? `From ${service.price?.toFixed(2) || '0.00'} ${currencySymbol()}`
-                                      : 'Price on request',
+                                  price: servicePriceLabel(service, offers),
                                   color: service.color || 'gray',
                                   type: (service.serviceType === 'COMBO' ? 'combo' : 'service') as 'service' | 'combo',
                                   serviceId: service.id,
