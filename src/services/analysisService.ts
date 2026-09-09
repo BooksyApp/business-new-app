@@ -230,7 +230,46 @@ export interface DiscountImpact {
   newClients: { on_offer: number; all_first_visits: number } | null;
 }
 
+
+/** What empty chairs cost, and what the policy recorded for them. */
+export interface NoShowImpact {
+  totals: {
+    no_shows: number;
+    cancellations: number;
+    bookings: number;
+    lost_revenue: number;
+    fees_recorded: number;
+    fees_count: number;
+  } | null;
+  byMonth: { month: string; no_shows: number; cancellations: number; fees_recorded: number }[];
+  repeatOffenders: {
+    client: string;
+    client_email: string | null;
+    no_shows: number;
+    cancellations: number;
+    fees_recorded: number;
+    latest: string;
+  }[];
+  recent: Record<string, unknown>[];
+  /** A window of 0 means the salon has set no policy, so nothing is ever charged. */
+  policy: { window_hours: number; late_fee: number } | null;
+}
+
 export const analysisService = {
+  async getNoShowImpact(
+    businessId: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<NoShowImpact> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const queryString = params.toString();
+    return apiClient.get<NoShowImpact>(
+      `/analytics/business/${businessId}/no-shows${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
   async getDiscountImpact(
     businessId: number,
     startDate?: string,

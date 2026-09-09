@@ -30,6 +30,19 @@ export interface Appointment {
    * a block still shows the offer it was taken on after that offer has ended.
    */
   listPrice?: number | null;
+  /**
+   * Taken up front through the booking flow. The till subtracts it from what is due, so
+   * the calendar has to say so — otherwise a cashier asks for the full price and only
+   * finds out from the error message.
+   */
+  depositAmount?: number | null;
+  depositPaid?: boolean | null;
+  /**
+   * What the customer owes for cancelling late. Computed from the salon's own window when
+   * they cancelled; nothing collects it automatically, which is exactly why it has to be
+   * visible.
+   */
+  cancellationFee?: number | null;
   color?: string;
   notes?: string;
   /** What the customer said they would pay with when booking: SALON, GIFT_CARD, WALLET. */

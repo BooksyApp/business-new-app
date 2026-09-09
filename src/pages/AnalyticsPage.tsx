@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { DiscountImpact } from "@/components/analytics/DiscountImpact";
+import { NoShowImpact } from "@/components/analytics/NoShowImpact";
 import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
@@ -348,6 +349,24 @@ export default function AnalyticsPage() {
                 </p>
               </div>
               <DiscountImpact
+                businessId={businessId}
+                startDate={getDateRange().startDate}
+                endDate={getDateRange().endDate}
+              />
+            </section>
+
+            {/* After offers, before revenue: both are money the salon did not take, and a
+                revenue figure means something different once you know what was missed. */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Empty chairs
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  No-shows, late cancellations, and what your policy recorded for them.
+                </p>
+              </div>
+              <NoShowImpact
                 businessId={businessId}
                 startDate={getDateRange().startDate}
                 endDate={getDateRange().endDate}

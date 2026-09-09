@@ -146,6 +146,19 @@ export function AppointmentModal({
   const clientEmail = appointmentData.clientEmail || "";
   const notes = appointmentData.notes || "";
   const price = appointmentData.price || 0;
+  /**
+   * Money already taken, and money owed for cancelling late.
+   *
+   * Both existed on the booking and neither reached this screen: a cashier asked for the
+   * full price on a booking with a 30% deposit and only found out from an error, and a
+   * late cancellation left the salon owed a fee nobody could see.
+   */
+  const depositPaid =
+    appointmentData.depositPaid && appointmentData.depositAmount
+      ? Number(appointmentData.depositAmount)
+      : 0;
+  const dueNow = Math.max(0, price - depositPaid);
+  const cancellationFee = Number(appointmentData.cancellationFee ?? 0);
   const status = appointmentData.status || "PENDING";
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
@@ -282,8 +295,21 @@ export function AppointmentModal({
                 <p className="truncate font-semibold">{serviceName}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">with {staffName}</p>
               </div>
-              <p className="shrink-0 text-lg font-semibold">
-                {price} {currencySymbol()}
+              <p className="shrink-0 text-right">
+                {depositPaid > 0 ? (
+                  <>
+                    <span className="block text-lg font-semibold">
+                      {dueNow} {currencySymbol()}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {price} {currencySymbol()} less {depositPaid} deposit
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-lg font-semibold">
+                    {price} {currencySymbol()}
+                  </span>
+                )}
               </p>
             </div>
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
@@ -326,6 +352,17 @@ export function AppointmentModal({
             the money is taken would leave the till and the diary disagreeing. A cancelled
             one is over, so there is nothing to do to it either. */}
         <div className="space-y-2 border-t px-5 py-4 shrink-0">
+          {/* Computed from your own cancellation window when the client cancelled. Nothing
+              collects it automatically — it is here so you know to ask. */}
+          {cancellationFee > 0 && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <span className="font-semibold">
+                Late cancellation fee: {cancellationFee} {currencySymbol()}
+              </span>
+              <span className="text-amber-800">— cancelled inside your notice window</span>
+            </div>
+          )}
+
           {settled ? (
             <p className="text-center text-sm text-muted-foreground">
               {paid ? "Paid and settled — nothing left to change." : "This appointment was cancelled."}
@@ -341,7 +378,7 @@ export function AppointmentModal({
               }}
             >
               <CreditCard className="h-4 w-4" />
-              Take payment · {price} {currencySymbol()}
+              Take payment · {dueNow} {currencySymbol()}
             </Button>
           )}
           {!settled && (
