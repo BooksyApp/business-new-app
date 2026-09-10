@@ -12,6 +12,7 @@ import {
   Gift,
   Percent,
   BadgeCheck,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -353,6 +354,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { icon: TaskIcon, label: "Till", path: "/sales", description: "Ring up a visit, take payment, see today's takings" },
       { icon: AnalyticsIcon, label: "Analytics", path: "/analytics", description: "Revenue, bookings and client trends over time" },
+      { icon: Landmark, label: "Money", path: "/money", description: "Payouts, tips, the cash drawer, invoices and tax" },
     ],
   },
   {

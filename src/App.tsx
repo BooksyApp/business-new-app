@@ -11,6 +11,7 @@ const HomePage = lazy(() => import("./pages/HomePage"));
 const CreateBusinessPage = lazy(() => import("./pages/CreateBusinessPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SalesPage = lazy(() => import("./pages/SalesPage"));
+const MoneyPage = lazy(() => import("./pages/MoneyPage"));
 const ItemsCategoryPage = lazy(() => import("./pages/ItemsCategoryPage"));
 const AddServicePage = lazy(() => import("./pages/AddServicePage"));
 const AddComboServicePage = lazy(() => import("./pages/AddComboServicePage"));
@@ -182,6 +183,7 @@ const App = () => (
               <Route path="section/:section" element={<Suspense fallback={<PageLoader />}><SectionPage /></Suspense>} />
               <Route path="contacts" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
+              <Route path="money" element={<Suspense fallback={<PageLoader />}><MoneyPage /></Suspense>} />
               <Route path="staff" element={<Suspense fallback={<PageLoader />}><StaffPage /></Suspense>} />
               <Route path="edit-staff/:id" element={<Suspense fallback={<PageLoader />}><EditStaffPage /></Suspense>} />
               <Route path="add-staff" element={<Suspense fallback={<PageLoader />}><AddStaffPage /></Suspense>} />

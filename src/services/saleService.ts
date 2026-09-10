@@ -67,6 +67,19 @@ export interface CreateSaleRequest {
   paymentMethod: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'SPLIT' | 'MEMBERSHIP' | 'GIFT_CARD' | 'PACKAGE';
   paymentAmount: number;
   notes?: string;
+  /**
+   * The tenders this bill was settled with. The two split fields could only describe one
+   * shape of split — half cash, half card — so "60 on a gift card, 40 in notes" had to be
+   * rung up as two sales. Absent keeps the old single-method behaviour.
+   */
+  payments?: Array<{ method: string; amount: number; reference?: string }>;
+  /**
+   * Who the tip belongs to. Absent gives the whole tip to whoever did the work, which is
+   * what a one-chair salon means when it types a tip in.
+   */
+  tips?: Array<{ staffId?: number; amount: number; method?: string }>;
+  splitCashAmount?: number;
+  splitCardAmount?: number;
 }
 
 export const saleService = {

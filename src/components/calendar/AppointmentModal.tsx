@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { RefundDialog } from "@/components/money/RefundDialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, CreditCard, Edit, UserX, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, CreditCard, Edit, Undo2, UserX, XCircle } from "lucide-react";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -46,6 +47,7 @@ export function AppointmentModal({
   const [fullAppointment, setFullAppointment] = useState<ApiAppointment | null>(null);
   const [loading, setLoading] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
   // #30: one in-flight flag for both transitions — a double tap would otherwise fire the
   // second call, get rejected by BookingStateMachine, and show an error for an action
   // that actually succeeded.
@@ -186,7 +188,7 @@ export function AppointmentModal({
     NO_SHOW: { band: "bg-rose-600", chip: "bg-rose-100 text-rose-900", label: "No-show" },
   };
   const tone = statusTone[status] ?? statusTone.PENDING;
-  const paid = paymentStatus === "PAID";
+  const paid = paymentStatus === "PAID" || paymentStatus === "REFUNDED";
   /** Nothing can be done to it any more: the money is in, or it was called off. */
   const settled = paid || status === "CANCELLED";
   const clientName = appointmentData.clientName || appointment.clientName || "Walk-in";
@@ -364,9 +366,30 @@ export function AppointmentModal({
           )}
 
           {settled ? (
-            <p className="text-center text-sm text-muted-foreground">
-              {paid ? "Paid and settled — nothing left to change." : "This appointment was cancelled."}
-            </p>
+            paid ? (
+              // "Nothing left to change" was not true — a customer who was charged twice, or
+              // one the salon let down, has to be given their money back, and the only way to
+              // do it was the Stripe dashboard, where none of this is recorded.
+              <div className="space-y-2">
+                <p className="text-center text-sm text-muted-foreground">Paid and settled.</p>
+                {paymentStatus === "REFUNDED" ? (
+                  <p className="text-center text-sm text-muted-foreground">Already refunded.</p>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="h-10 w-full gap-2 border-red-200 text-sm text-red-600 hover:bg-red-50"
+                    onClick={() => setRefundOpen(true)}
+                  >
+                    <Undo2 className="h-4 w-4" />
+                    Refund
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground">
+                This appointment was cancelled.
+              </p>
+            )
           ) : null}
           {!settled && !paid && (
             <Button
@@ -420,6 +443,17 @@ export function AppointmentModal({
           )}
         </div>
       </SheetContent>
+
+      <RefundDialog
+        open={refundOpen}
+        onOpenChange={setRefundOpen}
+        bookingId={Number(appointment.apiId)}
+        paidAmount={price}
+        clientName={clientName}
+        onRefunded={() => {
+          onClose();
+        }}
+      />
 
       {/* Cancel Appointment Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
