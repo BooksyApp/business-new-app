@@ -17,6 +17,14 @@ TARGET="/opt/booksy/web"
 
 cd "$(dirname "$0")"
 
+# Dependencies first. `npm run build` calls tsc and vite from node_modules/.bin, and a
+# clean checkout has neither — which is what "sh: tsc: command not found" means. `npm ci`
+# when there is a lockfile, because it installs exactly what was locked and is faster.
+if [ ! -x node_modules/.bin/vite ]; then
+  echo "==> installing dependencies"
+  if [ -f package-lock.json ]; then npm ci; else npm install; fi
+fi
+
 echo "==> building"
 npm run build
 
