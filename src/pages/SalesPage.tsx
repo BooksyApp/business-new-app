@@ -1441,13 +1441,29 @@ export default function SalesPage() {
                                   }`}>
                                     {appointment.paymentStatus}
                                   </span>
-                                  {appointment.price && (
-                                    <div className="text-right">
-                                      <div className="text-base font-bold text-gray-900">
-                                        {appointment.price.toFixed(2)} {currencySymbol()}
+                                  {appointment.price && (() => {
+                                    // #117: a deposit already taken, on the row the cashier
+                                    // reads before opening the till. The number here was the
+                                    // full service price, so the settle list and the checkout
+                                    // screen disagreed — and this one is the figure a cashier
+                                    // quotes out loud while the customer is still standing
+                                    // there.
+                                    const paid = appointment.depositPaid
+                                      ? Math.min(Number(appointment.depositAmount ?? 0), appointment.price)
+                                      : 0;
+                                    return (
+                                      <div className="text-right">
+                                        <div className="text-base font-bold text-gray-900">
+                                          {(appointment.price - paid).toFixed(2)} {currencySymbol()}
+                                        </div>
+                                        {paid > 0 && (
+                                          <div className="text-[11px] text-emerald-700 font-medium leading-tight">
+                                            {paid.toFixed(2)} deposit paid
+                                          </div>
+                                        )}
                                       </div>
-                                    </div>
-                                  )}
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             </div>
