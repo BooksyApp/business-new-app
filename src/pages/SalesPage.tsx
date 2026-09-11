@@ -160,6 +160,10 @@ export default function SalesPage() {
   const [selectedClient, setSelectedClient] = useState<ClientWithStats | null>(null);
   const [periodFilter, setPeriodFilter] = useState("Days");
   const [searchQuery, setSearchQuery] = useState("");
+  // #118: "how much went through on card today" and "what did Anna take" are the two
+  // questions asked of this list, and neither could be answered without reading every row.
+  const [methodFilter, setMethodFilter] = useState("All");
+  const [staffFilter, setStaffFilter] = useState("All");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -209,6 +213,38 @@ export default function SalesPage() {
     };
     loadClients();
   }, [businessId]);
+
+  /**
+   * #118: the transactions actually shown, after every filter.
+   *
+   * Derived once rather than inline, because the totals under the list have to count the
+   * same rows the list shows — two copies of this expression is how a summary ends up
+   * describing a different set of sales from the one on screen.
+   */
+  const visibleTransactions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return transactions.filter((t) => {
+      if (q && !(
+        t.clientName?.toLowerCase().includes(q) ||
+        t.staffName?.toLowerCase().includes(q) ||
+        t.id?.toString().includes(q)
+      )) return false;
+      if (methodFilter !== "All" && t.paymentMethod !== methodFilter) return false;
+      if (staffFilter !== "All" && (t.staffName ?? "") !== staffFilter) return false;
+      return true;
+    });
+  }, [transactions, searchQuery, methodFilter, staffFilter]);
+
+  /** Only what this salon has actually taken money through — not a fixed list of methods
+      that offers "Gift card" to a salon that has never sold one. */
+  const methodOptions = useMemo(
+    () => ["All", ...Array.from(new Set(transactions.map((t) => t.paymentMethod).filter(Boolean)))],
+    [transactions]
+  );
+  const staffOptions = useMemo(
+    () => ["All", ...Array.from(new Set(transactions.map((t) => t.staffName).filter(Boolean)))],
+    [transactions]
+  );
 
   const filteredClients = clients
     .filter((c) => {
@@ -720,6 +756,14 @@ export default function SalesPage() {
       <PaymentMethodPage
         orderItems={orderItems}
         subtotal={calculateTotal()}
+        // #117: what the customer already paid up front on this booking. The backend has
+        // always subtracted it; the screen did not, so the cashier asked for the full
+        // price and the customer paid the deposit twice.
+        depositPaid={(() => {
+          if (!selectedAppointmentId) return 0;
+          const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
+          return appt?.depositPaid ? Number(appt.depositAmount ?? 0) : 0;
+        })()}
         // The client object, not its name: every benefit at the till — membership,
         // package, points, the stamp card — is keyed by client id, and this was passing
         // the whole record in as a name string.
@@ -1602,13 +1646,43 @@ export default function SalesPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="text"
-                    placeholder="Search for a customer or transaction ID"
+                    placeholder="Customer, staff or transaction ID"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                   />
                 </div>
         </div>
+
+              {/* #118: two selects rather than more tab rows — a salon with six staff would
+                  otherwise wrap the panel. Both list only values present in the loaded
+                  period, so neither can filter to an empty screen. */}
+              <div className="p-4 border-b border-gray-200 grid grid-cols-2 gap-3">
+                <label className="text-xs font-medium text-gray-600">
+                  Payment
+                  <select
+                    value={methodFilter}
+                    onChange={(e) => setMethodFilter(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  >
+                    {methodOptions.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-gray-600">
+                  Staff
+                  <select
+                    value={staffFilter}
+                    onChange={(e) => setStaffFilter(e.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  >
+                    {staffOptions.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
 
               {/* Date Summary */}
               <div className="p-4">
@@ -1629,7 +1703,7 @@ export default function SalesPage() {
                         // Calculate payment summary by method
                         // For split payments, count cash and card separately
                         const methodTotals: Record<string, number> = {};
-                        transactions.forEach(t => {
+                        visibleTransactions.forEach(t => {
                           if (t.splitCashAmount && t.splitCardAmount) {
                             // Split payment - add to both cash and card
                             methodTotals['Cash'] = (methodTotals['Cash'] || 0) + t.splitCashAmount;
@@ -1654,7 +1728,7 @@ export default function SalesPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-900">Together</span>
                         <span className="text-lg font-bold text-gray-900">
-                          {transactions.reduce((sum, t) => {
+                          {visibleTransactions.reduce((sum, t) => {
                             const amount = parseFloat(t.amount.replace(' ' + currencySymbol(), '').replace(',', '.'));
                             return sum + amount;
                           }, 0).toFixed(2)} {currencySymbol()}
@@ -1672,19 +1746,33 @@ export default function SalesPage() {
                 <div className="flex items-center justify-center h-64">
                   <p className="text-gray-500">Loading transactions...</p>
                 </div>
-              ) : transactions.length === 0 ? (
+              ) : visibleTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-center">
                   <p className="text-gray-900 font-medium mb-2">No transactions found</p>
+                  {/* #118: "nothing was sold" and "your filters hid everything" are
+                      different problems with different fixes, and telling somebody the
+                      first when it is the second sends them looking for a missing sale. */}
                   <p className="text-sm text-gray-500">
-                    No sales have been recorded for the selected period.
+                    {transactions.length === 0
+                      ? "No sales have been recorded for the selected period."
+                      : "No sales match these filters. Clear them to see the rest of the period."}
                   </p>
+                  {transactions.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setMethodFilter("All");
+                        setStaffFilter("All");
+                      }}
+                      className="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {transactions
-                    .filter(t => !searchQuery ||
-                      t.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      t.id?.toString().includes(searchQuery))
+                  {visibleTransactions
                     .map((transaction) => (
                   <div
                     key={transaction.id}

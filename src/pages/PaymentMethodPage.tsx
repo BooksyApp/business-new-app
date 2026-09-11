@@ -33,6 +33,19 @@ interface PaymentMethodPageProps {
     duration?: string;
   }>;
   subtotal?: number;
+  /**
+   * #117: a deposit the customer has already paid on this booking.
+   *
+   * The till showed the full service price and the cashier collected it, so a customer who
+   * had paid a 12 deposit on a 40 service handed over 40 more. The backend has subtracted
+   * it since PaymentConfirmationService was written — the money recorded was always right
+   * — but the number on the screen is what the cashier actually asks for.
+   *
+   * Not taken off `subtotal`: the sale is still worth what the services cost, and a
+   * discount percentage computed off a reduced base would be wrong. It comes off what is
+   * due, which is what a deposit is.
+   */
+  depositPaid?: number;
   selectedClient?: { id: string; name: string; avatar?: string } | null;
   selectedStaff?: { id: number; name: string; avatarUrl?: string; position?: string } | null;
   // #15: the full roster this sale's staff can be picked from, and a callback so the
@@ -68,6 +81,7 @@ interface PaymentMethodPageProps {
 export default function PaymentMethodPage({
   orderItems = [],
   subtotal = 80.00,
+  depositPaid = 0,
   selectedClient: propSelectedClient = null,
   selectedStaff: propSelectedStaff = null,
   staffList = [],
@@ -92,7 +106,10 @@ export default function PaymentMethodPage({
   const [customTipType, setCustomTipType] = useState<"percentage" | "fixed">("percentage");
   const [customTipValue, setCustomTipValue] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
-  const [paymentAmount, setPaymentAmount] = useState(subtotal);
+  /** Never negative and never more than the bill: a deposit larger than the sale would
+      otherwise ask the cashier to hand money back through the "change" field. */
+  const depositCredit = Math.max(0, Math.min(depositPaid ?? 0, subtotal));
+  const [paymentAmount, setPaymentAmount] = useState(Math.max(0, subtotal - Math.max(0, depositPaid)));
   const [showPaymentAmountDialog, setShowPaymentAmountDialog] = useState(false);
   const [tempPaymentAmount, setTempPaymentAmount] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -120,10 +137,10 @@ export default function PaymentMethodPage({
   // Update payment amount when card is selected and total changes (due to discount or tip)
   useEffect(() => {
     if (selectedPaymentMethod === "card-terminal") {
-      const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+      const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
       setPaymentAmount(currentTotal);
     }
-  }, [selectedPaymentMethod, subtotal, discountAmount, selectedTip, customTip]);
+  }, [selectedPaymentMethod, subtotal, discountAmount, selectedTip, customTip, depositCredit]);
 
   const tipOptions = [
     { amount: 0, percent: 0, label: "No Tip" },
@@ -171,14 +188,14 @@ export default function PaymentMethodPage({
   // A gift card is spent by code, so the till has to ask for it before it can take one.
   const [giftCardCode, setGiftCardCode] = useState("");
 
-  const total = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+  const total = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
   const change = paymentAmount > total ? paymentAmount - total : 0;
 
   const handleTipSelect = (tip: typeof tipOptions[0]) => {
     setSelectedTip({ amount: tip.amount, percent: tip.percent });
     setShowCustomTip(false);
     setCustomTip("");
-    setPaymentAmount(subtotal + tip.amount);
+    setPaymentAmount(subtotal + tip.amount - depositCredit);
   };
 
   const handleCustomTip = () => {
@@ -204,13 +221,13 @@ export default function PaymentMethodPage({
     setSelectedTip({ amount: tipAmount, percent: tipPercent });
     setShowCustomTip(true);
     setShowCustomTipDialog(false);
-    setPaymentAmount(subtotal + tipAmount);
+    setPaymentAmount(subtotal + tipAmount - depositCredit);
   };
 
   const handleCustomTipChange = (value: string) => {
     setCustomTip(value);
     const tipAmount = parseFloat(value) || 0;
-    setPaymentAmount(subtotal + tipAmount);
+    setPaymentAmount(subtotal + tipAmount - depositCredit);
   };
 
   const handleDiscountConfirm = () => {
@@ -239,7 +256,7 @@ export default function PaymentMethodPage({
     
     // Update payment amount if card is selected (should equal total)
     if (selectedPaymentMethod === "card-terminal") {
-      const newTotal = subtotal - discount + (selectedTip?.amount || parseFloat(customTip) || 0);
+      const newTotal = subtotal - discount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
       setPaymentAmount(newTotal);
     }
   };
@@ -247,7 +264,7 @@ export default function PaymentMethodPage({
   const handleSplitConfirm = () => {
     const cashAmount = parseFloat(splitCashAmount) || 0;
     const cardAmount = parseFloat(splitCardAmount) || 0;
-    const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+    const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
     
     // Set payment amount to total (cash + card)
     setPaymentAmount(cashAmount + cardAmount);
@@ -292,7 +309,7 @@ export default function PaymentMethodPage({
         discountPercent,
         paymentMethod: selectedPaymentMethod,
         amount: paymentAmount,
-        change: paymentAmount - (subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0)),
+        change: paymentAmount - (subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit),
       };
 
       if (selectedPaymentMethod === "gift-card") {
@@ -443,18 +460,18 @@ export default function PaymentMethodPage({
                         setShowPaymentAmountDialog(true);
                       } else if (method.id === "card-terminal") {
                         // For card, set payment amount to total (exact amount)
-                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
                         setPaymentAmount(currentTotal);
                       } else if (method.id === "split") {
                         // For split payment, open split dialog
-                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
                         setSplitCashAmount("");
                         setSplitCardAmount("");
                         setShowSplitDialog(true);
                       } else {
                         // Gift card, package, membership: the customer has already paid,
                         // so there is nothing to hand over and no change to give.
-                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0);
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
                         setPaymentAmount(currentTotal);
                       }
                     }}
@@ -494,7 +511,7 @@ export default function PaymentMethodPage({
               price: item.price,
               serviceId: (item as { serviceId?: number }).serviceId,
             }))}
-            total={subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0)}
+            total={subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit}
             onChange={setMulti}
           />
         </div>
@@ -683,8 +700,18 @@ export default function PaymentMethodPage({
 
           {/* Payment Details Section */}
           <div className="space-y-2 pt-4 border-t border-gray-200">
+            {/* #117: named, because a total that is simply lower than the services reads as
+                a pricing error and gets "corrected" by the cashier. */}
+            {depositCredit > 0 ? (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Deposit already paid</span>
+                <span className="font-medium text-emerald-700">
+                  -{depositCredit.toFixed(2)} {currencySymbol()}
+                </span>
+              </div>
+            ) : null}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Total</span>
+              <span className="text-gray-600">{depositCredit > 0 ? "Left to pay" : "Total"}</span>
               <span className="font-medium text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
             </div>
             {selectedPaymentMethod === "gift-card" ? (
