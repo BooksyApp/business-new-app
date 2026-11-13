@@ -14,10 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { formatPrice } from "@/lib/currency";
+import { reviewService, type Review, type RatingSummary } from "@/services/reviewService";
+import { ImageUploadField } from "@/components/media/ImageUploadField";
+import { assetUrl, publicSiteUrl } from "@/config/api";
 
 function formatMoney(value?: number) {
   if (typeof value !== "number") return "Price not set";
-  return value.toFixed(2);
+  // With the salon's currency: a bare "120.00" said nothing about which money.
+  return formatPrice(value);
 }
 
 function formatDuration(minutes?: number) {
@@ -79,6 +84,18 @@ export default function BusinessPage() {
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
   const [plans, setPlans] = useState<string[]>([]);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<RatingSummary | null>(null);
+
+  // The card said "Reviews are coming soon" whatever the salon had: reviews have been
+  // live (web, app, reply from the manager) for a while.
+  useEffect(() => {
+    const idRaw = localStorage.getItem("currentBusinessId");
+    const id = idRaw ? Number.parseInt(idRaw, 10) : NaN;
+    if (!Number.isFinite(id) || id <= 0) return;
+    reviewService.getByBusiness(id).then((r) => setReviews(r || [])).catch(() => setReviews([]));
+    reviewService.getSummary(id).then(setRatingSummary).catch(() => setRatingSummary(null));
+  }, []);
 
   useEffect(() => {
     // An empty list leaves the picker empty rather than falling back to a private copy
@@ -108,10 +125,12 @@ export default function BusinessPage() {
     }
   };
 
+  // The salon's page on the public site — same host, /salon/{id} (booqi-web). It used to
+  // be a made-up "<name>.booksy.com" that Share and Preview sent customers to.
   const publicUrl = useMemo(() => {
-    if (!business?.name) return "";
-    return `${business.name.toLowerCase().replace(/\s+/g, "-")}.booksy.com`;
-  }, [business?.name]);
+    if (!business?.id) return "";
+    return `${publicSiteUrl()}/salon/${business.slug ?? business.id}`;
+  }, [business?.id, business?.slug]);
 
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
@@ -248,11 +267,11 @@ export default function BusinessPage() {
       <div className="h-full flex flex-col bg-white relative">
         <div className="flex-1 overflow-y-auto p-4">
           <div className="w-full">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 space-y-6">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-2">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-4">Profile</h1>
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900 mb-3">
                         {business?.name || (isLoading ? "Loading..." : "Business")}
@@ -277,6 +296,7 @@ export default function BusinessPage() {
                       <div className="flex flex-col items-center gap-2">
                         <button
                           onClick={handleEditProfile}
+                          aria-label="Edit profile"
                           className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md"
                         >
                           <Pencil size={20} />
@@ -286,6 +306,7 @@ export default function BusinessPage() {
                       <div className="flex flex-col items-center gap-2">
                         <button
                           onClick={handlePreview}
+                          aria-label="Preview public profile"
                           disabled={!publicUrl}
                           className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md disabled:opacity-60"
                         >
@@ -296,6 +317,7 @@ export default function BusinessPage() {
                       <div className="flex flex-col items-center gap-2">
                         <button
                           onClick={handleShare}
+                          aria-label="Share public profile"
                           disabled={!publicUrl}
                           className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md disabled:opacity-60"
                         >
@@ -317,7 +339,7 @@ export default function BusinessPage() {
                       <div className="h-64 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 flex items-center justify-center relative overflow-hidden">
                         {business?.coverImageUrl ? (
                           <img
-                            src={business.coverImageUrl}
+                            src={assetUrl(business.coverImageUrl)}
                             alt={`${business?.name ?? "Salon"} cover`}
                             className="absolute inset-0 h-full w-full object-cover"
                             onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
@@ -412,10 +434,41 @@ export default function BusinessPage() {
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">Reviews</h3>
-                  <p className="text-sm text-gray-500">
-                    Reviews are coming soon. Once clients leave reviews from their booking confirmation page, they will appear here.
-                  </p>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-gray-900">Reviews</h3>
+                    {reviews.length > 0 && (
+                      <button
+                        onClick={() => navigate(getPath("reviews"))}
+                        className="text-sm font-semibold text-gray-700 hover:underline"
+                      >
+                        See all and reply
+                      </button>
+                    )}
+                  </div>
+                  {reviews.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No reviews yet. Clients can leave one after a completed visit, in the app or on the web.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-700">
+                        <span className="text-2xl font-bold text-gray-900">
+                          {ratingSummary?.average != null ? ratingSummary.average.toFixed(1) : "–"}
+                        </span>{" "}
+                        ★ from {ratingSummary?.count ?? reviews.length} review
+                        {(ratingSummary?.count ?? reviews.length) === 1 ? "" : "s"}
+                      </p>
+                      <ul className="mt-3 space-y-3">
+                        {reviews.slice(0, 3).map((r) => (
+                          <li key={r.id} className="border-t border-gray-100 pt-3 text-sm">
+                            <span className="font-semibold">{"★".repeat(r.rating)}</span>{" "}
+                            <span className="text-gray-500">{r.authorName ?? "A client"}</span>
+                            {r.comment && <p className="mt-1 text-gray-700">{r.comment}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </div>
 
                 {error ? (
@@ -596,27 +649,14 @@ export default function BusinessPage() {
             </div>
             {/* customer-app #4: without this the salon shows a stock photo in the
                 customer app, same as every other salon. */}
-            <div className="space-y-2">
-              <Label>Photo URL</Label>
-              <Input
-                value={editForm.coverImageUrl}
-                onChange={e => setEditForm(f => ({ ...f, coverImageUrl: e.target.value }))}
-                placeholder="https://example.com/your-salon.jpg"
-              />
-              <p className="text-xs text-muted-foreground">
-                Shown to customers in the app. Leave empty to use the default image.
-              </p>
-              {editForm.coverImageUrl.trim() ? (
-                <img
-                  src={editForm.coverImageUrl}
-                  alt="Salon photo preview"
-                  className="h-32 w-full rounded-lg border border-border/60 object-cover"
-                  // A typo in a URL should look like a broken link, not a broken layout.
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                  onLoad={e => { (e.currentTarget as HTMLImageElement).style.display = "block"; }}
-                />
-              ) : null}
-            </div>
+            <ImageUploadField
+              label="Cover photo"
+              purpose="BUSINESS_COVER"
+              shape="wide"
+              value={editForm.coverImageUrl}
+              onChange={url => setEditForm(f => ({ ...f, coverImageUrl: url }))}
+              hint="Shown to customers on the site and in the app. Logo and gallery: Business → Photos."
+            />
             {/* #37: deposit and cancellation policy shipped backend-only (#244/#308) and
                 was unreachable from the manager app — a salon could not set a deposit at
                 all. Leaving a field empty keeps the current value. */}

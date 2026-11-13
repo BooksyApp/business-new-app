@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { currencySymbol } from "@/lib/currency";
+import { currencySymbol, formatPrice } from "@/lib/currency";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { RefundDialog } from "@/components/money/RefundDialog";
@@ -62,9 +62,11 @@ export function AppointmentModal({
   const [savingClient, setSavingClient] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !appointment?.apiId) return;
+    // Wait for the booking itself: before it loads there is no salon id, and the list was
+    // asked for salon 0 — refused, so "Change client" offered nobody.
+    if (!isOpen || !appointment?.apiId || !fullAppointment?.businessId) return;
     clientService
-      .getClientsByBusiness((fullAppointment?.businessId ?? 0) || 0)
+      .getClientsByBusiness(fullAppointment.businessId)
       .then(setClients)
       .catch(() => setClients([]));
   }, [isOpen, appointment?.apiId, fullAppointment?.businessId]);
@@ -143,7 +145,7 @@ export function AppointmentModal({
   if (!appointment) return null;
 
   // Use full appointment data if available, otherwise fallback to appointment prop
-  const appointmentData = fullAppointment || (appointment as any);
+  const appointmentData = fullAppointment || (appointment as unknown as ApiAppointment);
   const clientPhone = appointmentData.clientPhone || "";
   const clientEmail = appointmentData.clientEmail || "";
   const notes = appointmentData.notes || "";
@@ -159,15 +161,20 @@ export function AppointmentModal({
     appointmentData.depositPaid && appointmentData.depositAmount
       ? Number(appointmentData.depositAmount)
       : 0;
-  const dueNow = Math.max(0, price - depositPaid);
+  // Less what was already paid online from a gift card. A promo's discount is priced by
+  // the server at the till, so the button names the code rather than a wrong amount.
+  const dueNow = Math.max(0, price - depositPaid - Number(appointmentData.prepaidAmount ?? 0));
+  const bookedPromo: string | null = appointmentData.promoCode ?? null;
   const cancellationFee = Number(appointmentData.cancellationFee ?? 0);
   const status = appointmentData.status || "PENDING";
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+  const isFutureVisit = appointmentDate > format(new Date(), 'yyyy-MM-dd');
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
   const serviceName = appointmentData.serviceName || appointment.service;
-  const startTime = appointmentData.startTime || appointment.startTime;
-  const endTime = appointmentData.endTime || appointment.endTime;
+  // The API sends "10:00:00"; a receptionist reads "10:00".
+  const startTime = (appointmentData.startTime || appointment.startTime)?.slice(0, 5);
+  const endTime = (appointmentData.endTime || appointment.endTime)?.slice(0, 5);
   const durationMinutes = (() => {
     const toMinutes = (t: string) => {
       const [h, m] = String(t).split(":").map(Number);
@@ -334,9 +341,17 @@ export function AppointmentModal({
                     : "At the salon"}
               </span>
             </div>
+            {Number(appointmentData.prepaidAmount ?? 0) > 0 && (
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Paid online</span>
+                <span className="font-medium text-emerald-700">
+                  {formatPrice(Number(appointmentData.prepaidAmount))} from their gift card
+                </span>
+              </div>
+            )}
             <div className="mt-1 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Booking</span>
-              <span className="font-medium">#{appointment.apiId ?? appointment.id}</span>
+              <span className="font-medium">#{appointment.apiId ? appointment.apiId.slice(0, 8).toUpperCase() : appointment.id}</span>
             </div>
           </div>
 
@@ -391,7 +406,14 @@ export function AppointmentModal({
               </p>
             )
           ) : null}
-          {!settled && !paid && (
+          {/* A visit that has not happened yet is not taken to the till (the server refuses it
+              too): it would show as completed to the customer before they have been. */}
+          {!settled && !paid && isFutureVisit && (
+            <p className="rounded-md bg-muted px-3 py-2 text-center text-sm text-muted-foreground">
+              Payment can be taken on the day of the visit. Until then you can change the time or cancel.
+            </p>
+          )}
+          {!settled && !paid && !isFutureVisit && (
             <Button
               className="h-11 w-full gap-2 text-sm"
               onClick={() => {
@@ -401,7 +423,9 @@ export function AppointmentModal({
               }}
             >
               <CreditCard className="h-4 w-4" />
-              Take payment · {dueNow} {currencySymbol()}
+              {bookedPromo
+                ? `Take payment · ${bookedPromo} applied`
+                : `Take payment · ${dueNow} ${currencySymbol()}`}
             </Button>
           )}
           {!settled && (
@@ -447,8 +471,10 @@ export function AppointmentModal({
       <RefundDialog
         open={refundOpen}
         onOpenChange={setRefundOpen}
-        bookingId={Number(appointment.apiId)}
-        paidAmount={price}
+        bookingId={appointment.apiId ?? ""}
+        // What the till took (after a promo or discount), not the list price — refunding
+        // the price gave back more than was paid. The server enforces the same ceiling.
+        paidAmount={appointmentData.paidAmount != null ? Number(appointmentData.paidAmount) : price}
         clientName={clientName}
         onRefunded={() => {
           onClose();
@@ -501,8 +527,8 @@ export function AppointmentModal({
                       setCancelReason("");
                       onClose();
                       onCancelled?.();
-                    } catch (error: any) {
-                      toast.error(error.message || "Failed to cancel appointment");
+                    } catch (error) {
+                      toast.error((error instanceof Error && error.message) || "Failed to cancel appointment");
                     }
                   } else if (appointment?.id) {
                     onDelete(appointment.id);

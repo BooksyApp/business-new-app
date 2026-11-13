@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { businessService, type Business } from "@/services/businessService";
 import { getCurrentBusinessId } from "@/config/api";
+import { getPlatformSettings } from "@/services/platformService";
 
 /**
  * Setup listed "Booking Rules", "Cancellation Policy" and "Tax Settings" as three items —
@@ -60,6 +61,14 @@ export default function BookingRulesPage() {
       .finally(() => setLoading(false));
   }, [businessId]);
 
+  // Whether a deposit can actually be collected. Unknown (null) until the platform answers.
+  const [onlinePayments, setOnlinePayments] = useState<boolean | null>(null);
+  useEffect(() => {
+    getPlatformSettings()
+      .then((p) => setOnlinePayments(Boolean(p.stripe?.enabled)))
+      .catch(() => setOnlinePayments(null));
+  }, []);
+
   const save = async () => {
     if (!businessId) return;
     setSaving(true);
@@ -71,7 +80,6 @@ export default function BookingRulesPage() {
         depositPercent: num(form.depositPercent),
         cancellationWindowHours: num(form.cancellationWindowHours),
         lateCancellationFee: num(form.lateCancellationFee),
-        currency: form.currency.trim() ? form.currency.trim().toUpperCase() : undefined,
         taxRate: num(form.taxRate),
         onlineBookingEnabled: onlineBooking,
         minBookingNoticeMinutes: num(form.minBookingNoticeMinutes),
@@ -131,6 +139,13 @@ export default function BookingRulesPage() {
             </TabsList>
 
             <TabsContent value="deposits" className="space-y-4 pt-4">
+            {onlinePayments === false && (
+              <p className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Online payments are not switched on yet, so a deposit cannot be taken: clients
+                are not asked for one and their bookings are confirmed straight away. The
+                percentage is kept for when payments go live.
+              </p>
+            )}
             <Card className="overflow-hidden border-l-4 border-l-amber-500 bg-white">
               <CardHeader><CardTitle className="text-base">Deposits and cancellations</CardTitle></CardHeader>
               <CardContent className="grid gap-5 md:grid-cols-3">
@@ -198,7 +213,15 @@ export default function BookingRulesPage() {
             <Card className="overflow-hidden border-l-4 border-l-sky-500 bg-white">
               <CardHeader><CardTitle className="text-base">Currency and tax</CardTitle></CardHeader>
               <CardContent className="grid gap-5 md:grid-cols-2">
-                {field("currency", "Currency", "Three-letter code, e.g. PLN or EUR. Every price in both apps is shown in it.", { maxLength: 3, placeholder: "PLN" })}
+                {/* Read-only: the currency follows the salon's country, which comes from its
+                    location. A hand-typed code here used to override it per salon. */}
+                <div className="space-y-1.5">
+                  <Label>Currency</Label>
+                  <Input value={form.currency || "—"} readOnly disabled />
+                  <p className="text-xs text-muted-foreground">
+                    Set automatically from your salon's location. Every price in both apps is shown in it.
+                  </p>
+                </div>
                 {field("taxRate", "Tax rate %", "Applied to sales on receipts.", { type: "number", min: 0, max: 100, step: "0.01", placeholder: "0" })}
               </CardContent>
             </Card>

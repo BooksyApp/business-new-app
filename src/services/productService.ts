@@ -42,7 +42,8 @@ class ProductService {
     return apiClient.post<Product>(`/products/business/${businessId}`, input);
   }
 
-  update(businessId: number, id: number, input: ProductInput): Promise<Product> {
+  /** A partial update is fine: the server keeps fields that are not sent. */
+  update(businessId: number, id: number, input: Partial<ProductInput>): Promise<Product> {
     return apiClient.put<Product>(`/products/${id}/business/${businessId}`, input);
   }
 

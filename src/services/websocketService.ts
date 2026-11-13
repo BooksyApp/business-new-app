@@ -2,13 +2,14 @@ import { WS_BASE_URL } from '@/config/api';
 import { Appointment } from './appointmentService';
 import { Sale } from './saleService';
 import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
+import Stomp, { Client, Subscription } from 'stompjs';
+import { TimeOff } from './timeOffService';
 
 type MessageHandler<T> = (data: T) => void;
 
 class WebSocketService {
   private socket: WebSocket | null = null;
-  private stompClient: any = null;
+  private stompClient: Client | null = null;
   private connected = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
@@ -133,7 +134,7 @@ class WebSocketService {
             
             resolve();
           },
-          (error: any) => {
+          (error: unknown) => {
             clearTimeout(connectionTimeout);
             this.connected = false;
             this.isConnecting = false;
@@ -150,7 +151,7 @@ class WebSocketService {
         );
 
         // Store socket reference for cleanup
-        this.socket = socket as any;
+        this.socket = socket as unknown as WebSocket;
         
         // Monitor socket close through SockJS events (if available)
         // Note: SockJS handles connection lifecycle, STOMP handles protocol
@@ -237,10 +238,10 @@ class WebSocketService {
     // when React cleanup runs mid-handshake (StrictMode, fast navigation).
     if (this.socket) {
       try {
-        const readyState = (this.socket as any).readyState;
+        const readyState = this.socket.readyState;
         // CONNECTING=0, OPEN=1 — close both; CLOSING=2 and CLOSED=3 are already handled
         if (readyState === 0 || readyState === 1) {
-          (this.socket as any).close(1000, manual ? 'Manual disconnect' : 'Cleanup');
+          this.socket.close(1000, manual ? 'Manual disconnect' : 'Cleanup');
         }
       } catch (error) {
         // Ignore — socket may already be gone
@@ -271,7 +272,7 @@ class WebSocketService {
   }
 
   subscribeToAppointments(businessId: number, handler: MessageHandler<Appointment>): () => void {
-    let subscription: any = null;
+    let subscription: Subscription | null = null;
     let unsubscribeCalled = false;
     let connectListener: (() => void) | null = null;
 
@@ -291,8 +292,8 @@ class WebSocketService {
 
       try {
         subscription = this.stompClient.subscribe(
-          `/topic/appointments/${businessId}`,
-          (message: any) => {
+          appointmentsTopic(businessId),
+          (message) => {
             if (unsubscribeCalled) return;
             
             console.log(`📨 Received WebSocket message on /topic/appointments/${businessId}:`, message.body);
@@ -379,7 +380,7 @@ class WebSocketService {
 
     const subscription = this.stompClient.subscribe(
       `/topic/appointments/${businessId}/staff/${staffId}`,
-      (message: any) => {
+      (message) => {
         try {
           const appointment = JSON.parse(message.body);
           handler(appointment);
@@ -403,7 +404,7 @@ class WebSocketService {
 
     const subscription = this.stompClient.subscribe(
       `/topic/sales/${businessId}`,
-      (message: any) => {
+      (message) => {
         try {
           const sale = JSON.parse(message.body);
           handler(sale);
@@ -420,8 +421,8 @@ class WebSocketService {
     };
   }
 
-  subscribeToTimeOffs(businessId: number, handler: MessageHandler<any>): () => void {
-    let subscription: any = null;
+  subscribeToTimeOffs(businessId: number, handler: MessageHandler<TimeOff>): () => void {
+    let subscription: Subscription | null = null;
     let unsubscribeCalled = false;
     let connectListener: (() => void) | null = null;
 
@@ -433,7 +434,7 @@ class WebSocketService {
       try {
         subscription = this.stompClient.subscribe(
           `/topic/time-off/${businessId}`,
-          (message: any) => {
+          (message) => {
             if (unsubscribeCalled) return;
             try {
               handler(JSON.parse(message.body));
@@ -486,5 +487,20 @@ class WebSocketService {
 
 export const websocketService = new WebSocketService();
 
-
-
+/**
+ * Where the open salon's live booking updates come from for the signed-in person. A team
+ * member whose role shows only their own calendar may not subscribe to the whole salon
+ * (the server refuses it), so they listen to their own column instead.
+ */
+function appointmentsTopic(businessId: number): string {
+  try {
+    const b = JSON.parse(localStorage.getItem("currentBusiness") || "{}");
+    const own = !b?.isOwner && Array.isArray(b?.myPermissions) && !b.myPermissions.includes("CALENDAR_ALL");
+    if (own && b?.myStaffId && Number(b.id) === Number(businessId)) {
+      return `/topic/appointments/${businessId}/staff/${b.myStaffId}`;
+    }
+  } catch {
+    // fall through to the salon-wide topic
+  }
+  return `/topic/appointments/${businessId}`;
+}

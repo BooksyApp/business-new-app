@@ -49,6 +49,9 @@ export interface Client {
   zipCode: string | null;
   country: string | null;
   notes: string | null;
+  /** Visit counts the client list returns (the calendar's "regular" badge reads them). */
+  totalVisits?: number;
+  completedAppointments?: number;
   avatarUrl: string | null;
   preferredLanguage: string | null;
   preferredContactMethod: string | null;
@@ -124,7 +127,7 @@ export interface Invitation {
   referralCode: string;
   type: string;
   status: string;
-  appointmentId?: number;
+  appointmentId?: string;
   message?: string;
   expiresAt?: string;
   acceptedAt?: string;
@@ -141,7 +144,7 @@ class InvitationService {
     recipientEmail?: string;
     recipientPhone?: string;
     type: string;
-    appointmentId?: number;
+    appointmentId?: string;
     message?: string;
     expirationDays?: number;
   }): Promise<Invitation> {

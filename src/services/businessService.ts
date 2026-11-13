@@ -10,7 +10,6 @@ export interface BusinessRequest {
   name: string;
   description?: string;
   category?: string;
-  logoUrl?: string;
   /**
    * customer-app #4: the photo customers see for this salon. Until V74 there was no
    * image column at all, so every salon in the customer app showed the same stock shot.
@@ -27,16 +26,6 @@ export interface BusinessRequest {
   maxBookingDaysAhead?: number;
   /** Comma-separated: any of CASH, CARD, ONLINE. */
   acceptedPaymentMethods?: string;
-  /** Booking policy — see booksy-backend V81. Each changes real behaviour. */
-  onlineBookingEnabled?: boolean;
-  minBookingNoticeMinutes?: number;
-  maxBookingDaysAhead?: number;
-  /** Comma-separated: any of CASH, CARD, ONLINE. */
-  acceptedPaymentMethods?: string;
-  /** Branding: a URL, since this system has no file storage. */
-  logoUrl?: string;
-  brandColor?: string;
-  receiptFooter?: string;
   website?: string;
   email?: string;
   phone?: string;
@@ -52,6 +41,8 @@ export interface BusinessRequest {
 }
 
 export interface Business {
+  /** Public URL reference, e.g. "krakow-cuts_482913" (backend V118). */
+  slug?: string;
   /** #12: ISO code from businesses.currency (V17). Drives every price display. */
   currency?: string;
   taxRate?: number;
@@ -89,6 +80,20 @@ export interface Business {
   createdAt: string;
   updatedAt?: string;
   verifiedAt?: string;
+  /** Booking policy (V81) and branding — the API returns them; the pages read them. */
+  onlineBookingEnabled?: boolean;
+  minBookingNoticeMinutes?: number;
+  maxBookingDaysAhead?: number;
+  /** Comma-separated: any of CASH, CARD, ONLINE. */
+  acceptedPaymentMethods?: string;
+  brandColor?: string;
+  receiptFooter?: string;
+  timezone?: string;
+  /** From the account's salon list: what the signed-in person is here. */
+  myRole?: string;
+  isOwner?: boolean;
+  myPermissions?: string[];
+  myStaffId?: number;
 }
 
 export interface BranchRequest {
@@ -136,7 +141,14 @@ class BusinessService {
   }
 
   async updateBusiness(id: number, data: Partial<BusinessRequest>, _accessToken?: string): Promise<Business> {
-    return apiClient.put<Business>(`/businesses/${id}`, data);
+    const updated = await apiClient.put<Business>(`/businesses/${id}`, data);
+    // Every price on every screen reads the currency from this cache (lib/currency). A
+    // location change can move the salon to another country — and so another currency —
+    // so refresh it here, once, rather than in each page that saves the business.
+    if (localStorage.getItem("currentBusinessId") === String(id)) {
+      localStorage.setItem("currentBusiness", JSON.stringify(updated));
+    }
+    return updated;
   }
 
   async createBranch(data: BranchRequest, _accessToken?: string): Promise<Branch> {

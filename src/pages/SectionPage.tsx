@@ -1,5 +1,5 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
-import { useVisibleNavGroups } from "@/components/layout/Sidebar";
+import { useVisibleNavGroups } from "@/components/layout/navigation";
 import { useNavigation } from "@/utils/navigationUtils";
 import { ChevronRight } from "lucide-react";
 import { Navigate, NavLink, useParams } from "react-router-dom";

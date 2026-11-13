@@ -19,8 +19,8 @@ export const useTimeOff = (businessIdParam?: number) => {
     try {
       const data = await timeOffService.getTimeOffsByBusiness(businessId);
       setTimeOffs(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch time offs");
+    } catch (err) {
+      setError((err instanceof Error && err.message) || "Failed to fetch time offs");
       console.error("Error fetching time offs:", err);
     } finally {
       setLoading(false);
@@ -89,8 +89,8 @@ export const useTimeOff = (businessIdParam?: number) => {
       });
       toast.success("Time off created successfully");
       return newTimeOff;
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create time off");
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || "Failed to create time off");
       return null;
     }
   }, []);
@@ -101,8 +101,8 @@ export const useTimeOff = (businessIdParam?: number) => {
       setTimeOffs(prev => prev.map(to => to.id === id ? updated : to));
       toast.success("Time off updated successfully");
       return updated;
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update time off");
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || "Failed to update time off");
       return null;
     }
   }, []);
@@ -114,8 +114,8 @@ export const useTimeOff = (businessIdParam?: number) => {
       setTimeOffs(prev => prev.filter(to => to.id !== id));
       toast.success("Time off deleted successfully");
       return true;
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete time off");
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || "Failed to delete time off");
       return false;
     }
   }, []);
@@ -126,8 +126,8 @@ export const useTimeOff = (businessIdParam?: number) => {
       setTimeOffs(prev => prev.map(to => to.id === id ? approved : to));
       toast.success("Time off approved successfully");
       return approved;
-    } catch (err: any) {
-      toast.error(err.message || "Failed to approve time off");
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || "Failed to approve time off");
       return null;
     }
   }, []);

@@ -17,13 +17,14 @@ export interface Appointment {
   staffName?: string;
   color: string;
   date: Date;
-  apiId?: number; // For API operations
+  apiId?: string; // For API operations
   clientPhone?: string;
   clientEmail?: string;
   notes?: string;
   price?: number;
   // #30: drives which lifecycle actions the calendar modal offers.
   status?: string;
+  clientId?: number;
 }
 
 // Frontend staff type
@@ -77,7 +78,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [websocketStatus, setWebsocketStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('disconnected');
-  const seenAppointmentIdsRef = useRef<Set<number>>(new Set());
+  const seenAppointmentIdsRef = useRef<Set<string>>(new Set());
   const currentDateRef = useRef<Date>(date || new Date());
   const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioWarningLoggedRef = useRef(false);
@@ -88,7 +89,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
 
     const playFallbackBeep = () => {
       try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (!AudioCtx) return;
         if (!fallbackAudioContextRef.current) {
           fallbackAudioContextRef.current = new AudioCtx();
@@ -115,7 +116,9 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
 
     if (!notificationAudioRef.current) {
       // Served app asset for reliable browser playback.
-      notificationAudioRef.current = new Audio('/sounds/manager-booking-alert.mp3');
+      // Under the app's base path (/manage/): from the site root it was a 404, so the
+      // new-booking alert never played.
+      notificationAudioRef.current = new Audio(`${import.meta.env.BASE_URL}sounds/manager-booking-alert.mp3`);
       notificationAudioRef.current.preload = 'auto';
     }
 
@@ -155,19 +158,19 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
 
       // Convert staff
       const convertedStaff = staffData.map(convertStaff);
-      seenAppointmentIdsRef.current = new Set(convertedAppointments.map((apt) => apt.apiId).filter((id): id is number => typeof id === 'number'));
+      seenAppointmentIdsRef.current = new Set(convertedAppointments.map((apt) => apt.apiId).filter((id): id is string => typeof id === 'string'));
 
       setAppointments(convertedAppointments);
       setStaff(convertedStaff);
       
       console.log(`✅ Loaded ${convertedAppointments.length} appointments for ${format(targetDate, 'yyyy-MM-dd')}`);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Failed to load appointments';
+    } catch (err) {
+      const errorMessage = (err instanceof Error && err.message) || 'Failed to load appointments';
       console.error('Failed to load appointments:', err);
       setError(errorMessage);
       
       // Only show toast if it's a critical error (not just empty results)
-      if (err.response?.status !== 404 && !errorMessage.includes('404')) {
+      if ((err as { response?: { status?: number } }).response?.status !== 404 && !errorMessage.includes('404')) {
         toast.error(errorMessage);
       }
       
@@ -247,8 +250,8 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
           
           const appointmentDate = parse(apiAppt.appointmentDate, 'yyyy-MM-dd', new Date());
           const converted = convertAppointment(apiAppt, appointmentDate);
-          const isNewAppointment = typeof apiAppt.id === 'number' && !seenAppointmentIdsRef.current.has(apiAppt.id);
-          if (typeof apiAppt.id === 'number') {
+          const isNewAppointment = typeof apiAppt.id === 'string' && !seenAppointmentIdsRef.current.has(apiAppt.id);
+          if (typeof apiAppt.id === 'string') {
             seenAppointmentIdsRef.current.add(apiAppt.id);
           }
 
@@ -275,9 +278,9 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
         
         console.log(`✅ [useAppointments] WebSocket subscription set up for business ${businessId} on ${currentDateStr}`);
         setWebsocketStatus('connected');
-      } catch (err: any) {
+      } catch (err) {
         console.error('❌ [useAppointments] WebSocket connection failed:', err);
-        console.error('Error stack:', err.stack);
+        console.error('Error stack:', (err as Error).stack);
         console.error('Error details:', JSON.stringify(err, null, 2));
         setWebsocketStatus('error');
         // Don't show error toast - WebSocket is optional for real-time updates
@@ -340,13 +343,13 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
       // shows a single summary toast, so per-item toasts are suppressed here.
       if (!opts?.silent) toast.success('Appointment created successfully');
       return converted;
-    } catch (err: any) {
-      if (!opts?.silent) toast.error(err.message || 'Failed to create appointment');
+    } catch (err) {
+      if (!opts?.silent) toast.error((err instanceof Error && err.message) || 'Failed to create appointment');
       throw err;
     }
   }, [businessId]);
 
-  const updateAppointment = useCallback(async (id: number, request: {
+  const updateAppointment = useCallback(async (id: string, request: {
     staffId: number;
     serviceId: number;
     appointmentDate: string;
@@ -368,19 +371,19 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
       setAppointments(prev => prev.map(apt => apt.apiId === id ? converted : apt));
       toast.success('Appointment updated successfully');
       return converted;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update appointment');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to update appointment');
       throw err;
     }
   }, [businessId]);
 
-  const deleteAppointment = useCallback(async (id: number) => {
+  const deleteAppointment = useCallback(async (id: string) => {
     try {
       await appointmentService.deleteAppointment(id);
       setAppointments(prev => prev.filter(apt => apt.apiId !== id));
       toast.success('Appointment cancelled successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete appointment');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to delete appointment');
       throw err;
     }
   }, []);

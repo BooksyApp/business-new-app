@@ -33,6 +33,8 @@ export interface CreateStaffRequest {
   position?: string;
   serviceIds?: number[];
   inviteAndCreateAccount?: boolean;
+  /** "/api/public/uploads/<id>.jpg" from uploadImage(…, "STAFF_AVATAR"). */
+  avatarUrl?: string;
   // staff-service schedule: { MONDAY: ["09:00","17:00"], … } — enabled days only.
   schedule?: Record<string, string[]>;
 }
@@ -44,6 +46,8 @@ export interface UpdateStaffRequest {
   position?: string;
   serviceIds?: number[];
   isActive?: boolean;
+  /** "" removes the photo. */
+  avatarUrl?: string;
   // staff-service schedule: { MONDAY: ["09:00","17:00"], … }. Update replaces all days.
   schedule?: Record<string, string[]>;
 }
@@ -72,6 +76,11 @@ export const staffService = {
   // #13/#293: the "Permission Level" picker in Add/Edit Staff was decorative — the
   // value never reached the backend (there's no such field on the create/update DTO).
   // Role has its own dedicated endpoint instead.
+  /** Email (or re-email) the link that lets this team member set up their own sign-in. */
+  async sendInvite(id: number): Promise<{ email: string; sent: boolean; expiresAt: string }> {
+    return apiClient.post(`/staff/${id}/invite`, {});
+  },
+
   async setRole(id: number, role: string): Promise<Staff> {
     return apiClient.put<Staff>(`/staff/${id}/role`, { role });
   },

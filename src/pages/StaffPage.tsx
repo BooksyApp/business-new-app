@@ -51,7 +51,8 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { useCommissions, useCommissionRules } from "@/hooks/useCommissions";
 import { usePayments } from "@/hooks/usePayments";
-import { CommissionCategory, CommissionType } from "@/services/commissionService";
+import { CommissionCategory, CommissionType, type CommissionRule } from "@/services/commissionService";
+import type { Staff } from "@/services/staffService";
 import { PaymentMethod } from "@/services/paymentService";
 import {
   Dialog,
@@ -300,8 +301,8 @@ export default function StaffPage() {
   const [isCommissionRuleDialogOpen, setIsCommissionRuleDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<any>(null);
-  const [editingCommissionRule, setEditingCommissionRule] = useState<any>(null);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [editingCommissionRule, setEditingCommissionRule] = useState<CommissionRule | null>(null);
   const [editStaffForm, setEditStaffForm] = useState({
     name: "",
     phone: "",
@@ -404,6 +405,7 @@ export default function StaffPage() {
     } else {
       setWorkingHoursForm({});
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- getHoursForDay is derived from businessHours, which is listed
   }, [selectedStaff, businessHours]);
 
   // Get business hours for the selected date
@@ -585,8 +587,8 @@ export default function StaffPage() {
       await Promise.all(updatePromises);
       await refreshServices();
       toast.success("Services updated successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save services");
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || "Failed to save services");
     }
   };
 
@@ -623,8 +625,8 @@ export default function StaffPage() {
         setSelectedStaffId(currentId);
       }, 100);
       toast.success(successMessage);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save working hours");
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || "Failed to save working hours");
     }
   };
 
@@ -777,12 +779,12 @@ export default function StaffPage() {
     <AppLayout>
       <div className="h-full flex flex-col bg-white">
         {/* Top Navigation Tabs */}
-        <div className="border-b border-gray-200 bg-white px-6">
+        <div className="border-b border-gray-200 bg-white px-3 sm:px-6">
           <div className="flex items-center justify-between">
-            <div className="flex gap-6">
+            <div className="flex gap-2 overflow-x-auto sm:gap-6">
               <button
                 onClick={() => setActiveTab("staff-members")}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === "staff-members"
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -792,7 +794,7 @@ export default function StaffPage() {
               </button>
               <button
                 onClick={() => setActiveTab("shifts")}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === "shifts"
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -805,7 +807,7 @@ export default function StaffPage() {
                   depend on — chairs, washbasins, lasers. */}
               <button
                 onClick={() => setActiveTab("resources")}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === "resources"
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -815,7 +817,7 @@ export default function StaffPage() {
               </button>
               <button
                 onClick={() => setActiveTab("commissions")}
-                className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                   activeTab === "commissions"
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1647,9 +1649,9 @@ export default function StaffPage() {
 
         {/* Commissions View */}
         {activeTab === "commissions" && (
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left Sidebar */}
-            <div className="w-80 bg-gray-50 border-r border-gray-200 flex flex-col">
+          <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+            {/* Left Sidebar — on phones it sits above the details instead of beside them */}
+            <div className="w-full shrink-0 bg-gray-50 border-b border-gray-200 flex flex-col md:w-80 md:border-b-0 md:border-r">
               <div className="p-4 space-y-4">
                 {/* Select Staffer */}
                 <div className="space-y-2">
@@ -1690,7 +1692,7 @@ export default function StaffPage() {
                   <button
                     onClick={() => setSelectedCommissionCategory("services")}
                     className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory === "services"
+                      selectedCommissionCategory.startsWith("services")
                         ? "bg-white text-gray-900 shadow-sm"
                         : "text-gray-700 hover:bg-gray-100"
                     }`}
@@ -1699,7 +1701,9 @@ export default function StaffPage() {
                   </button>
 
                   {/* Services Sub-categories */}
-                  {selectedCommissionCategory === "services" && (
+                  {/* Kept open while a sub-category is picked: it closed on the click, so
+                      "Not categorized" vanished the moment it was chosen. */}
+                  {selectedCommissionCategory.startsWith("services") && (
                     <div className="ml-4 space-y-1">
                       <button
                         onClick={() =>
@@ -1977,9 +1981,9 @@ export default function StaffPage() {
 
         {/* Staff Members View */}
         {activeTab === "staff-members" && (
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left Sidebar */}
-            <div className="w-80 bg-gray-50 border-r border-gray-200 flex flex-col">
+          <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+            {/* Left Sidebar — on phones it sits above the details instead of beside them */}
+            <div className="w-full shrink-0 bg-gray-50 border-b border-gray-200 flex flex-col md:w-80 md:border-b-0 md:border-r">
             {/* Search Bar */}
             <div className="p-4 border-b border-gray-200">
               <div className="relative">
@@ -2140,7 +2144,7 @@ export default function StaffPage() {
                   <div className="flex gap-6">
                     <button
                       onClick={() => setActiveContentTab("services")}
-                      className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                         activeContentTab === "services"
                           ? "border-gray-900 text-gray-900"
                           : "border-transparent text-gray-500 hover:text-gray-700"
@@ -2150,7 +2154,7 @@ export default function StaffPage() {
                     </button>
                     <button
                       onClick={() => setActiveContentTab("working-hours")}
-                      className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                         activeContentTab === "working-hours"
                           ? "border-gray-900 text-gray-900"
                           : "border-transparent text-gray-500 hover:text-gray-700"
@@ -2790,9 +2794,7 @@ export default function StaffPage() {
                   timeOffForm.endDate,
                   startTime,
                   endTime,
-                  timeOffForm.isFullDay,
-                  businessStartHour,
-                  businessEndHour
+                  timeOffForm.isFullDay
                 );
                 
                 if (hasConflict) {
@@ -2814,7 +2816,6 @@ export default function StaffPage() {
                     recurrenceEndDate: timeOffForm.isRecurring ? timeOffForm.recurrenceEndDate : null,
                     reason: timeOffForm.reason,
                     isApproved: timeOffForm.isApproved,
-                    needsManagerApproval: !timeOffForm.isApproved,
                   });
                   
                   toast.success("Time off created successfully");
@@ -2832,8 +2833,8 @@ export default function StaffPage() {
                     reason: "",
                     isApproved: false,
                   });
-                } catch (error: any) {
-                  toast.error(error?.message || "Failed to create time off");
+                } catch (error) {
+                  toast.error((error instanceof Error && error.message) || "Failed to create time off");
                 }
               }}
             >
@@ -3044,7 +3045,7 @@ export default function StaffPage() {
                     }
                     
                     // Prepare rule data (remove scope as it's not part of the API)
-                    const ruleData: any = {
+                    const ruleData: Omit<CommissionRule, "id"> = {
                       category: commissionRuleForm.category,
                       type: commissionRuleForm.type,
                       value: commissionRuleForm.value,
@@ -3286,8 +3287,8 @@ export default function StaffPage() {
                       toast.success("Staff member updated successfully");
                       setIsEditStaffDialogOpen(false);
                       refreshStaff();
-                    } catch (error: any) {
-                      toast.error(error?.message || "Failed to update staff member");
+                    } catch (error) {
+                      toast.error((error instanceof Error && error.message) || "Failed to update staff member");
                     }
                   }}
                   size="sm"

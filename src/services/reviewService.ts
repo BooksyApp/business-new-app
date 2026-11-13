@@ -10,7 +10,7 @@ export interface Review {
   businessId: number;
   userId: number | null;
   staffId: number | null;
-  appointmentId: number | null;
+  appointmentId: string | null;
   rating: number;
   comment: string | null;
   createdAt: string;
@@ -19,6 +19,12 @@ export interface Review {
   /** The salon's public answer, and when it was posted. Null until they reply. */
   reply: string | null;
   repliedAt: string | null;
+  serviceName?: string | null;
+  staffName?: string | null;
+  /** The stylist's photo ("/api/public/uploads/..."), render via assetUrl(). */
+  staffAvatarUrl?: string | null;
+  /** Photos the customer attached, at most three. */
+  photos?: string[];
 }
 
 export interface ReviewRequestPreview {

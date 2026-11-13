@@ -19,7 +19,7 @@ import { refundService } from "@/services/moneyService";
 interface RefundDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  bookingId: number;
+  bookingId: string;
   /** What was paid. Used for the full-refund default and to stop an over-refund. */
   paidAmount: number;
   clientName?: string | null;
@@ -70,10 +70,10 @@ export function RefundDialog({
       onRefunded?.(Number(result.amount ?? value));
       onOpenChange(false);
       setPartial(false); setAmount(""); setReason("");
-    } catch (e: any) {
+    } catch (e) {
       // A provider failure leaves the booking alone on purpose — the books must not say
       // refunded when the money did not move.
-      toast.error(e?.message ?? "The refund did not go through. Nothing was changed.");
+      toast.error(e instanceof Error ? e.message : "The refund did not go through. Nothing was changed.");
     } finally {
       setBusy(false);
     }

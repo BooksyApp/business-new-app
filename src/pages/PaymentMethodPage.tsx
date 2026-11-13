@@ -3,7 +3,7 @@ import { currencySymbol } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { businessService } from "@/services/businessService";
-import { getCurrentBusinessId } from "@/config/api";
+import { assetUrl, getCurrentBusinessId } from "@/config/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +46,10 @@ interface PaymentMethodPageProps {
    * due, which is what a deposit is.
    */
   depositPaid?: number;
+  /** Paid online from a gift card at booking time; sent as a PREPAID tender. */
+  prepaidOnline?: number;
+  /** The promo code the customer booked with, and what it takes off. */
+  bookedPromo?: { code: string; discount: number } | null;
   selectedClient?: { id: string; name: string; avatar?: string } | null;
   selectedStaff?: { id: number; name: string; avatarUrl?: string; position?: string } | null;
   // #15: the full roster this sale's staff can be picked from, and a callback so the
@@ -82,6 +86,8 @@ export default function PaymentMethodPage({
   orderItems = [],
   subtotal = 80.00,
   depositPaid = 0,
+  prepaidOnline = 0,
+  bookedPromo = null,
   selectedClient: propSelectedClient = null,
   selectedStaff: propSelectedStaff = null,
   staffList = [],
@@ -108,12 +114,26 @@ export default function PaymentMethodPage({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
   /** Never negative and never more than the bill: a deposit larger than the sale would
       otherwise ask the cashier to hand money back through the "change" field. */
-  const depositCredit = Math.max(0, Math.min(depositPaid ?? 0, subtotal));
-  const [paymentAmount, setPaymentAmount] = useState(Math.max(0, subtotal - Math.max(0, depositPaid)));
+  const depositOnly = Math.max(0, Math.min(depositPaid ?? 0, subtotal));
+  // Paid online from a gift card. Comes off what is due like a deposit, but unlike one the
+  // server does not subtract it — it is sent as a PREPAID tender (see handleConfirm).
+  const prepaidCredit = Math.max(0, Math.min(prepaidOnline ?? 0, subtotal - depositOnly));
+  const depositCredit = depositOnly + prepaidCredit;
+  const [paymentAmount, setPaymentAmount] = useState(Math.max(0, subtotal - depositCredit));
   const [showPaymentAmountDialog, setShowPaymentAmountDialog] = useState(false);
   const [tempPaymentAmount, setTempPaymentAmount] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountPercent, setDiscountPercent] = useState(0);
+  // The customer was shown this price when they booked: start the till from it instead
+  // of the full price. The server applies the same code, so the two totals agree.
+  useEffect(() => {
+    if (bookedPromo && bookedPromo.discount > 0) {
+      setDiscountAmount(bookedPromo.discount);
+      setDiscountPercent(subtotal > 0 ? (bookedPromo.discount / subtotal) * 100 : 0);
+      setPaymentAmount((prev) => Math.max(0, prev - bookedPromo.discount));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookedPromo?.code, bookedPromo?.discount]);
   const [showDiscountDialog, setShowDiscountDialog] = useState(false);
   const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
   const [discountValue, setDiscountValue] = useState("");
@@ -327,6 +347,25 @@ export default function PaymentMethodPage({
       if (selectedPaymentMethod === "split") {
         paymentData.splitCashAmount = parseFloat(splitCashAmount) || 0;
         paymentData.splitCardAmount = parseFloat(splitCardAmount) || 0;
+      }
+
+      // Paid online at booking: always on the bill as PREPAID, with whatever the cashier
+      // took for the rest — otherwise the server refuses the sale as a double charge.
+      if (prepaidCredit > 0) {
+        const rest: SalePayment[] = paymentData.payments
+          ? paymentData.payments
+          : selectedPaymentMethod === "split"
+            ? [
+                { method: "CASH", amount: paymentData.splitCashAmount ?? 0 },
+                { method: "CARD_TERMINAL", amount: paymentData.splitCardAmount ?? 0 },
+              ]
+            : selectedPaymentMethod === "gift-card"
+              ? [{ method: "GIFT_CARD", amount: total, giftCardCode: paymentData.giftCardCode }]
+              : [{ method: selectedPaymentMethod === "card" ? "CARD_TERMINAL" : "CASH", amount: total }];
+        paymentData.payments = [
+          { method: "PREPAID", amount: Number(prepaidCredit.toFixed(2)) },
+          ...rest.filter((p) => p.amount > 0),
+        ];
       }
 
       onConfirm(paymentData);
@@ -588,7 +627,7 @@ export default function PaymentMethodPage({
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
                     {selectedStaff.avatarUrl ? (
                       <img
-                        src={selectedStaff.avatarUrl}
+                        src={assetUrl(selectedStaff.avatarUrl)}
                         alt={selectedStaff.name}
                         className="w-full h-full object-cover"
                       />
@@ -704,7 +743,7 @@ export default function PaymentMethodPage({
                 a pricing error and gets "corrected" by the cashier. */}
             {depositCredit > 0 ? (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Deposit already paid</span>
+                <span className="text-gray-600">{prepaidCredit > 0 ? "Already paid (deposit / gift card online)" : "Deposit already paid"}</span>
                 <span className="font-medium text-emerald-700">
                   -{depositCredit.toFixed(2)} {currencySymbol()}
                 </span>

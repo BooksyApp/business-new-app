@@ -3,7 +3,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { useNavigation } from "@/utils/navigationUtils";
 import { useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Megaphone, Percent, Ticket } from "lucide-react";
+import { Percent, Ticket } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,7 @@ const marketingTools = [
 ];
 
 export default function MarketingPage() {
+  const [tab, setTab] = useState("promos");
   const flags = useFeatureFlags();
   const navigate = useNavigate();
   const { getPath } = useNavigation();
@@ -276,7 +277,12 @@ export default function MarketingPage() {
         title="Marketing"
         subtitle="Discount codes and messages to clients"
         actions={
-          <Button className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all">
+          // It had no handler: clicking it did nothing. It opens the Campaigns tab, where
+          // the form is.
+          <Button
+            onClick={() => setTab("campaigns")}
+            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all"
+          >
             <Plus size={16} />
             New Campaign
           </Button>
@@ -300,7 +306,7 @@ export default function MarketingPage() {
         {/* Two things live here, and they are different jobs: a code that discounts a
             bill, and a message sent to clients. Gift cards moved to the till, where they
             are actually sold. */}
-        <Tabs defaultValue="promos">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             <TabsTrigger value="promos" className="gap-2">
               <Ticket className="h-4 w-4" />

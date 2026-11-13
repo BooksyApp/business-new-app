@@ -17,34 +17,35 @@ import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import { quickSaleService, type QuickSaleItem as QuickSaleItemAPI } from "@/services/quickSaleService";
 import { membershipService, type Membership } from "@/services/membershipService";
-import { appointmentService } from "@/services/appointmentService";
+import { appointmentService, type Appointment } from "@/services/appointmentService";
+import { promoService } from "@/services/promoService";
+import { productService, type Product } from "@/services/productService";
 import { clientService, type ClientWithStats } from "@/services/clientService";
 import { categoryService, type Category } from "@/services/categoryService";
 import { websocketService } from "@/services/websocketService";
-import { saleService, type CreateSaleRequest } from "@/services/saleService";
+import { saleService, type CreateSaleRequest, type Sale } from "@/services/saleService";
 import { paymentConfirmationService, type PaymentConfirmationRequest } from "@/services/paymentConfirmationService";
+
+// Open and not yet paid, on any day. The settle list adds "today"; "Take payment" from the
+// calendar can be for any day.
+const isUnsettled = (apt: Appointment): boolean => {
+  // payment_status had no default and nothing set it on create, so every ordinary
+  // booking came back null and this list was permanently empty (fixed in V77, but a
+  // null is still the honest "nobody has said this is paid" and belongs here).
+  // PENDING_DEPOSIT is money owed too. PARTIALLY_REFUNDED was in the old condition
+  // and is not a value chk_payment_status allows, so it could never have matched.
+  const unpaid =
+    apt.paymentStatus == null ||
+    apt.paymentStatus === 'PENDING' ||
+    apt.paymentStatus === 'PENDING_DEPOSIT';
+  return apt.status !== 'CANCELLED' && apt.status !== 'NO_SHOW' && unpaid;
+};
 
 // Helper function to filter and sort unsettled appointments
 const filterAndSortUnsettledAppointments = (appointments: Appointment[]): Appointment[] => {
   const today = format(new Date(), 'yyyy-MM-dd');
   return appointments
-    .filter(apt => {
-      // Check if appointment is for today
-      const aptDate = format(new Date(apt.appointmentDate), 'yyyy-MM-dd');
-      // payment_status had no default and nothing set it on create, so every ordinary
-      // booking came back null and this list was permanently empty (fixed in V77, but a
-      // null is still the honest "nobody has said this is paid" and belongs here).
-      // PENDING_DEPOSIT is money owed too. PARTIALLY_REFUNDED was in the old condition
-      // and is not a value chk_payment_status allows, so it could never have matched.
-      const unpaid =
-        apt.paymentStatus == null ||
-        apt.paymentStatus === 'PENDING' ||
-        apt.paymentStatus === 'PENDING_DEPOSIT';
-      return aptDate === today &&
-        apt.status !== 'CANCELLED' &&
-        apt.status !== 'NO_SHOW' &&
-        unpaid;
-    })
+    .filter(apt => format(new Date(apt.appointmentDate), 'yyyy-MM-dd') === today && isUnsettled(apt))
     .sort((a, b) => {
       // Compare start times (HH:mm format)
       const timeA = a.startTime.split(':').map(Number);
@@ -98,6 +99,8 @@ interface Transaction {
   total: string;
   paidDate: string;
   sale: Sale; // Keep reference to original sale
+  /** The sale's date and time, for sorting newest first. */
+  isoDate?: string;
 }
 
 // Quick sale item type for display
@@ -109,6 +112,21 @@ interface QuickSaleItem {
   color: string;
   type: 'service' | 'combo';
   serviceId?: number;
+}
+
+/** A line in the basket: a service, combo, product, membership, gift card or booking. */
+interface BasketItem {
+  id: string;
+  basketId?: string;
+  name: string;
+  price: string;
+  duration?: string;
+  type?: string;
+  serviceId?: number;
+  productId?: number;
+  membershipId?: number;
+  giftCardAmount?: number;
+  appointmentId?: string;
 }
 
 /**
@@ -150,13 +168,16 @@ export default function SalesPage() {
     // Memberships are off until the plans and their billing are signed off.
     // { id: "memberships", name: "MEMBERSHIPS" },
     { id: "gift-cards", name: "GIFT CARDS" },
-    // Disabled sections from products to timepass
-    // { id: "products", name: "PRODUCTS" },
+    // Retail from Inventory. It was commented out, so a product could be stocked but
+    // never sold, while Inventory promised that a sale takes it off the shelf.
+    { id: "products", name: "PRODUCTS" },
+    // Disabled sections from own amount to timepass
     // { id: "own-amount", name: "OWN AMOUNT" },
     // { id: "packages", name: "PACKAGES" },
     // { id: "time-passes", name: "TIME PASSES" },
   ];
-  const [basket, setBasket] = useState<any[]>([]);
+  const [basket, setBasket] = useState<BasketItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientWithStats | null>(null);
   const [periodFilter, setPeriodFilter] = useState("Days");
   const [searchQuery, setSearchQuery] = useState("");
@@ -181,12 +202,14 @@ export default function SalesPage() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [appointmentsError, setAppointmentsError] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   // Arriving from the calendar's "Take payment": open on the settle list with this
   // booking already picked, instead of making the cashier find it again.
   const location = useLocation();
-  const incomingAppointmentId = (location.state as { appointmentId?: number } | null)?.appointmentId;
+  const incomingAppointmentId = (location.state as { appointmentId?: string } | null)?.appointmentId;
   const [selectedAppointmentStaffId, setSelectedAppointmentStaffId] = useState<number | null>(null);
+  // The promo code the selected booking was made with, priced by the server.
+  const [bookedPromo, setBookedPromo] = useState<{ code: string; discount: number } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [serviceSearchQuery, setServiceSearchQuery] = useState("");
@@ -308,6 +331,32 @@ export default function SalesPage() {
     if (incomingAppointmentId) setActiveCategory("to-be-settled");
   }, [incomingAppointmentId]);
 
+  // Fresh each time the shelf is opened, so the stock shown follows the last sale.
+  useEffect(() => {
+    if (!businessId || activeCategory !== "products") return;
+    productService.list(businessId).then(setProducts).catch(() => setProducts([]));
+  }, [businessId, activeCategory]);
+
+  // Price the selected booking's promo code once it is in the basket.
+  useEffect(() => {
+    const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
+    const code = appt?.promoCode;
+    if (!businessId || !code) {
+      setBookedPromo(null);
+      return;
+    }
+    let alive = true;
+    promoService
+      .validate(businessId, code, Number(appt?.price ?? 0))
+      .then((r) => alive && setBookedPromo({ code: r.code, discount: Number(r.discount) }))
+      // A code that no longer validates is the server's to refuse at payment; do not
+      // pretend it applies here.
+      .catch(() => alive && setBookedPromo(null));
+    return () => {
+      alive = false;
+    };
+  }, [businessId, selectedAppointmentId, todayAppointments]);
+
   // Load today's appointments when "to-be-settled" category is active
   useEffect(() => {
     const loadTodayAppointments = async () => {
@@ -336,7 +385,21 @@ export default function SalesPage() {
         // Came here from the calendar to settle one specific booking: put it in the
         // basket now, so "Take payment" lands on a ready checkout rather than a list.
         if (incomingAppointmentId) {
-          const target = unsettledAppointments.find((a) => a.id === incomingAppointmentId);
+          let target = unsettledAppointments.find((a) => a.id === incomingAppointmentId);
+          // The list above is today's only. A booking from another day (paying ahead, or
+          // settling yesterday's) used to open an empty basket with no word why.
+          if (!target) {
+            const fetched = await appointmentService.getAppointmentById(incomingAppointmentId).catch(() => null);
+            const unsettled = fetched && isUnsettled(fetched) ? fetched : null;
+            if (unsettled) {
+              const service = services.find((s) => s.id === unsettled.serviceId);
+              target = service && !unsettled.serviceName ? { ...unsettled, serviceName: service.name } : unsettled;
+              const extra = target;
+              setTodayAppointments((prev) => (prev.some((a) => a.id === extra.id) ? prev : [extra, ...prev]));
+            } else {
+              toast.error(fetched ? "This booking is already settled or cancelled." : "Could not load that booking.");
+            }
+          }
           if (target) {
             setBasket((prev) =>
               prev.some((b) => b.appointmentId === target.id)
@@ -350,7 +413,7 @@ export default function SalesPage() {
                       price: String(target.price ?? 0),
                       type: "service",
                       serviceId: target.serviceId,
-                      duration: `${target.startTime} - ${target.endTime}`,
+                      duration: `${target.startTime?.slice(0, 5)} - ${target.endTime?.slice(0, 5)}`,
                     },
                   ]
             );
@@ -380,7 +443,9 @@ export default function SalesPage() {
     };
 
     loadTodayAppointments();
-  }, [businessId, activeCategory, services]);
+    // clients: a booking opened from the calendar is matched to its client here — if the
+    // client list arrived after the bookings, nobody was preselected.
+  }, [businessId, activeCategory, services, clients, incomingAppointmentId]);
 
   // WebSocket subscription for real-time appointment updates
   useEffect(() => {
@@ -415,17 +480,12 @@ export default function SalesPage() {
             // Check if appointment matches the unsettled criteria
             // Same rule as filterAndSortUnsettledAppointments above — the two drifting
             // apart is how a live-updated row survives a reload that then drops it.
-            const isUnsettled =
-              enrichedAppointment.status !== 'CANCELLED' &&
-              enrichedAppointment.status !== 'NO_SHOW' &&
-              (enrichedAppointment.paymentStatus == null ||
-                enrichedAppointment.paymentStatus === 'PENDING' ||
-                enrichedAppointment.paymentStatus === 'PENDING_DEPOSIT');
+            const stillOpen = isUnsettled(enrichedAppointment);
 
             // Find if appointment already exists in the list
             const existingIndex = prevAppointments.findIndex(apt => apt.id === enrichedAppointment.id);
 
-            if (isUnsettled) {
+            if (stillOpen) {
               // If it matches criteria, add or update it
               if (existingIndex >= 0) {
                 // Update existing appointment
@@ -455,7 +515,9 @@ export default function SalesPage() {
         unsubscribe();
       }
     };
-  }, [businessId, activeCategory]);
+    // services: live bookings are enriched from it; subscribed before it loaded, every
+    // update was read against an empty list.
+  }, [businessId, activeCategory, services]);
 
   // Load categories when services tab is active
   useEffect(() => {
@@ -487,7 +549,7 @@ export default function SalesPage() {
         
         // Calculate date range based on period filter
         let startDate: Date;
-        let endDate: Date = new Date();
+        const endDate: Date = new Date();
         
         if (periodFilter === "Days") {
           // Last 7 days
@@ -652,7 +714,9 @@ export default function SalesPage() {
         type: (service.serviceType === 'COMBO' ? 'combo' : 'service') as 'service' | 'combo',
         serviceId: service.id,
       }));
-  }, [services]);
+    // offers: the tile price includes a running offer; without it the price stayed undiscounted
+    // when the offers loaded after the services.
+  }, [services, offers]);
 
   // Initialize selected items when opening edit dialog
   useEffect(() => {
@@ -709,8 +773,12 @@ export default function SalesPage() {
     setBasket([...basket, { ...item, basketId: Date.now().toString() }]);
   };
 
+  // Not every line gets a basketId (products, gift cards and a booking brought from the
+  // calendar are added with their own id), so one key is used everywhere: removing one of
+  // those used to remove all of them, and their checkout coverage was never found.
+  const lineKey = (item: { basketId?: string; id?: string }) => item.basketId ?? item.id;
   const removeFromBasket = (basketId: string) => {
-    setBasket(basket.filter((item) => item.basketId !== basketId));
+    setBasket(basket.filter((item) => lineKey(item) !== basketId));
   };
 
   const clearBasket = () => {
@@ -744,7 +812,7 @@ export default function SalesPage() {
     const orderItems = basket.map(item => {
       const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
       return {
-        id: item.basketId,
+        id: lineKey(item),
         name: item.name,
         quantity: 1,
         price: isNaN(raw) ? 0 : raw,
@@ -763,6 +831,12 @@ export default function SalesPage() {
           if (!selectedAppointmentId) return 0;
           const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
           return appt?.depositPaid ? Number(appt.depositAmount ?? 0) : 0;
+        })()}
+        bookedPromo={bookedPromo}
+        prepaidOnline={(() => {
+          if (!selectedAppointmentId) return 0;
+          const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
+          return Number((appt as { prepaidAmount?: number } | undefined)?.prepaidAmount ?? 0);
         })()}
         // The client object, not its name: every benefit at the till — membership,
         // package, points, the stamp card — is keyed by client id, and this was passing
@@ -806,13 +880,21 @@ export default function SalesPage() {
                       ? 'MEMBERSHIP'
                       : item.type === 'gift-card'
                         ? 'GIFT_CARD'
-                        : 'SERVICE',
+                        : item.type === 'product'
+                          ? 'PRODUCT'
+                          : 'SERVICE',
+                // A product line is priced and taken off the shelf by the server.
+                productId: item.productId,
                 quantity: 1,
                 unitPrice: price,
                 duration: item.duration,
                 // Which benefit covers this line, when one does. Set per line so a basket
                 // can mix a service that is free on the membership with one that is paid.
-                coveredBy: paymentData.coverage?.[item.id],
+                // Keyed the way the checkout screen keys it (orderItems use basketId). Looking it
+                // up by item.id found nothing, so a line marked "Free (earned)", a membership or
+                // a package went to the server as a normal paid line: the client was charged
+                // and the reward stayed unspent.
+                coveredBy: paymentData.coverage?.[lineKey(item)],
                 membershipId: item.membershipId,
                 giftCardAmount: item.giftCardAmount,
               };
@@ -847,6 +929,7 @@ export default function SalesPage() {
               splitCashAmount: paymentData.splitCashAmount,
               splitCardAmount: paymentData.splitCardAmount,
               appointmentId: selectedAppointmentId || undefined,
+              promoCode: bookedPromo?.code,
             };
 
             // Confirm payment (creates sale, calculates commissions, updates appointment)
@@ -854,14 +937,16 @@ export default function SalesPage() {
 
             // Success
             toast.success('Payment processed successfully');
+            // The shelf just changed; show what is left, not what was there before the sale.
+            if (businessId) productService.list(businessId).then(setProducts).catch(() => {});
             setShowPaymentMethod(false);
             setBasket([]);
             setSelectedClient(null);
             setSelectedAppointmentId(null);
             setSelectedAppointmentStaffId(null);
-          } catch (error: any) {
+          } catch (error) {
             console.error('Failed to process payment:', error);
-            toast.error(error.message || 'Failed to process payment. Please try again.');
+            toast.error((error instanceof Error && error.message) || 'Failed to process payment. Please try again.');
           }
         }}
         onCancel={() => setShowPaymentMethod(false)}
@@ -909,26 +994,18 @@ export default function SalesPage() {
 
         {/* Main Content Area */}
         {activeTab === "NEW SALES" ? (
-          <div className="flex flex-1" style={{ minHeight: 0, width: '100%' }}>
+          // Phone: one column that scrolls (categories as a swipeable row, then items, then
+          // the basket). It used to keep three fixed desktop columns, which squeezed the
+          // items to a sliver and pushed the basket and "Select payment method" off screen.
+          <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-visible" style={{ minHeight: 0, width: '100%' }}>
             {/* Left Sidebar */}
-            <div 
-              className="border-r-2 border-gray-300 bg-white overflow-y-auto"
-              style={{ 
-                width: '256px',
-                minWidth: '256px',
-                maxWidth: '256px',
-                flexShrink: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%'
-              }}
-            >
-              <div className="p-4 space-y-1">
+            <div className="flex shrink-0 flex-col border-b border-gray-200 bg-white md:h-full md:w-64 md:overflow-y-auto md:border-b-0 md:border-r-2 md:border-gray-300">
+              <div className="flex gap-1 overflow-x-auto p-2 md:block md:space-y-1 md:p-4">
                 {sidebarCategories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => setActiveCategory(category.id)}
-                    className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors relative ${
+                    className={`shrink-0 whitespace-nowrap text-left px-4 py-2.5 text-sm font-medium transition-colors relative md:w-full ${
                       activeCategory === category.id
                         ? "text-gray-900 bg-gray-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
@@ -944,7 +1021,7 @@ export default function SalesPage() {
             </div>
 
             {/* Main Content - Category Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 p-4 md:overflow-y-auto md:p-6">
               {activeCategory === "quick-sale" && (
                 <>
                   <div className="flex items-center justify-between mb-4">
@@ -1247,6 +1324,47 @@ export default function SalesPage() {
                 </>
               )}
 
+              {activeCategory === "products" && (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">PRODUCTS</h2>
+                  </div>
+                  {products.length === 0 ? (
+                    <p className="text-sm text-gray-500">No products yet. Add them under Catalogue › Inventory.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {products.map((p) => {
+                        const out = p.quantityOnHand <= 0;
+                        return (
+                          <button
+                            key={p.id}
+                            disabled={out}
+                            onClick={() =>
+                              setBasket((b) => [
+                                ...b,
+                                {
+                                  id: `product-${p.id}-${Date.now()}`,
+                                  name: p.name,
+                                  price: String(p.price),
+                                  type: "product",
+                                  productId: p.id,
+                                },
+                              ])
+                            }
+                            className="rounded-lg border border-gray-200 p-4 text-left hover:border-gray-400 disabled:opacity-50"
+                          >
+                            <p className="font-medium text-gray-900">{p.name}</p>
+                            <p className="text-sm text-gray-500">
+                              {Number(p.price).toFixed(2)} {currencySymbol()} · {out ? "Out of stock" : `${p.quantityOnHand} in stock`}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
               {activeCategory === "gift-cards" && (
                 <>
                   <div className="flex items-center justify-between mb-4">
@@ -1361,7 +1479,7 @@ export default function SalesPage() {
                               const serviceItem: QuickSaleItem = {
                                 id: appointment.serviceId.toString(),
                                 name: appointment.serviceName || 'Service',
-                                duration: `${appointment.startTime} - ${appointment.endTime}`,
+                                duration: `${appointment.startTime?.slice(0, 5)} - ${appointment.endTime?.slice(0, 5)}`,
                                 price: appointment.price ? `${appointment.price.toFixed(2)} ${currencySymbol()}` : 'Price on request',
                                 color: appointment.color || 'gray',
                                 type: 'service',
@@ -1477,7 +1595,7 @@ export default function SalesPage() {
             </div>
 
             {/* Right Sidebar - Basket */}
-            <div className="w-96 border-l border-gray-200 bg-white flex flex-col">
+            <div className="flex w-full flex-col border-t border-gray-200 bg-white md:w-96 md:border-l md:border-t-0">
               {/* Client Selection */}
               <div className="p-4 border-b border-gray-200">
                 <Dialog open={showClientPicker} onOpenChange={setShowClientPicker}>
@@ -1579,7 +1697,7 @@ export default function SalesPage() {
                   <div className="space-y-2">
                     {basket.map((item) => (
                       <div
-                        key={item.basketId}
+                        key={lineKey(item)}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                       >
                         <div className="flex-1">
@@ -1587,7 +1705,8 @@ export default function SalesPage() {
                           <p className="text-xs text-gray-500">{item.price}</p>
                         </div>
                         <button
-                          onClick={() => removeFromBasket(item.basketId)}
+                          onClick={() => removeFromBasket(lineKey(item))}
+                          aria-label={`Remove ${item.name} from the basket`}
                           className="text-gray-400 hover:text-gray-600"
                         >
                           <Trash2 size={16} />
@@ -1603,13 +1722,14 @@ export default function SalesPage() {
                 <div className="flex items-center justify-between mb-4">
                   <button
                     onClick={clearBasket}
+                    aria-label="Empty the basket"
                     className="text-gray-400 hover:text-gray-600"
                     disabled={basket.length === 0}
                   >
                     <Trash2 size={20} />
                   </button>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500 mb-1">TOGETHER</p>
+                    <p className="text-xs text-gray-500 mb-1">TOTAL</p>
                     <p className="text-2xl font-bold text-gray-900">
                       {calculateTotal().toFixed(2)} {currencySymbol()}
                     </p>
@@ -1742,7 +1862,7 @@ export default function SalesPage() {
                     </div>
                     <div className="pt-3 border-t border-gray-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">Together</span>
+                        <span className="text-sm font-medium text-gray-900">Total</span>
                         <span className="text-lg font-bold text-gray-900">
                           {visibleTransactions.reduce((sum, t) => {
                             const amount = parseFloat(t.amount.replace(' ' + currencySymbol(), '').replace(',', '.'));
@@ -1807,6 +1927,8 @@ export default function SalesPage() {
                         </span>
                         <span className="text-sm text-gray-500">-</span>
                         <span className="text-sm text-gray-500">{transaction.date}</span>
+                        {/* The number Money > Invoices asks for — it was shown nowhere. */}
+                        <span className="text-xs text-gray-400">Sale #{transaction.id}</span>
                         {transaction.description && (
                           <>
                             <span className="text-sm text-gray-500">•</span>
@@ -1867,7 +1989,7 @@ export default function SalesPage() {
                       <div className="flex items-center justify-between mb-2">
                         <div>
                           <span className="text-sm font-medium text-gray-900">
-                            Bill {selectedTransaction.billNumber} | ID {selectedTransaction.billId}
+                            Sale #{selectedTransaction.id} · Bill {selectedTransaction.billNumber}
                           </span>
                         </div>
                         <span className="text-sm text-gray-600">{selectedTransaction.date}</span>
@@ -1949,7 +2071,7 @@ export default function SalesPage() {
                         <span className="text-gray-900 font-medium">{selectedTransaction.tip}</span>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                        <span className="text-base font-medium text-gray-900">Together</span>
+                        <span className="text-base font-medium text-gray-900">Total</span>
                         <span className="text-base font-bold text-gray-900">{selectedTransaction.total}</span>
                       </div>
                     </div>

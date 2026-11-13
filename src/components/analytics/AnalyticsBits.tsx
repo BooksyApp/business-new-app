@@ -4,7 +4,7 @@ import { Lightbulb, type LucideIcon } from "lucide-react";
 
 export type Tone = "violet" | "sky" | "emerald" | "amber" | "rose" | "slate";
 
-export const TONE: Record<Tone, { chip: string; value: string; bar: string; edge: string }> = {
+const TONE: Record<Tone, { chip: string; value: string; bar: string; edge: string }> = {
   violet: { chip: "bg-violet-50 text-violet-600", value: "text-violet-700", bar: "bg-violet-500", edge: "border-l-violet-500" },
   sky: { chip: "bg-sky-50 text-sky-600", value: "text-sky-700", bar: "bg-sky-500", edge: "border-l-sky-500" },
   emerald: { chip: "bg-emerald-50 text-emerald-600", value: "text-emerald-700", bar: "bg-emerald-500", edge: "border-l-emerald-500" },

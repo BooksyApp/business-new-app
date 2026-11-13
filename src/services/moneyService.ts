@@ -61,7 +61,7 @@ export interface PayoutBatch {
 
 export interface PayoutItem {
   id: number;
-  booking_id: number | null;
+  booking_id: string | null;
   refund_id: number | null;
   kind: 'SALE' | 'REFUND' | 'FEE' | 'ADJUSTMENT';
   description: string;
@@ -102,7 +102,7 @@ export interface TipSummary {
 export interface TipLine {
   id: number;
   sale_id: number | null;
-  booking_id: number | null;
+  booking_id: string | null;
   staff_id: number | null;
   staff_name: string | null;
   amount: number;
@@ -176,7 +176,7 @@ export interface Invoice extends InvoiceSummary {
 // ---------------------------------------------------------------- deposits
 
 export interface ForfeitCandidate {
-  id: number;
+  id: string;
   appointment_date: string;
   start_time: string;
   status: string;
@@ -289,9 +289,9 @@ export const moneyService = {
     apiClient.get<ForfeitReport>(`/businesses/${businessId}/deposit-forfeits${range(from, to)}`),
   getForfeitCandidates: (businessId: number) =>
     apiClient.get<ForfeitCandidate[]>(`/businesses/${businessId}/deposit-forfeits/eligible`),
-  keepDeposit: (businessId: number, bookingId: number, reason: string) =>
+  keepDeposit: (businessId: number, bookingId: string, reason: string) =>
     apiClient.post<{ amount: number }>(`/businesses/${businessId}/deposit-forfeits/${bookingId}`, { reason }),
-  releaseDeposit: (businessId: number, bookingId: number) =>
+  releaseDeposit: (businessId: number, bookingId: string) =>
     apiClient.delete<{ released: boolean }>(`/businesses/${businessId}/deposit-forfeits/${bookingId}`),
 };
 
@@ -302,9 +302,9 @@ export const moneyService = {
  */
 export const refundService = {
   /** Omit the amount for a full refund of the booking price. */
-  refund: (bookingId: number, amount?: number, reason?: string) =>
+  refund: (bookingId: string, amount?: number, reason?: string) =>
     apiClient.post<{
-      bookingId: number;
+      bookingId: string;
       amount: number;
       stripeRefundId: string | null;
       reason: string | null;

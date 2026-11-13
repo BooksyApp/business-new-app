@@ -25,6 +25,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useServices } from "@/hooks/useServices";
 import { useAddons } from "@/hooks/useAddons";
 import { useNavigation } from "@/utils/navigationUtils";
+import type { Service } from "@/services/serviceService";
 
 // Helper function to format duration
 const formatDuration = (minutes?: number): string => {
@@ -97,7 +98,7 @@ export default function ItemsCategoryPage() {
   const filteredServices = useMemo(() => {
     if (!apiServices) return [];
     
-    let filtered = apiServices.filter((service) => {
+    const filtered = apiServices.filter((service) => {
       // Filter by category
       if (selectedCategory === "all") {
         // Show all services
@@ -250,8 +251,11 @@ export default function ItemsCategoryPage() {
                 {currentItems.map((item) => {
                   const colorClass = getColorClass(item.color);
                   const colorStyle = item.color?.startsWith("#") ? { backgroundColor: item.color } : {};
-                  const isCombo = activeTab === "services" && item.serviceType === 'COMBO';
                   const isAddon = activeTab === "addons";
+                  // The list mixes services and add-ons; the service-only fields are read
+                  // through this, and only when the row is not an add-on.
+                  const svc = (isAddon ? {} : item) as Partial<Service>;
+                  const isCombo = activeTab === "services" && svc.serviceType === 'COMBO';
                   
                   return (
                     <div
@@ -305,26 +309,26 @@ export default function ItemsCategoryPage() {
                               HIDDEN
                             </Badge>
                           )}
-                          {!isAddon && item.mobileService && (
+                          {!isAddon && svc.mobileService && (
                             <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 text-xs" title="Performed at the client's location">
                               <MapPin size={12} className="mr-1" />
                               MOBILE
                             </Badge>
                           )}
-                          {!isAddon && item.virtualAppointment && (
+                          {!isAddon && svc.virtualAppointment && (
                             <Badge variant="secondary" className="bg-teal-100 text-teal-700 border-teal-200 text-xs" title="Online / video appointment">
                               <Video size={12} className="mr-1" />
                               VIRTUAL
                             </Badge>
                           )}
-                          {!isAddon && !isCombo && item.serviceType && !["standard", "SERVICE"].includes(item.serviceType) && (
+                          {!isAddon && !isCombo && svc.serviceType && !["standard", "SERVICE"].includes(svc.serviceType) && (
                             <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200 text-xs">
-                              {item.serviceType.toUpperCase()}
+                              {svc.serviceType?.toUpperCase()}
                             </Badge>
                           )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
-                          {!isAddon && <span>{formatDuration(item.durationMinutes)}</span>}
+                          {!isAddon && <span>{formatDuration(svc.durationMinutes ?? 0)}</span>}
                           <span className="font-semibold text-gray-900">
                             {formatPrice(item.price)}
                           </span>
@@ -347,7 +351,11 @@ export default function ItemsCategoryPage() {
         {/* Floating Action Button with Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="fixed bottom-8 right-8 w-14 h-14 bg-black text-white rounded-full shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center z-10">
+            <button
+              aria-label="Add to catalogue"
+              title="Add a service, combo or add-on"
+              className="fixed bottom-8 right-8 w-14 h-14 bg-black text-white rounded-full shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center z-10"
+            >
               <Plus size={24} />
             </button>
           </DropdownMenuTrigger>

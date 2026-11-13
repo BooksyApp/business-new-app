@@ -18,9 +18,9 @@ export function useSales(businessIdParam?: number, date?: Date) {
       setError(null);
       const salesData = await saleService.getSalesByBusiness(businessId, targetDate);
       setSales(salesData);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load sales:', err);
-      setError(err.message || 'Failed to load sales');
+      setError((err instanceof Error && err.message) || 'Failed to load sales');
       toast.error('Failed to load sales');
     } finally {
       setLoading(false);
@@ -71,8 +71,8 @@ export function useSales(businessIdParam?: number, date?: Date) {
       setSales(prev => [...prev, created]);
       toast.success('Sale created successfully');
       return created;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create sale');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to create sale');
       throw err;
     }
   }, []);
@@ -82,8 +82,8 @@ export function useSales(businessIdParam?: number, date?: Date) {
       await saleService.cancelSale(id);
       setSales(prev => prev.filter(s => s.id !== id));
       toast.success('Sale cancelled successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to cancel sale');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to cancel sale');
       throw err;
     }
   }, []);

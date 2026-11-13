@@ -1,4 +1,5 @@
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
+import { myAccess, pageClosedToRole } from "@/components/layout/navigation";
 import { useEffect, useState } from "react";
 import { getAccessToken } from "@/utils/authUtils";
 import { businessService } from "@/services/businessService";
@@ -16,6 +17,7 @@ interface BusinessOwnerRouteProps {
  */
 const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
   const { businessId } = useParams<{ businessId: string }>();
+  const location = useLocation();
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -82,7 +84,7 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
         });
         setIsAuthorized(true);
         setIsLoading(false);
-      } catch (error: any) {
+      } catch (error) {
         console.error("BusinessOwnerRoute: Error validating business ownership", error);
         toast.error("Failed to verify business access. Please try again.");
         setIsAuthorized(false);
@@ -106,6 +108,12 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
   if (!isAuthorized) {
     // Redirect to home or business selection page
     return <Navigate to="/" replace />;
+  }
+
+  // A team member's role leaves some pages out of the menu; opening one by its address
+  // used to show "Failed to load" (the server refuses it). Go to their calendar instead.
+  if (pageClosedToRole(myAccess(), location.pathname)) {
+    return <Navigate to={`/${businessId}/calendar`} replace />;
   }
 
   return <>{children}</>;

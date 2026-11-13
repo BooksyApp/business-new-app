@@ -47,7 +47,7 @@ export default function CreateBusinessPage() {
   const [buildingNumber, setBuildingNumber] = useState("");
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [addressResults, setAddressResults] = useState<any[]>([]);
+  const [addressResults, setAddressResults] = useState<{ display_name?: string; name?: string; lat: string; lon: string; address?: { country?: string; country_code?: string; house_number?: string; building?: string } }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const [creating, setCreating] = useState(false);

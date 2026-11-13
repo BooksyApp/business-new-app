@@ -7,7 +7,7 @@ import { Calendar, DollarSign, Users, TrendingUp, Clock, Star, Building2, Plus }
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getUserBusinesses, isBusinessOwner } from "@/utils/businessUtils";
-import { businessService } from "@/services/businessService";
+import { businessService, type Business } from "@/services/businessService";
 import { toast } from "sonner";
 import { analysisService, type AnalyticsOverview } from "@/services/analysisService";
 import { appointmentService, type Appointment } from "@/services/appointmentService";
@@ -23,7 +23,7 @@ export default function HomePage() {
   // behavior below auto-redirects a single business straight into it, which is exactly
   // right on first login but left no way back to add a second business afterwards.
   const forceSwitch = searchParams.get("switch") === "1";
-  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [noBusiness, setNoBusiness] = useState(false);
   const [newBizName, setNewBizName] = useState("");
@@ -92,7 +92,7 @@ export default function HomePage() {
           setLoading(false);
           return;
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error loading businesses:", error);
         // Don't show error toast - this might be a temporary service issue
         // The user can still use the app, they just won't see business selection
@@ -132,7 +132,7 @@ export default function HomePage() {
             <CardHeader>
               <Building2 className="h-10 w-10 text-primary mb-2" />
               <CardTitle>Set up your business</CardTitle>
-              <CardDescription>Create your first business to get started with Booksy.</CardDescription>
+              <CardDescription>Create your first business to get started with booqi.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

@@ -9,6 +9,8 @@ import { API_BASE_URL } from '@/config/api';
  * turning on an announcement changed a row in a table and nothing in any client.
  */
 export interface PlatformSettings {
+  /** Online card payments; off in the MVP, so deposits are recorded but never taken. */
+  stripe?: { enabled?: boolean };
   appMaintenance: boolean;
   appMaintenanceMessage: string;
   minAppVersion: string;

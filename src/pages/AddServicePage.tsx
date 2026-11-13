@@ -227,9 +227,10 @@ export default function AddServicePage() {
         toast.success("Service created successfully");
       }
       navigate(getPath("items-category"));
-    } catch (error: any) {
+    } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'create'} service:`, error);
-      const errorMessage = error?.response?.data?.message || error?.message || `Failed to ${isEditMode ? 'update' : 'create'} service`;
+      const e = error as { message?: string; response?: { data?: { message?: string } } };
+      const errorMessage = e?.response?.data?.message || e?.message || `Failed to ${isEditMode ? 'update' : 'create'} service`;
       toast.error(errorMessage);
     }
   };
@@ -277,9 +278,10 @@ export default function AddServicePage() {
         color: "#3b82f6",
       });
       setSelectedStaff([]);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to create service:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to create service";
+      const e = error as { message?: string; response?: { data?: { message?: string } } };
+      const errorMessage = e?.response?.data?.message || e?.message || "Failed to create service";
       toast.error(errorMessage);
     }
   };

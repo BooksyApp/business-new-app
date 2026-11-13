@@ -57,6 +57,37 @@ import ClientsTab from "@/components/analytics/ClientsTab";
 import ServicesTab from "@/components/analytics/ServicesTab";
 import StaffTab from "@/components/analytics/StaffTab";
 
+interface SeasonalAnalytics {
+  bestMonth?: string;
+  worstMonth?: string;
+  monthlyData?: { month?: string; period?: string; revenue: number }[];
+  monthlyRevenue?: { month?: string; period?: string; revenue: number }[];
+}
+
+interface ServiceDurationAnalytics {
+  durationEfficiency?: number;
+  averageActualDuration?: number;
+  averageScheduledDuration?: number;
+}
+
+interface WaitTimeAnalytics {
+  averageWaitTime?: number;
+  averageGapTime?: number;
+}
+
+interface CustomerAcquisitionAnalytics {
+  newCustomers?: number;
+  averageFirstVisitValue?: number;
+  customerAcquisitionCost?: number;
+}
+
+interface ServiceBundleAnalytics {
+  totalBundlesSold?: number;
+  bundleRevenue?: number;
+  averageBundleValue?: number;
+  bundleRevenuePercentage?: number;
+}
+
 export default function AnalyticsPage() {
   const businessId = useBusinessId();
   const [loading, setLoading] = useState(true);
@@ -77,14 +108,14 @@ export default function AnalyticsPage() {
   const [customerRetention, setCustomerRetention] = useState<CustomerRetentionAnalytics | null>(null);
   const [profitability, setProfitability] = useState<ProfitabilityAnalytics | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodsAnalytics | null>(null);
-  const [seasonal, setSeasonal] = useState<any>(null);
-  const [serviceDuration, setServiceDuration] = useState<any>(null);
-  const [waitTimes, setWaitTimes] = useState<any>(null);
-  const [leadTime, setLeadTime] = useState<any>(null);
-  const [revenuePerHour, setRevenuePerHour] = useState<any>(null);
-  const [acquisition, setAcquisition] = useState<any>(null);
-  const [bundles, setBundles] = useState<any>(null);
-  const [forecast, setForecast] = useState<any>(null);
+  const [seasonal, setSeasonal] = useState<SeasonalAnalytics | null>(null);
+  const [serviceDuration, setServiceDuration] = useState<ServiceDurationAnalytics | null>(null);
+  const [waitTimes, setWaitTimes] = useState<WaitTimeAnalytics | null>(null);
+  const [leadTime, setLeadTime] = useState<unknown>(null);
+  const [revenuePerHour, setRevenuePerHour] = useState<unknown>(null);
+  const [acquisition, setAcquisition] = useState<CustomerAcquisitionAnalytics | null>(null);
+  const [bundles, setBundles] = useState<ServiceBundleAnalytics | null>(null);
+  const [forecast, setForecast] = useState<unknown>(null);
 
   const getDateRange = () => {
     const endDate = format(new Date(), "yyyy-MM-dd");
@@ -175,27 +206,27 @@ export default function AnalyticsPage() {
             need(revenue, () => analysisService.getRevenueAnalytics(businessId, sd, ed), setRevenue),
             need(profitability, () => analysisService.getProfitabilityAnalytics(businessId, sd, ed), setProfitability),
             need(paymentMethods, () => analysisService.getPaymentMethodAnalytics(businessId, sd, ed), setPaymentMethods),
-            need(seasonal, () => analysisService.getSeasonalAnalytics(businessId, sd, ed), setSeasonal),
+            need(seasonal, () => analysisService.getSeasonalAnalytics(businessId, sd, ed) as Promise<SeasonalAnalytics>, setSeasonal),
           ]);
         } else if (activeTab === "diary") {
           await Promise.all([
             need(bookings, () => analysisService.getBookingAnalytics(businessId, sd, ed), setBookings),
             need(peakHours, () => analysisService.getPeakHoursAnalytics(businessId, sd, ed), setPeakHours),
             need(cancellations, () => analysisService.getCancellationAnalytics(businessId, sd, ed), setCancellations),
-            need(serviceDuration, () => analysisService.getServiceDurationAnalytics(businessId, sd, ed), setServiceDuration),
-            need(waitTimes, () => analysisService.getWaitTimeAnalytics(businessId, sd, ed), setWaitTimes),
+            need(serviceDuration, () => analysisService.getServiceDurationAnalytics(businessId, sd, ed) as Promise<ServiceDurationAnalytics>, setServiceDuration),
+            need(waitTimes, () => analysisService.getWaitTimeAnalytics(businessId, sd, ed) as Promise<WaitTimeAnalytics>, setWaitTimes),
           ]);
         } else if (activeTab === "people") {
           await Promise.all([
             need(clients, () => analysisService.getClientAnalytics(businessId, sd, ed), setClients),
             need(customerRetention, () => analysisService.getCustomerRetentionAnalytics(businessId, sd, ed), setCustomerRetention),
-            need(acquisition, () => analysisService.getCustomerAcquisitionAnalytics(businessId, sd, ed), setAcquisition),
+            need(acquisition, () => analysisService.getCustomerAcquisitionAnalytics(businessId, sd, ed) as Promise<CustomerAcquisitionAnalytics>, setAcquisition),
           ]);
         } else if (activeTab === "team") {
           await Promise.all([
             need(services, () => analysisService.getServiceAnalytics(businessId, sd, ed), setServices),
             need(performance, () => analysisService.getPerformanceAnalytics(businessId, sd, ed), setPerformance),
-            need(bundles, () => analysisService.getServiceBundleAnalytics(businessId, sd, ed), setBundles),
+            need(bundles, () => analysisService.getServiceBundleAnalytics(businessId, sd, ed) as Promise<ServiceBundleAnalytics>, setBundles),
           ]);
         }
       } catch (err) {
@@ -210,6 +241,7 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the loaded groups are a cache read inside; depending on them would refetch in a loop
   }, [businessId, period, activeTab]);
 
   /** Whether a group already has its data, so switching to it does not flash a spinner. */
@@ -446,7 +478,7 @@ export default function AnalyticsPage() {
                     topPaymentMethod
                       ? [
                           {
-                            text: `${topPaymentMethod.paymentMethod} takes ${pct(topPaymentMethod.percentage)}% of your revenue across ${topPaymentMethod.transactions} transactions.`,
+                            text: `${topPaymentMethod.method} takes ${pct(topPaymentMethod.percentage)}% of your revenue across ${topPaymentMethod.transactions} transactions.`,
                             tone: "sky" as const,
                           },
                         ]
@@ -459,7 +491,9 @@ export default function AnalyticsPage() {
                   tone="sky"
                   formatValue={(v) => `${money(v)} ${currencySymbol()}`}
                   rows={(paymentMethods.paymentMethods ?? []).map((m) => ({
-                    label: m.paymentMethod,
+                    // The API calls it `method`; reading `paymentMethod` left every bar unlabelled
+                    // and the insight read "undefined takes 100% of your revenue".
+                    label: m.method,
                     value: m.revenue,
                     detail: `${m.transactions} · ${pct(m.percentage)}%`,
                   }))}

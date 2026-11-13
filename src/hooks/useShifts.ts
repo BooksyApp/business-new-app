@@ -20,9 +20,9 @@ export function useShifts(businessIdParam?: number, date?: string) {
       setError(null);
       const data = await shiftService.getShiftsByBusinessAndDate(businessId, date);
       setShifts(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load shifts:', err);
-      setError(err.message || 'Failed to load shifts');
+      setError((err instanceof Error && err.message) || 'Failed to load shifts');
       toast.error('Failed to load shifts');
     } finally {
       setLoading(false);
@@ -44,8 +44,8 @@ export function useShifts(businessIdParam?: number, date?: string) {
       setShifts(prev => [...prev, created]);
       toast.success('Shift created successfully');
       return created;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create shift');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to create shift');
       throw err;
     }
   }, [businessId]);
@@ -61,8 +61,8 @@ export function useShifts(businessIdParam?: number, date?: string) {
       setShifts(prev => prev.map(s => s.id === id ? updated : s));
       toast.success('Shift updated successfully');
       return updated;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update shift');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to update shift');
       throw err;
     }
   }, [businessId]);
@@ -77,8 +77,8 @@ export function useShifts(businessIdParam?: number, date?: string) {
       await shiftService.deleteShift(id, businessId);
       setShifts(prev => prev.filter(s => s.id !== id));
       toast.success('Shift deleted successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete shift');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to delete shift');
       throw err;
     }
   }, [businessId]);

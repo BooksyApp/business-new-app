@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -37,6 +37,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAppointments, type Appointment as AppointmentType } from "@/hooks/useAppointments";
 import { useServices } from "@/hooks/useServices";
 import { useTimeOff } from "@/hooks/useTimeOff";
+import type { TimeOff } from "@/services/timeOffService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -44,7 +45,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { Users } from "lucide-react";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { useFeatureFlags } from "@/services/platformService";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
@@ -54,7 +54,7 @@ import { useNavigation } from "@/utils/navigationUtils";
 // Extended appointment type with date
 interface AppointmentWithDate extends Appointment {
   date: Date;
-  apiId?: number;
+  apiId?: string;
   /** Carries the "requested by client" flag the booking form writes into the notes. */
   notes?: string;
 }
@@ -68,7 +68,7 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     startTime: apt.startTime,
     endTime: apt.endTime,
     staffId: apt.staffId,
-    color: apt.color as any,
+    color: apt.color,
     // Needed on the block itself: the "requested by client" flag lives in the notes, and
     // the badges are keyed off the client record rather than a name string.
     notes: apt.notes,
@@ -104,7 +104,7 @@ function getAppointmentsForStaff(appointments: Appointment[], staffId: string): 
   return appointments.filter((apt) => apt.staffId === staffId);
 }
 
-function getTimeOffsForStaffAndDate(timeOffs: any[], staffId: string, date: Date): any[] {
+function getTimeOffsForStaffAndDate(timeOffs: TimeOff[], staffId: string, date: Date): TimeOff[] {
   const dateStr = format(date, "yyyy-MM-dd");
   return timeOffs.filter((to) => {
     if (to.staffId.toString() !== staffId.toString()) return false;
@@ -236,7 +236,7 @@ function normalizeTime(timeStr: string): string {
 }
 
 // Check if time off overlaps with appointment
-function timeOffOverlapsAppointment(timeOff: any, appointment: Appointment, businessStartHour: number, businessEndHour: number): boolean {
+function timeOffOverlapsAppointment(timeOff: TimeOff, appointment: Appointment, businessStartHour: number, businessEndHour: number): boolean {
   if (timeOff.staffId.toString() !== appointment.staffId.toString()) return false;
   
   // Normalize time formats and handle full day time offs
@@ -259,7 +259,7 @@ function timeOffOverlapsAppointment(timeOff: any, appointment: Appointment, busi
 
 // Check if a new time off conflicts with existing time offs
 function hasTimeOffConflict(
-  existingTimeOffs: any[],
+  existingTimeOffs: TimeOff[],
   staffId: string | number,
   startDate: string,
   endDate: string,
@@ -307,14 +307,16 @@ function hasTimeOffConflict(
   });
 }
 
+type ConflictItem = { type: 'appointment'; item: Appointment } | { type: 'timeoff'; item: TimeOff };
+
 // Group appointments and time offs by conflicts
 function groupConflictingItems(
   appointments: Appointment[], 
-  timeOffs: any[],
+  timeOffs: TimeOff[],
   businessStartHour: number,
   businessEndHour: number
-): Array<{ type: 'appointment' | 'timeoff'; item: any }[]> {
-  const groups: Array<{ type: 'appointment' | 'timeoff'; item: any }[]> = [];
+): ConflictItem[][] {
+  const groups: ConflictItem[][] = [];
   const processedApts = new Set<string>();
   const processedTimeOffs = new Set<number>();
   
@@ -322,7 +324,7 @@ function groupConflictingItems(
   appointments.forEach((apt) => {
     if (processedApts.has(apt.id)) return;
     
-    const conflictGroup: Array<{ type: 'appointment' | 'timeoff'; item: any }> = [
+    const conflictGroup: ConflictItem[] = [
       { type: 'appointment', item: apt }
     ];
     processedApts.add(apt.id);
@@ -360,7 +362,7 @@ function groupConflictingItems(
   timeOffs.forEach((timeOff) => {
     if (processedTimeOffs.has(timeOff.id)) return;
     
-    const conflictGroup: Array<{ type: 'appointment' | 'timeoff'; item: any }> = [
+    const conflictGroup: ConflictItem[] = [
       { type: 'timeoff', item: timeOff }
     ];
     processedTimeOffs.add(timeOff.id);
@@ -537,7 +539,7 @@ export default function CalendarPage() {
   const [selectionConflict, setSelectionConflict] = useState(false);
   const [isSelectionDialogOpen, setIsSelectionDialogOpen] = useState(false);
   const [showAppointmentTimeOffConflictDialog, setShowAppointmentTimeOffConflictDialog] = useState(false);
-  const [pendingAppointmentWithTimeOffData, setPendingAppointmentWithTimeOffData] = useState<any>(null);
+  const [pendingAppointmentWithTimeOffData, setPendingAppointmentWithTimeOffData] = useState<Parameters<typeof createAppointmentAPI>[0] | null>(null);
   const [finalSelection, setFinalSelection] = useState<{
     staffId: string;
     staffName: string;
@@ -640,16 +642,16 @@ export default function CalendarPage() {
     isApproved: false,
   });
   const [showConflictDialog, setShowConflictDialog] = useState(false);
-  const [pendingAppointmentData, setPendingAppointmentData] = useState<any>(null);
+  const [pendingAppointmentData, setPendingAppointmentData] = useState<Parameters<typeof createAppointmentAPI>[0] | null>(null);
   const [showTimeOffConflictDialog, setShowTimeOffConflictDialog] = useState(false);
-  const [pendingTimeOffData, setPendingTimeOffData] = useState<any>(null);
+  const [pendingTimeOffData, setPendingTimeOffData] = useState<{ staffId: string; startDate: string; endDate: string; startTime: string; endTime: string; isFullDay: boolean; reason: string } | null>(null);
   
   // Clients state for dropdown
   const [clients, setClients] = useState<Client[]>([]);
   const [clientSearchOpen, setClientSearchOpen] = useState(false);
   
   // Appointment form state
-  const [editingAppointmentId, setEditingAppointmentId] = useState<number | null>(null);
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [appointmentForm, setAppointmentForm] = useState({
     clientId: "",
     clientName: "",
@@ -1013,6 +1015,7 @@ export default function CalendarPage() {
       });
     }
     return items;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- placeFromWaitlist is rebuilt each render and only reads currentDate, which is listed
   }, [appointments, currentDate, waitlist]);
 
   const getWeekDays = (date: Date): Date[] => {
@@ -1035,6 +1038,17 @@ export default function CalendarPage() {
 
   // Check if current date is being viewed
   const isCurrentDate = isToday(currentDate);
+
+  // Open the day at the salon's opening hour (or an hour before now, today) instead of
+  // midnight: the grid used to start with nine hours of closed, hatched rows.
+  const dayGridRef = useRef<HTMLDivElement>(null);
+  const openingHour = getBusinessHoursForDate(currentDate).startHour;
+  useEffect(() => {
+    if (viewType !== "Day" || loading || !dayGridRef.current) return;
+    const nowHour = new Date().getHours();
+    const target = isCurrentDate ? Math.max(openingHour, Math.min(nowHour - 1, 23)) : openingHour;
+    dayGridRef.current.scrollTop = Math.max(0, target) * 4 * SLOT_HEIGHT;
+  }, [viewType, loading, openingHour, isCurrentDate, currentDate]);
 
   // Get current time position
   const getCurrentTimePosition = (): number | null => {
@@ -1060,18 +1074,22 @@ export default function CalendarPage() {
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
-    setEditingAppointmentId(appointment.apiId ? Number(appointment.apiId) : null);
+    setEditingAppointmentId(appointment.apiId ?? null);
     setAppointmentForm({
+      // Opening a booking to edit used to drop these two: cancelling the edit and then
+      // creating a new booking sent no idempotency key.
+      requestedByClient: ((appointment as { notes?: string }).notes ?? "").includes("Requested by client"),
+      idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       clientId: appointment.clientId ? String(appointment.clientId) : "",
       clientName: appointment.clientName || "",
-      clientPhone: (appointment as any).clientPhone || "",
-      clientEmail: (appointment as any).clientEmail || "",
+      clientPhone: appointment.clientPhone || "",
+      clientEmail: appointment.clientEmail || "",
       serviceId: appointment.service || "",
       staffId: appointment.staffId || "",
       startTime: appointment.startTime || "",
       endTime: appointment.endTime || "",
-      notes: (appointment as any).notes || "",
-      price: (appointment as any).price ? String((appointment as any).price) : "",
+      notes: appointment.notes || "",
+      price: appointment.price ? String(appointment.price) : "",
       date: appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
     });
     handleCloseModal();
@@ -1109,23 +1127,13 @@ export default function CalendarPage() {
       <div className="flex h-full w-full overflow-hidden bg-white">
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* WebSocket Status Indicator */}
-          <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">WebSocket:</span>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                websocketStatus === 'connected' ? 'bg-green-100 text-green-700' :
-                websocketStatus === 'connecting' ? 'bg-yellow-100 text-yellow-700' :
-                websocketStatus === 'error' ? 'bg-red-100 text-red-700' :
-                'bg-gray-100 text-gray-700'
-              }`}>
-                {websocketStatus === 'connected' ? '🟢 Connected' :
-                 websocketStatus === 'connecting' ? '🟡 Connecting...' :
-                 websocketStatus === 'error' ? '🔴 Error' :
-                 '⚪ Disconnected'}
-              </span>
+          {/* Live-update status. A permanent "WebSocket: Connected" badge meant nothing to a
+              salon; only a broken connection is worth their attention, in their words. */}
+          {websocketStatus === 'error' && (
+            <div role="status" className="px-4 py-2 border-b border-amber-200 bg-amber-50 text-sm text-amber-800">
+              Live updates are paused. New bookings will appear when the connection is back — or refresh the page.
             </div>
-          </div>
+          )}
           
           {/* The waitlist, where the slots are. It lived only on the Clients page, so a
               salon looking at a gap in today's calendar had no idea somebody was waiting
@@ -1170,8 +1178,8 @@ export default function CalendarPage() {
           {/* Top Navigation Bar - Only show when staff exists */}
           {!loading && apiStaff && apiStaff.length > 0 && (
           <>
-          <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-3">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-white px-3 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1">
@@ -1228,7 +1236,7 @@ export default function CalendarPage() {
                           const startTime = `${startHour.toString().padStart(2, "0")}:00`;
                           const endTime = `${endHour.toString().padStart(2, "0")}:00`;
                           return (
-                            <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            <Badge variant="outline" className="ml-2 hidden text-xs bg-blue-50 text-blue-700 border-blue-200 sm:inline-flex">
                               <Clock size={12} className="mr-1" />
                               {startTime} - {endTime}
                             </Badge>
@@ -1419,7 +1427,7 @@ export default function CalendarPage() {
 
       {/* Calendar Grid - Conditional based on view type */}
           {viewType === "Day" && (
-          <div className="flex flex-1 overflow-auto bg-white relative">
+          <div ref={dayGridRef} className="flex flex-1 overflow-auto bg-white relative">
             {/* Current Time Indicator - Full horizontal line across all columns */}
             {isCurrentDate && (() => {
               const timePosition = getCurrentTimePosition();
@@ -1439,8 +1447,8 @@ export default function CalendarPage() {
             })()}
             
             {/* Time Column */}
-            <div className="w-24 shrink-0 border-r border-gray-200 bg-white sticky left-0 z-10 relative">
-              <div className="h-16 border-b border-gray-200 bg-white"></div>
+            <div className="w-24 shrink-0 self-start border-r border-gray-200 bg-white sticky left-0 z-20">
+              <div className="sticky top-0 z-20 h-16 border-b border-gray-200 bg-white"></div>
               
               {/* Current Time Indicator in Time Column - Time badge */}
               {isCurrentDate && (() => {
@@ -1500,7 +1508,9 @@ export default function CalendarPage() {
         </div>
 
             {/* Staff Columns */}
-        <div className="flex flex-1">
+        {/* self-start: as a stretched flex item this row was only as tall as the viewport,
+            so the sticky staff headers scrolled away with it once the day opened at 09:00. */}
+        <div className="flex flex-1 self-start">
               {/* The waiting list, as the first column of the calendar. It sat above the
                   grid as a strip, which is the wrong shape for the job: a salon looks at a
                   gap in a staff member's day and wants to drag somebody into it, and the
@@ -1639,8 +1649,8 @@ export default function CalendarPage() {
                           // Check for conflicts while dragging
                           const startMinutes = parseTime(dragSelection.startTime);
                           const endMinutes = parseTime(endTime);
-                          let actualStart = startMinutes <= endMinutes ? dragSelection.startTime : endTime;
-                          let actualEnd = startMinutes <= endMinutes ? endTime : dragSelection.startTime;
+                          const actualStart = startMinutes <= endMinutes ? dragSelection.startTime : endTime;
+                          const actualEnd = startMinutes <= endMinutes ? endTime : dragSelection.startTime;
                           
                           const dayAppointments = appointments.filter((apt) =>
                             isSameDay(apt.date, currentDate)
@@ -1777,7 +1787,7 @@ export default function CalendarPage() {
                           const endMinutes = parseTime(dragSelection.endTime);
                           
                           // Determine actual start and end for visual display (handle backward dragging)
-                          let displayStart = startMinutes <= endMinutes ? dragSelection.startTime : dragSelection.endTime;
+                          const displayStart = startMinutes <= endMinutes ? dragSelection.startTime : dragSelection.endTime;
                           let displayEnd = startMinutes <= endMinutes ? dragSelection.endTime : dragSelection.startTime;
                           
                           // If end equals start (initial click), show at least 15 minutes for visual feedback
@@ -2271,6 +2281,8 @@ export default function CalendarPage() {
           {/* Floating Action Button */}
           <button
             className="fixed bottom-8 right-8 w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-900 transition-colors z-20"
+            aria-label="New appointment"
+            title="New appointment"
             onClick={() => setIsNewAppointmentOpen(true)}
           >
             <Plus size={24} />
@@ -2508,7 +2520,7 @@ export default function CalendarPage() {
                     setIsNewAppointmentOpen(false);
                     setEditingAppointmentId(null);
                     setFinalSelection(null);
-                    setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+                    setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
                     toast.success("Appointment created successfully (with conflict)");
                   } catch (error) {
                     toast.error("Failed to create appointment");
@@ -2573,7 +2585,7 @@ export default function CalendarPage() {
                     setIsNewAppointmentOpen(false);
                     setEditingAppointmentId(null);
                     setFinalSelection(null);
-                    setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+                    setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
                     toast.success("Appointment created successfully");
                   } catch (error) {
                     toast.error("Failed to create appointment");
@@ -2604,13 +2616,17 @@ export default function CalendarPage() {
             notes: "",
             price: "",
             date: format(currentDate, 'yyyy-MM-dd'),
+            requestedByClient: false,
+            // A fresh key for the next booking: closing the sheet dropped it, so the next
+            // one lost its double-click protection.
+            idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           });
         }
       }}>
         <SheetContent side="right" className="!max-w-none w-[500px] p-0 flex flex-col h-screen max-h-screen">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
-            <h2 className="text-base font-semibold">{editingAppointmentId ? 'Edit Appointment' : 'New Appointment'}</h2>
+            <SheetTitle className="text-base font-semibold">{editingAppointmentId ? 'Edit Appointment' : 'New Appointment'}</SheetTitle>
           </div>
 
           {/* Client Selection */}
@@ -2758,7 +2774,8 @@ export default function CalendarPage() {
                   className="h-8 text-xs px-2"
                   onClick={() => {
                     setBookingMode(m.key);
-                    if (m.key === "group") setExtraServices([]);
+                    // Only "single" is offered for now (group/recurring stay off), kept for when they return.
+                    if ((m.key as string) === "group") setExtraServices([]);
                   }}
                 >
                   <m.Icon className="h-3 w-3 mr-1" />
@@ -3433,6 +3450,9 @@ export default function CalendarPage() {
                     startTime: reservationForm.startTime,
                     endTime: reservationForm.endTime,
                     isFullDay: false,
+                    isRecurring: false,
+                    // A block the owner puts on the calendar is in force at once.
+                    isApproved: true,
                     reason: reservationForm.reason || "Reservation",
                   });
                   toast.success("Time reservation saved successfully");

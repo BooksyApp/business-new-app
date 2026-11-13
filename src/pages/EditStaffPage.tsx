@@ -1,4 +1,8 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { RoleSelect } from "@/components/staff/RoleSelect";
+import { roleService } from "@/services/roleService";
+import { myAccess } from "@/components/layout/navigation";
 import { currencySymbol } from "@/lib/currency";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -23,25 +27,26 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { StaffAvatarPicker } from "@/components/media/StaffAvatarPicker";
 import { useStaff } from "@/hooks/useStaff";
 import { useServices } from "@/hooks/useServices";
 import { staffService } from "@/services/staffService";
 import { serviceService } from "@/services/serviceService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useNavigation } from "@/utils/navigationUtils";
+import { WorkingHoursEditor } from "@/components/staff/WorkingHoursEditor";
 import {
-  WorkingHoursEditor,
   DEFAULT_WEEK,
   scheduleToPayload,
   weekFromWorkingHours,
   type WeekSchedule,
-} from "@/components/staff/WorkingHoursEditor";
+} from "@/components/staff/workingHours";
 
 export default function EditStaffPage() {
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const { id } = useParams<{ id: string }>();
+  const [inviting, setInviting] = useState(false);
   const businessId = useBusinessId();
   const { updateStaff, loading: updating } = useStaff(businessId);
   const { services, loading: servicesLoading } = useServices(businessId);
@@ -57,6 +62,7 @@ export default function EditStaffPage() {
     showInCalendar: true,
     availableForOnlineBooking: true,
     description: "",
+    avatarUrl: "",
   });
 
   // Load staff data
@@ -70,11 +76,15 @@ export default function EditStaffPage() {
           name: staff.name,
           phone: staff.phone || "",
           email: staff.email || "",
-          permissionLevel: "Owner", // Default, adjust based on your permission system
+          permissionLevel: "",
           position: staff.position || "",
-          showInCalendar: staff.canBookAppointments || false,
-          availableForOnlineBooking: staff.canBookAppointments || false,
+          // Read from isActive: canBookAppointments does not exist on Staff, so both were
+          // always false — and Save sends showInCalendar as isActive, so every edit
+          // switched the team member off (gone from the calendar, booking and sign-in).
+          showInCalendar: staff.isActive !== false,
+          availableForOnlineBooking: staff.isActive !== false,
           description: "",
+          avatarUrl: staff.avatarUrl ?? "",
         });
         // Load the staff's saved hours. If they have none yet (new/unconfigured
         // staff), start from a sensible enabled Mon–Fri week instead of all-off,
@@ -122,10 +132,18 @@ export default function EditStaffPage() {
         phone: formData.phone || undefined,
         position: formData.position || undefined,
         isActive: formData.showInCalendar,
+        avatarUrl: formData.avatarUrl,
         schedule: scheduleToPayload(schedule),
       });
       // Persist the staff↔service assignments (owned by service-catalog).
       await serviceService.setStaffServiceIds(businessId, Number(id), selectedServiceIds);
+      if (formData.permissionLevel && myAccess().isOwner) {
+        const roles = await roleService.list(businessId);
+        const current = roles.find((r) => r.memberIds.includes(Number(id)));
+        if (String(current?.id ?? "") !== formData.permissionLevel) {
+          await roleService.assign(Number(id), Number(formData.permissionLevel));
+        }
+      }
       navigate(getPath("staff"));
     } catch (error) {
       console.error("Failed to update staff:", error);
@@ -194,18 +212,12 @@ export default function EditStaffPage() {
               <div className="space-y-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
                   {/* Profile Picture */}
-                  <div className="flex flex-col items-center">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        <AvatarFallback className="bg-gray-200 text-gray-700 text-2xl font-medium">
-                          {getInitials(formData.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors">
-                        <UserPlus size={16} />
-                      </button>
-                    </div>
-                  </div>
+                  {/* The camera button used to do nothing. */}
+                  <StaffAvatarPicker
+                    value={formData.avatarUrl}
+                    initials={getInitials(formData.name)}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, avatarUrl: url }))}
+                  />
 
                   {/* Name */}
                   <div className="space-y-2">
@@ -242,37 +254,37 @@ export default function EditStaffPage() {
 
                   {/* Invite Again */}
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="gap-2">
-                      INVITE AGAIN
+                    {/* It was a button with no handler: nothing was ever re-sent. */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      type="button"
+                      disabled={inviting || !formData.email}
+                      onClick={async () => {
+                        setInviting(true);
+                        try {
+                          const r = await staffService.sendInvite(Number(id));
+                          toast.success(`Invitation sent to ${r.email}`);
+                        } catch (err) {
+                          toast.error((err instanceof Error && err.message) || "Could not send the invitation");
+                        } finally {
+                          setInviting(false);
+                        }
+                      }}
+                    >
+                      {inviting ? "SENDING…" : "INVITE AGAIN"}
                     </Button>
                     <HelpCircle size={16} className="text-gray-400" />
                   </div>
 
-                  {/* Permission Level */}
-                  <div className="space-y-2">
-                    <Label htmlFor="permission-level">Permission Level</Label>
-                    <div className="relative">
-                      <Select
-                        value={formData.permissionLevel}
-                        onValueChange={(value) =>
-                          handleInputChange("permissionLevel", value)
-                        }
-                      >
-                        <SelectTrigger id="permission-level" className="pr-10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Owner">Owner</SelectItem>
-                          <SelectItem value="Manager">Manager</SelectItem>
-                          <SelectItem value="Staff">Staff</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <ChevronRight
-                        size={16}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
+                  {/* Role — one of the salon's roles (Team → Roles). It always showed "Owner"
+                      and was never saved. */}
+                  <RoleSelect
+                    staffId={Number(id)}
+                    value={formData.permissionLevel}
+                    onChange={(v) => handleInputChange("permissionLevel", v)}
+                  />
 
                   {/* Position */}
                   <div className="space-y-2">
@@ -300,7 +312,7 @@ export default function EditStaffPage() {
                       className="text-sm text-gray-700 cursor-pointer"
                     >
                       Check the box if the Staff Member offers services and
-                      should be visible in your Booksy Calendar.
+                      should be visible in your booqi Calendar.
                     </Label>
                   </div>
 

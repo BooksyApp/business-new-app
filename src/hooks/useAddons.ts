@@ -21,9 +21,9 @@ export function useAddons(businessIdParam?: number) {
       setError(null);
       const data = await addonService.getAddonsByBusiness(businessId);
       setAddons(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load addons:', err);
-      setError(err.message || 'Failed to load addons');
+      setError((err instanceof Error && err.message) || 'Failed to load addons');
       toast.error('Failed to load addons');
     } finally {
       setLoading(false);
@@ -45,8 +45,8 @@ export function useAddons(businessIdParam?: number) {
       setAddons(prev => [...prev, created]);
       toast.success('Addon created successfully');
       return created;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create addon');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to create addon');
       throw err;
     }
   }, [businessId]);
@@ -57,8 +57,8 @@ export function useAddons(businessIdParam?: number) {
       setAddons(prev => prev.map(addon => addon.id === id ? updated : addon));
       toast.success('Addon updated successfully');
       return updated;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update addon');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to update addon');
       throw err;
     }
   }, [businessId]);
@@ -68,8 +68,8 @@ export function useAddons(businessIdParam?: number) {
       await addonService.deleteAddon(id, businessId);
       setAddons(prev => prev.filter(addon => addon.id !== id));
       toast.success('Addon deleted successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete addon');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to delete addon');
       throw err;
     }
   }, [businessId]);

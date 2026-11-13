@@ -47,9 +47,41 @@ export const DEFAULT_BUSINESS_ID = 1;
 import { getAccessToken, isTokenValid, clearAuthData } from '@/utils/authUtils';
 
 // Helper function to clear auth data and redirect to login
+/**
+ * Swap the refresh token for a new pair. The access token lives 24 hours and the panel
+ * never used the 30-day refresh token, so a salon was signed out mid-shift every day.
+ * One refresh at a time: the server rotates the refresh token, so two in parallel would
+ * cancel each other out.
+ */
+let refreshing: Promise<string | null> | null = null;
+export const refreshSession = (): Promise<string | null> => {
+  if (refreshing) return refreshing;
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return Promise.resolve(null);
+  refreshing = fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  })
+    .then(async (r) => {
+      if (!r.ok) return null;
+      const data = await r.json();
+      if (!data?.accessToken) return null;
+      localStorage.setItem('accessToken', data.accessToken);
+      if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+      return data.accessToken as string;
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+};
+
 const clearAuthAndRedirect = () => {
   clearAuthData();
-  window.location.href = '/login';
+  // The app lives under /manage/ (vite `base`); a bare '/login' is the public site's 404.
+  window.location.href = `${import.meta.env.BASE_URL}login`;
 };
 
 // API Client
@@ -63,16 +95,20 @@ class ApiClient {
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    requireAuth: boolean = true
+    requireAuth: boolean = true,
+    retried: boolean = false
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    const accessToken = getAccessToken();
+    let accessToken = getAccessToken();
     
-    // Validate token if auth is required
+    // An expired access token is renewed before giving up on the session.
     if (requireAuth && accessToken && !isTokenValid(accessToken)) {
-      console.warn('Invalid or expired token, redirecting to login');
-      clearAuthAndRedirect();
-      throw new Error('Token invalid or expired');
+      accessToken = await refreshSession();
+      if (!accessToken) {
+        console.warn('Session expired and could not be renewed, redirecting to login');
+        clearAuthAndRedirect();
+        throw new Error('Token invalid or expired');
+      }
     }
     
     // If auth is required but no token, redirect to login
@@ -82,9 +118,10 @@ class ApiClient {
       throw new Error('No authentication token');
     }
 
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    // A file upload (FormData) needs the browser's own multipart Content-Type with its boundary.
+    const headers: Record<string, string> = {
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(options.headers as Record<string, string> | undefined),
     };
 
     // Add Authorization header if auth is required and token exists
@@ -99,6 +136,14 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+
+      // A 401 on a signed-in request: renew once and try again before signing out.
+      if (response.status === 401 && requireAuth && !retried) {
+        const renewed = await refreshSession();
+        if (renewed) {
+          return this.request<T>(endpoint, options, requireAuth, true);
+        }
+      }
       
       // Handle 401 Unauthorized - token invalid or expired
       if (response.status === 401) {
@@ -114,8 +159,13 @@ class ApiClient {
         } catch {
           errorData = { error: response.statusText, message: response.statusText };
         }
-        const error = new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`);
-        (error as any).response = { data: errorData, status: response.status };
+        // The API answers RFC 7807 problem details: the sentence meant for a person is
+        // `detail`. Reading only message/error showed "HTTP error! status: 409" instead of
+        // "This time slot is already booked" across the whole panel.
+        const error = new Error(
+          errorData.detail || errorData.message || errorData.error || `HTTP error! status: ${response.status}`
+        );
+        (error as Error & { response?: unknown }).response = { data: errorData, status: response.status };
         throw error;
       }
 
@@ -124,15 +174,20 @@ class ApiClient {
         return {} as T;
       }
 
-      return await response.json();
-    } catch (error: any) {
+      // An endpoint that answers `null` (e.g. "no drawer open") comes back as 200 with an
+      // empty body; response.json() throws on that, which left the cash drawer screen
+      // showing an error after every close instead of the shut drawer.
+      const text = await response.text();
+      return (text ? JSON.parse(text) : null) as T;
+    } catch (error) {
       console.error('API request failed:', error);
       
       // Handle connection timeout and network errors
-      if (error?.message?.includes('ERR_CONNECTION_TIMED_OUT') || 
-          error?.message?.includes('timeout') ||
-          error?.message?.includes('Failed to fetch')) {
-        const errorMessage = error?.message?.includes('ERR_CONNECTION_TIMED_OUT') 
+      const e = error as { message?: string } | null;
+      if (e?.message?.includes('ERR_CONNECTION_TIMED_OUT') || 
+          e?.message?.includes('timeout') ||
+          e?.message?.includes('Failed to fetch')) {
+        const errorMessage = e?.message?.includes('ERR_CONNECTION_TIMED_OUT') 
           ? 'Connection timed out. The API server may be unreachable. Please verify the API URL and ensure the server is running and accessible.'
           : 'Network error: Unable to connect to the API server. Please check your connection and verify the API is accessible.';
         throw new Error(errorMessage);
@@ -146,14 +201,14 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET' }, requireAuth);
   }
 
-  async post<T>(endpoint: string, data?: any, requireAuth: boolean = true): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown, requireAuth: boolean = true): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: JSON.stringify(data),
     }, requireAuth);
   }
 
-  async put<T>(endpoint: string, data?: any, requireAuth: boolean = true): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown, requireAuth: boolean = true): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -163,6 +218,33 @@ class ApiClient {
   async delete<T>(endpoint: string, requireAuth: boolean = true): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' }, requireAuth);
   }
+
+  /** multipart/form-data POST (photo uploads). */
+  async upload<T>(endpoint: string, form: FormData): Promise<T> {
+    return this.request<T>(endpoint, { method: 'POST', body: form }, true);
+  }
+}
+
+/**
+ * Uploaded photos come back as "/api/public/uploads/<id>.jpg". In production the API shares
+ * the hub's origin; in development it is another port, so prefix the API's own origin.
+ */
+/**
+ * The public site (booqi-web), where a salon's page lives. Production serves it on the hub's
+ * own origin; in development it is a separate server on :3000, so the hub's origin would
+ * open the hub itself on a /salon/... path.
+ */
+export function publicSiteUrl(): string {
+  const configured = import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined;
+  const site = configured || (import.meta.env.DEV ? "http://localhost:3000" : window.location.origin);
+  return site.replace(/\/+$/, "");
+}
+
+export function assetUrl(url: string | null | undefined): string {
+  if (!url) return "";
+  if (!url.startsWith("/api/")) return url;
+  const base = API_BASE_URL.replace(/\/api\/?$/, "");
+  return base.startsWith("http") ? base + url : url;
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

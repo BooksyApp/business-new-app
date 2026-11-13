@@ -4,12 +4,12 @@ import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, ThumbsUp, MessageSquare, TrendingUp, Reply } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { getCurrentBusinessId } from "@/config/api";
+import { assetUrl, getCurrentBusinessId } from "@/config/api";
 import { reviewService, ratingBreakdown, type Review, type RatingSummary } from "@/services/reviewService";
 
 // #25: this page shipped with hardcoded demo reviews — invented client names,
@@ -276,8 +276,9 @@ export default function ReviewsPage() {
                             never recorded before, so nobody could be named). */}
                         <p className="truncate text-sm font-semibold">{review.authorName || "A customer"}</p>
                         <p className="text-xs text-muted-foreground">
-                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}
-                          {review.staffId ? ` · Staff #${review.staffId}` : ""}
+                          {review.createdAt
+                            ? new Date(review.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+                            : ""}
                         </p>
                       </div>
                     </div>
@@ -307,6 +308,34 @@ export default function ReviewsPage() {
                       <span className="italic text-muted-foreground">Rating only, no comment</span>
                     )}
                   </p>
+                  {review.photos && review.photos.length > 0 && (
+                    <div className="mb-3 flex gap-2">
+                      {review.photos.map((src) => (
+                        <a key={src} href={assetUrl(src)} target="_blank" rel="noopener noreferrer"
+                           className="block h-20 w-20 overflow-hidden rounded-lg border border-border/60">
+                          <img src={assetUrl(src)} alt="Photo from this review" className="h-full w-full object-cover" loading="lazy" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {/* Who did the work, with their photo: the review is about them as much as the salon. */}
+                  {(review.staffName || review.serviceName) && (
+                    <div className="mb-3 flex items-center gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                      {review.staffName && (
+                        <Avatar className="h-7 w-7">
+                          {review.staffAvatarUrl && <AvatarImage src={assetUrl(review.staffAvatarUrl)} alt="" className="object-cover" />}
+                          <AvatarFallback className="bg-blue-50 text-[11px] font-semibold text-blue-700">
+                            {review.staffName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <span className="truncate">
+                        {review.serviceName && <span className="font-medium text-foreground">{review.serviceName}</span>}
+                        {review.serviceName && review.staffName && " · "}
+                        {review.staffName && <>with <span className="font-medium text-foreground">{review.staffName}</span></>}
+                      </span>
+                    </div>
+                  )}
                   {/* Answering a review in public is how a bad one stops being the last
                       word on it. The button did nothing until now. */}
                   {review.reply && replyingTo !== review.id ? (

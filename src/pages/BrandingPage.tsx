@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { businessService, type Business } from "@/services/businessService";
 import { getCurrentBusinessId } from "@/config/api";
+import { useNavigation } from "@/utils/navigationUtils";
 
 /**
  * Setup listed "Logo & Colors", "Email Templates" and "Receipt Design" with nothing behind
@@ -18,10 +20,13 @@ import { getCurrentBusinessId } from "@/config/api";
  */
 export default function BrandingPage() {
   const businessId = getCurrentBusinessId();
+  const { getPath } = useNavigation();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ logoUrl: "", brandColor: "", receiptFooter: "", coverImageUrl: "" });
+  // Cover and logo moved to the Photos page, which saves them as they change. They are not
+  // in this form, so saving the colour here can never put back an older photo.
+  const [form, setForm] = useState({ brandColor: "", receiptFooter: "" });
 
   useEffect(() => {
     if (!businessId) { setLoading(false); return; }
@@ -30,10 +35,8 @@ export default function BrandingPage() {
       .then(b => {
         setBusiness(b);
         setForm({
-          logoUrl: b.logoUrl ?? "",
           brandColor: b.brandColor ?? "",
           receiptFooter: b.receiptFooter ?? "",
-          coverImageUrl: b.coverImageUrl ?? "",
         });
       })
       .catch(() => toast.error("Could not load your branding"))
@@ -54,18 +57,6 @@ export default function BrandingPage() {
     }
   };
 
-  const preview = (url: string, alt: string, className: string) =>
-    url.trim() ? (
-      <img
-        src={url}
-        alt={alt}
-        className={className}
-        // A typo should look like a broken link, not a broken layout.
-        onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-        onLoad={e => { (e.currentTarget as HTMLImageElement).style.display = "block"; }}
-      />
-    ) : null;
-
   return (
     <AppLayout>
       <PageHeader title="Branding" subtitle="How your salon looks to customers" />
@@ -76,32 +67,14 @@ export default function BrandingPage() {
         ) : (
           <>
             <Card>
-              <CardHeader><CardTitle className="text-base">Images</CardTitle></CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Logo URL</Label>
-                  <Input
-                    value={form.logoUrl}
-                    onChange={e => setForm(f => ({ ...f, logoUrl: e.target.value }))}
-                    placeholder="https://example.com/logo.png"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Square works best. Leave empty to show your salon's name instead.
-                  </p>
-                  {preview(form.logoUrl, "Logo preview", "h-16 w-16 rounded-lg border border-border/60 object-contain bg-white")}
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                <div>
+                  <p className="font-medium">Cover, logo and gallery</p>
+                  <p className="text-sm text-muted-foreground">Photos have their own page now.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Cover photo URL</Label>
-                  <Input
-                    value={form.coverImageUrl}
-                    onChange={e => setForm(f => ({ ...f, coverImageUrl: e.target.value }))}
-                    placeholder="https://example.com/salon.jpg"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    The photo customers see in the app. Empty shows a tile with your initials.
-                  </p>
-                  {preview(form.coverImageUrl, "Cover preview", "h-32 w-full rounded-lg border border-border/60 object-cover")}
-                </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={getPath("photos")}>Manage photos</Link>
+                </Button>
               </CardContent>
             </Card>
 

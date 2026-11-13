@@ -17,8 +17,8 @@ export function useBusinessHours(businessIdParam?: number) {
     try {
       const data = await businessHoursService.getBusinessHoursByBusinessId(currentBusinessId);
       setBusinessHours(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch business hours");
+    } catch (err) {
+      setError((err instanceof Error && err.message) || "Failed to fetch business hours");
       console.error("Error fetching business hours:", err);
     } finally {
       setLoading(false);

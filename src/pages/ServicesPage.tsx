@@ -272,6 +272,7 @@ export default function ServicesPage() {
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        aria-label={`Delete category ${group.category!.name}`}
                         onClick={() => {
                           if (confirm(`Delete category "${group.category!.name}"? Services in this category won't be deleted.`)) {
                             deleteCategory(group.category!.id);
@@ -321,6 +322,7 @@ export default function ServicesPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0"
+                              aria-label={`Edit ${service.name}`}
                               onClick={e => {
                                 e.stopPropagation();
                                 setEditingService(service);
@@ -333,6 +335,7 @@ export default function ServicesPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              aria-label={`Delete ${service.name}`}
                               onClick={e => {
                                 e.stopPropagation();
                                 handleDeleteService(service.id, service.name);

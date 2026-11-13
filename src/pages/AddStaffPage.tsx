@@ -21,7 +21,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { StaffAvatarPicker } from "@/components/media/StaffAvatarPicker";
 import { Switch } from "@/components/ui/switch";
 import { useStaff } from "@/hooks/useStaff";
 import { useServices } from "@/hooks/useServices";
@@ -29,20 +29,23 @@ import { serviceService } from "@/services/serviceService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { useNavigation } from "@/utils/navigationUtils";
+import { RoleSelect } from "@/components/staff/RoleSelect";
+import { roleService } from "@/services/roleService";
+import { myAccess } from "@/components/layout/navigation";
 import { toast } from "sonner";
+import { WorkingHoursEditor } from "@/components/staff/WorkingHoursEditor";
 import {
-  WorkingHoursEditor,
   DEFAULT_WEEK,
   WEEK_DAYS,
   scheduleToPayload,
   type WeekSchedule,
-} from "@/components/staff/WorkingHoursEditor";
+} from "@/components/staff/workingHours";
 
 export default function AddStaffPage() {
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const businessId = useBusinessId();
-  const { createStaff, setStaffRole, loading: creating } = useStaff();
+  const { createStaff, loading: creating } = useStaff();
   const { services, loading: servicesLoading } = useServices();
   const { businessHours } = useBusinessHours(businessId);
   const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
@@ -74,6 +77,7 @@ export default function AddStaffPage() {
     inviteAndCreateAccount: true,
     permissionLevel: "",
     position: "",
+    avatarUrl: "",
   });
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -112,6 +116,7 @@ export default function AddStaffPage() {
         phone: formData.phone || undefined,
         position: formData.position || undefined,
         inviteAndCreateAccount: formData.inviteAndCreateAccount,
+        avatarUrl: formData.avatarUrl || undefined,
         schedule: scheduleToPayload(schedule),
       });
       // Persist the staff↔service assignments (owned by service-catalog).
@@ -119,8 +124,8 @@ export default function AddStaffPage() {
         await serviceService.setStaffServiceIds(businessId, created.id, selectedServiceIds);
       }
       // #13/#293: role has its own endpoint — createStaff's DTO has no field for it.
-      if (created?.id && formData.permissionLevel) {
-        await setStaffRole(created.id, formData.permissionLevel.toUpperCase());
+      if (created?.id && formData.permissionLevel && myAccess().isOwner) {
+        await roleService.assign(created.id, Number(formData.permissionLevel));
       }
       // #55: the button used to promise an invite and then say nothing at all. Report
       // what was actually requested. Whether the invitation is *emailed* is a separate
@@ -134,9 +139,9 @@ export default function AddStaffPage() {
         toast.success("Staff member added");
       }
       navigate(getPath("staff"));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to create staff:", error);
-      toast.error(error.message || "Failed to create staff member");
+      toast.error((error instanceof Error && error.message) || "Failed to create staff member");
     }
   };
 
@@ -186,18 +191,11 @@ export default function AddStaffPage() {
               <div className="space-y-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
                   {/* Profile Picture */}
-                  <div className="flex flex-col items-center">
-                    <div className="relative">
-                      <Avatar className="h-24 w-24">
-                        <AvatarFallback className="bg-gray-200 text-gray-700 text-2xl font-medium">
-                          <UserPlus size={32} />
-                        </AvatarFallback>
-                      </Avatar>
-                      <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors">
-                        <UserPlus size={16} />
-                      </button>
-                    </div>
-                  </div>
+                  {/* The camera button used to do nothing. */}
+                  <StaffAvatarPicker
+                    value={formData.avatarUrl}
+                    onChange={(url) => setFormData((prev) => ({ ...prev, avatarUrl: url }))}
+                  />
 
                   {/* Name */}
                   <div className="space-y-2">
@@ -235,11 +233,11 @@ export default function AddStaffPage() {
                     />
                   </div>
 
-                  {/* Invite and create Booksy account? */}
+                  {/* Invite and create booqi account? */}
                   <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="invite-account" className="text-sm font-medium">
-                        Invite and create Booksy account?
+                        Invite and create booqi account?
                       </Label>
                       <Switch
                         id="invite-account"
@@ -250,36 +248,16 @@ export default function AddStaffPage() {
                       />
                     </div>
                     <p className="text-xs text-gray-600">
-                      We'll send them a link to download the Booksy app so that
+                      We'll send them a link to download the booqi app so that
                       they can start managing their calendar.
                     </p>
                   </div>
 
-                  {/* Permission Level */}
-                  <div className="space-y-2">
-                    <Label htmlFor="permission-level">Permission Level</Label>
-                    <div className="relative">
-                      <Select
-                        value={formData.permissionLevel}
-                        onValueChange={(value) =>
-                          handleInputChange("permissionLevel", value)
-                        }
-                      >
-                        <SelectTrigger id="permission-level" className="pr-10">
-                          <SelectValue placeholder="Select permission level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Owner">Owner</SelectItem>
-                          <SelectItem value="Manager">Manager</SelectItem>
-                          <SelectItem value="Staff">Staff</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <ChevronRight
-                        size={16}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                      />
-                    </div>
-                  </div>
+                  {/* Role — one of the salon's roles (Team → Roles). */}
+                  <RoleSelect
+                    value={formData.permissionLevel}
+                    onChange={(v) => handleInputChange("permissionLevel", v)}
+                  />
 
                   {/* Position */}
                   <div className="space-y-2">

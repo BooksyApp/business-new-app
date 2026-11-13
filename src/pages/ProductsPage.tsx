@@ -66,7 +66,9 @@ export default function ProductsPage() {
     if (next < 0) return;
     setBusy(true);
     try {
-      await productService.update(p.id, businessId, { quantityOnHand: next });
+      // (businessId, id) — the two were swapped, which only worked while a product id
+      // happened to equal the salon id.
+      await productService.update(businessId, p.id, { quantityOnHand: next });
       load();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Could not update stock");

@@ -393,8 +393,8 @@ function DrawerTab({ businessId }: { businessId: number }) {
       setOpeningFloat("");
       toast.success("Drawer open");
       load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not open the drawer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open the drawer");
     } finally { setBusy(false); }
   };
 
@@ -410,8 +410,8 @@ function DrawerTab({ businessId }: { businessId: number }) {
       else toast.warning(`${formatPrice(Math.abs(diff))} short`);
       setCounted(""); setNotes("");
       load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not close the drawer");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not close the drawer");
     } finally { setBusy(false); }
   };
 
@@ -426,8 +426,8 @@ function DrawerTab({ businessId }: { businessId: number }) {
       await moneyService.moveCash(businessId, session.id, direction, Number(moveAmount), moveReason);
       setMoveAmount(""); setMoveReason("");
       load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not record that");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not record that");
     } finally { setBusy(false); }
   };
 
@@ -609,8 +609,8 @@ function InvoicesTab({ businessId }: { businessId: number }) {
       toast.success(`Issued ${invoice.number}`);
       setSaleId(""); setBuyerName(""); setBuyerTax("");
       load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not issue that invoice");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not issue that invoice");
     } finally { setBusy(false); }
   };
 
@@ -681,7 +681,7 @@ function DepositsTab({ businessId }: { businessId: number }) {
   const [report, setReport] = useState<ForfeitReport | null>(null);
   const [candidates, setCandidates] = useState<ForfeitCandidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<number | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!businessId) { setLoading(false); return; }
@@ -693,14 +693,14 @@ function DepositsTab({ businessId }: { businessId: number }) {
 
   useEffect(load, [load]);
 
-  const keep = async (bookingId: number) => {
+  const keep = async (bookingId: string) => {
     setBusy(bookingId);
     try {
       await moneyService.keepDeposit(businessId, bookingId, "No-show");
       toast.success("Recorded as kept");
       load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not record that");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not record that");
     } finally { setBusy(null); }
   };
 
@@ -841,8 +841,8 @@ function SettingsTab({ businessId }: { businessId: number }) {
       });
       setSettings(updated);
       toast.success("Saved");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Could not save");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
     } finally { setSaving(false); }
   };
 

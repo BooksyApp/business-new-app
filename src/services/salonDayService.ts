@@ -110,7 +110,7 @@ export interface ClientNote {
   kind: NoteKind;
   body: string;
   pinned: boolean;
-  appointment_id: number | null;
+  appointment_id: string | null;
   author_name: string | null;
   created_at: string;
   updated_at: string;
@@ -122,7 +122,7 @@ export interface ClientPhoto {
   kind: 'BEFORE' | 'AFTER';
   caption: string | null;
   taken_on: string;
-  appointment_id: number | null;
+  appointment_id: string | null;
 }
 
 export interface ClientRecord {
@@ -330,7 +330,7 @@ export const salonDayService = {
   addClientNote: (
     businessId: number,
     clientId: number,
-    note: { kind: NoteKind; body: string; pinned?: boolean; appointmentId?: number; authorName?: string },
+    note: { kind: NoteKind; body: string; pinned?: boolean; appointmentId?: string; authorName?: string },
   ) => apiClient.post<ClientNote>(`${base(businessId)}/clients/${clientId}/notes`, note),
   updateClientNote: (businessId: number, noteId: number, change: { body?: string; pinned?: boolean }) =>
     apiClient.put<ClientNote>(`${base(businessId)}/client-notes/${noteId}`, change),
@@ -339,7 +339,7 @@ export const salonDayService = {
   addClientPhoto: (
     businessId: number,
     clientId: number,
-    photo: { url: string; kind: 'BEFORE' | 'AFTER'; caption?: string; appointmentId?: number },
+    photo: { url: string; kind: 'BEFORE' | 'AFTER'; caption?: string; appointmentId?: string },
   ) => apiClient.post<ClientPhoto>(`${base(businessId)}/clients/${clientId}/photos`, photo),
   deleteClientPhoto: (businessId: number, photoId: number) =>
     apiClient.delete<void>(`${base(businessId)}/client-photos/${photoId}`),

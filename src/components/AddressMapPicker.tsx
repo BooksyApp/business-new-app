@@ -13,7 +13,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -123,6 +123,7 @@ export default function AddressMapPicker({
         setMapCenter([40.7128, -74.0060]);
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- ask for the location once, on open
   }, []);
 
   // Update position if initialPosition or selectedPosition changes (from external sources like search)
@@ -135,6 +136,7 @@ export default function AddressMapPicker({
       setPosition(initialPosition);
       setMapCenter(initialPosition);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only outside changes move the pin; adding position would snap a dragged pin back
   }, [initialPosition, selectedPosition]);
 
   const handlePositionChange = async (lat: number, lng: number) => {

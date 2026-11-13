@@ -2,7 +2,8 @@ import { apiClient } from '@/config/api';
 
 /** One tender on a bill. A bill can have several: 20 off a gift card, 80 in cash. */
 export interface SalePayment {
-  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS';
+  // PREPAID: taken from a gift card when the booking was made (V114); never charged again.
+  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS' | 'PREPAID';
   amount: number;
   /** Gift card code, when the method is GIFT_CARD. */
   giftCardCode?: string;
@@ -11,6 +12,10 @@ export interface SalePayment {
 }
 
 export interface PaymentConfirmationRequest {
+  /** A gift card paying the whole bill (single-tender form); the server reads it. */
+  giftCardCode?: string;
+  /** Promo code the booking was made with; the server applies it and counts the use. */
+  promoCode?: string;
   /** Several tenders on one bill. Preferred over paymentMethod + split fields. */
   payments?: SalePayment[];
   businessId: number;
@@ -43,7 +48,7 @@ export interface PaymentConfirmationRequest {
   splitCashAmount?: number;
   splitCardAmount?: number;
   notes?: string;
-  appointmentId?: number;
+  appointmentId?: string;
 }
 
 export interface PaymentConfirmationResponse {

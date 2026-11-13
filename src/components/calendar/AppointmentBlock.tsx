@@ -21,12 +21,14 @@ export interface Appointment {
   staffName?: string; // Master/staff name
   color: AppointmentColor | string; // Can be a color name or hex color
   // Additional fields from API
+  /** The day it is on — set by useAppointments; the modal and edit form read it. */
+  date?: Date;
   clientId?: number;
   clientPhone?: string;
   clientEmail?: string;
   notes?: string;
   price?: number;
-  apiId?: number;
+  apiId?: string;
   // #30: needed to decide which lifecycle actions apply. Optional because older
   // call sites build these without it; the footer simply shows fewer buttons then.
   status?: string;
@@ -124,7 +126,7 @@ export function AppointmentBlock({ appointment, onClick, visits }: AppointmentBl
           "text-[10px] font-semibold whitespace-nowrap flex-shrink-0",
           useWhiteText ? "text-white" : "text-foreground/90"
         )}>
-          {appointment.startTime}
+          {appointment.startTime?.slice(0, 5)}
         </span>
         
         {/* Separator */}

@@ -10,6 +10,7 @@ import { componentTagger } from "lovable-tagger";
 // build has to emit it.
 export default defineConfig(({ mode }) => ({
   base: "/manage/",
+  define: { global: "globalThis" },
   root: process.cwd(),
   publicDir: 'public',
   server: {

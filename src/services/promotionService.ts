@@ -81,6 +81,10 @@ export const promotionService = {
       { successUrl, cancelUrl }
     ),
 
+  /** Drop a reservation that was never paid for, so a new campaign can be started. */
+  discard: (businessId: number, promotionId: number) =>
+    apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/discard`, {}),
+
   /** Stop delivering. Paused days are added back to the end when it resumes. */
   pause: (businessId: number, promotionId: number) =>
     apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/pause`, {}),

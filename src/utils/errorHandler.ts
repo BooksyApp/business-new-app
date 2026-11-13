@@ -13,7 +13,7 @@ export interface ErrorResponse {
 /**
  * Extracts a user-friendly error message from various error types
  */
-export function extractErrorMessage(error: any): string {
+export function extractErrorMessage(error: unknown): string {
   // If it's already a string, return it
   if (typeof error === 'string') {
     return error;
@@ -26,19 +26,20 @@ export function extractErrorMessage(error: any): string {
 
   // If it's a backend ErrorResponse object
   if (error && typeof error === 'object') {
+    const e = error as { validationErrors?: unknown; message?: unknown; error?: unknown };
     // Check for validation errors first (most specific)
-    if (error.validationErrors && Array.isArray(error.validationErrors) && error.validationErrors.length > 0) {
-      return error.validationErrors.join(', ');
+    if (e.validationErrors && Array.isArray(e.validationErrors) && e.validationErrors.length > 0) {
+      return e.validationErrors.join(', ');
     }
 
     // Check for message field (this is the main error message from backend)
-    if (error.message && typeof error.message === 'string' && error.message.trim()) {
-      return error.message.trim();
+    if (e.message && typeof e.message === 'string' && e.message.trim()) {
+      return e.message.trim();
     }
 
     // Check for error field (fallback)
-    if (error.error && typeof error.error === 'string' && error.error.trim()) {
-      return error.error.trim();
+    if (e.error && typeof e.error === 'string' && e.error.trim()) {
+      return e.error.trim();
     }
   }
 
@@ -66,7 +67,7 @@ export function formatErrorMessage(message: string): string {
 /**
  * Gets a user-friendly error message from an error
  */
-export function getErrorMessage(error: any): string {
+export function getErrorMessage(error: unknown): string {
   const message = extractErrorMessage(error);
   return formatErrorMessage(message);
 }

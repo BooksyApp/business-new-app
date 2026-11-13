@@ -401,9 +401,10 @@ export default function AddComboServicePage() {
       }
       
       navigate(getPath("items-category"));
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to create combo service:", error);
-      toast.error(error?.response?.data?.message || error?.message || "Failed to create combo service");
+      const e = error as { message?: string; response?: { data?: { message?: string } } };
+      toast.error(e?.response?.data?.message || e?.message || "Failed to create combo service");
     }
   };
 
@@ -520,9 +521,10 @@ export default function AddComboServicePage() {
       setComboServices([]);
       setBookingType("sequence");
       setPricingType("custom");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to create combo service:", error);
-      toast.error(error?.response?.data?.message || error?.message || "Failed to create combo service");
+      const e = error as { message?: string; response?: { data?: { message?: string } } };
+      toast.error(e?.response?.data?.message || e?.message || "Failed to create combo service");
     }
   };
 

@@ -23,9 +23,9 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
         ? await serviceService.getServicesByCategory(categoryId)
         : await serviceService.getServicesByBusiness(businessId);
       setServices(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load services:', err);
-      setError(err.message || 'Failed to load services');
+      setError((err instanceof Error && err.message) || 'Failed to load services');
       toast.error('Failed to load services');
     } finally {
       setLoading(false);
@@ -47,8 +47,8 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
       setServices(prev => [...prev, created]);
       toast.success('Service created successfully');
       return created;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create service');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to create service');
       throw err;
     }
   }, [businessId]);
@@ -59,8 +59,8 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
       setServices(prev => prev.map(svc => svc.id === id ? updated : svc));
       toast.success('Service updated successfully');
       return updated;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update service');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to update service');
       throw err;
     }
   }, [businessId]);
@@ -70,8 +70,8 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
       await serviceService.deleteService(id, businessId);
       setServices(prev => prev.filter(svc => svc.id !== id));
       toast.success('Service deleted successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete service');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to delete service');
       throw err;
     }
   }, [businessId]);

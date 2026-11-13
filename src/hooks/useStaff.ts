@@ -16,9 +16,9 @@ export function useStaff(businessIdParam?: number) {
       setError(null);
       const data = await staffService.getStaffByBusiness(businessId);
       setStaff(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load staff:', err);
-      setError(err.message || 'Failed to load staff');
+      setError((err instanceof Error && err.message) || 'Failed to load staff');
       toast.error('Failed to load staff');
     } finally {
       setLoading(false);
@@ -35,8 +35,8 @@ export function useStaff(businessIdParam?: number) {
       setStaff(prev => [...prev, created]);
       toast.success('Staff member created successfully');
       return created;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create staff member');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to create staff member');
       throw err;
     }
   }, [businessId]);
@@ -47,8 +47,8 @@ export function useStaff(businessIdParam?: number) {
       setStaff(prev => prev.map(s => s.id === id ? updated : s));
       toast.success('Staff member updated successfully');
       return updated;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update staff member');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to update staff member');
       throw err;
     }
   }, [businessId]);
@@ -58,8 +58,8 @@ export function useStaff(businessIdParam?: number) {
       await staffService.deleteStaff(id, businessId);
       setStaff(prev => prev.filter(s => s.id !== id));
       toast.success('Staff member deleted successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete staff member');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to delete staff member');
       throw err;
     }
   }, [businessId]);

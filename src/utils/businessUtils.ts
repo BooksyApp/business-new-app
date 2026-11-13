@@ -19,7 +19,7 @@ export const getCurrentUser = () => {
  */
 export const isBusinessOwner = (): boolean => {
   const user = getCurrentUser();
-  return user?.role === "BUSINESS_OWNER";
+  return user?.role === "BUSINESS_OWNER" || user?.role === "STAFF";
 };
 
 /**
@@ -27,7 +27,7 @@ export const isBusinessOwner = (): boolean => {
  */
 export const ownsBusiness = async (businessId: number): Promise<boolean> => {
   const user = getCurrentUser();
-  if (!user || user.role !== "BUSINESS_OWNER") {
+  if (!user || (user.role !== "BUSINESS_OWNER" && user.role !== "STAFF")) {
     return false;
   }
 
@@ -50,7 +50,7 @@ export const ownsBusiness = async (businessId: number): Promise<boolean> => {
  */
 export const getUserBusinesses = async () => {
   const user = getCurrentUser();
-  if (!user || user.role !== "BUSINESS_OWNER") {
+  if (!user || (user.role !== "BUSINESS_OWNER" && user.role !== "STAFF")) {
     return [];
   }
 

@@ -19,6 +19,7 @@ const AddComboServicePage = lazy(() => import("./pages/AddComboServicePage"));
 const AddAddonPage = lazy(() => import("./pages/AddAddonPage"));
 const ClientsPage = lazy(() => import("./pages/ClientsPage"));
 const StaffPage = lazy(() => import("./pages/StaffPage"));
+const RolesPage = lazy(() => import("./pages/RolesPage"));
 const EditStaffPage = lazy(() => import("./pages/EditStaffPage"));
 const AddStaffPage = lazy(() => import("./pages/AddStaffPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
@@ -39,9 +40,11 @@ const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const BrandingPage = lazy(() => import("./pages/BrandingPage"));
+const PhotosPage = lazy(() => import("./pages/PhotosPage"));
 const BusinessPage = lazy(() => import("./pages/BusinessPage"));
 const BusinessHoursPage = lazy(() => import("./pages/BusinessHoursPage"));
 const RegistrationPage = lazy(() => import("./pages/RegistrationPage"));
+const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const PaymentMethodPage = lazy(() => import("./pages/PaymentMethodPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -116,6 +119,16 @@ const App = () => (
                 </Suspense>
               }
             />
+            {/* The link in a team invitation. Not behind PublicRoute: an owner who is
+                signed in on this browser can still open a colleague's invitation. */}
+            <Route
+              path="/accept-invite"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <AcceptInvitePage />
+                </Suspense>
+              }
+            />
             <Route
               path="/register"
               element={
@@ -187,6 +200,7 @@ const App = () => (
               <Route path="money" element={<Suspense fallback={<PageLoader />}><MoneyPage /></Suspense>} />
               <Route path="promotion" element={<Suspense fallback={<PageLoader />}><PromotionPage /></Suspense>} />
               <Route path="staff" element={<Suspense fallback={<PageLoader />}><StaffPage /></Suspense>} />
+              <Route path="roles" element={<Suspense fallback={<PageLoader />}><RolesPage /></Suspense>} />
               <Route path="edit-staff/:id" element={<Suspense fallback={<PageLoader />}><EditStaffPage /></Suspense>} />
               <Route path="add-staff" element={<Suspense fallback={<PageLoader />}><AddStaffPage /></Suspense>} />
               <Route path="business" element={<Suspense fallback={<PageLoader />}><BusinessPage /></Suspense>} />
@@ -197,6 +211,7 @@ const App = () => (
               <Route path="security" element={<Suspense fallback={<PageLoader />}><SecurityPage /></Suspense>} />
               <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
               <Route path="branding" element={<Suspense fallback={<PageLoader />}><BrandingPage /></Suspense>} />
+              <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
               <Route path="help" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense>} />
               <Route path="payment-method" element={<Suspense fallback={<PageLoader />}><PaymentMethodPage /></Suspense>} />

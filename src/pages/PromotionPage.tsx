@@ -91,6 +91,16 @@ export default function PromotionPage() {
   };
 
   const live = history.find((r) => r.status === "ACTIVE" || r.status === "PAUSED");
+  /**
+   * #144: a campaign reserved but never confirmed.
+   *
+   * The row is created PENDING and the Stripe webhook turns it ACTIVE. When that webhook
+   * does not arrive — an unregistered endpoint, a missing signing secret, a salon that
+   * closed the Stripe tab — it stays PENDING, and the server refuses a second campaign
+   * while one exists. This screen showed nothing at all in that state, so the salon met a
+   * 409 with no explanation and no way out.
+   */
+  const pending = history.find((r) => r.status === "PENDING");
   const past = history.filter((r) => r.status === "ENDED" || r.status === "CANCELLED");
 
   const act = async (fn: () => Promise<unknown>, done: string) => {
@@ -119,6 +129,53 @@ export default function PromotionPage() {
           <Card>
             <CardContent className="py-6 text-sm text-muted-foreground">
               Promoted placement is not on sale at the moment.
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {/* Reserved but not confirmed. Above everything, because until it is resolved the
+            salon cannot do anything else here. */}
+        {pending && !live ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment not confirmed</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                A campaign at {formatPrice(pending.dailyBudget)} a day for {pending.days} days is
+                waiting on payment. Nothing has been charged and nothing is being shown. Finish
+                it, or cancel it and start again.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      const { checkoutUrl } = await promotionService.checkout(
+                        businessId,
+                        pending.id,
+                        `${window.location.origin}/promotion`,
+                        `${window.location.origin}/promotion`
+                      );
+                      window.location.href = checkoutUrl;
+                    }, "Opening payment…")
+                  }
+                >
+                  Finish payment
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    void act(
+                      () => promotionService.discard(businessId, pending.id),
+                      "Reservation cancelled."
+                    )
+                  }
+                >
+                  Cancel it
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : null}
@@ -220,7 +277,7 @@ export default function PromotionPage() {
           </Card>
         ) : null}
 
-        {quote?.enabled && !live ? (
+        {quote?.enabled && !live && !pending ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

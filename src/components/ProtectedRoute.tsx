@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { clearAuthData, getAccessToken } from "@/utils/authUtils";
+import { refreshSession } from "@/config/api";
 import { authService } from "@/services/authService";
 
 interface ProtectedRouteProps {
@@ -26,7 +27,12 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
 
       try {
-        const validationResult = await authService.validateToken(accessToken);
+        let validationResult = await authService.validateToken(accessToken);
+        // Expired after a day: renew with the refresh token instead of signing out.
+        if (!validationResult.valid) {
+          const renewed = await refreshSession();
+          if (renewed) validationResult = await authService.validateToken(renewed);
+        }
 
         if (!isMounted) return;
 

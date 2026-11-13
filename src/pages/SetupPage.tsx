@@ -109,7 +109,7 @@ const settingsCategories: SettingsCategory[] = [
     icon: Palette,
     mainPath: "branding",
     items: [
-      { label: "Logo & cover photo", path: "branding" },
+      { label: "Photos: cover, logo, gallery", path: "photos" },
       { label: "Brand colour", path: "branding" },
       { label: "Receipt footer", path: "branding" },
     ],
@@ -150,9 +150,10 @@ const settingsCategories: SettingsCategory[] = [
     title: "Team Permissions",
     description: "Control staff access levels",
     icon: Users,
-    mainPath: "staff",
+    mainPath: "roles",
     items: [
-      { label: "Staff & roles", path: "staff" },
+      { label: "Roles & permissions", path: "roles" },
+      { label: "Team members", path: "staff" },
       { label: "Salon opening hours", path: "business-hours" },
     ],
     color: "text-amber-600",

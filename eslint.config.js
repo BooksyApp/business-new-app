@@ -23,4 +23,10 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // shadcn/ui primitives export their variant helpers (buttonVariants, badgeVariants…)
+    // next to the component by design; they are vendored and not hand-edited.
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
 );

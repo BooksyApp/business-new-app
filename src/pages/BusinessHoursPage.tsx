@@ -119,7 +119,7 @@ export default function BusinessHoursPage() {
                 return (
                   <div
                     key={d.key}
-                    className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${
+                    className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-4 py-3 transition-colors ${
                       day.enabled ? "bg-card" : "bg-muted/30 opacity-60"
                     }`}
                   >
@@ -133,7 +133,7 @@ export default function BusinessHoursPage() {
                     {/* Day label */}
                     <Label
                       htmlFor={`toggle-${d.key}`}
-                      className="w-28 cursor-pointer font-medium text-sm"
+                      className="w-24 cursor-pointer font-medium text-sm sm:w-28"
                     >
                       {d.label}
                     </Label>

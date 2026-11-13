@@ -138,9 +138,9 @@ export default function ClientsPage() {
       setLoading(true);
       const data = await clientService.getClientsWithAppointments(businessId);
       setClients(data);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to load clients:", error);
-      toast.error(error.message || "Failed to load clients");
+      toast.error((error instanceof Error && error.message) || "Failed to load clients");
     } finally {
       setLoading(false);
     }
@@ -150,7 +150,7 @@ export default function ClientsPage() {
     try {
       const data = await invitationService.getInvitationsByBusiness(businessId);
       setInvitations(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to load invitations:", error);
       // Don't break the page if invitations fail to load
       setInvitations([]);
@@ -675,7 +675,7 @@ export default function ClientsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {staff.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
+                    <SelectItem key={s.id} value={String(s.id)}>
                       {s.name}
                     </SelectItem>
                   ))}
@@ -802,7 +802,7 @@ export default function ClientsPage() {
                           expirationDays: 30,
                         });
                         await loadInvitations(); // Refresh invitations
-                      } catch (invError: any) {
+                      } catch (invError) {
                         console.error("Failed to create invitation:", invError);
                         // Don't fail the whole operation if invitation fails
                       }
@@ -820,8 +820,8 @@ export default function ClientsPage() {
                       notes: "",
                     });
                     loadClients(); // Refresh clients list
-                  } catch (error: any) {
-                    toast.error(error.message || "Failed to send invitation");
+                  } catch (error) {
+                    toast.error((error instanceof Error && error.message) || "Failed to send invitation");
                   }
                 }}
                 disabled={!invitationForm.serviceId || !invitationForm.staffId || !invitationForm.appointmentDate || !invitationForm.startTime || !invitationForm.endTime}
@@ -951,8 +951,8 @@ export default function ClientsPage() {
                     if (shouldInvite) {
                       await loadInvitations();
                     }
-                  } catch (error: any) {
-                    toast.error(error.message || "Failed to add client. If invitation was requested, it may have failed.");
+                  } catch (error) {
+                    toast.error((error instanceof Error && error.message) || "Failed to add client. If invitation was requested, it may have failed.");
                   }
                 }}
                 disabled={!newClientForm.firstName.trim() || (!newClientForm.email && !newClientForm.phone)}

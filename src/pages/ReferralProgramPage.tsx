@@ -45,6 +45,7 @@ export default function ReferralProgramPage() {
       .getMyPlatformCode()
       .then(setMyCode)
       .catch(() => setMyCode(null));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loadData reads only businessId, which is listed
   }, [businessId]);
 
   const loadData = async () => {
@@ -66,9 +67,9 @@ export default function ReferralProgramPage() {
         // Endpoint might not exist yet
         console.log("Referral usages endpoint not available");
       }
-    } catch (error: any) {
+    } catch (error) {
       // Referral service may not be deployed yet — suppress toast, show inline notice
-      console.warn("Referral service unavailable:", error?.message || error);
+      console.warn("Referral service unavailable:", (error instanceof Error && error.message) || error);
       setServiceUnavailable(true);
     } finally {
       setLoading(false);

@@ -66,7 +66,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
   }, [businessId, staffId]);
 
   const calculateCommission = useCallback(async (
-    appointmentId: number,
+    appointmentId: string,
     serviceId: number,
     saleAmount: number
   ) => {

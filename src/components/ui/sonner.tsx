@@ -10,6 +10,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      // Top, not the default bottom-right: the till's CONFIRM AND PAY, the calendar's +
+      // button and every sheet's Save live in the bottom-right, and a toast sat on them.
+      position="top-center"
       toastOptions={{
         classNames: {
           toast:

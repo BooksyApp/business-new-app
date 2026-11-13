@@ -29,6 +29,13 @@ export interface PromoCodeRequest {
 }
 
 class PromoService {
+  /** What a code takes off this subtotal, per the server. Throws if the code is not valid. */
+  async validate(businessId: number, code: string, subtotal: number): Promise<{ code: string; discount: number }> {
+    return apiClient.get<{ code: string; discount: number }>(
+      `/promo-codes/business/${businessId}/validate?code=${encodeURIComponent(code)}&subtotal=${subtotal}`
+    );
+  }
+
   async list(businessId: number): Promise<PromoCode[]> {
     return apiClient.get<PromoCode[]>(`/promo-codes/business/${businessId}`);
   }

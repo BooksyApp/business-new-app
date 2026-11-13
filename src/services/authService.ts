@@ -74,7 +74,7 @@ class AuthService {
       // Check if response is ok
       if (!response.ok) {
         // Try to parse error response from backend
-        let errorData: ErrorResponse | any;
+        let errorData: ErrorResponse;
         const contentType = response.headers.get('content-type');
         
         if (contentType && contentType.includes('application/json')) {
@@ -103,15 +103,16 @@ class AuthService {
         const error = new Error(errorMessage);
         
         // Attach the full error response for debugging
-        (error as any).response = errorData;
-        (error as any).status = response.status;
+        const e = error as Error & { response?: unknown; status?: number };
+        e.response = errorData;
+        e.status = response.status;
         
         console.error('API Error Response:', errorData);
         throw error;
       }
 
       return await response.json();
-    } catch (error: any) {
+    } catch (error) {
       // If it's already our formatted error, re-throw it
       if (error instanceof Error && error.message && !error.message.includes('Failed to fetch')) {
         console.error('Auth API request failed:', error.message, error);
@@ -119,19 +120,20 @@ class AuthService {
       }
       
       // Handle network errors (Failed to fetch, CORS, connection refused, timeout, etc.)
-      if (error?.message?.includes('Failed to fetch') || 
-          error?.message?.includes('NetworkError') ||
-          error?.message?.includes('ERR_CONNECTION_TIMED_OUT') ||
-          error?.message?.includes('ERR_CONNECTION_REFUSED') ||
-          error?.message?.includes('timeout') ||
-          error?.name === 'TypeError') {
+      const e = error as { message?: string; name?: string } | null;
+      if (e?.message?.includes('Failed to fetch') || 
+          e?.message?.includes('NetworkError') ||
+          e?.message?.includes('ERR_CONNECTION_TIMED_OUT') ||
+          e?.message?.includes('ERR_CONNECTION_REFUSED') ||
+          e?.message?.includes('timeout') ||
+          e?.name === 'TypeError') {
         console.error('Network error:', error);
         
         // Provide specific error messages based on error type
         let errorMessage = 'Unable to connect to the server. ';
-        if (error?.message?.includes('ERR_CONNECTION_TIMED_OUT') || error?.message?.includes('timeout')) {
+        if (e?.message?.includes('ERR_CONNECTION_TIMED_OUT') || e?.message?.includes('timeout')) {
           errorMessage += 'Connection timed out. Please check if the API server is running and accessible.';
-        } else if (error?.message?.includes('ERR_CONNECTION_REFUSED')) {
+        } else if (e?.message?.includes('ERR_CONNECTION_REFUSED')) {
           errorMessage += 'Connection refused. The server may be down or not accepting connections.';
         } else {
           errorMessage += 'Please check your connection and try again.';
@@ -165,9 +167,9 @@ class AuthService {
           password: data.password,
         }),
       });
-    } catch (primaryError: any) {
+    } catch (primaryError) {
       // Fallback to the admin alias at /api/auth/login (also public, accepts {email} too)
-      const fallbackStatus = primaryError?.status;
+      const fallbackStatus = (primaryError as { status?: number } | null)?.status;
       const shouldTryPublicFallback =
         !fallbackStatus ||
         [400, 404, 500, 502, 503, 504].includes(fallbackStatus);
@@ -201,11 +203,12 @@ class AuthService {
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     return this.request<AuthResponse>('/auth/refresh', {
       method: 'POST',
-      body: JSON.stringify(refreshToken),
+      // The endpoint reads {"refreshToken": "..."}; a bare string was rejected.
+      body: JSON.stringify({ refreshToken }),
     });
   }
 
-  async validateToken(token: string): Promise<{ valid: boolean; message: string; user?: any }> {
+  async validateToken(token: string): Promise<{ valid: boolean; message: string; user?: unknown }> {
     try {
       const response = await fetch(`${AUTH_API_BASE}/auth/validate`, {
         method: 'POST',
@@ -215,8 +218,13 @@ class AuthService {
         },
       });
 
-      if (!response.ok) {
+      // Only the server saying no ends the session. A restart (every deploy) answered
+      // with a network error or a 5xx, and that signed every open manager out.
+      if (response.status === 401 || response.status === 403) {
         return { valid: false, message: 'Token validation failed' };
+      }
+      if (!response.ok) {
+        return { valid: true, message: 'Could not check the session right now' };
       }
 
       const data = await response.json();
@@ -225,9 +233,9 @@ class AuthService {
         message: data.message || 'Token validation failed',
         user: data.user,
       };
-    } catch (error: any) {
-      console.error('Token validation error:', error);
-      return { valid: false, message: error?.message || 'Token validation failed' };
+    } catch (error) {
+      console.warn('Could not reach the server to check the session; keeping it:', error);
+      return { valid: true, message: 'Could not check the session right now' };
     }
   }
 }

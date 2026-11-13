@@ -62,7 +62,9 @@ export default function LocationsPage() {
       <PageHeader
         title="Locations"
         subtitle="Your salon and any other shops you run"
-        action={
+        // PageHeader takes `actions`: passed as `action`, the "Add location" button was
+        // never rendered, so a second location could not be added.
+        actions={
           <Button className="gap-2" onClick={() => setAdding(v => !v)}>
             <Plus size={16} />
             {adding ? "Cancel" : "Add location"}

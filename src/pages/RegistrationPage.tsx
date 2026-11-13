@@ -33,6 +33,8 @@ interface RegistrationData {
   passwordConfirmation: string;
   language: string;
   country: string;
+  /** ISO 3166-1 alpha-2 from the picked address; "" when unknown (typed by hand). */
+  countryCode: string;
   termsAccepted: boolean;
   marketing1: boolean;
   category: string;
@@ -85,6 +87,10 @@ const RegistrationPage = () => {
   const totalSteps = 6;
 
   const [formData, setFormData] = useState<RegistrationData>({
+    // null, not missing: step 3 checks `latitude !== null`, and undefined passed that check,
+    // so an address typed without picking a suggestion went through with no coordinates.
+    latitude: null,
+    longitude: null,
     firstName: "",
     lastName: "",
     email: "",
@@ -93,7 +99,10 @@ const RegistrationPage = () => {
     password: "",
     passwordConfirmation: "",
     language: "English",
-    country: "Poland",
+    // Was a hidden, hardcoded "Poland" sent for every salon wherever it was. It now comes
+    // from the address the owner picks, and the server works it out from the pin anyway.
+    country: "",
+    countryCode: "",
     termsAccepted: false,
     marketing1: false,
     category: "",
@@ -134,10 +143,16 @@ const RegistrationPage = () => {
   // #56: set when the address lookup is unreachable, so the wizard can tell the user to
   // type the address and building number by hand instead of silently going nowhere.
   const [geocodeUnavailable, setGeocodeUnavailable] = useState(false);
+  const [supportedCountries, setSupportedCountries] = useState<{ code: string }[]>([]);
+  useEffect(() => {
+    getPlatformSettings()
+      .then((p) => setSupportedCountries(p.countries ?? []))
+      .catch(() => setSupportedCountries([]));
+  }, []);
   const [addressSearch, setAddressSearch] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [additionalDetails, setAdditionalDetails] = useState("");
-  const [addressResults, setAddressResults] = useState<any[]>([]);
+  const [addressResults, setAddressResults] = useState<{ display_name?: string; name?: string; lat: string; lon: string; address?: { country?: string; country_code?: string; house_number?: string; building?: string } }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [editingDay, setEditingDay] = useState<string | null>(null);
   const [tempStartTime, setTempStartTime] = useState("10:00");
@@ -166,6 +181,10 @@ const RegistrationPage = () => {
     "aesthetic-medicine": Stethoscope,
     dental: Stethoscope,
   };
+  const [otherCategories, setOtherCategories] = useState<BusinessCategory[]>([]);
+  useEffect(() => {
+    categoryService.list().then(setOtherCategories).catch(() => setOtherCategories([]));
+  }, []);
   const featuredCategories = otherCategories.slice(0, 6).map((c) => ({
     id: c.slug,
     name: c.name,
@@ -174,10 +193,6 @@ const RegistrationPage = () => {
 
   // Was a hardcoded array here and a free-text box on the business profile, so the same
   // trade ended up stored three different ways. One list, from the backend.
-  const [otherCategories, setOtherCategories] = useState<BusinessCategory[]>([]);
-  useEffect(() => {
-    categoryService.list().then(setOtherCategories).catch(() => setOtherCategories([]));
-  }, []);
 
   const helpOptions = [
     "More self-booked clients", "Selling products", "Less canceled or missed appointments",
@@ -216,7 +231,7 @@ const RegistrationPage = () => {
   const isPasswordValid = hasLetter && hasDigit && hasMinLength;
   const passwordsMatch = formData.password === formData.passwordConfirmation && formData.passwordConfirmation.length > 0;
 
-  const updateFormData = (field: keyof RegistrationData, value: any) => {
+  const updateFormData = (field: keyof RegistrationData, value: RegistrationData[keyof RegistrationData]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -328,7 +343,13 @@ const RegistrationPage = () => {
     formData.termsAccepted;
   const canProceedStep2 = formData.businessName.trim() !== "" && 
     formData.category !== "" && formData.weeklySchedule !== "" && formData.workLocation !== "";
-  const canProceedStep3 = formData.address !== "" && formData.buildingNumber.trim() !== "" && formData.latitude !== null && formData.longitude !== null;
+  // A country booqi does not operate in is refused by the server; say so here, before the
+  // account is created, instead of after it when retrying would hit "email taken".
+  const unsupportedCountry =
+    formData.countryCode !== "" &&
+    supportedCountries.length > 0 &&
+    !supportedCountries.some((c) => c.code === formData.countryCode);
+  const canProceedStep3 = formData.address !== "" && formData.buildingNumber.trim() !== "" && formData.latitude !== null && formData.longitude !== null && !unsupportedCountry;
   const canProceedStep4 = true; // Step 4 is now optional/skippable
   const canProceedStep5 = formData.profileLiveDate !== "";
 
@@ -353,7 +374,9 @@ const RegistrationPage = () => {
         address: formData.address,
         buildingNumber: formData.buildingNumber,
         apartmentNumber: formData.apartmentNumber,
-        city: formData.address?.split(',')[1]?.trim() || '',
+        // No city: the picked address is the geocoder's full line, which already ends in
+        // city and country. Sending a city made the server append both again, and the
+        // second comma part it guessed as "city" was usually the street.
         country: formData.country,
         latitude: formData.latitude || undefined,
         longitude: formData.longitude || undefined,
@@ -369,7 +392,7 @@ const RegistrationPage = () => {
         services: formData.services.length > 0 ? JSON.stringify(formData.services) : undefined,
       });
 
-      const { accessToken, refreshToken, userId, businessId, fullName, email, role } = authResponse as any;
+      const { accessToken, refreshToken, userId, businessId, fullName, email, role } = authResponse;
 
       // Store tokens FIRST so apiClient can use them for the business update call below
       localStorage.setItem('accessToken', accessToken);
@@ -391,7 +414,6 @@ const RegistrationPage = () => {
         name: formData.businessName,
         category: formData.category || undefined,
         address: formData.address || undefined,
-        city: formData.address?.split(',')[1]?.trim() || undefined,
         country: formData.country || undefined,
         latitude: formData.latitude || undefined,
         longitude: formData.longitude || undefined,
@@ -459,28 +481,29 @@ const RegistrationPage = () => {
         }
       }
 
-      toast.success("Registration completed! Welcome to Booksy!");
+      toast.success("Registration completed! Welcome to booqi!");
 
       // Redirect to portal (home page)
       navigate('/');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Registration error:', error);
+      const e = error as { message?: string; response?: { message?: string; error?: string }; status?: number } | null;
       console.error('Error details:', {
-        message: error?.message,
-        response: error?.response,
-        status: error?.status,
+        message: e?.message,
+        response: e?.response,
+        status: e?.status,
         error: error
       });
       
       // Try to extract error message from various sources
       let errorMessage = "Registration failed. Please try again.";
       
-      if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.response?.message) {
-        errorMessage = error.response.message;
-      } else if (error?.response?.error) {
-        errorMessage = error.response.error;
+      if (e?.message) {
+        errorMessage = e.message;
+      } else if (e?.response?.message) {
+        errorMessage = e.response.message;
+      } else if (e?.response?.error) {
+        errorMessage = e.response.error;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
@@ -1053,6 +1076,8 @@ const RegistrationPage = () => {
                                 updateFormData("address", displayName);
                                 updateFormData("latitude", lat);
                                 updateFormData("longitude", lon);
+                                updateFormData("country", addr.address?.country || displayName.split(',').pop()?.trim() || "");
+                                updateFormData("countryCode", (addr.address?.country_code || "").toUpperCase());
                                 // Extract building number from address details if available
                                 const buildingNumber = addr.address?.house_number || addr.address?.building || '';
                                 if (buildingNumber) {
@@ -1106,6 +1131,10 @@ const RegistrationPage = () => {
                       onLocationSelect={(lat, lng, address, buildingNumber) => {
                         updateFormData("latitude", lat);
                         updateFormData("longitude", lng);
+                        // A moved pin may be in another country; the server reads it from the
+                        // pin, so drop the code taken from an earlier pick rather than trust it.
+                        updateFormData("countryCode", "");
+                        updateFormData("country", address ? address.split(',').pop()?.trim() || "" : "");
                         if (address) {
                           updateFormData("address", address);
                           // Update the address search input field with shortened address
@@ -1129,6 +1158,12 @@ const RegistrationPage = () => {
                       selectedPosition={formData.latitude && formData.longitude ? [formData.latitude, formData.longitude] : null}
                       disabled={editingDay !== null}
                     />
+                    {unsupportedCountry && (
+                      <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                        booqi is not open in {formData.country || "this country"} yet, so a salon
+                        there cannot be set up. Prices, tax and payments are set per country.
+                      </p>
+                    )}
                     {geocodeUnavailable && (
                       <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         Address lookup is unavailable right now. Click your location on the
@@ -1332,7 +1367,7 @@ const RegistrationPage = () => {
               <div className="space-y-6">
                   <div className="space-y-3">
                     <Label className="text-sm font-medium text-gray-700">
-                      How do you hope Booksy can help you? <span className="text-gray-500 font-normal">(Select up to 5)</span>
+                      How do you hope booqi can help you? <span className="text-gray-500 font-normal">(Select up to 5)</span>
                     </Label>
                     <div className="grid grid-cols-2 gap-2.5">
                       {helpOptions.map((option) => {
@@ -1465,12 +1500,12 @@ const RegistrationPage = () => {
                   <h1 className="text-3xl font-semibold text-gray-900 mb-2">
                     You're all set, {formData.firstName || "there"}!
                   </h1>
-                  <p className="text-gray-600">To help your business thrive, here are a few ways Booksy will do that:</p>
+                  <p className="text-gray-600">To help your business thrive, here are a few ways booqi will do that:</p>
                 </div>
 
               <div className="space-y-3">
                 {[
-                  { icon: User, text: "Clients book themselves with your Booksy profile" },
+                  { icon: User, text: "Clients book themselves with your booqi profile" },
                   { icon: Bell, text: "No-shows are history with automated reminders and custom fees" },
                   { icon: Sparkles, text: "Easy social bookings with social tools to turn followers into clients" },
                   { icon: DollarSign, text: "Flexible modern payments with multiple payment methods, including your phone" },

@@ -16,9 +16,9 @@ export function useCategories(businessIdParam?: number) {
       setError(null);
       const data = await categoryService.getCategoriesByBusiness(businessId);
       setCategories(data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load categories:', err);
-      setError(err.message || 'Failed to load categories');
+      setError((err instanceof Error && err.message) || 'Failed to load categories');
       toast.error('Failed to load categories');
     } finally {
       setLoading(false);
@@ -35,8 +35,8 @@ export function useCategories(businessIdParam?: number) {
       setCategories(prev => [...prev, created]);
       toast.success('Category created successfully');
       return created;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create category');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to create category');
       throw err;
     }
   }, [businessId]);
@@ -47,8 +47,8 @@ export function useCategories(businessIdParam?: number) {
       setCategories(prev => prev.map(cat => cat.id === id ? updated : cat));
       toast.success('Category updated successfully');
       return updated;
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update category');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to update category');
       throw err;
     }
   }, [businessId]);
@@ -58,8 +58,8 @@ export function useCategories(businessIdParam?: number) {
       await categoryService.deleteCategory(id, businessId);
       setCategories(prev => prev.filter(cat => cat.id !== id));
       toast.success('Category deleted successfully');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete category');
+    } catch (err) {
+      toast.error((err instanceof Error && err.message) || 'Failed to delete category');
       throw err;
     }
   }, [businessId]);

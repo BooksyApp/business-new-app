@@ -37,7 +37,7 @@ export interface Commission {
   id: number;
   businessId: number;
   staffId: number;
-  appointmentId?: number;
+  appointmentId?: string;
   serviceId?: number;
   saleId?: number;
   category: CommissionCategory;
@@ -132,7 +132,7 @@ export const commissionService = {
   async calculateCommission(
     businessId: number,
     staffId: number,
-    appointmentId: number,
+    appointmentId: string,
     serviceId: number,
     saleAmount: number
   ): Promise<Commission> {
@@ -146,7 +146,7 @@ export const commissionService = {
     return apiClient.put(`/commissions/${id}/cancel`, {});
   },
 
-  async cancelCommissionsForAppointment(appointmentId: number): Promise<void> {
+  async cancelCommissionsForAppointment(appointmentId: string): Promise<void> {
     return apiClient.put(`/commissions/appointment/${appointmentId}/cancel`, {});
   },
 };

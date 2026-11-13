@@ -2,7 +2,7 @@ import { apiClient } from '@/config/api';
 import { format } from 'date-fns';
 
 export interface Appointment {
-  id: number;
+  id: string;
   businessId: number;
   staffId: number;
   staffName?: string;
@@ -48,6 +48,12 @@ export interface Appointment {
   /** What the customer said they would pay with when booking: SALON, GIFT_CARD, WALLET. */
   paymentPreference?: string | null;
   giftCardCode?: string | null;
+  /** The promo code the customer booked with; the till must apply it. */
+  promoCode?: string | null;
+  /** What the till took for this visit, net of tip. */
+  paidAmount?: number | null;
+  /** Taken from a gift card at booking and not yet used at the till (V114). */
+  prepaidAmount?: number | null;
 }
 
 export interface CreateAppointmentRequest {
@@ -67,7 +73,7 @@ export interface CreateAppointmentRequest {
 }
 
 export const appointmentService = {
-  async getAppointmentById(id: number): Promise<Appointment> {
+  async getAppointmentById(id: string): Promise<Appointment> {
     return apiClient.get<Appointment>(`/bookings/${id}`);
   },
 
@@ -111,25 +117,25 @@ export const appointmentService = {
     });
   },
 
-  async updateAppointment(id: number, request: CreateAppointmentRequest): Promise<Appointment> {
+  async updateAppointment(id: string, request: CreateAppointmentRequest): Promise<Appointment> {
     return apiClient.put<Appointment>(`/bookings/${id}`, request);
   },
 
-  async deleteAppointment(id: number): Promise<void> {
+  async deleteAppointment(id: string): Promise<void> {
     return apiClient.delete<void>(`/bookings/${id}`);
   },
 
-  async confirmAppointment(id: number): Promise<Appointment> {
+  async confirmAppointment(id: string): Promise<Appointment> {
     return apiClient.put<Appointment>(`/bookings/${id}/confirm`, {});
   },
 
   // #30: PUT /api/bookings/{id}/no-show has existed on the backend since V22 with no
   // caller here, so a salon could never record that a client failed to turn up.
-  async markNoShow(id: number): Promise<Appointment> {
+  async markNoShow(id: string): Promise<Appointment> {
     return apiClient.put<Appointment>(`/bookings/${id}/no-show`, {});
   },
 
-  async cancelAppointment(id: number, reason: string): Promise<void> {
+  async cancelAppointment(id: string, reason: string): Promise<void> {
     return apiClient.put<void>(`/bookings/${id}/cancel`, { reason });
   },
 };
