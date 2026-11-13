@@ -206,7 +206,7 @@ export default function PhotosPage() {
 
               <div className="rounded-xl border border-border/60 bg-white p-4 sm:p-5">
                 <h2 className="font-semibold">Logo</h2>
-                <p className="mb-3 text-sm text-muted-foreground">Shown next to your name. Square works best.</p>
+                <p className="mb-3 text-sm text-muted-foreground">Shown next to your name on your page, in search results and when customers book. Square works best.</p>
                 <button
                   type="button"
                   onClick={() => logoInput.current?.click()}
