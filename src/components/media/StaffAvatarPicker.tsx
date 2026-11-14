@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { assetUrl } from "@/config/api";
-import { uploadImage } from "@/services/uploadService";
+import { UPLOAD_REQUIREMENT, uploadImage } from "@/services/uploadService";
 
 /** The team member's photo: tap the camera to upload, × to go back to initials. */
 export function StaffAvatarPicker({
@@ -66,7 +66,7 @@ export function StaffAvatarPicker({
           </button>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">Shown to customers when they choose who to book.</p>
+      <p className="text-xs text-muted-foreground">Shown to customers when they choose who to book. {UPLOAD_REQUIREMENT.STAFF_AVATAR}</p>
       <input ref={input} type="file" accept="image/jpeg,image/png" className="hidden" aria-label="Staff photo"
              onChange={(e) => pick(e.target.files?.[0])} />
     </div>

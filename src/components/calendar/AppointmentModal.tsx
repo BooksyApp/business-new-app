@@ -163,7 +163,8 @@ export function AppointmentModal({
       : 0;
   // Less what was already paid online from a gift card. A promo's discount is priced by
   // the server at the till, so the button names the code rather than a wrong amount.
-  const dueNow = Math.max(0, price - depositPaid - Number(appointmentData.prepaidAmount ?? 0));
+  const pointsPaid = Number(appointmentData.pointsDiscount ?? 0);
+  const dueNow = Math.max(0, price - depositPaid - Number(appointmentData.prepaidAmount ?? 0) - pointsPaid);
   const bookedPromo: string | null = appointmentData.promoCode ?? null;
   const cancellationFee = Number(appointmentData.cancellationFee ?? 0);
   const status = appointmentData.status || "PENDING";
@@ -341,6 +342,12 @@ export function AppointmentModal({
                     : "At the salon"}
               </span>
             </div>
+            {pointsPaid > 0 && (
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Paid with points</span>
+                <span className="font-medium text-emerald-700">{formatPrice(pointsPaid)}</span>
+              </div>
+            )}
             {Number(appointmentData.prepaidAmount ?? 0) > 0 && (
               <div className="mt-1 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Paid online</span>

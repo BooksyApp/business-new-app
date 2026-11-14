@@ -46,6 +46,11 @@ interface PaymentMethodPageProps {
    * due, which is what a deposit is.
    */
   depositPaid?: number;
+  /**
+   * Value of loyalty points the customer spent when booking (UX-26). Comes off what is due
+   * but is NOT sent as a tender: the server records it as a POINTS payment itself.
+   */
+  pointsCredit?: number;
   /** Paid online from a gift card at booking time; sent as a PREPAID tender. */
   prepaidOnline?: number;
   /** The promo code the customer booked with, and what it takes off. */
@@ -87,6 +92,7 @@ export default function PaymentMethodPage({
   subtotal = 80.00,
   depositPaid = 0,
   prepaidOnline = 0,
+  pointsCredit = 0,
   bookedPromo = null,
   selectedClient: propSelectedClient = null,
   selectedStaff: propSelectedStaff = null,
@@ -118,7 +124,8 @@ export default function PaymentMethodPage({
   // Paid online from a gift card. Comes off what is due like a deposit, but unlike one the
   // server does not subtract it — it is sent as a PREPAID tender (see handleConfirm).
   const prepaidCredit = Math.max(0, Math.min(prepaidOnline ?? 0, subtotal - depositOnly));
-  const depositCredit = depositOnly + prepaidCredit;
+  const pointsCovered = Math.max(0, Math.min(pointsCredit ?? 0, subtotal - depositOnly - prepaidCredit));
+  const depositCredit = depositOnly + prepaidCredit + pointsCovered;
   const [paymentAmount, setPaymentAmount] = useState(Math.max(0, subtotal - depositCredit));
   const [showPaymentAmountDialog, setShowPaymentAmountDialog] = useState(false);
   const [tempPaymentAmount, setTempPaymentAmount] = useState("");
@@ -743,7 +750,15 @@ export default function PaymentMethodPage({
                 a pricing error and gets "corrected" by the cashier. */}
             {depositCredit > 0 ? (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">{prepaidCredit > 0 ? "Already paid (deposit / gift card online)" : "Deposit already paid"}</span>
+                <span className="text-gray-600">
+                  {pointsCovered > 0 && depositOnly + prepaidCredit === 0
+                    ? "Paid with points at booking"
+                    : pointsCovered > 0
+                      ? "Already paid (deposit / gift card / points)"
+                      : prepaidCredit > 0
+                        ? "Already paid (deposit / gift card online)"
+                        : "Deposit already paid"}
+                </span>
                 <span className="font-medium text-emerald-700">
                   -{depositCredit.toFixed(2)} {currencySymbol()}
                 </span>

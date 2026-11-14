@@ -833,6 +833,11 @@ export default function SalesPage() {
           return appt?.depositPaid ? Number(appt.depositAmount ?? 0) : 0;
         })()}
         bookedPromo={bookedPromo}
+        pointsCredit={(() => {
+          if (!selectedAppointmentId) return 0;
+          const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
+          return Number((appt as { pointsDiscount?: number } | undefined)?.pointsDiscount ?? 0);
+        })()}
         prepaidOnline={(() => {
           if (!selectedAppointmentId) return 0;
           const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);

@@ -54,6 +54,8 @@ export interface Appointment {
   paidAmount?: number | null;
   /** Taken from a gift card at booking and not yet used at the till (V114). */
   prepaidAmount?: number | null;
+  /** Value of loyalty points spent at booking (V124); the till takes it off what is due. */
+  pointsDiscount?: number | null;
 }
 
 export interface CreateAppointmentRequest {

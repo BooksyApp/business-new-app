@@ -18,6 +18,7 @@ import { assetUrl, getCurrentBusinessId, publicSiteUrl } from "@/config/api";
 import { businessService, type Business } from "@/services/businessService";
 import {
   businessPhotoService,
+  UPLOAD_REQUIREMENT,
   uploadImage,
   type BusinessPhoto,
   type UploadPurpose,
@@ -157,7 +158,7 @@ export default function PhotosPage() {
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <h2 className="font-semibold">Cover photo</h2>
-                    <p className="text-sm text-muted-foreground">The first thing customers see — at the top of your page and on your card in search.</p>
+                    <p className="text-sm text-muted-foreground">The first thing customers see — at the top of your page and on your card in search. {UPLOAD_REQUIREMENT.BUSINESS_COVER}</p>
                   </div>
                 </div>
                 <button
@@ -207,6 +208,7 @@ export default function PhotosPage() {
               <div className="rounded-xl border border-border/60 bg-white p-4 sm:p-5">
                 <h2 className="font-semibold">Logo</h2>
                 <p className="mb-3 text-sm text-muted-foreground">Shown next to your name on your page, in search results and when customers book. Square works best.</p>
+                <p className="-mt-2 mb-3 text-xs text-muted-foreground">{UPLOAD_REQUIREMENT.BUSINESS_LOGO}</p>
                 <button
                   type="button"
                   onClick={() => logoInput.current?.click()}
@@ -254,7 +256,7 @@ export default function PhotosPage() {
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold">Gallery <span className="ml-1 text-sm font-normal text-muted-foreground">{used} / {MAX_PHOTOS}</span></h2>
-                  <p className="text-sm text-muted-foreground">Your space and your work. Customers swipe through these on your page.</p>
+                  <p className="text-sm text-muted-foreground">Your space and your work. Customers swipe through these on your page. {UPLOAD_REQUIREMENT.BUSINESS_PHOTO}</p>
                 </div>
                 <Button size="sm" onClick={() => galleryInput.current?.click()} disabled={used >= MAX_PHOTOS}>
                   <UploadCloud className="mr-2 h-4 w-4" />
