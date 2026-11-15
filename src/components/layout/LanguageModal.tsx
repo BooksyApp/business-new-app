@@ -1,33 +1,11 @@
-import { useState } from "react";
-import * as React from "react";
-import { X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Check, Globe } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { BRAND_FONT } from "@/components/auth/useBrandFont";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { HUB_LOCALES } from "@/lib/hubLocale";
 import { cn } from "@/lib/utils";
-
-interface Language {
-  code: string;
-  name: string;
-  flag: string; // Flag emoji or component
-}
-
-const languages: Language[] = [
-  { code: "en-US", name: "English (United States)", flag: "🇺🇸" },
-  { code: "en-GB", name: "English (Great Britain)", flag: "🇬🇧" },
-  { code: "pl", name: "Polish", flag: "🇵🇱" },
-  { code: "es-ES", name: "Spanish (Spain)", flag: "🇪🇸" },
-  { code: "es", name: "Spanish", flag: "🇪🇸" },
-  { code: "pt-BR", name: "Portuguese (Brazil)", flag: "🇧🇷" },
-  { code: "fr", name: "French", flag: "🇫🇷" },
-  { code: "vi", name: "Vietnamese", flag: "🇻🇳" },
-  { code: "uk", name: "Ukrainian", flag: "🇺🇦" },
-  { code: "zh-CN", name: "Simplified Chinese", flag: "🇨🇳" },
-];
+import { t } from "@/i18n";
 
 interface LanguageModalProps {
   open: boolean;
@@ -36,122 +14,82 @@ interface LanguageModalProps {
   onLanguageChange: (code: string) => void;
 }
 
-export function LanguageModal({
-  open,
-  onOpenChange,
-  selectedLanguage,
-  onLanguageChange,
-}: LanguageModalProps) {
-  const [tempSelected, setTempSelected] = useState(selectedLanguage);
+/**
+ * The panel's language: native names with the English name underneath, the current one
+ * checked, no flags (a flag is a country, not a language). Picking one switches at once
+ * and closes — there is no OK step. A dialog on desktop, a bottom sheet on a phone.
+ */
+export function LanguageModal({ open, onOpenChange, selectedLanguage, onLanguageChange }: LanguageModalProps) {
+  const isMobile = useIsMobile();
 
-  const handleOk = () => {
-    onLanguageChange(tempSelected);
-    onOpenChange(false);
-  };
+  const list = (
+    <div className="px-3 pb-3" style={{ fontFamily: BRAND_FONT }}>
+      <ul role="radiogroup" aria-label={t("layout.language")} className="space-y-1">
+        {HUB_LOCALES.map((l) => {
+          const on = l.code === selectedLanguage;
+          return (
+            <li key={l.code}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={on}
+                lang={l.code}
+                onClick={() => {
+                  if (!on) onLanguageChange(l.code);
+                  onOpenChange(false);
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)]",
+                  on ? "bg-[rgb(var(--reg-brand-soft))]" : "hover:bg-[rgb(var(--reg-ink)/0.04)]",
+                )}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className={cn("block text-base text-[rgb(var(--reg-ink))]", on ? "font-bold" : "font-semibold")}>{l.name}</span>
+                  <span className="block text-sm text-[rgb(var(--reg-muted))]">{l.subtitle}</span>
+                </span>
+                <span
+                  aria-hidden
+                  className={cn(
+                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                    on ? "bg-[rgb(var(--reg-brand))] text-white" : "ring-1 ring-inset ring-[rgb(var(--reg-line))]",
+                  )}
+                >
+                  {on && <Check size={14} strokeWidth={3} />}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 
-  const handleClose = () => {
-    setTempSelected(selectedLanguage); // Reset to original selection
-    onOpenChange(false);
-  };
+  const header = (Title: typeof DialogTitle | typeof SheetTitle, Desc: typeof DialogDescription | typeof SheetDescription) => (
+    <div className="flex items-center gap-2 px-6 pb-2 pt-5" style={{ fontFamily: BRAND_FONT }}>
+      <Globe size={20} className="text-[rgb(var(--reg-muted))]" aria-hidden />
+      <Title className="text-lg font-extrabold tracking-[-0.02em] text-[rgb(var(--reg-ink))]">{t("layout.language")}</Title>
+      <Desc className="sr-only">{t("layout.chooseTheLanguageOfThe")}</Desc>
+    </div>
+  );
 
-  // Update temp selection when modal opens
-  React.useEffect(() => {
-    if (open) {
-      setTempSelected(selectedLanguage);
-    }
-  }, [open, selectedLanguage]);
-
-  // Split languages into two columns
-  const leftColumn = languages.slice(0, Math.ceil(languages.length / 2));
-  const rightColumn = languages.slice(Math.ceil(languages.length / 2));
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="rounded-t-[28px] border-0 bg-white p-0 pb-[max(12px,env(safe-area-inset-bottom))]">
+          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-[rgb(var(--reg-ink)/0.15)]" aria-hidden />
+          {header(SheetTitle, SheetDescription)}
+          {list}
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 rounded-lg overflow-hidden bg-white">
-        {/* Dark Gray Header */}
-        <DialogHeader className="bg-[#2a2a2a] text-white px-6 py-4 m-0 rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handleClose}
-              className="text-white/70 hover:text-white transition-colors -ml-2"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <DialogTitle className="text-lg font-semibold text-white flex-1 text-center">
-              Tongue
-            </DialogTitle>
-            <div className="w-9"></div> {/* Spacer for centering */}
-          </div>
-        </DialogHeader>
-
-        {/* Language List */}
-        <div className="p-6 bg-white">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-            {/* Left Column */}
-            <div className="space-y-2">
-              {leftColumn.map((language) => (
-                <label
-                  key={language.code}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded cursor-pointer transition-colors hover:bg-gray-100",
-                    tempSelected === language.code && "bg-gray-100"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="language"
-                    value={language.code}
-                    checked={tempSelected === language.code}
-                    onChange={() => setTempSelected(language.code)}
-                    className="w-4 h-4 text-[#2a2a2a] border-gray-400 focus:ring-[#2a2a2a] cursor-pointer accent-[#2a2a2a]"
-                  />
-                  <span className="text-xl leading-none">{language.flag}</span>
-                  <span className="text-sm font-normal text-gray-900 flex-1">
-                    {language.name}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-2">
-              {rightColumn.map((language) => (
-                <label
-                  key={language.code}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded cursor-pointer transition-colors hover:bg-gray-100",
-                    tempSelected === language.code && "bg-gray-100"
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="language"
-                    value={language.code}
-                    checked={tempSelected === language.code}
-                    onChange={() => setTempSelected(language.code)}
-                    className="w-4 h-4 text-[#2a2a2a] border-gray-400 focus:ring-[#2a2a2a] cursor-pointer accent-[#2a2a2a]"
-                  />
-                  <span className="text-xl leading-none">{language.flag}</span>
-                  <span className="text-sm font-normal text-gray-900 flex-1">
-                    {language.name}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* OK Button */}
-        <div className="px-6 pb-6">
-          <Button
-            onClick={handleOk}
-            className="w-full bg-[#2a2a2a] hover:bg-[#3a3a3a] text-white font-semibold py-2.5 transition-colors"
-          >
-            OK
-          </Button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="gap-0 overflow-hidden rounded-[24px] border-0 bg-white p-0 sm:max-w-sm">
+        {header(DialogTitle, DialogDescription)}
+        {list}
       </DialogContent>
     </Dialog>
   );
 }
-

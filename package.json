@@ -11,6 +11,7 @@
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",
     "lint": "eslint .",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "preview": "vite preview",
     "preview:prod": "vite preview --mode production",
     "test": "vitest run",
