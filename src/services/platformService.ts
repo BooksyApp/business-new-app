@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { API_BASE_URL } from '@/config/api';
+import { getLocale } from '@/i18n';
 
 /**
  * The platform switches the back office sets.
@@ -20,9 +21,21 @@ export interface PlatformSettings {
   customerSignupsOpen: boolean;
   businessSignupsOpen: boolean;
   defaultMap: { lat: number; lng: number; zoom: number };
-  countries: { code: string; name: string; currency: string }[];
+  countries: PlatformCountry[];
+  /** Online card payments live for this deployment (same flag the web reads). v1: false. */
+  onlinePayments?: boolean;
   /** Which features the platform has switched on for this panel. */
   flags: Record<string, boolean>;
+}
+
+export interface PlatformCountry {
+  code: string;
+  name: string;
+  currency: string;
+  dial_code?: string | null;
+  center_lat?: number | null;
+  center_lng?: number | null;
+  default_zoom?: number | null;
 }
 
 export const PLATFORM_DEFAULTS: PlatformSettings = {
@@ -77,4 +90,81 @@ export function useFeatureFlags(): Record<string, boolean> {
     };
   }, []);
   return flags;
+}
+
+/** Where the panel is being used: dial code and map centre come from the country row. */
+export interface Market {
+  country: string;
+  dialCode: string;
+  center: { lat: number; lng: number; zoom: number };
+}
+
+const LOCALE_COUNTRY: Record<string, string> = { az: 'AZ', pl: 'PL' };
+const LAUNCH_COUNTRY = 'AZ';
+
+async function geoCountry(): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/geo`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { country?: string | null; active?: boolean };
+    return body.active && body.country ? body.country.toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The market to default to: the business's own country when it has one, else the visitor's
+ * (IP geo), else the one their panel language implies, else the launch market. Never a
+ * hardcoded country: the dial code and map centre come from the platform's country rows.
+ */
+export async function resolveMarket(businessCountry?: string | null): Promise<Market | null> {
+  const settings = await platformSettings();
+  const countries = settings.countries ?? [];
+  const find = (code?: string | null) => (code ? countries.find((c) => c.code.toUpperCase() === code.toUpperCase()) : undefined);
+  const row =
+    find(businessCountry) ??
+    find(await geoCountry()) ??
+    find(LOCALE_COUNTRY[getLocale()]) ??
+    find(LAUNCH_COUNTRY) ??
+    countries[0];
+  if (!row) return null;
+  return {
+    country: row.code,
+    dialCode: row.dial_code || '',
+    center: {
+      lat: row.center_lat ?? settings.defaultMap.lat,
+      lng: row.center_lng ?? settings.defaultMap.lng,
+      zoom: Math.max(row.default_zoom ?? 12, 11),
+    },
+  };
+}
+
+export function useMarket(businessCountry?: string | null): Market | null {
+  const [market, setMarket] = useState<Market | null>(null);
+  useEffect(() => {
+    let live = true;
+    resolveMarket(businessCountry).then((m) => {
+      if (live) setMarket(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, [businessCountry]);
+  return market;
+}
+
+/** True when online card payments are live. False while loading or when the platform has them off. */
+export function useOnlinePayments(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    platformSettings().then((s) => {
+      if (live) setOn(s.onlinePayments === true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return on;
 }

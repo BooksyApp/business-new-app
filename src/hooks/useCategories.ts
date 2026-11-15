@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { categoryService, type Category, type CreateCategoryRequest, type UpdateCategoryRequest } from '@/services/categoryService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
+import { t } from "@/i18n";
 
 export function useCategories(businessIdParam?: number) {
   const routeBusinessId = useBusinessId();
@@ -18,8 +19,8 @@ export function useCategories(businessIdParam?: number) {
       setCategories(data);
     } catch (err) {
       console.error('Failed to load categories:', err);
-      setError((err instanceof Error && err.message) || 'Failed to load categories');
-      toast.error('Failed to load categories');
+      setError((err instanceof Error && err.message) || t("hooks.failedToLoadCategories"));
+      toast.error(t("hooks.failedToLoadCategories"));
     } finally {
       setLoading(false);
     }
@@ -33,10 +34,10 @@ export function useCategories(businessIdParam?: number) {
     try {
       const created = await categoryService.createCategory(businessId, request);
       setCategories(prev => [...prev, created]);
-      toast.success('Category created successfully');
+      toast.success(t("hooks.categoryCreatedSuccessfully"));
       return created;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to create category');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateCategory"));
       throw err;
     }
   }, [businessId]);
@@ -45,10 +46,10 @@ export function useCategories(businessIdParam?: number) {
     try {
       const updated = await categoryService.updateCategory(id, businessId, request);
       setCategories(prev => prev.map(cat => cat.id === id ? updated : cat));
-      toast.success('Category updated successfully');
+      toast.success(t("hooks.categoryUpdatedSuccessfully"));
       return updated;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to update category');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateCategory"));
       throw err;
     }
   }, [businessId]);
@@ -57,9 +58,9 @@ export function useCategories(businessIdParam?: number) {
     try {
       await categoryService.deleteCategory(id, businessId);
       setCategories(prev => prev.filter(cat => cat.id !== id));
-      toast.success('Category deleted successfully');
+      toast.success(t("hooks.categoryDeletedSuccessfully"));
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to delete category');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToDeleteCategory"));
       throw err;
     }
   }, [businessId]);

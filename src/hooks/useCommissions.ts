@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { commissionService, Commission, CommissionRule, CommissionCategory, CommissionStatus } from '@/services/commissionService';
 import { useBusinessId } from './useBusinessId';
+import { t } from "@/i18n";
 
 interface UseCommissionsOptions {
   staffId?: number;
@@ -33,7 +34,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
       setPendingCommissions(pending);
       setTotalPending(total);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load commissions'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadCommissions")));
       console.error('Error loading commissions:', err);
     } finally {
       setLoading(false);
@@ -57,7 +58,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
       const result = await commissionService.getCommissionsByDateRange(businessId, staffId, startDate, endDate);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load commissions by date range'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadCommissionsBy")));
       console.error('Error loading commissions by date range:', err);
       return [];
     } finally {
@@ -85,7 +86,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
       await refresh();
       return commission;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to calculate commission'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToCalculateCommission")));
       console.error('Error calculating commission:', err);
       return null;
     } finally {
@@ -100,7 +101,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
       await commissionService.cancelCommission(id);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to cancel commission'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToCancelCommission")));
       console.error('Error cancelling commission:', err);
       throw err;
     } finally {
@@ -138,7 +139,7 @@ export const useCommissionRules = (businessId?: number) => {
       const result = await commissionService.getCommissionRules(bid);
       setRules(result);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load commission rules'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadCommissionRules")));
       console.error('Error loading commission rules:', err);
     } finally {
       setLoading(false);
@@ -158,7 +159,7 @@ export const useCommissionRules = (businessId?: number) => {
       const result = await commissionService.getCommissionRulesByCategory(bid, category);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load commission rules by category'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadCommissionRules2")));
       console.error('Error loading commission rules by category:', err);
       return [];
     } finally {
@@ -175,7 +176,7 @@ export const useCommissionRules = (businessId?: number) => {
       const result = await commissionService.getCommissionRulesByStaff(bid, staffId);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load commission rules by staff'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadCommissionRules3")));
       console.error('Error loading commission rules by staff:', err);
       return [];
     } finally {
@@ -193,7 +194,7 @@ export const useCommissionRules = (businessId?: number) => {
       await loadRules();
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to create commission rule'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToCreateCommissionRule")));
       console.error('Error creating commission rule:', err);
       return null;
     } finally {
@@ -209,7 +210,7 @@ export const useCommissionRules = (businessId?: number) => {
       await loadRules();
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to update commission rule'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToUpdateCommissionRule")));
       console.error('Error updating commission rule:', err);
       return null;
     } finally {
@@ -224,7 +225,7 @@ export const useCommissionRules = (businessId?: number) => {
       await commissionService.deleteCommissionRule(id);
       await loadRules();
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to delete commission rule'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToDeleteCommissionRule")));
       console.error('Error deleting commission rule:', err);
       throw err;
     } finally {
@@ -239,7 +240,7 @@ export const useCommissionRules = (businessId?: number) => {
       await commissionService.deactivateCommissionRule(id);
       await loadRules();
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to deactivate commission rule'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToDeactivateCommissionRule")));
       console.error('Error deactivating commission rule:', err);
       throw err;
     } finally {
@@ -256,7 +257,7 @@ export const useCommissionRules = (businessId?: number) => {
       await commissionService.deleteAllCommissionRules(bid);
       await loadRules();
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to delete all commission rules'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToDeleteAllCommission")));
       console.error('Error deleting all commission rules:', err);
       throw err;
     } finally {

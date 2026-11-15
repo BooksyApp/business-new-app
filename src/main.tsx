@@ -6,6 +6,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import App from "./App.tsx";
 import "./index.css";
+import { t } from "@/i18n";
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -30,8 +31,8 @@ class ErrorBoundary extends React.Component<
     if (this.state.error) {
       return (
         <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-          <h1>Something went wrong</h1>
-          <p>Please refresh the page. If the issue persists, contact support.</p>
+          <h1>{t("main.somethingWentWrong")}</h1>
+          <p>{t("main.pleaseRefreshThePageIf")}</p>
           {/* The message and stack, in development only. "Something went wrong" with
               nothing else is the least useful thing a crash can say to the person who has
               to fix it — and in production it is all a salon should see. */}

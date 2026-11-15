@@ -38,6 +38,8 @@ export interface PaymentConfirmationRequest {
     membershipId?: number;
     /** Set when the line is a gift card being sold, so the sale issues one. */
     giftCardAmount?: number;
+    /** The booking this line is the service of. */
+    appointmentId?: string;
   }>;
   discountAmount?: number;
   discountPercent?: number;
@@ -49,6 +51,8 @@ export interface PaymentConfirmationRequest {
   splitCardAmount?: number;
   notes?: string;
   appointmentId?: string;
+  /** One visit, one ticket: every booking this sale settles. Unioned with appointmentId. */
+  appointmentIds?: string[];
 }
 
 export interface PaymentConfirmationResponse {

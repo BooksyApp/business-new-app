@@ -1,530 +1,718 @@
-import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
-import { StatCard } from "@/components/ui/stat-card";
-import { useNavigation } from "@/utils/navigationUtils";
-import { useRef } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Percent, Ticket } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { getCurrentBusinessId } from "@/config/api";
-import { formatPrice } from "@/lib/currency";
-import { promoService, type PromoCode } from "@/services/promoService";
-import { giftCardService, packageService, type GiftCard, type ServicePackage } from "@/services/growthService";
-import { useFeatureFlags } from "@/services/platformService";
-import { campaignService, type Campaign, type AudiencePreview } from "@/services/campaignService";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Mail, 
-  MessageSquare, 
-  Gift, 
-  Megaphone, 
-  Users, 
-  TrendingUp,
+import {
+  CalendarRange,
+  Copy,
+  CopyPlus,
+  Gift,
+  Mail,
+  Megaphone,
+  MessageSquare,
+  Percent,
   Plus,
   Send,
-  ArrowUpRight
+  Shuffle,
+  Ticket,
+  Users,
+  XCircle,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/page/booqi";
+import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import {
+  ActionMenu,
+  ClientPreview,
+  Field,
+  FilterChips,
+  Meter,
+  RowAction,
+  Segmented,
+  StatusChip,
+} from "@/components/page/kit";
+import { GUAVA, dateRange, fieldCls, lifecycleOf, money, salonName, type Lifecycle } from "@/components/page/kitStyles";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { getCurrentBusinessId } from "@/config/api";
+import { currencySymbol, formatPrice } from "@/lib/currency";
+import { cn } from "@/lib/utils";
+import { useServices } from "@/hooks/useServices";
+import { useNavigation } from "@/utils/navigationUtils";
+import { promoService, type PromoCode } from "@/services/promoService";
+import { useFeatureFlags } from "@/services/platformService";
+import { campaignService, type Campaign, type AudiencePreview } from "@/services/campaignService";
+import { t as tr, fmtDate as formatLocaleDate } from "@/i18n";
 
 // #46: the campaign list here was hardcoded — invented names, invented open rates,
-// invented revenue — on a screen an owner reads as their real marketing performance.
-// It comes from the API now.
+// invented revenue. Everything on this page comes from the API.
+
+type PromoType = "PERCENT" | "FIXED";
+type Channel = "EMAIL" | "SMS";
+type Segment = "LAPSED_90D" | "TOP_SPENDERS";
+
+const SEGMENT_LABEL: Record<Segment, string> = {
+  get LAPSED_90D() { return tr("marketing.segmentLapsed"); },
+  get TOP_SPENDERS() { return tr("marketing.segmentTopSpenders"); },
+};
+
+const EMPTY_PROMO = { code: "", type: "PERCENT" as PromoType, value: "", maxUses: "", from: "", to: "" };
+const EMPTY_CAMPAIGN = { name: "", channel: "EMAIL" as Channel, segment: "LAPSED_90D" as Segment, subject: "", body: "" };
+
+const promoStatus = (p: PromoCode): Lifecycle =>
+  lifecycleOf({ active: p.active, from: p.valid_from, to: p.valid_to, exhausted: p.max_uses != null && p.uses >= p.max_uses });
+
+const campaignStatus = (c: Campaign): Lifecycle =>
+  c.status === "DRAFT" ? "draft" : c.status === "QUEUED" ? "queued" : c.status === "FAILED" ? "failed" : c.status === "SENT" ? "active" : "ended";
+
+const campaignLabel = (c: Campaign) => (c.status === "SENT" ? "Sent" : c.status === "CANCELLED" ? "Cancelled" : undefined);
+
+const valueLabel = (type: string, value: number | string) =>
+  type === "PERCENT" ? `${Number(value) || 0}% off` : `${money(value, currencySymbol())} off`;
+
+function randomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
 
 /**
- * Four tiles that did nothing.
- *
- * Email, SMS and Loyalty had no onClick at all, and Referral navigated to a path with no
- * businessId in it, so it went nowhere too. Each one now does the thing its title says:
- * the two channels open the campaign form already set to that channel, and the other two
- * go to the page that owns them.
+ * Campaigns & codes: a code that discounts a bill, and a message sent to a segment of
+ * clients. Two jobs, two tabs; the header action follows the tab.
  */
-const marketingTools = [
-  {
-    key: "EMAIL" as const,
-    title: "Email campaign",
-    description: "Write one message and send it to a segment of clients",
-    icon: Mail,
-    tone: "bg-sky-50 text-sky-600",
-  },
-  {
-    key: "SMS" as const,
-    title: "SMS campaign",
-    description: "The same, by text. Only clients who agreed to SMS are included",
-    icon: MessageSquare,
-    tone: "bg-emerald-50 text-emerald-600",
-  },
-  {
-    key: "LOYALTY" as const,
-    title: "Loyalty",
-    description: "Points per spend and the stamp card: come N times, one free",
-    icon: Gift,
-    tone: "bg-violet-50 text-violet-600",
-    flag: "loyalty_cards",
-  },
-  {
-    key: "REFERRAL" as const,
-    title: "Referrals",
-    description: "Your booqi code and the clients your clients bring in",
-    icon: Users,
-    tone: "bg-amber-50 text-amber-600",
-    flag: "platform_referral",
-  },
-];
-
 export default function MarketingPage() {
-  const [tab, setTab] = useState("promos");
+  const [tab, setTab] = useState<"promos" | "campaigns">("promos");
   const flags = useFeatureFlags();
   const navigate = useNavigate();
   const { getPath } = useNavigation();
-  const campaignFormRef = useRef<HTMLDivElement>(null);
   const businessId = getCurrentBusinessId();
+  const { services } = useServices(businessId);
 
   // #28: promo codes shipped complete on the backend (V24, PromoController) and were
-  // unreachable from the manager app — a salon could not issue a discount code at all.
-  // This is also the first thing on this page backed by real data rather than the
-  // hardcoded campaign figures around it (#46).
-  const [promos, setPromos] = useState<PromoCode[]>([]);
-  const [promoForm, setPromoForm] = useState({ code: "", type: "PERCENT", value: "" });
+  // unreachable from the manager app.
+  const [promos, setPromos] = useState<PromoCode[] | null>(null);
+  const [promoForm, setPromoForm] = useState(EMPTY_PROMO);
   const [promoBusy, setPromoBusy] = useState(false);
+  const [promoFilter, setPromoFilter] = useState<"all" | Lifecycle>("all");
+  const [promoSheetOpen, setPromoSheetOpen] = useState(false);
 
-  // #28: gift cards and packages, same story as promo codes — complete backends with no
-  // way in. Gift cards have no list-by-business endpoint, only lookup by code, so the
-  // UI offers issue + find rather than pretending a list exists.
-  const [giftAmount, setGiftAmount] = useState("");
-  const [giftEmail, setGiftEmail] = useState("");
-  const [giftLookupCode, setGiftLookupCode] = useState("");
-  const [foundCard, setFoundCard] = useState<GiftCard | null>(null);
-  const [giftBusy, setGiftBusy] = useState(false);
-
-  const [packages, setPackages] = useState<ServicePackage[]>([]);
-  const [pkgForm, setPkgForm] = useState({ name: "", sessionsTotal: "5", price: "" });
-  const [pkgBusy, setPkgBusy] = useState(false);
-
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [campaignForm, setCampaignForm] = useState({
-    name: "", channel: "EMAIL", segment: "LAPSED_90D", subject: "", body: "",
-  });
+  const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [campaignForm, setCampaignForm] = useState(EMPTY_CAMPAIGN);
   const [audience, setAudience] = useState<AudiencePreview | null>(null);
   const [campaignBusy, setCampaignBusy] = useState(false);
+  const [campaignSheetOpen, setCampaignSheetOpen] = useState(false);
 
   const loadCampaigns = useCallback(() => {
     if (!businessId) return;
     campaignService.list(businessId).then((d) => setCampaigns(d || [])).catch(() => setCampaigns([]));
   }, [businessId]);
 
-  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
-
-  // Recheck the audience whenever the targeting changes, so the size is never stale
-  // relative to the segment and channel actually selected.
-  useEffect(() => {
-    if (!businessId) return;
-    campaignService
-      .preview(businessId, campaignForm.segment, campaignForm.channel)
-      .then(setAudience)
-      .catch(() => setAudience(null));
-  }, [businessId, campaignForm.segment, campaignForm.channel]);
-
-  const createCampaign = async () => {
-    const name = campaignForm.name.trim();
-    const body = campaignForm.body.trim();
-    if (!name || !body) {
-      toast.error("A name and a message are required");
-      return;
-    }
-    setCampaignBusy(true);
-    try {
-      await campaignService.create(businessId, {
-        name, channel: campaignForm.channel, segment: campaignForm.segment,
-        subject: campaignForm.channel === "EMAIL" ? campaignForm.subject.trim() || undefined : undefined,
-        body,
-      });
-      setCampaignForm({ name: "", channel: "EMAIL", segment: "LAPSED_90D", subject: "", body: "" });
-      loadCampaigns();
-      toast.success("Campaign created as a draft");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not create the campaign");
-    } finally {
-      setCampaignBusy(false);
-    }
-  };
-
-  const queueCampaign = async (id: number) => {
-    setCampaignBusy(true);
-    try {
-      const c = await campaignService.queue(businessId, id);
-      loadCampaigns();
-      toast.success(`Queued for ${c.recipientCount} recipients`);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not queue the campaign");
-    } finally {
-      setCampaignBusy(false);
-    }
-  };
-
-  const loadPackages = useCallback(() => {
-    if (!businessId) return;
-    packageService.list(businessId).then((d) => setPackages(d || [])).catch(() => setPackages([]));
-  }, [businessId]);
-
-  useEffect(() => { loadPackages(); }, [loadPackages]);
-
-  const issueGiftCard = async () => {
-    const amount = Number(giftAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("A positive amount is required");
-      return;
-    }
-    setGiftBusy(true);
-    try {
-      const card = await giftCardService.issue(businessId, amount, giftEmail.trim() || undefined);
-      setFoundCard(card);
-      setGiftAmount(""); setGiftEmail("");
-      toast.success(`Gift card ${card.code} issued`);
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not issue the gift card");
-    } finally {
-      setGiftBusy(false);
-    }
-  };
-
-  const lookupGiftCard = async () => {
-    const code = giftLookupCode.trim();
-    if (!code) return;
-    setGiftBusy(true);
-    try {
-      setFoundCard(await giftCardService.lookup(code));
-    } catch {
-      setFoundCard(null);
-      toast.error("No gift card with that code");
-    } finally {
-      setGiftBusy(false);
-    }
-  };
-
-  const createPackage = async () => {
-    const name = pkgForm.name.trim();
-    const sessionsTotal = Number(pkgForm.sessionsTotal);
-    const price = Number(pkgForm.price);
-    if (!name || !Number.isFinite(sessionsTotal) || sessionsTotal < 1 || !Number.isFinite(price) || price < 0) {
-      toast.error("Name, at least one session and a non-negative price are required");
-      return;
-    }
-    setPkgBusy(true);
-    try {
-      await packageService.create(businessId, { name, sessionsTotal, price, active: true });
-      setPkgForm({ name: "", sessionsTotal: "5", price: "" });
-      loadPackages();
-      toast.success("Package created");
-    } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not create the package");
-    } finally {
-      setPkgBusy(false);
-    }
-  };
-
   const loadPromos = useCallback(() => {
     if (!businessId) return;
     promoService.list(businessId).then((d) => setPromos(d || [])).catch(() => setPromos([]));
   }, [businessId]);
 
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
   useEffect(() => { loadPromos(); }, [loadPromos]);
+
+  // Recheck the audience whenever the targeting changes, so the size is never stale
+  // relative to the segment and channel actually selected.
+  useEffect(() => {
+    if (!businessId || !campaignSheetOpen) return;
+    campaignService
+      .preview(businessId, campaignForm.segment, campaignForm.channel)
+      .then(setAudience)
+      .catch(() => setAudience(null));
+  }, [businessId, campaignForm.segment, campaignForm.channel, campaignSheetOpen]);
+
+  /* ── promo codes ── */
 
   const createPromo = async () => {
     const code = promoForm.code.trim().toUpperCase();
     const value = Number(promoForm.value);
-    if (!code || !Number.isFinite(value) || value < 0) {
-      toast.error("A code and a non-negative value are required");
+    const maxUses = promoForm.maxUses.trim() ? Number(promoForm.maxUses) : undefined;
+    if (!code || !promoForm.value.trim() || !Number.isFinite(value) || value < 0) {
+      toast.error(tr("marketing.aCodeAndANon"));
       return;
     }
     if (promoForm.type === "PERCENT" && value > 100) {
-      toast.error("A percentage discount cannot exceed 100");
+      toast.error(tr("marketing.aPercentageDiscountCannotExceed"));
+      return;
+    }
+    if (maxUses != null && (!Number.isInteger(maxUses) || maxUses < 1)) {
+      toast.error(tr("marketing.theUseLimitMustBe"));
+      return;
+    }
+    if (promoForm.from && promoForm.to && promoForm.to < promoForm.from) {
+      toast.error(tr("marketing.theEndDateIsBefore"));
       return;
     }
     setPromoBusy(true);
     try {
-      await promoService.create(businessId, { code, type: promoForm.type as "PERCENT" | "FIXED", value, active: true });
-      setPromoForm({ code: "", type: "PERCENT", value: "" });
+      await promoService.create(businessId, {
+        code,
+        type: promoForm.type,
+        value,
+        maxUses,
+        validFrom: promoForm.from ? `${promoForm.from}T00:00:00` : undefined,
+        validTo: promoForm.to ? `${promoForm.to}T23:59:59` : undefined,
+        active: true,
+      });
+      setPromoForm(EMPTY_PROMO);
+      setPromoSheetOpen(false);
       loadPromos();
-      toast.success("Promo code created");
+      toast.success(tr("marketing.isLive", { code }));
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not create the promo code");
+      toast.error(error instanceof Error ? error.message : tr("marketing.couldNotCreateThePromo"));
     } finally {
       setPromoBusy(false);
     }
   };
 
-  const deactivatePromo = async (id: number) => {
+  const deactivatePromo = async (p: PromoCode) => {
+    if (!confirm(tr("marketing.endClientsWillNotBe", { code: p.code }))) return;
     setPromoBusy(true);
     try {
-      await promoService.deactivate(businessId, id);
+      await promoService.deactivate(businessId, p.id);
       loadPromos();
-      toast.success("Promo code deactivated");
+      toast.success(`${p.code} ended`);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not deactivate the promo code");
+      toast.error(error instanceof Error ? error.message : tr("marketing.couldNotDeactivateThePromo"));
     } finally {
       setPromoBusy(false);
     }
   };
-  
+
+  const duplicatePromo = (p: PromoCode) => {
+    setPromoForm({
+      code: `${p.code.slice(0, 34)}2`,
+      type: (p.type === "FIXED" ? "FIXED" : "PERCENT") as PromoType,
+      value: String(p.value),
+      maxUses: p.max_uses != null ? String(p.max_uses) : "",
+      from: "",
+      to: "",
+    });
+    setPromoSheetOpen(true);
+  };
+
+  const copy = (text: string) => {
+    void navigator.clipboard?.writeText(text);
+    toast.success(`${text} copied`);
+  };
+
+  /* ── campaigns ── */
+
+  const createCampaign = async () => {
+    const name = campaignForm.name.trim();
+    const body = campaignForm.body.trim();
+    if (!name || !body) {
+      toast.error(tr("marketing.aNameAndAMessage"));
+      return;
+    }
+    setCampaignBusy(true);
+    try {
+      await campaignService.create(businessId, {
+        name,
+        channel: campaignForm.channel,
+        segment: campaignForm.segment,
+        subject: campaignForm.channel === "EMAIL" ? campaignForm.subject.trim() || undefined : undefined,
+        body,
+      });
+      setCampaignForm(EMPTY_CAMPAIGN);
+      setCampaignSheetOpen(false);
+      loadCampaigns();
+      toast.success(tr("marketing.campaignSavedAsADraft"));
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : tr("marketing.couldNotCreateTheCampaign"));
+    } finally {
+      setCampaignBusy(false);
+    }
+  };
+
+  const queueCampaign = async (c: Campaign) => {
+    if (!confirm(tr("marketing.queueTheRecipientListIs", { name: c.name }))) return;
+    setCampaignBusy(true);
+    try {
+      const queued = await campaignService.queue(businessId, c.id);
+      loadCampaigns();
+      toast.success(tr("marketing.queuedForRecipients", { recipientCount: queued.recipientCount }));
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : tr("marketing.couldNotQueueTheCampaign"));
+    } finally {
+      setCampaignBusy(false);
+    }
+  };
+
+  const duplicateCampaign = (c: Campaign) => {
+    setCampaignForm({
+      name: `${c.name} (copy)`,
+      channel: c.channel,
+      segment: c.segment,
+      subject: c.subject ?? "",
+      body: c.body,
+    });
+    setCampaignSheetOpen(true);
+  };
+
+  const openNewCampaign = (channel?: Channel) => {
+    if (channel) setCampaignForm((f) => ({ ...f, channel }));
+    setTab("campaigns");
+    setCampaignSheetOpen(true);
+  };
+
+  /* ── numbers ── */
+
+  const promoList = promos ?? [];
+  const byStatus: Record<string, number> = {};
+  promoList.forEach((p) => { const s = promoStatus(p); byStatus[s] = (byStatus[s] ?? 0) + 1; });
+  const shownPromos = promoList
+    .filter((p) => promoFilter === "all" || promoStatus(p) === promoFilter)
+    .sort((a, b) => order(promoStatus(a)) - order(promoStatus(b)) || b.uses - a.uses);
+  const redemptions = promoList.reduce((n, c) => n + (c.uses ?? 0), 0);
+  const campaignList = campaigns ?? [];
+  const drafts = campaignList.filter((c) => c.status === "DRAFT").length;
+  const reached = campaignList.filter((c) => c.status !== "DRAFT").reduce((n, c) => n + (c.recipientCount ?? 0), 0);
+
+  const shortcuts = [
+    { key: "EMAIL", title: tr("common.email"), body: tr("marketing.oneMessageToASegment"), icon: Mail, tone: "bg-sky-50 text-sky-700", run: () => openNewCampaign("EMAIL") },
+    { key: "SMS", title: "SMS", body: tr("marketing.onlyClientsWhoAgreedTo"), icon: MessageSquare, tone: "bg-emerald-50 text-emerald-700", run: () => openNewCampaign("SMS") },
+    { key: "LOYALTY", title: tr("common.loyalty"), body: tr("marketing.comeNTimesOneFree"), icon: Gift, tone: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]", flag: "loyalty_cards", run: () => navigate(getPath("/loyalty")) },
+    { key: "REFERRAL", title: tr("common.referrals"), body: tr("marketing.clientsBringClients"), icon: Users, tone: "bg-amber-50 text-amber-700", flag: "platform_referral", run: () => navigate(getPath("/referral-program")) },
+  ].filter((t) => !t.flag || flags[t.flag] !== false);
+
   return (
     <AppLayout>
-      <PageHeader
-        title="Marketing"
-        subtitle="Discount codes and messages to clients"
-        actions={
-          // It had no handler: clicking it did nothing. It opens the Campaigns tab, where
-          // the form is.
-          <Button
-            onClick={() => setTab("campaigns")}
-            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all"
-          >
-            <Plus size={16} />
-            New Campaign
-          </Button>
-        }
-      />
+      <BooqiScope>
+        <PageHeader
+          title={tr("marketing.campaignsCodes")}
+          subtitle={tr("marketing.discountCodesForCheckoutAnd")}
+          actions={
+            tab === "promos" ? (
+              <>
+                <Button variant="outline" className={cn(secondaryBtn, "hidden sm:inline-flex")} onClick={() => openNewCampaign()}>
+                  <Megaphone size={16} />{" "}{tr("marketing.newCampaign")}
+                </Button>
+                <Button className={primaryBtn} onClick={() => setPromoSheetOpen(true)}>
+                  <Plus size={16} />{" "}{tr("marketing.newPromoCode")}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" className={cn(secondaryBtn, "hidden sm:inline-flex")} onClick={() => { setTab("promos"); setPromoSheetOpen(true); }}>
+                  <Ticket size={16} />{" "}{tr("marketing.newPromoCode")}
+                </Button>
+                <Button className={primaryBtn} onClick={() => openNewCampaign()}>
+                  <Plus size={16} />{" "}{tr("marketing.newCampaign")}
+                </Button>
+              </>
+            )
+          }
+        />
 
-      <div className="p-6 space-y-6">
-        {/* Three numbers, so the page opens with an answer rather than four forms. */}
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard icon={Ticket} label="Active promo codes" value={promos.filter((c) => c.active).length} tone="violet" />
-          <StatCard icon={Megaphone} label="Campaigns" value={campaigns.length} tone="sky" />
-          <StatCard
-            icon={Percent}
-            label="Redemptions"
-            value={promos.reduce((n, c) => n + (c.uses ?? 0), 0)}
-            hint="Across every code"
-            tone="emerald"
-          />
+        <div className={pageBody}>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatCard icon={Ticket} label={tr("marketing.liveCodes")} value={byStatus.active ?? 0} hint={byStatus.scheduled ? `${byStatus.scheduled} scheduled` : tr("marketing.usableAtCheckoutToday")} tone="violet" />
+            <StatCard icon={Percent} label={tr("marketing.redemptions")} value={redemptions} hint={tr("marketing.acrossEveryCode")} tone="emerald" />
+            <StatCard icon={Megaphone} label={tr("marketing.campaigns")} value={campaignList.length} hint={drafts ? `${drafts} draft${drafts === 1 ? "" : "s"}` : tr("marketing.noneWaiting")} tone="sky" />
+            <StatCard icon={Send} label={tr("marketing.clientsReached")} value={reached} hint={tr("marketing.queuedOrSent")} tone="amber" />
+          </div>
+
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "promos" | "campaigns")}>
+            <TabsList>
+              <TabsTrigger value="promos"><Ticket className="h-4 w-4" />{" "}{tr("marketing.promoCodes")}</TabsTrigger>
+              <TabsTrigger value="campaigns"><Megaphone className="h-4 w-4" />{" "}{tr("marketing.campaigns")}</TabsTrigger>
+            </TabsList>
+
+            {/* ── promo codes ── */}
+            <TabsContent value="promos" className="space-y-4">
+              {promos === null ? (
+                <SkeletonGrid />
+              ) : promoList.length === 0 ? (
+                <EmptyState
+                  icon={Ticket}
+                  title={tr("marketing.noPromoCodesYet")}
+                  body={tr("marketing.aCodeTurnsAPost")}
+                  action={<Button className={primaryBtn} onClick={() => setPromoSheetOpen(true)}><Plus size={16} />{" "}{tr("marketing.newPromoCode")}</Button>}
+                />
+              ) : (
+                <>
+                  <FilterChips<"all" | Lifecycle>
+                    label={tr("marketing.filterPromoCodes")}
+                    value={promoFilter}
+                    onChange={setPromoFilter}
+                    options={[
+                      { value: "all", label: tr("common.all"), count: promoList.length },
+                      { value: "active", label: tr("common.active"), count: byStatus.active ?? 0 },
+                      { value: "scheduled", label: tr("common.scheduled"), count: byStatus.scheduled ?? 0 },
+                      { value: "ended", label: tr("common.ended"), count: byStatus.ended ?? 0 },
+                    ]}
+                  />
+                  {shownPromos.length === 0 ? (
+                    <p className="rounded-[20px] bg-white px-5 py-8 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      {tr("marketing.nothingHere")}
+                    </p>
+                  ) : (
+                    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {shownPromos.map((p) => (
+                        <PromoCard
+                          key={p.id}
+                          promo={p}
+                          busy={promoBusy}
+                          onCopy={() => copy(p.code)}
+                          onDuplicate={() => duplicatePromo(p)}
+                          onEnd={() => void deactivatePromo(p)}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </TabsContent>
+
+            {/* ── campaigns ── */}
+            <TabsContent value="campaigns" className="space-y-5">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {shortcuts.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={t.run}
+                      className="group flex items-center gap-3 rounded-[18px] bg-white p-3.5 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)] transition hover:-translate-y-0.5 hover:ring-[rgb(var(--reg-brand)/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)]"
+                    >
+                      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", t.tone)}>
+                        <Icon size={18} strokeWidth={1.9} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold">{t.title}</span>
+                        <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{t.body}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {campaigns === null ? (
+                <SkeletonGrid />
+              ) : campaignList.length === 0 ? (
+                <EmptyState
+                  icon={Megaphone}
+                  title={tr("marketing.noCampaignsYet")}
+                  body={tr("marketing.bringBackClientsYouHave")}
+                  action={<Button className={primaryBtn} onClick={() => openNewCampaign()}><Plus size={16} />{" "}{tr("marketing.newCampaign")}</Button>}
+                />
+              ) : (
+                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  {campaignList.map((c, i) => {
+                    const Icon = c.channel === "SMS" ? MessageSquare : Mail;
+                    return (
+                      <li key={c.id} className={cn("flex items-center gap-3 px-4 py-3.5 md:px-5", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
+                        <span className={cn("hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex", c.channel === "SMS" ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700")}>
+                          <Icon size={18} strokeWidth={1.9} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <p className="truncate text-[15px] font-semibold">{c.name}</p>
+                            <StatusChip status={campaignStatus(c)} label={campaignLabel(c)} />
+                          </div>
+                          <p className="mt-0.5 truncate text-sm text-[rgb(var(--reg-muted))]">
+                            {c.channel === "SMS" ? "SMS" : tr("common.email")} · {SEGMENT_LABEL[c.segment] ?? c.segment}
+                            {c.status !== "DRAFT" ? " " + tr("marketing.recipientCount", { count: c.recipientCount }) : ""}
+                            {c.createdAt ? ` · ${formatLocaleDate(new Date(c.createdAt), { day: "numeric", month: "short" })}` : ""}
+                          </p>
+                        </div>
+                        {c.status === "DRAFT" && (
+                          <RowAction icon={Send} disabled={campaignBusy} onClick={() => void queueCampaign(c)}>
+                            {tr("marketing.queue")}
+                          </RowAction>
+                        )}
+                        <ActionMenu
+                          label={tr("common.moreFor", { name: c.name })}
+                          actions={[{ label: tr("common.duplicate"), icon: CopyPlus, onSelect: () => duplicateCampaign(c) }]}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
-        {/* Two things live here, and they are different jobs: a code that discounts a
-            bill, and a message sent to clients. Gift cards moved to the till, where they
-            are actually sold. */}
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
-            <TabsTrigger value="promos" className="gap-2">
-              <Ticket className="h-4 w-4" />
-              Promo codes
-            </TabsTrigger>
-            <TabsTrigger value="campaigns" className="gap-2">
-              <Megaphone className="h-4 w-4" />
-              Campaigns
-            </TabsTrigger>
-          </TabsList>
+        {/* ── new campaign ── */}
+        <FormSheet
+          open={campaignSheetOpen}
+          onOpenChange={setCampaignSheetOpen}
+          title={tr("marketing.newCampaign")}
+          description={tr("marketing.targetASegmentRatherThan")}
+          footer={
+            <>
+              <Button variant="outline" className={sheetSecondary} onClick={() => setCampaignSheetOpen(false)}>{tr("common.cancel")}</Button>
+              <Button className={sheetPrimary} disabled={campaignBusy} onClick={createCampaign}>
+                {campaignBusy ? tr("common.saving") : tr("marketing.saveAsDraft")}
+              </Button>
+            </>
+          }
+        >
+          <CampaignPreview form={campaignForm} />
 
-          <TabsContent value="promos" className="pt-4">
-        {/* #28: real promo codes, backed by PromoController. */}
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle className="text-lg">Promo codes</CardTitle>
-            <CardDescription>
-              Discount codes clients can redeem at checkout. Deactivating keeps redeemed
-              history intact.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Code</Label>
-                <Input
-                  value={promoForm.code}
-                  onChange={(e) => setPromoForm((f) => ({ ...f, code: e.target.value }))}
-                  placeholder="SUMMER20"
-                  className="h-9 w-44"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Type</Label>
-                <select
-                  value={promoForm.type}
-                  onChange={(e) => setPromoForm((f) => ({ ...f, type: e.target.value }))}
-                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="PERCENT">Percent</option>
-                  <option value="FIXED">Fixed</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Value</Label>
-                <Input
-                  type="number" min="0" step="0.01"
-                  value={promoForm.value}
-                  onChange={(e) => setPromoForm((f) => ({ ...f, value: e.target.value }))}
-                  className="h-9 w-28"
-                />
-              </div>
-              <Button className="h-9" disabled={promoBusy} onClick={createPromo}>
-                CREATE CODE
+          <Field label={tr("common.name")} htmlFor="cmp-name" hint={tr("marketing.onlyYouSeeThis")}>
+            <input id="cmp-name" className={fieldCls} value={campaignForm.name} placeholder={tr("marketing.winBackNovember")}
+              onChange={(e) => setCampaignForm((f) => ({ ...f, name: e.target.value }))} />
+          </Field>
+          <Field label={tr("marketing.channel")}>
+            <Segmented
+              label={tr("marketing.channel")}
+              value={campaignForm.channel}
+              onChange={(channel) => setCampaignForm((f) => ({ ...f, channel }))}
+              options={[{ value: "EMAIL", label: tr("common.email"), icon: Mail }, { value: "SMS", label: "SMS", icon: MessageSquare }]}
+            />
+          </Field>
+          <Field
+            label={tr("marketing.whoGetsIt")}
+            hint={
+              audience ? (
+                <>
+                  <span className="font-semibold text-[rgb(var(--reg-ink))]">{tr("marketing.reachable", { reachable: audience.reachable })}</span>{" "}{tr("marketing.ofInThisSegment", { segmentSize: audience.segmentSize })}
+                  {audience.reachable < audience.segmentSize &&
+                    tr("marketing.theRestHaveNoOn", { value: campaignForm.channel === "EMAIL" ? tr("marketing.emailAddress") : tr("marketing.phoneNumber") })}
+                </>
+              ) : undefined
+            }
+          >
+            <Segmented
+              label={tr("marketing.segment")}
+              value={campaignForm.segment}
+              onChange={(segment) => setCampaignForm((f) => ({ ...f, segment }))}
+              options={[
+                { value: "LAPSED_90D", label: tr("marketing.lapsed"), hint: tr("marketing.notSeenInDays") },
+                { value: "TOP_SPENDERS", label: tr("marketing.topSpenders"), hint: tr("marketing.yourBestClients") },
+              ]}
+            />
+          </Field>
+          {campaignForm.channel === "EMAIL" && (
+            <Field label={tr("marketing.subject")} htmlFor="cmp-subject">
+              <input id="cmp-subject" className={fieldCls} value={campaignForm.subject} placeholder={tr("marketing.itSBeenAWhile")}
+                onChange={(e) => setCampaignForm((f) => ({ ...f, subject: e.target.value }))} />
+            </Field>
+          )}
+          <Field
+            label={tr("marketing.message")}
+            htmlFor="cmp-body"
+            hint={campaignForm.channel === "SMS" ? tr("marketing.charactersSms", { count: campaignForm.body.length, value: Math.max(1, Math.ceil(campaignForm.body.length / 160)) }) : undefined}
+          >
+            <Textarea id="cmp-body" rows={5} className="rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
+              value={campaignForm.body} placeholder={tr("marketing.yourChairIsWaitingBook")}
+              onChange={(e) => setCampaignForm((f) => ({ ...f, body: e.target.value }))} />
+          </Field>
+        </FormSheet>
+
+        {/* ── new promo code ── */}
+        <FormSheet
+          open={promoSheetOpen}
+          onOpenChange={setPromoSheetOpen}
+          title={tr("marketing.newPromoCode")}
+          description={tr("marketing.clientsTypeItWhenThey")}
+          footer={
+            <>
+              <Button variant="outline" className={sheetSecondary} onClick={() => setPromoSheetOpen(false)}>{tr("common.cancel")}</Button>
+              <Button className={sheetPrimary} disabled={promoBusy} onClick={createPromo}>
+                {promoBusy ? tr("common.creating") : tr("marketing.createCode")}
+              </Button>
+            </>
+          }
+        >
+          <PromoPreview form={promoForm} price={Number(services.find((s) => (s.price ?? 0) > 0)?.price ?? 40)} serviceName={services.find((s) => (s.price ?? 0) > 0)?.name ?? "Haircut"} />
+
+          <Field label={tr("marketing.code")} htmlFor="promo-code" hint={tr("marketing.lettersAndNumbersClientsType")}>
+            <div className="flex gap-2">
+              <input
+                id="promo-code"
+                className={cn(fieldCls, "font-mono uppercase tracking-[0.12em]")}
+                value={promoForm.code}
+                maxLength={40}
+                onChange={(e) => setPromoForm((f) => ({ ...f, code: e.target.value.replace(/\s+/g, "").toUpperCase() }))}
+                placeholder={tr("marketing.summer20")}
+              />
+              <Button type="button" variant="outline" className={cn(secondaryBtn, "h-12 shrink-0 px-4")} onClick={() => setPromoForm((f) => ({ ...f, code: randomCode() }))}>
+                <Shuffle size={16} /> <span className="sr-only sm:not-sr-only">{tr("marketing.generate")}</span>
               </Button>
             </div>
-
-            {promos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No promo codes yet.</p>
-            ) : (
-              <div className="divide-y divide-border/40">
-                {promos.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {p.code}{" "}
-                        <span className="text-muted-foreground font-normal">
-                          {p.type === "PERCENT" ? `${p.value}%` : formatPrice(p.value)}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Used {p.uses}{p.max_uses != null ? ` of ${p.max_uses}` : ""}
-                        {p.active ? "" : " • inactive"}
-                      </p>
-                    </div>
-                    {p.active && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs"
-                        disabled={promoBusy} onClick={() => deactivatePromo(p.id)}>
-                        Deactivate
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-          </TabsContent>
-
-          <TabsContent value="campaigns" className="pt-4">
-        {/* Enhanced Marketing Tools */}
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {marketingTools
-            .filter((tool) => {
-              // Only some tools need a flag, so the union has it optional.
-              const flag = (tool as { flag?: string }).flag;
-              return !flag || flags[flag] !== false;
-            })
-            .map((tool, index) => {
-            const Icon = tool.icon;
-            return (
-              <Card
-                key={tool.key}
-                className="group cursor-pointer border bg-white transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
-                style={{ animationDelay: `${index * 50}ms` }}
-                onClick={() => {
-                  if (tool.key === "REFERRAL") {
-                    navigate(getPath("/referral-program"));
-                  } else if (tool.key === "LOYALTY") {
-                    navigate(getPath("/loyalty"));
-                  } else {
-                    // Set the channel and put the cursor in the form, rather than leaving
-                    // the owner to find the same choice again in a dropdown below.
-                    setCampaignForm((f) => ({ ...f, channel: tool.key }));
-                    campaignFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }
-                }}
-              >
-                <CardContent className="p-5">
-                  <div className={`mb-3 flex h-11 w-11 items-center justify-center rounded-xl ${tool.tone}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold">{tool.title}</h3>
-                  <p className="mt-1 text-sm leading-snug text-muted-foreground">{tool.description}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* #46: real campaigns. */}
-        <Card ref={campaignFormRef} className="mt-5 bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Campaigns</CardTitle>
-            <CardDescription>
-              Target a segment rather than a list — a copied list is stale the next day.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Name</Label>
-                <Input className="h-9 w-52" value={campaignForm.name} placeholder="Win-back October"
-                  onChange={(e) => setCampaignForm((f) => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Channel</Label>
-                <select className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  value={campaignForm.channel}
-                  onChange={(e) => setCampaignForm((f) => ({ ...f, channel: e.target.value }))}>
-                  <option value="EMAIL">Email</option>
-                  <option value="SMS">SMS</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Segment</Label>
-                <select className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  value={campaignForm.segment}
-                  onChange={(e) => setCampaignForm((f) => ({ ...f, segment: e.target.value }))}>
-                  <option value="LAPSED_90D">Not seen in 90 days</option>
-                  <option value="TOP_SPENDERS">Top spenders</option>
-                </select>
-              </div>
-            </div>
-
-            {campaignForm.channel === "EMAIL" && (
-              <div className="space-y-1">
-                <Label className="text-xs">Subject</Label>
-                <Input className="h-9" value={campaignForm.subject}
-                  onChange={(e) => setCampaignForm((f) => ({ ...f, subject: e.target.value }))} />
-              </div>
-            )}
-            <div className="space-y-1">
-              <Label className="text-xs">Message</Label>
-              <Textarea rows={3} value={campaignForm.body}
-                onChange={(e) => setCampaignForm((f) => ({ ...f, body: e.target.value }))} />
-            </div>
-
-            {audience && (
-              <p className="text-sm text-muted-foreground">
-                {audience.segmentSize} in this segment • <span className="font-medium">{audience.reachable} reachable</span>
-                {audience.reachable < audience.segmentSize && (
-                  <> — the rest have no {campaignForm.channel === "EMAIL" ? "email address" : "phone number"} on
-                  file, or have not consented to marketing.</>
-                )}
-              </p>
-            )}
-
-            <Button disabled={campaignBusy} onClick={createCampaign}>CREATE DRAFT</Button>
-
-            {campaigns.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No campaigns yet.</p>
-            ) : (
-              <div className="divide-y divide-border/40">
-                {campaigns.map((c) => (
-                  <div key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{c.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {c.channel} • {c.segment === "LAPSED_90D" ? "Not seen in 90 days" : "Top spenders"} • {c.status}
-                        {c.status !== "DRAFT" ? ` • ${c.recipientCount} recipients` : ""}
-                      </p>
-                    </div>
-                    {c.status === "DRAFT" && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs"
-                        disabled={campaignBusy} onClick={() => queueCampaign(c.id)}>
-                        Queue
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </Field>
+          <Field label={tr("common.discount")}>
+            <Segmented
+              label={tr("marketing.discountType")}
+              value={promoForm.type}
+              onChange={(type) => setPromoForm((f) => ({ ...f, type }))}
+              options={[{ value: "PERCENT", label: tr("marketing.percent"), icon: Percent }, { value: "FIXED", label: tr("common.amount", { value: currencySymbol() }) }]}
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={promoForm.type === "PERCENT" ? tr("marketing.percentOff") : tr("marketing.amountOff")} htmlFor="promo-value">
+              <input id="promo-value" type="number" inputMode="decimal" min="0" step="0.01" className={fieldCls}
+                value={promoForm.value} placeholder={promoForm.type === "PERCENT" ? "15" : "10"}
+                onChange={(e) => setPromoForm((f) => ({ ...f, value: e.target.value }))} />
+            </Field>
+            <Field label={tr("marketing.useLimit")} htmlFor="promo-max" hint={tr("marketing.emptyUnlimited")}>
+              <input id="promo-max" type="number" inputMode="numeric" min="1" step="1" className={fieldCls}
+                value={promoForm.maxUses} placeholder="∞"
+                onChange={(e) => setPromoForm((f) => ({ ...f, maxUses: e.target.value }))} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={tr("marketing.starts")} htmlFor="promo-from" hint={tr("marketing.emptyNow")}>
+              <input id="promo-from" type="date" className={fieldCls} value={promoForm.from}
+                onChange={(e) => setPromoForm((f) => ({ ...f, from: e.target.value }))} />
+            </Field>
+            <Field label={tr("common.ends")} htmlFor="promo-to" hint={tr("marketing.emptyNoEnd")}>
+              <input id="promo-to" type="date" className={fieldCls} value={promoForm.to} min={promoForm.from || undefined}
+                onChange={(e) => setPromoForm((f) => ({ ...f, to: e.target.value }))} />
+            </Field>
+          </div>
+        </FormSheet>
+      </BooqiScope>
     </AppLayout>
+  );
+}
+
+const order = (s: Lifecycle) => ({ active: 0, scheduled: 1, draft: 2, queued: 2, paused: 3, failed: 4, ended: 5 })[s];
+
+function SkeletonGrid() {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="h-[168px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />
+      ))}
+    </div>
+  );
+}
+
+/** A code as a coupon: the code itself is the hero, then value, use and dates. */
+function PromoCard({
+  promo: p,
+  busy,
+  onCopy,
+  onDuplicate,
+  onEnd,
+}: {
+  promo: PromoCode;
+  busy: boolean;
+  onCopy: () => void;
+  onDuplicate: () => void;
+  onEnd: () => void;
+}) {
+  const status = promoStatus(p);
+  const dead = status === "ended";
+  const exhausted = p.max_uses != null && p.uses >= p.max_uses;
+  return (
+    <li className={cn("flex flex-col rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]", dead && "bg-white/70")}>
+      <div className="flex items-start justify-between gap-2 p-4 pb-3">
+        <button
+          type="button"
+          onClick={onCopy}
+          title={tr("marketing.copyCode")}
+          className={cn(
+            "group inline-flex min-w-0 items-center gap-2 rounded-xl border border-dashed px-3 py-1.5 font-mono text-[17px] font-bold tracking-[0.1em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
+            dead
+              ? "border-[rgb(var(--reg-line))] text-[rgb(var(--reg-ink)/0.55)] line-through decoration-1"
+              : "border-[rgb(var(--reg-brand)/0.45)] bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] hover:bg-[rgb(236_231_255)]",
+          )}
+        >
+          <span className="truncate">{p.code}</span>
+          <Copy size={14} className="shrink-0 opacity-60 group-hover:opacity-100" aria-hidden />
+          <span className="sr-only">{tr("common.copy")}</span>
+        </button>
+        <StatusChip status={status} label={exhausted && p.active ? tr("marketing.usedUp") : undefined} />
+      </div>
+      <div className="px-4">
+        <p className="text-[22px] font-extrabold leading-tight tracking-[-0.02em]">{valueLabel(p.type, p.value)}</p>
+        <p className="mt-1 flex items-center gap-1.5 text-sm text-[rgb(var(--reg-muted))]">
+          <CalendarRange size={14} aria-hidden />
+          {dateRange(p.valid_from, p.valid_to)}
+        </p>
+      </div>
+      <div className="mt-auto px-4 pb-1 pt-4">
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="font-semibold tabular-nums">
+            {tr("marketing.useCount", { count: p.uses })}
+          </span>
+          <span className="text-xs text-[rgb(var(--reg-muted))]">{p.max_uses != null ? tr("marketing.of", { max_uses: p.max_uses }) : tr("marketing.noLimit")}</span>
+        </div>
+        {p.max_uses != null && <Meter className="mt-1.5" value={p.uses} max={p.max_uses} label={tr("marketing.ofUses", { code: p.code, uses: p.uses, max_uses: p.max_uses })} />}
+      </div>
+      <div className="flex items-center justify-end gap-1 border-t border-[rgb(var(--reg-line)/0.6)] px-3 py-2 mt-3">
+        <RowAction tone="ink" icon={CopyPlus} onClick={onDuplicate}>{tr("common.duplicate")}</RowAction>
+        {p.active && (
+          <ActionMenu
+            label={tr("marketing.moreFor", { code: p.code })}
+            actions={[
+              { label: tr("marketing.copyCode"), icon: Copy, onSelect: onCopy },
+              { label: tr("marketing.endCode"), icon: XCircle, onSelect: onEnd, danger: true, disabled: busy },
+            ]}
+          />
+        )}
+      </div>
+    </li>
+  );
+}
+
+/** The booking summary on booqi-web, with the code applied. Pay at the salon (v1). */
+function PromoPreview({ form, price, serviceName }: { form: typeof EMPTY_PROMO; price: number; serviceName: string }) {
+  const v = Math.max(0, Number(form.value) || 0);
+  const off = form.type === "PERCENT" ? Math.min(price, (price * Math.min(v, 100)) / 100) : Math.min(price, v);
+  const code = form.code.trim() || "YOURCODE";
+  return (
+    <ClientPreview where={tr("marketing.bookingSummary")}>
+      <div className="rounded-2xl bg-white p-4 text-[rgb(var(--reg-ink))] shadow-[0_8px_24px_-16px_rgb(var(--reg-ink)/0.25)]">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-semibold">{serviceName}</span>
+          <span className="tabular-nums">{formatPrice(price)}</span>
+        </div>
+        <div className="mt-3 flex items-center gap-2 rounded-xl bg-[rgb(var(--reg-canvas))] px-3 py-2 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
+          <Ticket size={15} className="text-[rgb(var(--reg-muted))]" aria-hidden />
+          <span className="font-mono text-sm font-bold tracking-[0.1em]">{code}</span>
+          <span className="ml-auto text-xs font-semibold text-emerald-700">{tr("marketing.applied")}</span>
+        </div>
+        <div className={cn("mt-3 flex items-center justify-between text-sm font-semibold", GUAVA.text)}>
+          <span>{tr("marketing.promoCode")}</span>
+          <span className="tabular-nums">−{formatPrice(off)}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between border-t border-[rgb(var(--reg-line))] pt-2.5">
+          <span className="text-sm font-bold">{tr("marketing.payAtTheSalon")}</span>
+          <span className="text-lg font-extrabold tabular-nums">{formatPrice(price - off)}</span>
+        </div>
+      </div>
+    </ClientPreview>
+  );
+}
+
+/** The inbox: an email card or a text bubble, from the salon. */
+function CampaignPreview({ form }: { form: typeof EMPTY_CAMPAIGN }) {
+  const name = salonName();
+  const body = form.body.trim() || tr("marketing.yourMessageAppearsHere");
+  return (
+    <ClientPreview where={form.channel === "SMS" ? tr("marketing.theirPhone") : tr("marketing.theirInbox")}>
+      {form.channel === "SMS" ? (
+        <div className="rounded-2xl bg-white p-4">
+          <p className="text-center text-[11px] font-semibold text-[rgb(var(--reg-muted))]">{name}</p>
+          <div className="mt-2 max-w-[85%] whitespace-pre-wrap break-words rounded-[18px] rounded-bl-md bg-[rgb(var(--reg-ink)/0.07)] px-3.5 py-2.5 text-sm leading-snug">
+            {body}
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl bg-white">
+          <div className="flex items-center gap-3 border-b border-[rgb(var(--reg-line)/0.7)] px-4 py-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-sm font-bold text-[rgb(var(--reg-brand-strong))]">
+              {name.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">{name}</p>
+              <p className="truncate text-sm">{form.subject.trim() || tr("marketing.subject")}</p>
+            </div>
+          </div>
+          <p className="line-clamp-5 whitespace-pre-wrap break-words px-4 py-3 text-sm leading-relaxed text-[rgb(var(--reg-ink)/0.85)]">{body}</p>
+        </div>
+      )}
+    </ClientPreview>
   );
 }

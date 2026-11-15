@@ -4,12 +4,14 @@ import {
   ShieldCheck,
   Package,
   Clock as ClockIcon,
-  Star,
   Gift,
   Percent,
   Landmark,
   Megaphone,
   Image as ImageIcon,
+  MessageSquareText,
+  Stamp,
+  Rocket,
 } from "lucide-react";
 import { useFeatureFlags } from "@/services/platformService";
 import {
@@ -24,6 +26,7 @@ import {
   SettingsIcon,
   HelpIcon,
 } from "./navIcons";
+import { t } from "@/i18n";
 
 /**
  * The manager app's menu and who may open what. Kept out of Sidebar.tsx so that file
@@ -71,60 +74,69 @@ export interface NavGroup {
  * unreachable.
  */
 export const navGroups: NavGroup[] = [
-  { icon: CalendarIcon, label: "Calendar", slug: "calendar", path: "/calendar" },
+  { icon: CalendarIcon, get label() { return t("common.calendar"); }, slug: "calendar", path: "/calendar" },
   {
     icon: TaskIcon,
-    label: "Sales",
+    get label() { return t("common.sales"); },
     slug: "sales",
     items: [
-      { icon: TaskIcon, label: "Till", path: "/sales", description: "Ring up a visit, take payment, see today's takings" },
-      { icon: AnalyticsIcon, label: "Analytics", path: "/analytics", description: "Revenue, bookings and client trends over time" },
-      { icon: Landmark, label: "Money", path: "/money", description: "Payouts, tips, the cash drawer, invoices and tax" },
-      { icon: Megaphone, label: "Promotion", path: "/promotion", description: "Pay to appear at the top of the lists customers browse" },
+      { icon: TaskIcon, get label() { return t("common.till"); }, path: "/sales", get description() { return t("layout.ringUpAVisitTake"); } },
+      { icon: AnalyticsIcon, get label() { return t("layout.analytics"); }, path: "/analytics", get description() { return t("layout.revenueBookingsAndClientTrends"); } },
+      { icon: Landmark, get label() { return t("common.money"); }, path: "/money", get description() { return t("layout.payoutsTipsTheCashDrawer"); } },
+      { icon: Rocket, get label() { return t("layout.promotion"); }, path: "/promotion", get description() { return t("layout.payToAppearAtThe"); } },
     ],
   },
   {
     icon: Users,
-    label: "Clients",
+    get label() { return t("common.clients"); },
     slug: "clients",
     items: [
-      { icon: Users, label: "All clients", path: "/clients", description: "Everyone who has booked, with their history and spend" },
-      { icon: Star, label: "Reviews", path: "/reviews", description: "Read feedback, reply to it, ask for more" },
-      { icon: Gift, label: "Referrals", path: "/referral-program", description: "Your code, and the clients your clients bring in", flag: "platform_referral" },
-      { icon: MarketingIcon, label: "Marketing", path: "/marketing", description: "Campaigns and promo codes" },
-      { icon: Percent, label: "Offers", path: "/offers", description: "Cut a price — it shows on your card in the app and on the web" },
-      { icon: Star, label: "Loyalty", path: "/loyalty", description: "Come N times, one service free — and who is collecting", flag: "loyalty_cards" },
+      { icon: Users, get label() { return t("layout.allClients"); }, path: "/clients", get description() { return t("layout.everyoneWhoHasBookedWith"); } },
+      { icon: MessageSquareText, get label() { return t("common.reviews"); }, path: "/reviews", get description() { return t("layout.readFeedbackReplyToIt"); } },
+    ],
+  },
+  {
+    // Growing the book of clients, apart from the clients themselves: these five used to
+    // sit under Clients, so "who are my clients" and "how do I get more" were one list.
+    icon: Megaphone,
+    get label() { return t("layout.marketing"); },
+    slug: "marketing",
+    items: [
+      { icon: MarketingIcon, get label() { return t("layout.campaignsCodes"); }, path: "/marketing", get description() { return t("layout.messagesToClientsAndPromo"); } },
+      { icon: Percent, get label() { return t("common.offers"); }, path: "/offers", get description() { return t("layout.cutAPriceItShows"); } },
+      { icon: Stamp, get label() { return t("common.loyalty"); }, path: "/loyalty", get description() { return t("layout.comeNTimesOneService"); }, flag: "loyalty_cards" },
+      { icon: Gift, get label() { return t("common.referrals"); }, path: "/referral-program", get description() { return t("layout.yourCodeAndTheClients"); }, flag: "platform_referral" },
     ],
   },
   {
     icon: ItemCategoryIcon,
-    label: "Catalogue",
+    get label() { return t("layout.catalogue"); },
     slug: "catalogue",
     items: [
-      { icon: ItemCategoryIcon, label: "Services", path: "/items-category", description: "What you sell, how long it takes, what it costs" },
-      { icon: Package, label: "Add-ons", path: "/addons", description: "Extras a client can add to a booking" },
+      { icon: ItemCategoryIcon, get label() { return t("common.services"); }, path: "/items-category", get description() { return t("layout.whatYouSellHowLong"); } },
+      { icon: Package, get label() { return t("layout.addOns"); }, path: "/addons", get description() { return t("layout.extrasYouAddToA"); } },
       // #26: real stock with SKUs and reorder levels, not add-on management.
-      { icon: Package, label: "Inventory", path: "/inventory", description: "Stock levels and reorder points" },
+      { icon: Package, get label() { return t("layout.inventory"); }, path: "/inventory", get description() { return t("layout.stockLevelsAndReorderPoints"); } },
     ],
   },
   {
     icon: StaffIcon,
-    label: "Team",
+    get label() { return t("common.team"); },
     slug: "team",
     items: [
-      { icon: Users, label: "Team members", path: "/staff", description: "Who works here, their services, hours and invitations" },
-      { icon: ShieldCheck, label: "Roles", path: "/roles", description: "What each role can see and do — owner only" },
+      { icon: Users, get label() { return t("layout.teamMembers"); }, path: "/staff", get description() { return t("layout.whoWorksHereTheirServices"); } },
+      { icon: ShieldCheck, get label() { return t("layout.roles"); }, path: "/roles", get description() { return t("layout.whatEachRoleCanSee"); } },
     ],
   },
   {
     icon: SettingsIcon,
-    label: "Business",
+    get label() { return t("common.business"); },
     slug: "business",
     items: [
-      { icon: BusinessIcon, label: "Business profile", path: "/business", description: "Name, address and contact details" },
-      { icon: ImageIcon, label: "Photos", path: "/photos", description: "Cover, logo and gallery customers see" },
-      { icon: ClockIcon, label: "Opening hours", path: "/business-hours", description: "When the salon is open, and its closed days" },
-      { icon: SettingsIcon, label: "Settings", path: "/setup", description: "Booking rules, deposits, payments, notifications, branding" },
+      { icon: BusinessIcon, get label() { return t("common.businessProfile"); }, path: "/business", get description() { return t("layout.nameAddressAndContactDetails"); } },
+      { icon: ImageIcon, get label() { return t("common.photos"); }, path: "/photos", get description() { return t("layout.coverLogoAndGalleryCustomers"); } },
+      { icon: ClockIcon, get label() { return t("common.openingHours"); }, path: "/business-hours", get description() { return t("layout.whenTheSalonIsOpen"); } },
+      { icon: SettingsIcon, get label() { return t("layout.settings"); }, path: "/setup", get description() { return t("layout.bookingRulesDepositsPaymentsNotifications"); } },
     ],
   },
 ];

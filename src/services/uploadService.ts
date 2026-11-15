@@ -1,4 +1,5 @@
 import { apiClient } from "@/config/api";
+import { t } from "@/i18n";
 
 export type UploadPurpose =
   | "STAFF_AVATAR"
@@ -21,18 +22,18 @@ interface ImageRule { minW: number; minH: number; minAspect?: number; maxAspect?
 
 /** Mirrors ImageStorage.Purpose on the server, so people hear it before the upload starts. */
 const RULES: Partial<Record<UploadPurpose, ImageRule>> = {
-  BUSINESS_COVER: { minW: 1200, minH: 500, minAspect: 1.6, maxAspect: 3.2, message: "The cover photo must be at least 1200 × 500 px and landscape." },
-  BUSINESS_PHOTO: { minW: 800, minH: 600, message: "A gallery photo must be at least 800 × 600 px." },
-  STAFF_AVATAR: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, message: "The profile photo must be at least 256 × 256 px and roughly square." },
-  BUSINESS_LOGO: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, message: "The logo must be at least 256 × 256 px and roughly square." },
+  BUSINESS_COVER: { minW: 1200, minH: 500, minAspect: 1.6, maxAspect: 3.2, get message() { return t("services.theCoverPhotoMustBe"); } },
+  BUSINESS_PHOTO: { minW: 800, minH: 600, get message() { return t("services.aGalleryPhotoMustBe"); } },
+  STAFF_AVATAR: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, get message() { return t("services.theProfilePhotoMustBe"); } },
+  BUSINESS_LOGO: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, get message() { return t("services.theLogoMustBeAt"); } },
 };
 
 /** The requirement, to show under an upload control. */
 export const UPLOAD_REQUIREMENT: Partial<Record<UploadPurpose, string>> = {
-  BUSINESS_COVER: "At least 1200 × 500 px, landscape. JPEG or PNG, up to 8 MB.",
-  BUSINESS_PHOTO: "At least 800 × 600 px. JPEG or PNG, up to 8 MB each.",
-  STAFF_AVATAR: "At least 256 × 256 px, roughly square. JPEG or PNG.",
-  BUSINESS_LOGO: "At least 256 × 256 px, roughly square. JPEG or PNG, up to 8 MB.",
+  get BUSINESS_COVER() { return t("services.requirementCover"); },
+  get BUSINESS_PHOTO() { return t("services.requirementPhoto"); },
+  get STAFF_AVATAR() { return t("services.requirementAvatar"); },
+  get BUSINESS_LOGO() { return t("services.requirementLogo"); },
 };
 
 async function checkDimensions(file: File, purpose: UploadPurpose) {
@@ -49,7 +50,7 @@ async function checkDimensions(file: File, purpose: UploadPurpose) {
   }
   const aspect = w / h;
   if (w < rule.minW || h < rule.minH || (rule.minAspect && aspect < rule.minAspect) || (rule.maxAspect && aspect > rule.maxAspect)) {
-    throw new Error(`${rule.message} This one is ${w} × ${h} px.`);
+    throw new Error(t("services.thisOneIsPx", { message: rule.message, w, h }));
   }
 }
 
@@ -59,10 +60,10 @@ async function checkDimensions(file: File, purpose: UploadPurpose) {
  */
 export async function uploadImage(file: File, purpose: UploadPurpose): Promise<UploadedImage> {
   if (!/^image\/(jpeg|png)$/.test(file.type)) {
-    throw new Error("Choose a JPEG or PNG image.");
+    throw new Error(t("services.chooseAJpegOrPng"));
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("The image is larger than 8 MB.");
+    throw new Error(t("services.theImageIsLargerThan"));
   }
   await checkDimensions(file, purpose);
   const form = new FormData();

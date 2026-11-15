@@ -6,6 +6,7 @@ import {
   type DaySchedule,
   type WeekSchedule,
 } from "./workingHours";
+import { t } from "@/i18n";
 
 export function WorkingHoursEditor({
   value,
@@ -26,7 +27,7 @@ export function WorkingHoursEditor({
             <Switch
               checked={day.enabled}
               onCheckedChange={(checked) => setDay(d.key, { enabled: checked })}
-              aria-label={`${day.enabled ? "Disable" : "Enable"} ${d.label}`}
+              aria-label={`${day.enabled ? t("staff.disable") : t("staff.enable")} ${d.label}`}
             />
             <span className="w-24 text-sm text-gray-700">{d.label}</span>
             {day.enabled ? (
@@ -36,7 +37,7 @@ export function WorkingHoursEditor({
                   value={day.start}
                   onChange={(e) => setDay(d.key, { start: e.target.value })}
                   className="w-32"
-                  aria-label={`${d.label} start time`}
+                  aria-label={t("staff.startTime", { label: d.label })}
                 />
                 <span className="text-gray-400">–</span>
                 <Input
@@ -44,11 +45,11 @@ export function WorkingHoursEditor({
                   value={day.end}
                   onChange={(e) => setDay(d.key, { end: e.target.value })}
                   className="w-32"
-                  aria-label={`${d.label} end time`}
+                  aria-label={t("staff.endTime", { label: d.label })}
                 />
               </div>
             ) : (
-              <span className="text-sm text-gray-400">Closed</span>
+              <span className="text-sm text-gray-400">{t("common.closed")}</span>
             )}
           </div>
         );

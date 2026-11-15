@@ -17,18 +17,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import type { Category } from "@/services/categoryService";
+import { t, formatMinutes } from "@/i18n";
 
 function formatDuration(minutes?: number) {
   if (!minutes) return "";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}min`;
-  if (h > 0) return `${h}h`;
-  return `${m}min`;
+  return formatMinutes(minutes);
 }
 
 function formatPrice(price?: number) {
-  if (price == null) return "Price TBD";
+  if (price == null) return t("services.priceTbd");
   return `${price.toFixed(2)} ${currencySymbol()}`;
 }
 
@@ -94,7 +91,7 @@ export default function ServicesPage() {
 
   const handleAddService = async () => {
     if (!serviceForm.name.trim()) {
-      toast.error("Service name is required");
+      toast.error(t("services.serviceNameIsRequired"));
       return;
     }
     setSavingService(true);
@@ -132,13 +129,13 @@ export default function ServicesPage() {
   };
 
   const handleDeleteService = async (id: number, name: string) => {
-    if (!confirm(`Delete "${name}"?`)) return;
+    if (!confirm(t("services.delete", { name }))) return;
     await deleteService(id);
   };
 
   const handleAddCategory = async () => {
     if (!categoryForm.name.trim()) {
-      toast.error("Category name is required");
+      toast.error(t("services.categoryNameIsRequired"));
       return;
     }
     setSavingCategory(true);
@@ -157,8 +154,8 @@ export default function ServicesPage() {
   return (
     <AppLayout>
       <PageHeader
-        title="Services"
-        subtitle="Manage your service offerings and pricing"
+        title={t("common.services")}
+        subtitle={t("services.manageYourServiceOfferingsAnd")}
         actions={
           <div className="flex gap-2">
             <Button
@@ -167,14 +164,14 @@ export default function ServicesPage() {
               onClick={() => setAddCategoryOpen(true)}
             >
               <Tag size={16} />
-              Add Category
+              {t("services.addCategory")}
             </Button>
             <Button
               className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all"
               onClick={() => setAddServiceOpen(true)}
             >
               <Plus size={16} />
-              Add Service
+              {t("services.addService")}
             </Button>
           </div>
         }
@@ -185,11 +182,11 @@ export default function ServicesPage() {
             organised, and what it costs. Reading them off a list of cards was the job
             this page used to leave to the owner. */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard icon={Tag} label="Services" value={services.length} tone="violet" />
-          <StatCard icon={Layers} label="Categories" value={categories.length} tone="sky" />
+          <StatCard icon={Tag} label={t("common.services")} value={services.length} tone="violet" />
+          <StatCard icon={Layers} label={t("services.categories")} value={categories.length} tone="sky" />
           <StatCard
             icon={Coins}
-            label="Average price"
+            label={t("services.averagePrice")}
             value={
               services.length
                 ? `${Math.round(
@@ -206,7 +203,7 @@ export default function ServicesPage() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search services..."
+              placeholder={t("common.searchServices")}
               className="pl-10 border-border/60 focus:border-accent/50 transition-all"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -215,10 +212,10 @@ export default function ServicesPage() {
           <Select value={selectedCategoryFilter} onValueChange={setSelectedCategoryFilter}>
             <SelectTrigger className="w-40 border-border/60 hover:border-accent/30 transition-all">
               <Filter size={16} className="mr-2" />
-              <SelectValue placeholder="Category" />
+              <SelectValue placeholder={t("common.category")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="all">{t("services.allCategories")}</SelectItem>
               {categories.map(cat => (
                 <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
               ))}
@@ -237,12 +234,12 @@ export default function ServicesPage() {
         {!loading && services.length === 0 && (
           <EmptyState
             icon={Tag}
-            title="No services yet"
-            body="A service is what a customer books. Add one and it appears in the app straight away."
+            title={t("common.noServicesYet")}
+            body={t("services.aServiceIsWhatA")}
             action={
               <Button onClick={() => setAddServiceOpen(true)} className="gap-2">
                 <Plus size={16} />
-                Add service
+                {t("services.addService2")}
               </Button>
             }
           />
@@ -261,10 +258,10 @@ export default function ServicesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg font-bold">
-                        {group.category?.name ?? "Uncategorized"}
+                        {group.category?.name ?? t("services.uncategorized")}
                       </CardTitle>
                       <CardDescription className="mt-0.5">
-                        {group.services.length} service{group.services.length !== 1 ? "s" : ""} available
+                        {t("services.availableCount", { count: group.services.length })}
                       </CardDescription>
                     </div>
                     {group.category && (
@@ -272,9 +269,9 @@ export default function ServicesPage() {
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        aria-label={`Delete category ${group.category!.name}`}
+                        aria-label={t("services.deleteCategory", { name: group.category!.name })}
                         onClick={() => {
-                          if (confirm(`Delete category "${group.category!.name}"? Services in this category won't be deleted.`)) {
+                          if (confirm(t("services.deleteCategoryServicesInThis", { name: group.category!.name }))) {
                             deleteCategory(group.category!.id);
                           }
                         }}
@@ -297,7 +294,7 @@ export default function ServicesPage() {
                             <h4 className="font-semibold text-sm truncate">{service.name}</h4>
                             {!service.isActive && (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-muted-foreground">
-                                Inactive
+                                {t("services.inactive")}
                               </Badge>
                             )}
                           </div>
@@ -322,7 +319,7 @@ export default function ServicesPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              aria-label={`Edit ${service.name}`}
+                              aria-label={t("services.edit", { name: service.name })}
                               onClick={e => {
                                 e.stopPropagation();
                                 setEditingService(service);
@@ -335,7 +332,7 @@ export default function ServicesPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                              aria-label={`Delete ${service.name}`}
+                              aria-label={t("services.delete2", { name: service.name })}
                               onClick={e => {
                                 e.stopPropagation();
                                 handleDeleteService(service.id, service.name);
@@ -359,26 +356,26 @@ export default function ServicesPage() {
       <Dialog open={addServiceOpen} onOpenChange={setAddServiceOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Service</DialogTitle>
-            <DialogDescription>Create a new service for your clients to book.</DialogDescription>
+            <DialogTitle>{t("services.addNewService")}</DialogTitle>
+            <DialogDescription>{t("services.createANewServiceFor")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Service Name *</Label>
+              <Label>{t("services.serviceName")}</Label>
               <Input
-                placeholder="e.g. Hair Cut, Swedish Massage"
+                placeholder={t("services.eGHairCutSwedish")}
                 value={serviceForm.name}
                 onChange={e => setServiceForm(f => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label>Category</Label>
+              <Label>{t("common.category")}</Label>
               <Select
                 value={serviceForm.categoryId}
                 onValueChange={v => setServiceForm(f => ({ ...f, categoryId: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select category" />
+                  <SelectValue placeholder={t("services.selectCategory")} />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map(cat => (
@@ -389,39 +386,39 @@ export default function ServicesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Duration (minutes)</Label>
+                <Label>{t("services.durationMinutes")}</Label>
                 <Input
                   type="number"
-                  placeholder="e.g. 60"
+                  placeholder={t("services.eG")}
                   value={serviceForm.durationMinutes}
                   onChange={e => setServiceForm(f => ({ ...f, durationMinutes: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Price ({currencySymbol()})</Label>
+                <Label>{t("services.price", { value: currencySymbol() })}</Label>
                 <Input
                   type="number"
                   step="0.01"
-                  placeholder="e.g. 35.00"
+                  placeholder={t("services.eG2")}
                   value={serviceForm.price}
                   onChange={e => setServiceForm(f => ({ ...f, price: e.target.value }))}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Description (optional)</Label>
+              <Label>{t("common.descriptionOptional")}</Label>
               <Input
-                placeholder="Brief description of the service"
+                placeholder={t("services.briefDescriptionOfTheService")}
                 value={serviceForm.description}
                 onChange={e => setServiceForm(f => ({ ...f, description: e.target.value }))}
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setAddServiceOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddServiceOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleAddService} disabled={savingService}>
               {savingService && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Service
+              {t("services.addService")}
             </Button>
           </div>
         </DialogContent>
@@ -431,28 +428,28 @@ export default function ServicesPage() {
       <Dialog open={editServiceOpen} onOpenChange={setEditServiceOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Service</DialogTitle>
+            <DialogTitle>{t("services.editService")}</DialogTitle>
           </DialogHeader>
           {editingService && (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Service Name *</Label>
+                <Label>{t("services.serviceName")}</Label>
                 <Input
                   value={editingService.name}
                   onChange={e => setEditingService(s => s ? { ...s, name: e.target.value } : s)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Category</Label>
+                <Label>{t("common.category")}</Label>
                 <Select
-                  value={editingService.categoryId ? String(editingService.categoryId) : ""}
-                  onValueChange={v => setEditingService(s => s ? { ...s, categoryId: v ? Number(v) : undefined } : s)}
+                  value={editingService.categoryId ? String(editingService.categoryId) : "none"}
+                  onValueChange={v => setEditingService(s => s ? { ...s, categoryId: v && v !== "none" ? Number(v) : undefined } : s)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder={t("services.selectCategory")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">{t("services.none")}</SelectItem>
                     {categories.map(cat => (
                       <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                     ))}
@@ -461,7 +458,7 @@ export default function ServicesPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Duration (minutes)</Label>
+                  <Label>{t("services.durationMinutes")}</Label>
                   <Input
                     type="number"
                     value={editingService.durationMinutes ?? ""}
@@ -469,7 +466,7 @@ export default function ServicesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Price ({currencySymbol()})</Label>
+                  <Label>{t("services.price", { value: currencySymbol() })}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -479,7 +476,7 @@ export default function ServicesPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t("services.description")}</Label>
                 <Input
                   value={editingService.description ?? ""}
                   onChange={e => setEditingService(s => s ? { ...s, description: e.target.value } : s)}
@@ -488,10 +485,10 @@ export default function ServicesPage() {
             </div>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setEditServiceOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditServiceOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleEditService} disabled={savingService}>
               {savingService && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              {t("services.saveChanges")}
             </Button>
           </div>
         </DialogContent>
@@ -501,32 +498,32 @@ export default function ServicesPage() {
       <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Add Category</DialogTitle>
-            <DialogDescription>Group your services into categories.</DialogDescription>
+            <DialogTitle>{t("services.addCategory")}</DialogTitle>
+            <DialogDescription>{t("services.groupYourServicesIntoCategories")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Category Name *</Label>
+              <Label>{t("services.categoryName")}</Label>
               <Input
-                placeholder="e.g. Hair Services, Massage & Wellness"
+                placeholder={t("services.eGHairServicesMassage")}
                 value={categoryForm.name}
                 onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label>Description (optional)</Label>
+              <Label>{t("common.descriptionOptional")}</Label>
               <Input
-                placeholder="Brief description"
+                placeholder={t("services.briefDescription")}
                 value={categoryForm.description}
                 onChange={e => setCategoryForm(f => ({ ...f, description: e.target.value }))}
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>{t("common.cancel")}</Button>
             <Button onClick={handleAddCategory} disabled={savingCategory}>
               {savingCategory && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Add Category
+              {t("services.addCategory")}
             </Button>
           </div>
         </DialogContent>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { businessHoursService, type BusinessHours, type BusinessHoursUpdateItem } from "@/services/businessHoursService";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { t } from "@/i18n";
 
 export function useBusinessHours(businessIdParam?: number) {
   const routeBusinessId = useBusinessId();
@@ -18,7 +19,7 @@ export function useBusinessHours(businessIdParam?: number) {
       const data = await businessHoursService.getBusinessHoursByBusinessId(currentBusinessId);
       setBusinessHours(data);
     } catch (err) {
-      setError((err instanceof Error && err.message) || "Failed to fetch business hours");
+      setError((err instanceof Error && err.message) || t("hooks.failedToFetchBusinessHours"));
       console.error("Error fetching business hours:", err);
     } finally {
       setLoading(false);
@@ -72,7 +73,7 @@ export function useBusinessHours(businessIdParam?: number) {
   }, [getHoursForDay, getDefaultHours]);
 
   const updateBusinessHours = useCallback(async (hours: BusinessHoursUpdateItem[]): Promise<BusinessHours[]> => {
-    if (!currentBusinessId) throw new Error("Business ID is required");
+    if (!currentBusinessId) throw new Error(t("common.businessIdIsRequired"));
     const updated = await businessHoursService.updateBusinessHours(currentBusinessId, hours);
     setBusinessHours(updated);
     return updated;

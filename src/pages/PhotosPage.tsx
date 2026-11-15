@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
 import { ExternalLink, ImagePlus, Loader2, Star, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 
-import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BooqiScope, PageHeader } from "@/components/page/booqi";
+import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { ClientPreview } from "@/components/page/kit";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -24,6 +27,7 @@ import {
   type UploadPurpose,
 } from "@/services/uploadService";
 import { cn } from "@/lib/utils";
+import { t } from "@/i18n";
 
 const MAX_PHOTOS = 12;
 
@@ -53,7 +57,7 @@ export default function PhotosPage() {
     if (!businessId) { setLoading(false); return; }
     Promise.all([businessService.getBusiness(businessId), businessPhotoService.list(businessId)])
       .then(([b, list]) => { setBusiness(b); setPhotos(list); })
-      .catch(() => toast.error("Could not load your photos"))
+      .catch(() => toast.error(t("photos.couldNotLoadYourPhotos")))
       .finally(() => setLoading(false));
   }, [businessId]);
 
@@ -76,11 +80,11 @@ export default function PhotosPage() {
       setBusiness(await businessService.updateBusiness(businessId, patch));
       toast.success(
         value
-          ? slot === "cover" ? "Cover photo updated" : "Logo updated"
-          : slot === "cover" ? "Cover photo removed" : "Logo removed",
+          ? slot === "cover" ? t("photos.coverPhotoUpdated") : t("photos.logoUpdated")
+          : slot === "cover" ? t("photos.coverPhotoRemoved") : t("photos.logoRemoved"),
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save the photo");
+      toast.error(e instanceof Error ? e.message : t("photos.couldNotSaveThePhoto"));
     } finally {
       setBusySlot(null);
     }
@@ -89,9 +93,9 @@ export default function PhotosPage() {
   const addToGallery = useCallback(async (files: File[]) => {
     if (!businessId || files.length === 0) return;
     const room = MAX_PHOTOS - photos.length - pending.length;
-    if (room <= 0) { toast.info(`The gallery is full (${MAX_PHOTOS} photos). Remove one to add another.`); return; }
+    if (room <= 0) { toast.info(t("photos.theGalleryIsFullPhotos", { MAX_PHOTOS })); return; }
     const chosen = files.slice(0, room);
-    if (files.length > room) toast.info(`Only ${room} more photo${room === 1 ? "" : "s"} fit — ${MAX_PHOTOS} at most.`);
+    if (files.length > room) toast.info(t("photos.onlyMoreFit", { count: room, MAX_PHOTOS }));
     const queue = chosen.map((f, i) => ({ key: `${Date.now()}-${i}`, name: f.name, file: f }));
     setPending((p) => [...p, ...queue.map(({ key, name }) => ({ key, name }))]);
     for (const item of queue) {
@@ -112,9 +116,9 @@ export default function PhotosPage() {
     try {
       await businessPhotoService.remove(businessId, photo.id);
       setPhotos((p) => p.filter((x) => x.id !== photo.id));
-      toast.success("Photo removed");
+      toast.success(t("photos.photoRemoved"));
     } catch {
-      toast.error("Could not remove the photo");
+      toast.error(t("photos.couldNotRemoveThePhoto"));
     }
   };
 
@@ -130,35 +134,41 @@ export default function PhotosPage() {
 
   return (
     <AppLayout>
+      <BooqiScope>
       <PageHeader
-        title="Photos"
-        subtitle="What customers see on your booqi page and in the app"
+        title={t("common.photos")}
+        subtitle={t("photos.whatCustomersSeeOnYour")}
         actions={
-          publicUrl ? (
-            <Button variant="outline" size="sm" asChild>
-              <a href={publicUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                View your page
-              </a>
+          <>
+            {publicUrl ? (
+              <Button variant="outline" className={cn(secondaryBtn, "hidden sm:inline-flex")} asChild>
+                <a href={publicUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink size={16} />{" "}{t("photos.viewYourPage")}
+                </a>
+              </Button>
+            ) : null}
+            <Button className={primaryBtn} onClick={() => galleryInput.current?.click()} disabled={loading || used >= MAX_PHOTOS}>
+              <UploadCloud size={16} />{" "}{t("photos.addPhotos")}
             </Button>
-          ) : undefined
+          </>
         }
       />
-
-      <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+      <div className={pageBody}>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="min-w-0 space-y-6">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <div className="flex items-center gap-2 text-sm text-[rgb(var(--reg-muted))]">
+            <Loader2 className="h-4 w-4 animate-spin" />{" "}{t("common.loading2")}
           </div>
         ) : (
           <>
             {/* Cover + logo: how the page opens. */}
             <section className="grid gap-4 lg:grid-cols-[1fr_260px]">
-              <div className="rounded-xl border border-border/60 bg-white p-4 sm:p-5">
+              <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] sm:p-5">
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <h2 className="font-semibold">Cover photo</h2>
-                    <p className="text-sm text-muted-foreground">The first thing customers see — at the top of your page and on your card in search. {UPLOAD_REQUIREMENT.BUSINESS_COVER}</p>
+                    <h2 className="text-base font-extrabold tracking-[-0.01em]">{t("photos.coverPhoto")}</h2>
+                    <p className="text-sm text-[rgb(var(--reg-muted))]">{t("photos.theFirstThingCustomersSee", { BUSINESS_COVER: UPLOAD_REQUIREMENT.BUSINESS_COVER })}</p>
                   </div>
                 </div>
                 <button
@@ -167,78 +177,78 @@ export default function PhotosPage() {
                   disabled={busySlot === "cover"}
                   className={cn(
                     "group relative flex aspect-[16/7] w-full items-center justify-center overflow-hidden rounded-lg",
-                    cover ? "bg-muted" : "border-2 border-dashed border-border bg-muted/30 hover:border-foreground/30",
+                    cover ? "bg-muted" : "border-2 border-dashed border-[rgb(var(--reg-line))] bg-muted/30 hover:border-foreground/30",
                   )}
-                  aria-label={cover ? "Change cover photo" : "Add a cover photo"}
+                  aria-label={cover ? t("photos.changeCoverPhoto") : t("photos.addACoverPhoto")}
                 >
                   {cover ? (
                     <>
                       <img src={assetUrl(cover)} alt="" className="h-full w-full object-cover" />
                       <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
-                        Change cover
+                        {t("photos.changeCover")}
                       </span>
                     </>
                   ) : (
-                    <span className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+                    <span className="flex flex-col items-center gap-2 text-sm text-[rgb(var(--reg-muted))]">
                       <ImagePlus className="h-7 w-7" />
-                      Add a cover photo
-                      <span className="text-xs">Landscape works best · at least 1200 px wide</span>
+                      {t("photos.addACoverPhoto")}
+                      <span className="text-xs">{t("photos.landscapeWorksBestAtLeast")}</span>
                     </span>
                   )}
                   {busySlot === "cover" && (
                     <span className="absolute inset-0 flex items-center justify-center bg-white/70">
-                      <Loader2 className="h-6 w-6 animate-spin" aria-label="Saving" />
+                      <Loader2 className="h-6 w-6 animate-spin" aria-label={t("photos.saving")} />
                     </span>
                   )}
                 </button>
                 {cover && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => coverInput.current?.click()} disabled={busySlot === "cover"}>
-                      Change
+                      {t("photos.change")}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setBrandImage("cover", "")} disabled={busySlot === "cover"}>
-                      Remove
+                      {t("common.remove")}
                     </Button>
                   </div>
                 )}
-                <input ref={coverInput} type="file" accept="image/jpeg,image/png" className="hidden" aria-label="Cover photo file"
+                <input ref={coverInput} type="file" accept="image/jpeg,image/png" className="hidden" aria-label={t("photos.coverPhotoFile")}
                        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setBrandImage("cover", "", f); }} />
               </div>
 
-              <div className="rounded-xl border border-border/60 bg-white p-4 sm:p-5">
-                <h2 className="font-semibold">Logo</h2>
-                <p className="mb-3 text-sm text-muted-foreground">Shown next to your name on your page, in search results and when customers book. Square works best.</p>
-                <p className="-mt-2 mb-3 text-xs text-muted-foreground">{UPLOAD_REQUIREMENT.BUSINESS_LOGO}</p>
+              <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] sm:p-5">
+                <h2 className="text-base font-extrabold tracking-[-0.01em]">{t("photos.logo")}</h2>
+                <p className="mb-3 text-sm text-[rgb(var(--reg-muted))]">{t("photos.shownNextToYourName")}</p>
+                <p className="-mt-2 mb-3 text-xs text-[rgb(var(--reg-muted))]">{UPLOAD_REQUIREMENT.BUSINESS_LOGO}</p>
                 <button
                   type="button"
                   onClick={() => logoInput.current?.click()}
                   disabled={busySlot === "logo"}
                   className={cn(
                     "relative mx-auto flex h-32 w-32 items-center justify-center overflow-hidden rounded-xl",
-                    logo ? "border border-border/60 bg-white" : "border-2 border-dashed border-border bg-muted/30 hover:border-foreground/30",
+                    logo ? "border border-border/60 bg-white" : "border-2 border-dashed border-[rgb(var(--reg-line))] bg-muted/30 hover:border-foreground/30",
                   )}
-                  aria-label={logo ? "Change logo" : "Add a logo"}
+                  aria-label={logo ? t("photos.changeLogo") : t("photos.addALogo")}
                 >
                   {logo ? (
                     <img src={assetUrl(logo)} alt="" className="h-full w-full object-contain" />
                   ) : (
-                    <span className="flex flex-col items-center gap-1 text-xs text-muted-foreground">
-                      <ImagePlus className="h-6 w-6" /> Add logo
+                    <span className="flex flex-col items-center gap-1 text-xs text-[rgb(var(--reg-muted))]">
+                      <ImagePlus className="h-6 w-6" />{" "}{t("photos.addLogo")}
                     </span>
                   )}
                   {busySlot === "logo" && (
                     <span className="absolute inset-0 flex items-center justify-center bg-white/70">
-                      <Loader2 className="h-5 w-5 animate-spin" aria-label="Saving" />
+                      <Loader2 className="h-5 w-5 animate-spin" aria-label={t("photos.saving")} />
                     </span>
                   )}
                 </button>
                 {logo && (
                   <div className="mt-3 flex justify-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => logoInput.current?.click()} disabled={busySlot === "logo"}>Change</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setBrandImage("logo", "")} disabled={busySlot === "logo"}>Remove</Button>
+                    <Button size="sm" variant="outline" onClick={() => logoInput.current?.click()} disabled={busySlot === "logo"}>{t("photos.change")}</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setBrandImage("logo", "")} disabled={busySlot === "logo"}>{t("common.remove")}</Button>
                   </div>
                 )}
-                <input ref={logoInput} type="file" accept="image/jpeg,image/png" className="hidden" aria-label="Logo file"
+                <input ref={logoInput} type="file" accept="image/jpeg,image/png" className="hidden" aria-label={t("photos.logoFile")}
                        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setBrandImage("logo", "", f); }} />
               </div>
             </section>
@@ -246,8 +256,8 @@ export default function PhotosPage() {
             {/* Gallery */}
             <section
               className={cn(
-                "rounded-xl border bg-white p-4 transition-colors sm:p-5",
-                dragging ? "border-foreground/40 bg-muted/40" : "border-border/60",
+                "rounded-[20px] bg-white p-4 ring-1 transition-colors sm:p-5",
+                dragging ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]" : "ring-[rgb(var(--reg-line)/0.8)]",
               )}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
@@ -255,37 +265,33 @@ export default function PhotosPage() {
             >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">Gallery <span className="ml-1 text-sm font-normal text-muted-foreground">{used} / {MAX_PHOTOS}</span></h2>
-                  <p className="text-sm text-muted-foreground">Your space and your work. Customers swipe through these on your page. {UPLOAD_REQUIREMENT.BUSINESS_PHOTO}</p>
+                  <h2 className="text-base font-extrabold tracking-[-0.01em]">{t("photos.gallery")}{" "}<span className="ml-1 text-sm font-normal text-[rgb(var(--reg-muted))]">{used} / {MAX_PHOTOS}</span></h2>
+                  <p className="text-sm text-[rgb(var(--reg-muted))]">{t("photos.yourSpaceAndYourWork", { BUSINESS_PHOTO: UPLOAD_REQUIREMENT.BUSINESS_PHOTO })}</p>
                 </div>
-                <Button size="sm" onClick={() => galleryInput.current?.click()} disabled={used >= MAX_PHOTOS}>
-                  <UploadCloud className="mr-2 h-4 w-4" />
-                  Add photos
-                </Button>
               </div>
 
               {used === 0 ? (
                 <button
                   type="button"
                   onClick={() => galleryInput.current?.click()}
-                  className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-12 text-center hover:border-foreground/30"
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[rgb(var(--reg-line))] px-4 py-12 text-center hover:border-foreground/30"
                 >
-                  <UploadCloud className="h-8 w-8 text-muted-foreground" />
-                  <span className="font-medium">Drag photos here, or click to choose</span>
-                  <span className="max-w-md text-sm text-muted-foreground">
-                    Show customers the room, the chairs and your best work. Daylight photos look best.
+                  <UploadCloud className="h-8 w-8 text-[rgb(var(--reg-muted))]" />
+                  <span className="font-medium">{t("photos.dragPhotosHereOrClick")}</span>
+                  <span className="max-w-md text-sm text-[rgb(var(--reg-muted))]">
+                    {t("photos.showCustomersTheRoomThe")}
                   </span>
-                  <span className="text-xs text-muted-foreground">JPEG or PNG · up to 8 MB each · {MAX_PHOTOS} at most</span>
+                  <span className="text-xs text-[rgb(var(--reg-muted))]">{t("photos.jpegOrPngUpTo", { MAX_PHOTOS })}</span>
                 </button>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {photos.map((p) => {
                     const isCover = cover !== "" && cover === p.url;
                     return (
-                      <figure key={p.id} className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-border/60 bg-muted">
+                      <figure key={p.id} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-[rgb(var(--reg-canvas))]">
                         <img src={assetUrl(p.url)} alt="" className="h-full w-full object-cover" loading="lazy" />
                         {isCover && (
-                          <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">Cover</span>
+                          <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">{t("photos.cover")}</span>
                         )}
                         {/* Always visible on touch screens; on hover elsewhere. */}
                         <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1.5 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
@@ -295,13 +301,13 @@ export default function PhotosPage() {
                               onClick={() => setBrandImage("cover", p.url)}
                               className="flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-900 hover:bg-white"
                             >
-                              <Star className="h-3.5 w-3.5" /> Make cover
+                              <Star className="h-3.5 w-3.5" />{" "}{t("photos.makeCover")}
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => setToDelete(p)}
-                            aria-label="Delete this photo"
+                            aria-label={t("photos.deleteThisPhoto")}
                             className="rounded-full bg-white/90 p-1.5 text-red-600 hover:bg-white"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -311,7 +317,7 @@ export default function PhotosPage() {
                     );
                   })}
                   {pending.map((p) => (
-                    <div key={p.key} className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 text-xs text-muted-foreground">
+                    <div key={p.key} className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 text-xs text-[rgb(var(--reg-muted))]">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span className="max-w-[90%] truncate">{p.name}</span>
                     </div>
@@ -320,42 +326,74 @@ export default function PhotosPage() {
                     <button
                       type="button"
                       onClick={() => galleryInput.current?.click()}
-                      className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground hover:border-foreground/30"
+                      className="flex aspect-[4/3] flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-[rgb(var(--reg-line))] text-sm text-[rgb(var(--reg-muted))] hover:border-foreground/30"
                     >
                       <ImagePlus className="h-5 w-5" />
-                      Add more
+                      {t("photos.addMore")}
                     </button>
                   )}
                 </div>
               )}
-              <input ref={galleryInput} type="file" accept="image/jpeg,image/png" multiple className="hidden" aria-label="Gallery photo files"
+              <input ref={galleryInput} type="file" accept="image/jpeg,image/png" multiple className="hidden" aria-label={t("photos.galleryPhotoFiles")}
                      onChange={(e) => { const files = Array.from(e.target.files ?? []); e.target.value = ""; addToGallery(files); }} />
               {used > 0 && (
-                <p className="mt-3 text-xs text-muted-foreground">Changes are saved automatically. You can also drag photos onto this box.</p>
+                <p className="mt-3 text-xs text-[rgb(var(--reg-muted))]">{t("photos.changesAreSavedAutomaticallyYou")}</p>
               )}
             </section>
           </>
         )}
       </div>
-
+      {/* How the page opens on booqi-web: cover, logo, name, the first gallery photos. */}
+      <aside className="min-w-0 xl:sticky xl:top-[132px] xl:self-start">
+        <ClientPreview where={t("common.yourSalonPage")}>
+          <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-inset ring-[rgb(var(--reg-line))]">
+            <div className="relative aspect-[16/8] bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))]">
+              {cover ? <img src={assetUrl(cover)} alt="" className="absolute inset-0 h-full w-full object-cover" /> : null}
+            </div>
+            <div className="px-4 pb-4">
+              <div className="relative -mt-7 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white text-lg font-extrabold text-[rgb(var(--reg-brand-strong))] shadow-[0_6px_16px_-8px_rgb(var(--reg-ink)/0.4)] ring-2 ring-white">
+                {logo ? <img src={assetUrl(logo)} alt="" className="h-full w-full object-contain" /> : (business?.name ?? "?").charAt(0).toUpperCase()}
+              </div>
+              <p className="mt-2 truncate text-lg font-extrabold tracking-[-0.02em]">{business?.name ?? t("common.yourSalon")}</p>
+              {photos.length > 0 ? (
+                <div className="mt-3 grid grid-cols-4 gap-1.5">
+                  {photos.slice(0, 4).map((ph, i) => (
+                    <div key={ph.id} className="relative aspect-square overflow-hidden rounded-lg bg-[rgb(var(--reg-canvas))]">
+                      <img src={assetUrl(ph.url)} alt="" className="h-full w-full object-cover" />
+                      {i === 3 && photos.length > 4 && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-bold text-white">+{photos.length - 4}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 rounded-lg bg-[rgb(var(--reg-canvas))] px-3 py-4 text-center text-xs text-[rgb(var(--reg-muted))]">{t("photos.galleryPhotosAppearHere")}</p>
+              )}
+            </div>
+          </div>
+        </ClientPreview>
+      </aside>
+      </div>
+      </div>
       <AlertDialog open={toDelete !== null} onOpenChange={(open) => { if (!open) setToDelete(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this photo?</AlertDialogTitle>
-            <AlertDialogDescription>It disappears from your page straight away.</AlertDialogDescription>
+            <AlertDialogTitle>{t("photos.deleteThisPhoto2")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("photos.itDisappearsFromYourPage")}</AlertDialogDescription>
           </AlertDialogHeader>
           {toDelete && <img src={assetUrl(toDelete.url)} alt="" className="max-h-48 w-full rounded-md object-cover" />}
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogCancel>{t("photos.keepIt")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() => { if (toDelete) removePhoto(toDelete); setToDelete(null); }}
             >
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </BooqiScope>
     </AppLayout>
   );
 }

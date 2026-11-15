@@ -4,6 +4,7 @@ import { Sale } from './saleService';
 import SockJS from 'sockjs-client';
 import Stomp, { Client, Subscription } from 'stompjs';
 import { TimeOff } from './timeOffService';
+import { t } from "@/i18n";
 
 type MessageHandler<T> = (data: T) => void;
 
@@ -62,7 +63,7 @@ class WebSocketService {
         if (!SockJS || !Stomp) {
           console.warn('SockJS or Stomp not available. WebSocket features disabled.');
           this.isConnecting = false;
-          reject(new Error('WebSocket libraries not loaded'));
+          reject(new Error(t("services.websocketLibrariesNotLoaded")));
           return;
         }
 
@@ -101,7 +102,7 @@ class WebSocketService {
             this.isConnecting = false;
             this.cleanupConnection(false);
             this.handleReconnect();
-            reject(new Error('Connection timeout'));
+            reject(new Error(t("services.connectionTimeout")));
           }
         }, 10000); // 10 second timeout
 

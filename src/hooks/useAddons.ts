@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { addonService, type Addon, type CreateAddonRequest, type UpdateAddonRequest } from '@/services/addonService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
+import { t } from "@/i18n";
 
 export function useAddons(businessIdParam?: number) {
   const routeBusinessId = useBusinessId();
@@ -12,7 +13,7 @@ export function useAddons(businessIdParam?: number) {
 
   const loadAddons = useCallback(async () => {
     if (!businessId || businessId <= 0) {
-      setError('Business ID is required');
+      setError(t("common.businessIdIsRequired"));
       setLoading(false);
       return;
     }
@@ -23,8 +24,8 @@ export function useAddons(businessIdParam?: number) {
       setAddons(data);
     } catch (err) {
       console.error('Failed to load addons:', err);
-      setError((err instanceof Error && err.message) || 'Failed to load addons');
-      toast.error('Failed to load addons');
+      setError((err instanceof Error && err.message) || t("hooks.failedToLoadAddons"));
+      toast.error(t("hooks.failedToLoadAddons"));
     } finally {
       setLoading(false);
     }
@@ -36,17 +37,17 @@ export function useAddons(businessIdParam?: number) {
 
   const createAddon = useCallback(async (request: CreateAddonRequest) => {
     if (!businessId || businessId <= 0) {
-      const error = new Error('Business ID is required');
+      const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;
     }
     try {
       const created = await addonService.createAddon(businessId, request);
       setAddons(prev => [...prev, created]);
-      toast.success('Addon created successfully');
+      toast.success(t("hooks.addonCreatedSuccessfully"));
       return created;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to create addon');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateAddon"));
       throw err;
     }
   }, [businessId]);
@@ -55,10 +56,10 @@ export function useAddons(businessIdParam?: number) {
     try {
       const updated = await addonService.updateAddon(id, businessId, request);
       setAddons(prev => prev.map(addon => addon.id === id ? updated : addon));
-      toast.success('Addon updated successfully');
+      toast.success(t("hooks.addonUpdatedSuccessfully"));
       return updated;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to update addon');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateAddon"));
       throw err;
     }
   }, [businessId]);
@@ -67,9 +68,9 @@ export function useAddons(businessIdParam?: number) {
     try {
       await addonService.deleteAddon(id, businessId);
       setAddons(prev => prev.filter(addon => addon.id !== id));
-      toast.success('Addon deleted successfully');
+      toast.success(t("hooks.addonDeletedSuccessfully"));
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to delete addon');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToDeleteAddon"));
       throw err;
     }
   }, [businessId]);

@@ -1,9 +1,12 @@
-import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { ServiceChip } from "@/components/ServiceChip";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BooqiScope, PageHeader, Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, StatCard } from "@/components/page/booqi";
+import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
-import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star, ThumbsUp, MessageSquare, TrendingUp, Reply } from "lucide-react";
+import { Star, ThumbsUp, MessageSquare, TrendingUp, Reply, Clock, Send } from "lucide-react";
+import { format } from "@/i18n/dateFns";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
@@ -11,6 +14,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { assetUrl, getCurrentBusinessId } from "@/config/api";
 import { reviewService, ratingBreakdown, type Review, type RatingSummary } from "@/services/reviewService";
+import { t } from "@/i18n";
 
 // #25: this page shipped with hardcoded demo reviews — invented client names,
 // invented comments and an invented 4.8 average from 128 reviews — on a screen a salon
@@ -47,6 +51,8 @@ export default function ReviewsPage() {
   // pressing it will do anything before it does.
   const [requestCount, setRequestCount] = useState(0);
   const [requesting, setRequesting] = useState(false);
+  const [filter, setFilter] = useState<"all" | "reply" | "photos" | number>("all");
+  const [sortBy, setSortBy] = useState<"newest" | "lowest">("newest");
 
   const saveReply = async (reviewId: number, text?: string) => {
     if (!businessId) return;
@@ -57,7 +63,7 @@ export default function ReviewsPage() {
       setReplyingTo(null);
       setReplyText("");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not post your reply");
+      toast.error(e instanceof Error ? e.message : t("reviews.couldNotPostYourReply"));
     } finally {
       setSavingReply(false);
     }
@@ -70,12 +76,12 @@ export default function ReviewsPage() {
       const res = await reviewService.sendRequests(businessId);
       toast.success(
         res.requested > 0
-          ? `Asked ${res.requested} customer${res.requested === 1 ? "" : "s"} to review their visit`
-          : "Nobody to ask right now"
+          ? t("reviews.askedToReview", { count: res.requested })
+          : t("reviews.nobodyToAskRightNow")
       );
       setRequestCount(0);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not send review requests");
+      toast.error(e instanceof Error ? e.message : t("reviews.couldNotSendReviewRequests"));
     } finally {
       setRequesting(false);
     }
@@ -114,288 +120,285 @@ export default function ReviewsPage() {
     ? Math.round((reviews.filter((r) => r.reply && r.reply.trim()).length / reviews.length) * 100)
     : 0;
 
+  // Filters and sort over the loaded reviews.
+  const needsReply = (r: Review) => !r.reply || !r.reply.trim();
+  const counts = {
+    all: reviews.length,
+    reply: reviews.filter(needsReply).length,
+    photos: reviews.filter((r) => (r.photos?.length ?? 0) > 0).length,
+  };
+  const shown = reviews
+    .filter((r) =>
+      filter === "all" ? true : filter === "reply" ? needsReply(r) : filter === "photos" ? (r.photos?.length ?? 0) > 0 : r.rating === filter,
+    )
+    .sort((a, b) => (sortBy === "lowest" ? a.rating - b.rating || +new Date(b.createdAt) - +new Date(a.createdAt) : +new Date(b.createdAt) - +new Date(a.createdAt)));
+  // Average time to reply, from reviews that have one.
+  const replyHours = reviews
+    .filter((r) => r.reply && r.repliedAt)
+    .map((r) => (+new Date(r.repliedAt!.replace(" ", "T")) - +new Date(r.createdAt.replace(" ", "T"))) / 36e5)
+    .filter((h) => Number.isFinite(h) && h >= 0);
+  const avgReply = replyHours.length ? replyHours.reduce((s, h) => s + h, 0) / replyHours.length : null;
+  const avgReplyLabel = avgReply == null ? null : avgReply < 1 ? "under an hour" : avgReply < 48 ? `${Math.round(avgReply)} h` : `${Math.round(avgReply / 24)} days`;
+  const when = (d: string) => {
+    try {
+      return format(new Date(d.replace(" ", "T")), "d MMM yyyy");
+    } catch {
+      return d;
+    }
+  };
+  const initials = (name: string | null) =>
+    (name || "Client").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
+  const chip = (on: boolean) =>
+    cn(
+      "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold ring-1 transition",
+      on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white text-[rgb(var(--reg-ink)/0.8)] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
+    );
+
+  const scoreTone =
+    (summary.average ?? 0) >= 4 ? "text-emerald-600" : (summary.average ?? 0) >= 3 ? "text-amber-600" : summary.average != null ? "text-rose-600" : "text-[rgb(var(--reg-muted))]";
+  const filterLabel =
+    filter === "all" ? null : filter === "reply" ? t("reviews.needsReply") : filter === "photos" ? t("reviews.withPhotos") : `${filter}★`;
+
   return (
     <AppLayout>
-      <PageHeader
-        title="Reviews"
-        subtitle="What clients said, and what you said back"
-        actions={
-          <Button 
-            variant="outline"
-            className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
-            disabled={requesting || requestCount === 0}
-            onClick={() => void sendRequests()}
-            title={
-              requestCount === 0
-                ? "Everyone who has been and paid in the last 30 days has already been asked or reviewed"
-                : undefined
-            }
-          >
-            <MessageSquare size={16} />
-            {requesting
-              ? "Sending…"
-              : requestCount > 0
-                ? `Ask ${requestCount} client${requestCount === 1 ? "" : "s"} for a review`
-                : "Everyone has been asked"}
-          </Button>
-        }
-      />
+      <BooqiScope>
+        <PageHeader
+          title={t("common.reviews")}
+          subtitle={t("reviews.whatClientsSaidAndWhat")}
+          actions={
+            <Button
+              className={primaryBtn}
+              disabled={requesting || requestCount === 0}
+              onClick={() => void sendRequests()}
+              title={
+                requestCount === 0
+                  ? t("reviews.everyoneWhoHasBeenAnd")
+                  : undefined
+              }
+            >
+              <MessageSquare size={16} />
+              {requesting
+                ? t("reviews.sending")
+                : requestCount > 0
+                  ? t("reviews.askForReview", { count: requestCount })
+                  : t("reviews.everyoneHasBeenAsked")}
+            </Button>
+          }
+        />
 
-      <div className="p-6 space-y-6">
-        {/* Enhanced Stats Overview */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Enhanced Rating Summary */}
-          <Card className="lg:col-span-1 bg-white">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base font-semibold">Overall rating</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-6">
-                {/* Coloured by the score, not by the brand: a 2.1 printed in the same
-                    handsome gradient as a 4.9 tells the owner nothing. */}
-                <span
-                  className={`text-5xl font-bold ${
-                    (summary.average ?? 0) >= 4
-                      ? "text-emerald-600"
-                      : (summary.average ?? 0) >= 3
-                        ? "text-amber-600"
-                        : summary.average != null
-                          ? "text-rose-600"
-                          : "text-muted-foreground"
-                  }`}
-                >
-                  {summary.average != null ? summary.average.toFixed(1) : "—"}
-                </span>
-                <div>
-                  {/* Was hardcoded to five stars beside the real average, so a 2.0 salon
-                      showed a perfect row. */}
+        <div className="px-4 py-5 md:px-8 md:py-6">
+          <div className="mx-auto grid max-w-[1080px] gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-8">
+            {/* Summary — one row on a phone, a sticky card beside the feed on a desktop. */}
+            <aside className="lg:sticky lg:top-[120px] lg:self-start">
+              <div className="flex items-center gap-4 rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] lg:hidden">
+                <p className={cn("text-[36px] font-extrabold leading-none tracking-[-0.04em]", scoreTone)}>
+                  {summary.average != null ? summary.average.toFixed(1) : "–"}
+                </p>
+                <div className="min-w-0 flex-1">
                   <StarRating rating={Math.round(summary.average ?? 0)} />
-                  <p className="text-sm text-muted-foreground font-medium mt-1">{summary.count} {summary.count === 1 ? "review" : "reviews"}</p>
+                  <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{summary.count} {summary.count === 1 ? t("reviews.review") : t("reviews.reviews")}</p>
                 </div>
+                {counts.reply > 0 && (
+                  <button type="button" onClick={() => setFilter("reply")} className="shrink-0 rounded-full bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-800 ring-1 ring-rose-200">
+                    {t("reviews.toReply", { reply: counts.reply })}
+                  </button>
+                )}
               </div>
-              <div className="space-y-2.5">
-                {breakdown.map((item) => (
-                  <div key={item.stars} className="flex items-center gap-3">
-                    <span className="w-4 text-sm font-semibold">{item.stars}</span>
-                    <Star size={12} className="fill-amber-400 text-amber-400" />
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          item.stars >= 4
-                            ? "bg-emerald-500"
-                            : item.stars === 3
-                              ? "bg-amber-500"
-                              : "bg-rose-500"
-                        }`}
-                        style={{ width: `${item.percent}%` }}
-                      />
-                    </div>
-                    <span className="w-8 text-sm font-medium text-muted-foreground">{item.count}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Enhanced Quick Stats */}
-          <Card className="lg:col-span-2 bg-white">
-            <CardHeader className="pb-4">
-              <div>
-                <CardTitle className="text-base font-semibold">This month</CardTitle>
-                <CardDescription className="mt-1">Counted from the reviews below</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* These three were hardcoded to +12, 92% and 100%: a salon with two
-                  one-star reviews and no replies was shown a perfect month. They are
-                  counted from the reviews on screen now. */}
-              <div className="grid grid-cols-3 gap-4">
-                <StatCard icon={TrendingUp} label="New this month" value={newThisMonth} tone="emerald" />
-                <StatCard
-                  icon={ThumbsUp}
-                  label="Positive"
-                  value={reviews.length ? `${positivePercent}%` : "—"}
-                  hint="4 stars or more"
-                  tone="sky"
-                />
-                <StatCard
-                  icon={MessageSquare}
-                  label="Replied"
-                  value={reviews.length ? `${repliedPercent}%` : "—"}
-                  tone="violet"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Enhanced Recent Reviews */}
-        <Card className="bg-white">
-          <CardHeader className="pb-4">
-            <div>
-              <CardTitle className="text-base font-semibold">Recent reviews</CardTitle>
-              <CardDescription className="mt-1">Newest first · reply to answer publicly</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {loading ? (
-                <p className="text-sm text-muted-foreground">Loading reviews…</p>
-              ) : reviews.length === 0 ? (
-                <EmptyState
-                  icon={Star}
-                  title="No reviews yet"
-                  body="A customer can review a visit once it is done. Ask the people who have already been, using the button above."
-                />
-              ) : null}
-              {reviews.map((review, index) => (
-                <div
-                  key={review.id}
-                  // A card per review, with the score carried in colour: a page of
-                  // identical grey paragraphs gives no clue which one needs answering.
-                  className={`rounded-xl border-l-4 bg-white p-4 shadow-sm ${
-                    review.rating >= 4
-                      ? "border-l-emerald-500"
-                      : review.rating === 3
-                        ? "border-l-amber-500"
-                        : "border-l-rose-500"
-                  }`}
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Avatar className="ring-2 ring-background">
-                        <AvatarFallback
-                          className={`font-semibold ${clientColorClasses(review.authorName || "customer")}`}
-                        >
-                          {(review.authorName || "C").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        {/* The API carries the reviewer's first name now (user_id was
-                            never recorded before, so nobody could be named). */}
-                        <p className="truncate text-sm font-semibold">{review.authorName || "A customer"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {review.createdAt
-                            ? new Date(review.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
-                            : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          review.rating >= 4
-                            ? "bg-emerald-100 text-emerald-800"
-                            : review.rating === 3
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-rose-100 text-rose-800"
-                        }`}
-                      >
-                        {review.rating.toFixed(1)}
-                      </span>
-                      <StarRating rating={review.rating} />
-                    </div>
-                  </div>
-                  {/* A review nobody has answered is the one thing this page is for. */}
-                  {!review.reply && review.rating <= 3 && replyingTo !== review.id && (
-                    <p className="mb-2 inline-block rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700">
-                      Needs a reply
-                    </p>
-                  )}
-                  <p className="mb-3 text-sm leading-relaxed">
-                    {review.comment || (
-                      <span className="italic text-muted-foreground">Rating only, no comment</span>
-                    )}
+              <div className="hidden rounded-[24px] bg-white p-6 ring-1 ring-[rgb(var(--reg-line)/0.8)] lg:block">
+                <div className="flex items-end gap-3">
+                  <p className={cn("text-[64px] font-extrabold leading-[0.9] tracking-[-0.05em]", scoreTone)}>
+                    {summary.average != null ? summary.average.toFixed(1) : "–"}
                   </p>
-                  {review.photos && review.photos.length > 0 && (
-                    <div className="mb-3 flex gap-2">
-                      {review.photos.map((src) => (
-                        <a key={src} href={assetUrl(src)} target="_blank" rel="noopener noreferrer"
-                           className="block h-20 w-20 overflow-hidden rounded-lg border border-border/60">
-                          <img src={assetUrl(src)} alt="Photo from this review" className="h-full w-full object-cover" loading="lazy" />
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                  {/* Who did the work, with their photo: the review is about them as much as the salon. */}
-                  {(review.staffName || review.serviceName) && (
-                    <div className="mb-3 flex items-center gap-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                      {review.staffName && (
-                        <Avatar className="h-7 w-7">
-                          {review.staffAvatarUrl && <AvatarImage src={assetUrl(review.staffAvatarUrl)} alt="" className="object-cover" />}
-                          <AvatarFallback className="bg-blue-50 text-[11px] font-semibold text-blue-700">
-                            {review.staffName.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <span className="truncate">
-                        {review.serviceName && <span className="font-medium text-foreground">{review.serviceName}</span>}
-                        {review.serviceName && review.staffName && " · "}
-                        {review.staffName && <>with <span className="font-medium text-foreground">{review.staffName}</span></>}
-                      </span>
-                    </div>
-                  )}
-                  {/* Answering a review in public is how a bad one stops being the last
-                      word on it. The button did nothing until now. */}
-                  {review.reply && replyingTo !== review.id ? (
-                    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
-                      <p className="mb-1 text-xs font-semibold text-violet-900">Your reply</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{review.reply}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 h-7 px-2 text-xs"
-                        onClick={() => { setReplyingTo(review.id); setReplyText(review.reply ?? ""); }}
-                      >
-                        Edit reply
-                      </Button>
-                    </div>
-                  ) : replyingTo === review.id ? (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={replyText}
-                        onChange={e => setReplyText(e.target.value)}
-                        placeholder="Reply publicly to this review…"
-                        rows={3}
-                      />
-                      <div className="flex items-center gap-2">
-                        <Button size="sm" disabled={savingReply} onClick={() => void saveReply(review.id)}>
-                          {savingReply ? "Saving…" : "Post reply"}
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setReplyingTo(null)}>
-                          Cancel
-                        </Button>
-                        {review.reply ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            disabled={savingReply}
-                            onClick={() => void saveReply(review.id, "")}
-                          >
-                            Remove reply
-                          </Button>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
-                      onClick={() => { setReplyingTo(review.id); setReplyText(""); }}
-                    >
-                      <Reply size={14} />
-                      Reply
-                    </Button>
-                  )}
+                  <div className="pb-1">
+                    <StarRating rating={Math.round(summary.average ?? 0)} />
+                    <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{summary.count} {summary.count === 1 ? t("reviews.review") : t("reviews.reviews")}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <ul className="mt-6 space-y-1.5" aria-label={t("reviews.ratingDistribution")}>
+                  {breakdown.map((item) => (
+                    <li key={item.stars}>
+                      <button
+                        type="button"
+                        onClick={() => setFilter(filter === item.stars ? "all" : item.stars)}
+                        aria-pressed={filter === item.stars}
+                        className={cn("flex w-full items-center gap-3 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-[rgb(var(--reg-canvas))]", filter === item.stars && "bg-[rgb(var(--reg-brand-soft))]")}
+                      >
+                        <span className="w-6 text-sm font-semibold tabular-nums">{item.stars}★</span>
+                        <span className="h-2 flex-1 overflow-hidden rounded-full bg-[rgb(var(--reg-ink)/0.06)]">
+                          <span className="block h-full rounded-full bg-[linear-gradient(90deg,rgb(var(--reg-brand)),rgb(var(--reg-mesh-2)))]" style={{ width: `${item.percent}%` }} />
+                        </span>
+                        <span className="w-6 text-right text-sm tabular-nums text-[rgb(var(--reg-muted))]">{item.count}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {counts.reply > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setFilter("reply")}
+                    className="mt-6 flex w-full items-center justify-between rounded-2xl bg-rose-50 px-4 py-3 text-left ring-1 ring-rose-200 transition hover:bg-rose-100/70"
+                  >
+                    <span>
+                      <span className="block text-sm font-bold text-rose-900">{t("reviews.needReply", { count: counts.reply })}</span>
+                      <span className="block text-xs text-rose-800/80">{t("reviews.answeringPubliclyBuildsTrust")}</span>
+                    </span>
+                    <Reply size={18} className="text-rose-700" />
+                  </button>
+                ) : reviews.length > 0 ? (
+                  <p className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-200">{t("reviews.everyReviewHasAReply")}</p>
+                ) : null}
+                <dl className="mt-5 space-y-2 border-t border-[rgb(var(--reg-line)/0.7)] pt-4 text-sm">
+                  <div className="flex justify-between"><dt className="text-[rgb(var(--reg-muted))]">{t("reviews.replied")}</dt><dd className="font-semibold">{reviews.length ? `${repliedPercent}%` : "—"}</dd></div>
+                  {avgReplyLabel && <div className="flex justify-between"><dt className="text-[rgb(var(--reg-muted))]">{t("reviews.avgReplyTime")}</dt><dd className="font-semibold">{avgReplyLabel}</dd></div>}
+                  <div className="flex justify-between"><dt className="text-[rgb(var(--reg-muted))]">{t("reviews.newThisMonth")}</dt><dd className="font-semibold">{newThisMonth}</dd></div>
+                  <div className="flex justify-between"><dt className="text-[rgb(var(--reg-muted))]">{t("reviews.andUp")}</dt><dd className="font-semibold">{reviews.length ? `${positivePercent}%` : "—"}</dd></div>
+                </dl>
+              </div>
+            </aside>
+
+            {/* Feed */}
+            <section className="min-w-0" aria-label={t("common.reviews")}>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="-mx-4 flex min-w-0 basis-full gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:basis-auto md:flex-1 md:flex-wrap md:overflow-visible md:px-0" role="tablist" aria-label={t("reviews.filterReviews")}>
+                  <button type="button" role="tab" aria-selected={filter === "all"} onClick={() => setFilter("all")} className={chip(filter === "all")}>{t("common.all")}{" "}<span className="text-xs opacity-70">{counts.all}</span></button>
+                  <button type="button" role="tab" aria-selected={filter === "reply"} onClick={() => setFilter("reply")} className={chip(filter === "reply")}>{t("reviews.needsReply")}{" "}<span className="text-xs opacity-70">{counts.reply}</span></button>
+                  {counts.photos > 0 && (
+                    <button type="button" role="tab" aria-selected={filter === "photos"} onClick={() => setFilter("photos")} className={chip(filter === "photos")}>{t("reviews.withPhotos")}{" "}<span className="text-xs opacity-70">{counts.photos}</span></button>
+                  )}
+                  {[5, 4, 3, 2, 1].map((n) => (
+                    <button key={n} type="button" role="tab" aria-selected={filter === n} onClick={() => setFilter(n)} className={chip(filter === n)}>{n}★</button>
+                  ))}
+                </div>
+                <label className="ml-auto flex shrink-0 items-center gap-2 text-sm text-[rgb(var(--reg-muted))]">
+                  {t("reviews.sort")}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "newest" | "lowest")}
+                    className="h-9 rounded-full border border-[rgb(var(--reg-line))] bg-white px-3 text-sm font-semibold text-[rgb(var(--reg-ink))]"
+                  >
+                    <option value="newest">{t("reviews.newest")}</option>
+                    <option value="lowest">{t("reviews.lowestRating")}</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-5">
+                {loading ? (
+                  <p className="text-sm text-[rgb(var(--reg-muted))]">{t("reviews.loadingReviews")}</p>
+                ) : reviews.length === 0 ? (
+                  <EmptyState
+                    icon={Star}
+                    title={t("reviews.noReviewsYet")}
+                    body={t("reviews.aClientCanReviewA")}
+                  />
+                ) : shown.length === 0 ? (
+                  <EmptyState
+                    icon={Star}
+                    title={filterLabel ? t("reviews.noReviews", { value: filterLabel.toLowerCase() }) : t("reviews.nothingHere")}
+                    body={t("reviews.tryAnotherFilterOrShow")}
+                    action={<Button className={secondaryBtn} variant="outline" onClick={() => setFilter("all")}>{t("reviews.showAll")}</Button>}
+                  />
+                ) : (
+                  <ul className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-[24px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    {shown.map((review) => (
+                      <li key={review.id} className="px-5 py-6 md:px-7">
+                        <div className="flex items-start gap-3">
+                          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold", clientColorClasses(review.authorName || `review-${review.id}`))}>
+                            {initials(review.authorName)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <p className="truncate font-semibold">{review.authorName || t("reviews.aClient")}</p>
+                              <p className="shrink-0 text-xs text-[rgb(var(--reg-muted))]">{when(review.createdAt)}</p>
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <StarRating rating={review.rating} />
+                              {(review.serviceName || review.staffName) && (
+                                <span className="flex min-w-0 items-baseline gap-x-1 whitespace-nowrap text-sm text-[rgb(var(--reg-muted))]">
+                                  {review.serviceName && <ServiceChip services={review.services} fallback={review.serviceName} />}
+                                  {review.serviceName && review.staffName ? <span>·</span> : null}
+                                  {review.staffName ? <span className="truncate">{t("reviews.with", { staffName: review.staffName })}</span> : null}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="md:pl-[52px]">
+                          {review.comment ? (
+                            <p className="mt-3 whitespace-pre-wrap text-[15px] leading-[1.65]">{review.comment}</p>
+                          ) : (
+                            <p className="mt-3 text-sm italic text-[rgb(var(--reg-muted))]">{t("reviews.ratedWithoutAComment")}</p>
+                          )}
+
+                          {review.photos && review.photos.length > 0 && (
+                            <div className="mt-3 flex gap-2">
+                              {review.photos.map((src) => (
+                                <a key={src} href={assetUrl(src)} target="_blank" rel="noopener noreferrer" className="h-24 w-24 overflow-hidden rounded-2xl ring-1 ring-[rgb(var(--reg-line))] transition hover:opacity-90">
+                                  <img src={assetUrl(src)} alt={t("reviews.photoFromThisReview")} className="h-full w-full object-cover" loading="lazy" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          {replyingTo === review.id ? (
+                            <div className="mt-4 rounded-2xl bg-[rgb(var(--reg-brand-soft))] p-3 ring-1 ring-[rgb(var(--reg-brand)/0.2)]">
+                              <Textarea
+                                autoFocus
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                placeholder={t("reviews.replyPubliclyTo", { value: review.authorName || t("reviews.thisClient") })}
+                                rows={3}
+                                aria-label={t("reviews.yourReply")}
+                                className="rounded-xl border-0 bg-white text-base shadow-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.4)]"
+                              />
+                              <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                                {review.reply ? (
+                                  <Button variant="ghost" className="mr-auto h-10 rounded-full text-rose-700" disabled={savingReply} onClick={() => void saveReply(review.id, "")}>
+                                    {t("reviews.removeReply")}
+                                  </Button>
+                                ) : null}
+                                <Button variant="ghost" className="h-10 rounded-full" onClick={() => setReplyingTo(null)}>{t("common.cancel")}</Button>
+                                <Button className={cn(primaryBtn, "h-10")} disabled={savingReply || !replyText.trim()} onClick={() => void saveReply(review.id)}>
+                                  <Send size={15} /> {savingReply ? t("reviews.sending") : t("reviews.send")}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : review.reply ? (
+                            <div className="mt-4 rounded-2xl rounded-tl-md bg-[rgb(var(--reg-brand-soft))] px-4 py-3">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-bold text-[rgb(var(--reg-brand-strong))]">
+                                  {t("reviews.yourReply")}{review.repliedAt ? <span className="font-medium text-[rgb(var(--reg-muted))]"> · {when(review.repliedAt)}</span> : null}
+                                </p>
+                                <button type="button" onClick={() => { setReplyingTo(review.id); setReplyText(review.reply ?? ""); }} className="text-xs font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline">
+                                  {t("common.edit")}
+                                </button>
+                              </div>
+                              <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-[rgb(var(--reg-ink)/0.85)]">{review.reply}</p>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => { setReplyingTo(review.id); setReplyText(""); }}
+                              className={cn(
+                                "mt-4 inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold transition",
+                                review.rating <= 3 ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-100" : "text-[rgb(var(--reg-brand-strong))] ring-1 ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-brand-soft))]",
+                              )}
+                            >
+                              <Reply size={15} />{" "}{t("reviews.reply")}
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+      </BooqiScope>
     </AppLayout>
   );
 }

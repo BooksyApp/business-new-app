@@ -45,6 +45,7 @@ export const getCurrentBusinessId = (): number => {
 export const DEFAULT_BUSINESS_ID = 1;
 
 import { getAccessToken, isTokenValid, clearAuthData } from '@/utils/authUtils';
+import { t } from "@/i18n";
 
 // Helper function to clear auth data and redirect to login
 /**
@@ -107,7 +108,7 @@ class ApiClient {
       if (!accessToken) {
         console.warn('Session expired and could not be renewed, redirecting to login');
         clearAuthAndRedirect();
-        throw new Error('Token invalid or expired');
+        throw new Error(t("utils.tokenInvalidOrExpired"));
       }
     }
     
@@ -115,7 +116,7 @@ class ApiClient {
     if (requireAuth && !accessToken) {
       console.warn('No access token found, redirecting to login');
       clearAuthAndRedirect();
-      throw new Error('No authentication token');
+      throw new Error(t("utils.noAuthenticationToken"));
     }
 
     // A file upload (FormData) needs the browser's own multipart Content-Type with its boundary.
@@ -149,7 +150,7 @@ class ApiClient {
       if (response.status === 401) {
         console.warn('Unauthorized access, clearing auth and redirecting to login');
         clearAuthAndRedirect();
-        throw new Error('Unauthorized - Please login again');
+        throw new Error(t("utils.unauthorizedPleaseLoginAgain"));
       }
       
       if (!response.ok) {
@@ -163,7 +164,7 @@ class ApiClient {
         // `detail`. Reading only message/error showed "HTTP error! status: 409" instead of
         // "This time slot is already booked" across the whole panel.
         const error = new Error(
-          errorData.detail || errorData.message || errorData.error || `HTTP error! status: ${response.status}`
+          errorData.detail || errorData.message || errorData.error || t("utils.httpErrorStatus", { status: response.status })
         );
         (error as Error & { response?: unknown }).response = { data: errorData, status: response.status };
         throw error;
@@ -188,8 +189,8 @@ class ApiClient {
           e?.message?.includes('timeout') ||
           e?.message?.includes('Failed to fetch')) {
         const errorMessage = e?.message?.includes('ERR_CONNECTION_TIMED_OUT') 
-          ? 'Connection timed out. The API server may be unreachable. Please verify the API URL and ensure the server is running and accessible.'
-          : 'Network error: Unable to connect to the API server. Please check your connection and verify the API is accessible.';
+          ? t("utils.connectionTimedOutTheApi")
+          : t("utils.networkErrorUnableToConnect");
         throw new Error(errorMessage);
       }
       

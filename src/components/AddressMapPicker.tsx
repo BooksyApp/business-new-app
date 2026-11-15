@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/config/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useMarket } from '@/services/platformService';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 
 // #56: see the TileLayer below. Set VITE_MAP_TILE_URL / VITE_MAP_TILE_ATTRIBUTION to move
@@ -11,6 +12,7 @@ const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { t } from "@/i18n";
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -58,17 +60,31 @@ interface AddressMapPickerProps {
   initialPosition?: [number, number] | null;
   selectedPosition?: [number, number] | null;
   disabled?: boolean;
+  /** The business's country (ISO code) when known; picks the map centre. */
+  country?: string | null;
 }
 
 export default function AddressMapPicker({ 
   onLocationSelect, 
   initialPosition = null,
   selectedPosition = null,
-  disabled = false
+  disabled = false,
+  country = null
 }: AddressMapPickerProps) {
   const [position, setPosition] = useState<[number, number] | null>(initialPosition || selectedPosition);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([40.7128, -74.0060]); // Default: New York
+  // No hardcoded city: until a position is known the map opens on the market's own centre
+  // (Baku for AZ), taken from the platform's country rows.
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(initialPosition || selectedPosition);
   const [zoom, setZoom] = useState(15);
+  const market = useMarket(country);
+  const located = useRef(Boolean(initialPosition || selectedPosition));
+
+  useEffect(() => {
+    if (market && !located.current) {
+      setMapCenter([market.center.lat, market.center.lng]);
+      setZoom(market.center.zoom);
+    }
+  }, [market]);
 
   useEffect(() => {
     // Request user location when component mounts
@@ -76,7 +92,9 @@ export default function AddressMapPicker({
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const userPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+          located.current = true;
           setMapCenter(userPos);
+          setZoom(15);
           
           // If no position is set yet, use user location as default
           if (!position && !initialPosition && !selectedPosition) {
@@ -86,29 +104,26 @@ export default function AddressMapPicker({
         },
         (err) => {
           // Handle different geolocation error types
-          let errorMessage = 'Location access denied or unavailable';
+          let errorMessage = t("addressMapPicker.locationAccessDeniedOrUnavailable");
           switch (err.code) {
             case err.PERMISSION_DENIED:
-              errorMessage = 'Location permission denied by user';
+              errorMessage = t("addressMapPicker.locationPermissionDeniedByUser");
               break;
             case err.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable';
+              errorMessage = t("addressMapPicker.locationInformationUnavailable");
               break;
             case err.TIMEOUT:
-              errorMessage = 'Location request timed out';
+              errorMessage = t("addressMapPicker.locationRequestTimedOut");
               break;
             default:
-              errorMessage = `Location error: ${err.message || 'Unknown error'}`;
+              errorMessage = t("addressMapPicker.locationError", { value: err.message || t("addressMapPicker.unknownError") });
               break;
           }
           // Only log non-critical errors (don't spam console with expected permission denials)
           if (err.code !== err.PERMISSION_DENIED) {
             console.warn('Geolocation error:', errorMessage, err);
           }
-          // If no initial position, use default center
-          if (!initialPosition && !selectedPosition) {
-            setMapCenter([40.7128, -74.0060]);
-          }
+          // No fix: the market-centre effect above keeps the map on the business's country.
         },
         { 
           enableHighAccuracy: true, 
@@ -119,9 +134,6 @@ export default function AddressMapPicker({
     } else {
       // Geolocation not supported
       console.warn('Geolocation is not supported by this browser');
-      if (!initialPosition && !selectedPosition) {
-        setMapCenter([40.7128, -74.0060]);
-      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- ask for the location once, on open
   }, []);
@@ -129,10 +141,12 @@ export default function AddressMapPicker({
   // Update position if initialPosition or selectedPosition changes (from external sources like search)
   useEffect(() => {
     if (selectedPosition) {
+      located.current = true;
       setPosition(selectedPosition);
       // Only update mapCenter for external selections, which will trigger a pan (not zoom change)
       setMapCenter(selectedPosition);
     } else if (initialPosition && !position) {
+      located.current = true;
       setPosition(initialPosition);
       setMapCenter(initialPosition);
     }
@@ -167,7 +181,7 @@ export default function AddressMapPicker({
   return (
     <div className="w-full">
       <div className={`w-full h-96 rounded-xl overflow-hidden border-2 border-gray-200 relative ${disabled ? 'opacity-50' : ''}`}>
-        <MapContainer
+        {mapCenter ? (<MapContainer
           center={mapCenter}
           zoom={zoom}
           style={{ height: '100%', width: '100%' }}
@@ -194,7 +208,7 @@ export default function AddressMapPicker({
               icon={selectedLocationIcon}
             />
           )}
-        </MapContainer>
+        </MapContainer>) : null}
         {/* Disabled overlay - more prominent gray overlay */}
         {disabled && (
           <div className="absolute inset-0 bg-gray-400/60 z-[1000] cursor-not-allowed pointer-events-none" />
@@ -202,7 +216,7 @@ export default function AddressMapPicker({
       </div>
       
       <p className="mt-2 text-xs text-gray-600">
-        {disabled ? 'Please close the business hours dialog to interact with the map' : 'Click on the map to select your business location'}
+        {disabled ? t("addressMapPicker.pleaseCloseTheBusinessHours") : t("addressMapPicker.clickOnTheMapTo")}
       </p>
     </div>
   );

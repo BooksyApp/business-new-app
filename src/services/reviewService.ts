@@ -20,6 +20,8 @@ export interface Review {
   reply: string | null;
   repliedAt: string | null;
   serviceName?: string | null;
+  /** Every service of the reviewed visit (one for an ordinary booking). */
+  services?: { name: string; staffName?: string | null }[];
   staffName?: string | null;
   /** The stylist's photo ("/api/public/uploads/..."), render via assetUrl(). */
   staffAvatarUrl?: string | null;

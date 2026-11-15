@@ -22,7 +22,9 @@ import {
 
 import { BenefitsAndTenders, type Coverage } from "@/components/checkout/BenefitsAndTenders";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import "@/components/auth/auth-tokens.css";
 import type { SalePayment } from "@/services/paymentConfirmationService";
+import { t, fmtDate as formatLocaleDate } from "@/i18n";
 
 interface PaymentMethodPageProps {
   orderItems?: Array<{
@@ -64,6 +66,8 @@ interface PaymentMethodPageProps {
   // whatever the caller defaulted to, with no way to correct it from this screen.
   staffList?: Array<{ id: number; name: string; avatarUrl?: string; position?: string }>;
   onStaffChange?: (staff: { id: number; name: string; avatarUrl?: string; position?: string }) => void;
+  /** Throws the ticket away (the bin in the footer). Back keeps it. */
+  onDiscard?: () => void;
   onConfirm?: (paymentData: {
     tip: number;
     tipPercent: number;
@@ -99,7 +103,8 @@ export default function PaymentMethodPage({
   staffList = [],
   onStaffChange,
   onConfirm,
-  onCancel
+  onCancel,
+  onDiscard,
 }: PaymentMethodPageProps) {
   const navigate = useNavigate();
   const checkoutBusinessId = useBusinessId();
@@ -170,7 +175,7 @@ export default function PaymentMethodPage({
   }, [selectedPaymentMethod, subtotal, discountAmount, selectedTip, customTip, depositCredit]);
 
   const tipOptions = [
-    { amount: 0, percent: 0, label: "No Tip" },
+    { amount: 0, percent: 0, label: t("paymentMethod.noTip") },
     { amount: subtotal * 0.05, percent: 5, label: "5%" },
     { amount: subtotal * 0.10, percent: 10, label: "10%" },
   ];
@@ -179,28 +184,30 @@ export default function PaymentMethodPage({
   // cash and card to everyone regardless — a salon that takes no cash still had a Cash
   // button, and pressing it recorded a payment that never happened.
   const [accepted, setAccepted] = useState<string[]>(["CASH", "CARD"]);
+  const [receiptLook, setReceiptLook] = useState({ name: "", brandColor: "", footer: "" });
   useEffect(() => {
     const businessId = getCurrentBusinessId();
     if (!businessId) return;
     businessService
       .getBusiness(businessId)
-      .then(b =>
-        setAccepted((b.acceptedPaymentMethods ?? "CASH,CARD").split(",").map(m => m.trim()).filter(Boolean))
-      )
+      .then(b => {
+        setAccepted((b.acceptedPaymentMethods ?? "CASH,CARD").split(",").map(m => m.trim()).filter(Boolean));
+        setReceiptLook({ name: b.name ?? "", brandColor: b.brandColor ?? "", footer: b.receiptFooter ?? "" });
+      })
       // Unknown means offer both, which is what happened before the setting existed.
       .catch(() => setAccepted(["CASH", "CARD"]));
   }, []);
 
   const allMethods = [
-    { id: "cash", name: "Cash", icon: Hand, requires: "CASH" },
-    { id: "card-terminal", name: "Card", icon: CreditCard, requires: "CARD" },
-    { id: "split", name: "Split payment", icon: Split, requires: "SPLIT" },
+    { id: "cash", get name() { return t("common.cash"); }, icon: Hand, requires: "CASH" },
+    { id: "card-terminal", get name() { return t("common.card"); }, icon: CreditCard, requires: "CARD" },
+    { id: "split", get name() { return t("paymentMethod.splitPayment"); }, icon: Split, requires: "SPLIT" },
     // Value the customer already paid for. These were commented out because nothing
     // behind them existed: a salon could sell a package and hand over a gift card and
     // then had no way to accept either. booksy-backend takes both at checkout now.
-    { id: "gift-card", name: "Gift card", icon: Gift, requires: "GIFT_CARD" },
-    { id: "package", name: "Package", icon: Package, requires: "PACKAGE" },
-    { id: "membership", name: "Membership", icon: UserCircle, requires: "MEMBERSHIP" },
+    { id: "gift-card", get name() { return t("paymentMethod.giftCard"); }, icon: Gift, requires: "GIFT_CARD" },
+    { id: "package", get name() { return t("paymentMethod.package"); }, icon: Package, requires: "PACKAGE" },
+    { id: "membership", get name() { return t("paymentMethod.membership"); }, icon: UserCircle, requires: "MEMBERSHIP" },
     // { id: "check", name: "Check", icon: FileText },
   ];
 
@@ -272,7 +279,7 @@ export default function PaymentMethodPage({
 
     // Discount cannot exceed subtotal
     if (discount > subtotal + 0.01) {
-      toast.error(`Discount (${discount.toFixed(2)}) cannot exceed subtotal (${subtotal.toFixed(2)})`);
+      toast.error(t("paymentMethod.discountCannotExceedSubtotal", { value: discount.toFixed(2), value2: subtotal.toFixed(2) }));
       return;
     }
 
@@ -303,14 +310,14 @@ export default function PaymentMethodPage({
     if (selectedPaymentMethod === "split") {
       const splitSum = (parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0);
       if (Math.abs(splitSum - total) > 0.01) {
-        toast.error(`Split amounts (${splitSum.toFixed(2)}) must equal total (${total.toFixed(2)})`);
+        toast.error(t("paymentMethod.splitAmountsMustEqualTotal", { value: splitSum.toFixed(2), value2: total.toFixed(2) }));
         return;
       }
     }
 
     // The server refuses a gift-card sale without a code; asking here saves the trip.
     if (selectedPaymentMethod === "gift-card" && !giftCardCode.trim()) {
-      toast.error("Enter the gift card code");
+      toast.error(t("paymentMethod.enterTheGiftCardCode"));
       return;
     }
 
@@ -368,7 +375,7 @@ export default function PaymentMethodPage({
               ]
             : selectedPaymentMethod === "gift-card"
               ? [{ method: "GIFT_CARD", amount: total, giftCardCode: paymentData.giftCardCode }]
-              : [{ method: selectedPaymentMethod === "card" ? "CARD_TERMINAL" : "CASH", amount: total }];
+              : [{ method: selectedPaymentMethod === "card-terminal" ? "CARD_TERMINAL" : "CASH", amount: total }];
         paymentData.payments = [
           { method: "PREPAID", amount: Number(prepaidCredit.toFixed(2)) },
           ...rest.filter((p) => p.amount > 0),
@@ -388,29 +395,32 @@ export default function PaymentMethodPage({
   };
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="flex h-[100dvh] flex-col overflow-y-auto bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))] md:flex-row md:overflow-hidden" style={{ fontFamily: '"Plus Jakarta Sans", Inter, system-ui, sans-serif' }}>
       {/* Left Panel - Payment Method & Tip */}
-      <div className="w-1/2 border-r border-gray-200 bg-white flex flex-col">
+      <div className="flex w-full flex-col border-b border-[rgb(var(--reg-line))] bg-white md:w-1/2 md:overflow-y-auto md:border-b-0 md:border-r">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between shrink-0">
+        <div className="p-6 border-b border-[rgb(var(--reg-line)/0.8)] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Back"
+              aria-label={t("paymentMethod.back")}
               onClick={handleCancel}
               className="h-8 w-8"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">Payment Method & Tip</h1>
+            <div>
+              <h1 className="text-[22px] font-extrabold leading-tight tracking-[-0.02em]">{t("paymentMethod.takePayment")}</h1>
+              <p className="text-sm text-[rgb(var(--reg-muted))]">{selectedClient ? t("paymentMethod.itemsForClient", { count: orderItems.length, name: selectedClient.name }) : t("paymentMethod.itemsWalkIn", { count: orderItems.length })}</p>
+            </div>
           </div>
           <Button
             variant="outline"
             onClick={handleCancel}
-            className="h-9 px-4 text-red-600 border-red-200 hover:bg-red-50"
+            className="h-10 rounded-full border-[rgb(var(--reg-line))] px-4 text-sm font-semibold"
           >
-            CANCEL SALE
+            {t("paymentMethod.backToTicket")}
           </Button>
         </div>
 
@@ -419,58 +429,55 @@ export default function PaymentMethodPage({
           {/* Tip Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold text-gray-900">Tip</Label>
-              <Button aria-label="Share" variant="ghost" size="icon" className="h-8 w-8">
-                <Share2 className="h-4 w-4 text-gray-600" />
-              </Button>
+              <Label className="text-base font-semibold text-[rgb(var(--reg-ink))]">{t("paymentMethod.tip")}</Label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {tipOptions.map((tip) => (
                 <button
                   key={tip.percent}
                   onClick={() => handleTipSelect(tip)}
-                  className={`relative p-4 border-2 rounded-lg text-left transition-all ${
+                  className={`relative min-h-[64px] rounded-2xl p-4 text-left ring-1 ring-inset transition-all ${
                     selectedTip?.percent === tip.percent && !showCustomTip
-                      ? "border-gray-900 bg-gray-50"
-                      : "border-gray-200 hover:border-gray-300"
+                      ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                      : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                   }`}
                 >
                   {selectedTip?.percent === tip.percent && !showCustomTip && (
                     <div className="absolute top-2 right-2">
-                      <div className="w-5 h-5 bg-gray-900 rounded-full flex items-center justify-center">
+                      <div className="w-5 h-5 bg-[rgb(var(--reg-brand))] rounded-full flex items-center justify-center">
                         <Check className="h-3 w-3 text-white" />
                       </div>
                     </div>
                   )}
-                  <p className="text-sm font-medium text-gray-900">{tip.label}</p>
+                  <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{tip.label}</p>
                 </button>
               ))}
               <button
                 onClick={handleCustomTip}
-                className={`relative p-4 border-2 rounded-lg text-left transition-all ${
+                className={`relative min-h-[64px] rounded-2xl p-4 text-left ring-1 ring-inset transition-all ${
                   showCustomTip
-                    ? "border-gray-900 bg-gray-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                    : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                 }`}
               >
                 {showCustomTip && (
                   <div className="absolute top-2 right-2">
-                    <div className="w-5 h-5 bg-gray-900 rounded-full flex items-center justify-center">
+                    <div className="w-5 h-5 bg-[rgb(var(--reg-brand))] rounded-full flex items-center justify-center">
                       <Check className="h-3 w-3 text-white" />
                     </div>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <MoreHorizontal className="h-5 w-5 text-gray-400" />
-                  <p className="text-sm font-medium text-gray-900">Custom</p>
+                  <MoreHorizontal className="h-5 w-5 text-[rgb(var(--reg-muted)/0.8)]" />
+                  <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{t("paymentMethod.custom")}</p>
                 </div>
               </button>
             </div>
             {showCustomTip && (
-              <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+              <div className="mt-2 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">
-                    Custom tip: {selectedTip ? (selectedTip.percent > 0 ? `${selectedTip.percent.toFixed(1)}%` : `${selectedTip.amount.toFixed(2)} ${currencySymbol()}`) : `${parseFloat(customTip).toFixed(2)} ${currencySymbol()}`}
+                  <span className="text-sm text-[rgb(var(--reg-muted))]">
+                    {t("paymentMethod.customTip", { value: selectedTip ? (selectedTip.percent > 0 ? `${selectedTip.percent.toFixed(1)}%` : `${selectedTip.amount.toFixed(2)} ${currencySymbol()}`) : `${parseFloat(customTip).toFixed(2)} ${currencySymbol()}` })}
                   </span>
                   <Button
                     variant="ghost"
@@ -483,7 +490,7 @@ export default function PaymentMethodPage({
                     }}
                     className="h-7 text-xs"
                   >
-                    Remove
+                    {t("common.remove")}
                   </Button>
                 </div>
               </div>
@@ -492,7 +499,7 @@ export default function PaymentMethodPage({
 
           {/* Payment Method Section */}
           <div className="space-y-4">
-            <Label className="text-base font-semibold text-gray-900">Payment method</Label>
+            <Label className="text-base font-semibold text-[rgb(var(--reg-ink))]">{t("paymentMethod.paymentMethod")}</Label>
             <div className="grid grid-cols-2 gap-3">
               {paymentMethods.map((method) => {
                 const Icon = method.icon;
@@ -502,8 +509,8 @@ export default function PaymentMethodPage({
                     onClick={() => {
                       setSelectedPaymentMethod(method.id);
                       if (method.id === "cash") {
-                        setTempPaymentAmount(paymentAmount.toFixed(2));
-                        setShowPaymentAmountDialog(true);
+                        // Start from the exact total; the calculator below takes what was handed over.
+                        if (paymentAmount < total) setPaymentAmount(Number(Math.max(0, total).toFixed(2)));
                       } else if (method.id === "card-terminal") {
                         // For card, set payment amount to total (exact amount)
                         const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
@@ -521,31 +528,68 @@ export default function PaymentMethodPage({
                         setPaymentAmount(currentTotal);
                       }
                     }}
-                    className={`relative p-4 border-2 rounded-lg text-left transition-all ${
+                    className={`relative min-h-[64px] rounded-2xl p-4 text-left ring-1 ring-inset transition-all ${
                       selectedPaymentMethod === method.id
-                        ? "border-gray-900 bg-gray-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                        : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                     }`}
                   >
                     {selectedPaymentMethod === method.id && (
                       <div className="absolute top-2 right-2">
-                        <div className="w-5 h-5 bg-gray-900 rounded-full flex items-center justify-center">
+                        <div className="w-5 h-5 bg-[rgb(var(--reg-brand))] rounded-full flex items-center justify-center">
                           <Check className="h-3 w-3 text-white" />
                         </div>
                       </div>
                     )}
-                    <Icon className="h-6 w-6 text-gray-700 mb-2" />
-                    <p className="text-sm font-medium text-gray-900">{method.name}</p>
+                    <Icon className="h-6 w-6 text-[rgb(var(--reg-ink)/0.85)] mb-2" />
+                    <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{method.name}</p>
                   </button>
                 );
               })}
             </div>
+            {selectedPaymentMethod === "cash" && (
+              <div className="rounded-2xl bg-[rgb(var(--reg-canvas))] p-4 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
+                <label htmlFor="cash-received" className="text-sm font-semibold">{t("paymentMethod.cashReceived")}</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    id="cash-received"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    value={Number.isFinite(paymentAmount) ? String(paymentAmount) : ""}
+                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                    className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-lg font-bold tabular-nums"
+                  />
+                  <span className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{currencySymbol()}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[...new Set([Math.max(0, total), ...[5, 10, 20, 50, 100].map((n) => Math.ceil(Math.max(0, total) / n) * n)])]
+                    .filter((v) => v > 0)
+                    .slice(0, 5)
+                    .map((v, k) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setPaymentAmount(Number(v.toFixed(2)))}
+                        className={`h-9 rounded-full px-3.5 text-sm font-semibold tabular-nums ring-1 ring-inset ${Math.abs(paymentAmount - v) < 0.005 ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))]"}`}
+                      >
+                        {k === 0 ? t("paymentMethod.exact") : `${v.toFixed(0)} ${currencySymbol()}`}
+                      </button>
+                    ))}
+                </div>
+                <div className={`mt-3 flex items-center justify-between rounded-xl px-3 py-2.5 ${paymentAmount - total < -0.005 ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800"}`}>
+                  <span className="text-sm font-semibold">{paymentAmount - total < -0.005 ? t("paymentMethod.stillToPay") : t("paymentMethod.changeToGive")}</span>
+                  <span className="text-xl font-extrabold tabular-nums">{Math.abs(paymentAmount - total).toFixed(2)} {currencySymbol()}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Right Panel - Order Summary */}
-      <div className="w-1/2 bg-white flex flex-col">
+      <div className="flex w-full flex-col bg-[rgb(var(--reg-canvas))] md:w-1/2 md:overflow-y-auto">
         <div className="p-6 pb-0 shrink-0">
           <BenefitsAndTenders
             businessId={checkoutBusinessId}
@@ -562,30 +606,30 @@ export default function PaymentMethodPage({
           />
         </div>
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
+        <div className="p-6 border-b border-[rgb(var(--reg-line)/0.8)] shrink-0">
+          <h2 className="text-lg font-semibold text-[rgb(var(--reg-ink))] mb-4">{t("paymentMethod.orderSummary")}</h2>
           
           {/* Client Selection */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors">
+          <div className="border-2 border-dashed border-[rgb(var(--reg-line))] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors">
             <div className="flex items-center gap-3">
               {selectedClient ? (
                 <>
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <User className="h-5 w-5 text-gray-600" />
+                    <User className="h-5 w-5 text-[rgb(var(--reg-muted))]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{selectedClient.name}</p>
-                    <p className="text-xs text-gray-500">Client</p>
+                    <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{selectedClient.name}</p>
+                    <p className="text-xs text-[rgb(var(--reg-muted))]">{t("common.client")}</p>
                   </div>
                 </>
               ) : (
                 <>
-                  <User className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Select client or leave empty for walk-in</span>
+                  <User className="h-5 w-5 text-[rgb(var(--reg-muted)/0.8)]" />
+                  <span className="text-sm text-[rgb(var(--reg-muted))]">{t("paymentMethod.selectClientOrLeaveEmpty")}</span>
                 </>
               )}
             </div>
-            <Plus className="h-5 w-5 text-gray-400" />
+            <Plus className="h-5 w-5 text-[rgb(var(--reg-muted)/0.8)]" />
           </div>
         </div>
 
@@ -593,42 +637,42 @@ export default function PaymentMethodPage({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Item Details */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm font-medium text-gray-600 pb-2 border-b border-gray-200">
-              <span>Item</span>
-              <span>Amount</span>
+            <div className="flex items-center justify-between text-sm font-medium text-[rgb(var(--reg-muted))] pb-2 border-b border-[rgb(var(--reg-line)/0.8)]">
+              <span>{t("paymentMethod.item")}</span>
+              <span>{t("paymentMethod.amount")}</span>
             </div>
             {orderItems.length > 0 ? (
               <div className="space-y-3">
                 {orderItems.map((item) => (
-                  <div key={item.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                  <div key={item.id} className="flex items-start justify-between p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl cursor-pointer hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                      <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{item.name}</p>
                       {item.duration && (
-                        <p className="text-xs text-gray-500 mt-0.5">{item.duration}</p>
+                        <p className="text-xs text-[rgb(var(--reg-muted))] mt-0.5">{item.duration}</p>
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-500">x{item.quantity}</p>
-                      <p className="text-sm font-semibold text-gray-900 mt-0.5">{item.price.toFixed(2)} {currencySymbol()}</p>
+                      <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.x", { quantity: item.quantity })}</p>
+                      <p className="text-sm font-semibold text-[rgb(var(--reg-ink))] mt-0.5">{item.price.toFixed(2)} {currencySymbol()}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Pedicure klasyczny (1h 15m)</p>
+              <div className="p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl">
+                <p className="text-sm text-[rgb(var(--reg-muted))]">{t("paymentMethod.pedicureKlasycznyHM")}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-500">x1</span>
-                  <span className="text-sm font-medium text-gray-900">{`100,00 ${currencySymbol()}`}</span>
+                  <span className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.x1")}</span>
+                  <span className="text-sm font-medium text-[rgb(var(--reg-ink))]">{`100,00 ${currencySymbol()}`}</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Discount 20%</p>
+                <p className="text-xs text-[rgb(var(--reg-muted))] mt-2">{t("paymentMethod.discount")}</p>
               </div>
             )}
           </div>
 
           {/* Staff Info */}
           {selectedStaff && (
-            <div className="p-3 bg-gray-50 rounded-lg">
+            <div className="p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
@@ -639,15 +683,15 @@ export default function PaymentMethodPage({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-xs font-semibold text-gray-600">
+                      <span className="text-xs font-semibold text-[rgb(var(--reg-muted))]">
                         {(selectedStaff.name || '').split(' ').map(n => n[0]).join('').toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{selectedStaff.name}</p>
+                    <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{selectedStaff.name}</p>
                     {selectedStaff.position && (
-                      <p className="text-xs text-gray-500">{selectedStaff.position}</p>
+                      <p className="text-xs text-[rgb(var(--reg-muted))]">{selectedStaff.position}</p>
                     )}
                   </div>
                 </div>
@@ -662,12 +706,12 @@ export default function PaymentMethodPage({
                   >
                     <User className="h-3.5 w-3.5 mr-1.5" />
                     <Pencil className="h-3.5 w-3.5" />
-                    CHANGE
+                    {t("paymentMethod.change")}
                   </Button>
                 )}
               </div>
               {showStaffPicker && staffList.length > 1 && (
-                <div className="mt-2 space-y-1 border-t border-gray-200 pt-2">
+                <div className="mt-2 space-y-1 border-t border-[rgb(var(--reg-line)/0.8)] pt-2">
                   {staffList.map((member) => (
                     <button
                       key={member.id}
@@ -677,12 +721,12 @@ export default function PaymentMethodPage({
                         onStaffChange?.(member);
                         setShowStaffPicker(false);
                       }}
-                      className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 transition-colors ${
-                        member.id === selectedStaff.id ? "font-medium text-gray-900" : "text-gray-600"
+                      className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors ${
+                        member.id === selectedStaff.id ? "font-medium text-[rgb(var(--reg-ink))]" : "text-[rgb(var(--reg-muted))]"
                       }`}
                     >
                       {member.name}
-                      {member.position && <span className="text-xs text-gray-400 ml-1.5">{member.position}</span>}
+                      {member.position && <span className="text-xs text-[rgb(var(--reg-muted)/0.8)] ml-1.5">{member.position}</span>}
                     </button>
                   ))}
                 </div>
@@ -691,25 +735,25 @@ export default function PaymentMethodPage({
           )}
 
           <div className="text-center">
-            <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+            <p className="text-xs text-[rgb(var(--reg-muted))] flex items-center justify-center gap-1">
               <span>👆</span>
-              TAP ITEM TO CHANGE
+              {t("paymentMethod.tapItemToChange")}
             </p>
           </div>
 
           {/* Summary Breakdown */}
-          <div className="space-y-2 pt-4 border-t border-gray-200">
+          <div className="space-y-2 pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium text-gray-900">{subtotal.toFixed(2)} {currencySymbol()}</span>
+              <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.subtotal")}</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">{subtotal.toFixed(2)} {currencySymbol()}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <span className="text-gray-600">Discount</span>
+                <span className="text-[rgb(var(--reg-muted))]">{t("common.discount")}</span>
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  aria-label="Edit discount"
+                  aria-label={t("paymentMethod.editDiscount")}
                   className="h-5 w-5"
                   onClick={() => {
                     setDiscountValue("");
@@ -717,47 +761,47 @@ export default function PaymentMethodPage({
                     setShowDiscountDialog(true);
                   }}
                 >
-                  <Plus className="h-3 w-3 text-gray-400" />
+                  <Plus className="h-3 w-3 text-[rgb(var(--reg-muted)/0.8)]" />
                 </Button>
               </div>
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-[rgb(var(--reg-ink))]">
                 {discountAmount > 0 ? `-${discountAmount.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
               </span>
             </div>
             {/* Usage section disabled */}
             {/* <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-600">Usage</span>
+                <Package className="h-4 w-4 text-[rgb(var(--reg-muted)/0.8)]" />
+                <span className="text-[rgb(var(--reg-muted))]">Usage</span>
               </div>
-              <span className="font-medium text-gray-900">-</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">-</span>
             </div> */}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Tip</span>
-              <span className="font-medium text-gray-900">
+              <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.tip")}</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">
                 {(selectedTip?.amount || parseFloat(customTip) || 0).toFixed(2)} {currencySymbol()}
               </span>
             </div>
-            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-              <span className="text-base font-bold text-gray-900">TOTAL</span>
-              <span className="text-lg font-bold text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
+            <div className="flex items-center justify-between pt-3 border-t border-[rgb(var(--reg-line)/0.8)]">
+              <span className="text-base font-bold text-[rgb(var(--reg-ink))]">{t("paymentMethod.total")}</span>
+              <span className="text-lg font-bold text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
             </div>
           </div>
 
           {/* Payment Details Section */}
-          <div className="space-y-2 pt-4 border-t border-gray-200">
+          <div className="space-y-2 pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
             {/* #117: named, because a total that is simply lower than the services reads as
                 a pricing error and gets "corrected" by the cashier. */}
             {depositCredit > 0 ? (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">
+                <span className="text-[rgb(var(--reg-muted))]">
                   {pointsCovered > 0 && depositOnly + prepaidCredit === 0
-                    ? "Paid with points at booking"
+                    ? t("paymentMethod.paidWithPointsAtBooking")
                     : pointsCovered > 0
-                      ? "Already paid (deposit / gift card / points)"
+                      ? t("paymentMethod.alreadyPaidDepositGiftCard")
                       : prepaidCredit > 0
-                        ? "Already paid (deposit / gift card online)"
-                        : "Deposit already paid"}
+                        ? t("paymentMethod.alreadyPaidDepositGiftCard2")
+                        : t("paymentMethod.depositAlreadyPaid")}
                 </span>
                 <span className="font-medium text-emerald-700">
                   -{depositCredit.toFixed(2)} {currencySymbol()}
@@ -765,53 +809,52 @@ export default function PaymentMethodPage({
               </div>
             ) : null}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">{depositCredit > 0 ? "Left to pay" : "Total"}</span>
-              <span className="font-medium text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
+              <span className="text-[rgb(var(--reg-muted))]">{depositCredit > 0 ? t("paymentMethod.leftToPay") : t("common.total")}</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
             </div>
             {selectedPaymentMethod === "gift-card" ? (
               <div className="space-y-1.5">
-                <label className="text-sm text-gray-600">Gift card code</label>
+                <label className="text-sm text-[rgb(var(--reg-muted))]">{t("paymentMethod.giftCardCode")}</label>
                 <Input
                   value={giftCardCode}
                   onChange={e => setGiftCardCode(e.target.value.toUpperCase())}
-                  placeholder="Card code"
+                  placeholder={t("paymentMethod.cardCode")}
                   autoComplete="off"
                 />
-                <p className="text-xs text-gray-500">
-                  The card must have been issued by this salon and hold at least the total.
+                <p className="text-xs text-[rgb(var(--reg-muted))]">
+                  {t("paymentMethod.theCardMustHaveBeen")}
                 </p>
               </div>
             ) : selectedPaymentMethod === "package" || selectedPaymentMethod === "membership" ? (
-              <p className="text-xs text-gray-500">
-                One session comes off this client's package. Pick the client on the sale first —
-                without one there is no package to spend from.
+              <p className="text-xs text-[rgb(var(--reg-muted))]">
+                {t("paymentMethod.oneSessionComesOffThis")}
               </p>
             ) : selectedPaymentMethod === "split" ? (
               <>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Cash</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.cash")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Card</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.card")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
                 </div>
               </>
             ) : (
               <>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Customer gives</span>
-                  <span className="font-medium text-gray-900">{paymentAmount.toFixed(2)} {currencySymbol()}</span>
+                  <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.customerGives")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{paymentAmount.toFixed(2)} {currencySymbol()}</span>
                 </div>
                 {change > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Return</span>
-                    <span className="font-medium text-gray-900">{change.toFixed(2)} {currencySymbol()}</span>
+                    <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.return")}</span>
+                    <span className="font-medium text-[rgb(var(--reg-ink))]">{change.toFixed(2)} {currencySymbol()}</span>
                   </div>
                 )}
                 {change < 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Due to</span>
+                    <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.dueTo")}</span>
                     <span className="font-medium text-red-600">{Math.abs(change).toFixed(2)} {currencySymbol()}</span>
                   </div>
                 )}
@@ -820,21 +863,50 @@ export default function PaymentMethodPage({
           </div>
         </div>
 
+        {/* The receipt as it prints: the salon's colour on top, its footer at the bottom. */}
+        <div className="px-6 pb-6">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{t("paymentMethod.receiptPreview")}</p>
+          <div className="mx-auto max-w-[320px] overflow-hidden rounded-xl bg-white font-mono text-[12px] leading-relaxed shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+            <div className="h-1.5" style={{ backgroundColor: /^#[0-9a-fA-F]{6}$/.test(receiptLook.brandColor) ? receiptLook.brandColor : "rgb(var(--reg-brand))" }} aria-hidden />
+            <div className="px-5 py-4">
+              <p className="text-center text-[13px] font-bold">{receiptLook.name || t("common.yourSalon")}</p>
+              <p className="text-center text-[rgb(var(--reg-muted))]">{formatLocaleDate(new Date(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+              <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+              {orderItems.map((it) => (
+                <p key={it.id} className="flex justify-between gap-3"><span className="truncate">{it.name}</span><span className="tabular-nums">{(it.price * it.quantity).toFixed(2)}</span></p>
+              ))}
+              {discountAmount > 0 && <p className="flex justify-between"><span>{t("common.discount")}</span><span className="tabular-nums">-{discountAmount.toFixed(2)}</span></p>}
+              {(selectedTip?.amount || parseFloat(customTip) || 0) > 0 && <p className="flex justify-between"><span>{t("paymentMethod.tip")}</span><span className="tabular-nums">{(selectedTip?.amount || parseFloat(customTip) || 0).toFixed(2)}</span></p>}
+              {depositCredit > 0 && <p className="flex justify-between"><span>{t("paymentMethod.alreadyPaid")}</span><span className="tabular-nums">-{depositCredit.toFixed(2)}</span></p>}
+              <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+              <p className="flex justify-between font-bold"><span>{t("common.total")}</span><span className="tabular-nums">{total.toFixed(2)} {currencySymbol()}</span></p>
+              {receiptLook.footer.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{receiptLook.footer}</p>}
+            </div>
+          </div>
+        </div>
+
         {/* Footer Actions */}
-        <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3 shrink-0">
+        <div className="sticky bottom-0 flex shrink-0 items-center justify-end gap-3 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/95 p-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur md:p-6">
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Delete"
-            className="h-10 w-10 text-red-600 hover:bg-red-50"
+            aria-label={t("paymentMethod.discardThisSale")}
+            title={t("paymentMethod.discardThisSale")}
+            className="h-12 w-12 rounded-full text-red-600 hover:bg-red-50"
+            onClick={() => {
+              // It had no handler at all. It now throws the ticket away (Back keeps it).
+              if (!confirm(t("paymentMethod.discardThisSaleTheTicket"))) return;
+              if (onDiscard) onDiscard();
+              else handleCancel();
+            }}
           >
             <Trash2 className="h-5 w-5" />
           </Button>
           <Button
             onClick={handleConfirm}
-            className="h-11 px-6 bg-gray-900 hover:bg-gray-800 text-white font-medium"
+            className="h-[52px] flex-1 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-8 text-base font-semibold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110 md:flex-none"
           >
-            CONFIRM AND PAY
+            {t("paymentMethod.charge", { value: Math.max(0, total).toFixed(2), value2: currencySymbol() })}
           </Button>
         </div>
       </div>
@@ -843,9 +915,9 @@ export default function PaymentMethodPage({
       <Dialog open={showCustomTipDialog} onOpenChange={setShowCustomTipDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Custom Tip</DialogTitle>
+            <DialogTitle>{t("paymentMethod.customTip2")}</DialogTitle>
             <DialogDescription>
-              Choose whether to enter a percentage or fixed amount
+              {t("paymentMethod.chooseWhetherToEnterA")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -853,48 +925,48 @@ export default function PaymentMethodPage({
             <div className="flex gap-3">
               <button
                 onClick={() => setCustomTipType("percentage")}
-                className={`flex-1 p-4 border-2 rounded-lg text-left transition-all ${
+                className={`flex-1 p-4 border-2 rounded-2xl text-left transition-all ${
                   customTipType === "percentage"
-                    ? "border-gray-900 bg-gray-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                    : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Percent className="h-5 w-5 text-gray-700" />
-                  <span className="text-sm font-medium text-gray-900">Percentage</span>
+                  <Percent className="h-5 w-5 text-[rgb(var(--reg-ink)/0.85)]" />
+                  <span className="text-sm font-medium text-[rgb(var(--reg-ink))]">{t("common.percentage")}</span>
                 </div>
-                <p className="text-xs text-gray-500">Enter tip as percentage of subtotal</p>
+                <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.enterTipAsPercentageOf")}</p>
               </button>
               <button
                 onClick={() => setCustomTipType("fixed")}
-                className={`flex-1 p-4 border-2 rounded-lg text-left transition-all ${
+                className={`flex-1 p-4 border-2 rounded-2xl text-left transition-all ${
                   customTipType === "fixed"
-                    ? "border-gray-900 bg-gray-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                    : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-5 w-5 text-gray-700" />
-                  <span className="text-sm font-medium text-gray-900">Fixed Amount</span>
+                  <DollarSign className="h-5 w-5 text-[rgb(var(--reg-ink)/0.85)]" />
+                  <span className="text-sm font-medium text-[rgb(var(--reg-ink))]">{t("paymentMethod.fixedAmount")}</span>
                 </div>
-                <p className="text-xs text-gray-500">Enter tip as fixed amount</p>
+                <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.enterTipAsFixedAmount")}</p>
               </button>
             </div>
 
             {/* Tip Value Input */}
             <div className="space-y-2">
               <Label>
-                {customTipType === "percentage" ? "Tip Percentage (%)" : `Tip Amount (${currencySymbol()})`}
+                {customTipType === "percentage" ? t("paymentMethod.tipPercentage") : t("paymentMethod.tipAmount", { value: currencySymbol() })}
               </Label>
               <div className="relative">
                 {customTipType === "percentage" ? (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">%</span>
                 ) : (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
                 )}
                 <Input
                   type="number"
-                  placeholder={customTipType === "percentage" ? "Enter percentage" : "Enter amount"}
+                  placeholder={customTipType === "percentage" ? t("paymentMethod.enterPercentage") : t("paymentMethod.enterAmount")}
                   value={customTipValue}
                   onChange={(e) => setCustomTipValue(e.target.value)}
                   className={customTipType === "percentage" ? "pr-10" : "pl-10"}
@@ -902,11 +974,11 @@ export default function PaymentMethodPage({
                 />
               </div>
               {customTipValue && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[rgb(var(--reg-muted))]">
                   {customTipType === "percentage" ? (
-                    <>Tip amount: {(subtotal * (parseFloat(customTipValue) || 0) / 100).toFixed(2)} {currencySymbol()}</>
+                    <>{t("paymentMethod.tipAmount2", { value: (subtotal * (parseFloat(customTipValue) || 0) / 100).toFixed(2), value2: currencySymbol() })}</>
                   ) : (
-                    <>Tip percentage: {subtotal > 0 ? ((parseFloat(customTipValue) || 0) / subtotal * 100).toFixed(2) : 0}%</>
+                    <>{t("paymentMethod.tipPercentage2", { value: subtotal > 0 ? ((parseFloat(customTipValue) || 0) / subtotal * 100).toFixed(2) : 0 })}</>
                   )}
                 </p>
               )}
@@ -921,14 +993,14 @@ export default function PaymentMethodPage({
                   setCustomTipValue("");
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleCustomTipConfirm}
                 disabled={!customTipValue || parseFloat(customTipValue) <= 0}
                 className="bg-gray-900 hover:bg-gray-800"
               >
-                Confirm
+                {t("paymentMethod.confirm")}
               </Button>
             </div>
           </div>
@@ -939,20 +1011,19 @@ export default function PaymentMethodPage({
       <Dialog open={showPaymentAmountDialog} onOpenChange={setShowPaymentAmountDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Customer Payment</DialogTitle>
+            <DialogTitle>{t("paymentMethod.customerPayment")}</DialogTitle>
             <DialogDescription>
-              Enter the amount the customer is paying. You will still confirm the sale on
-              the next screen.
+              {t("paymentMethod.enterTheAmountTheCustomer")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Amount ({currencySymbol()})</Label>
+              <Label>{t("common.amount", { value: currencySymbol() })}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
                 <Input
                   type="number"
-                  placeholder="Enter amount"
+                  placeholder={t("paymentMethod.enterAmount")}
                   value={tempPaymentAmount}
                   onChange={(e) => setTempPaymentAmount(e.target.value)}
                   className="h-12 pl-12 text-lg font-semibold"
@@ -961,24 +1032,24 @@ export default function PaymentMethodPage({
                 />
               </div>
               {tempPaymentAmount && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-1">
+                <div className="mt-3 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Total</span>
-                    <span className="font-medium text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
+                    <span className="text-[rgb(var(--reg-muted))]">{t("common.total")}</span>
+                    <span className="font-medium text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Customer gives</span>
-                    <span className="font-medium text-gray-900">{parseFloat(tempPaymentAmount) || 0} {currencySymbol()}</span>
+                    <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.customerGives")}</span>
+                    <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(tempPaymentAmount) || 0} {currencySymbol()}</span>
                   </div>
                   {parseFloat(tempPaymentAmount) > total && (
-                    <div className="flex items-center justify-between text-sm pt-1 border-t border-gray-200">
-                      <span className="text-gray-600">Return</span>
+                    <div className="flex items-center justify-between text-sm pt-1 border-t border-[rgb(var(--reg-line)/0.8)]">
+                      <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.return")}</span>
                       <span className="font-medium text-green-600">{(parseFloat(tempPaymentAmount) - total).toFixed(2)} {currencySymbol()}</span>
                     </div>
                   )}
                   {parseFloat(tempPaymentAmount) < total && (
-                    <div className="flex items-center justify-between text-sm pt-1 border-t border-gray-200">
-                      <span className="text-gray-600">Due to</span>
+                    <div className="flex items-center justify-between text-sm pt-1 border-t border-[rgb(var(--reg-line)/0.8)]">
+                      <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.dueTo")}</span>
                       <span className="font-medium text-red-600">{(total - parseFloat(tempPaymentAmount)).toFixed(2)} {currencySymbol()}</span>
                     </div>
                   )}
@@ -995,7 +1066,7 @@ export default function PaymentMethodPage({
                   setTempPaymentAmount("");
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               {/* #23: this button read "Confirm", so staff took it as the end of checkout,
                   watched the dialog close with the cart unchanged and no /api/sales call,
@@ -1013,7 +1084,7 @@ export default function PaymentMethodPage({
                 disabled={!tempPaymentAmount || parseFloat(tempPaymentAmount) < 0}
                 className="bg-gray-900 hover:bg-gray-800"
               >
-                Set Amount
+                {t("paymentMethod.setAmount")}
               </Button>
             </div>
           </div>
@@ -1024,9 +1095,9 @@ export default function PaymentMethodPage({
       <Dialog open={showDiscountDialog} onOpenChange={setShowDiscountDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Discount</DialogTitle>
+            <DialogTitle>{t("paymentMethod.addDiscount")}</DialogTitle>
             <DialogDescription>
-              Choose whether to enter a percentage or fixed amount
+              {t("paymentMethod.chooseWhetherToEnterA")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1034,48 +1105,48 @@ export default function PaymentMethodPage({
             <div className="flex gap-3">
               <button
                 onClick={() => setDiscountType("percentage")}
-                className={`flex-1 p-4 border-2 rounded-lg text-left transition-all ${
+                className={`flex-1 p-4 border-2 rounded-2xl text-left transition-all ${
                   discountType === "percentage"
-                    ? "border-gray-900 bg-gray-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                    : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <Percent className="h-5 w-5 text-gray-700" />
-                  <span className="text-sm font-medium text-gray-900">Percentage</span>
+                  <Percent className="h-5 w-5 text-[rgb(var(--reg-ink)/0.85)]" />
+                  <span className="text-sm font-medium text-[rgb(var(--reg-ink))]">{t("common.percentage")}</span>
                 </div>
-                <p className="text-xs text-gray-500">Enter discount as percentage of subtotal</p>
+                <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.enterDiscountAsPercentageOf")}</p>
               </button>
               <button
                 onClick={() => setDiscountType("fixed")}
-                className={`flex-1 p-4 border-2 rounded-lg text-left transition-all ${
+                className={`flex-1 p-4 border-2 rounded-2xl text-left transition-all ${
                   discountType === "fixed"
-                    ? "border-gray-900 bg-gray-50"
-                    : "border-gray-200 hover:border-gray-300"
+                    ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                    : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-5 w-5 text-gray-700" />
-                  <span className="text-sm font-medium text-gray-900">Fixed Amount</span>
+                  <DollarSign className="h-5 w-5 text-[rgb(var(--reg-ink)/0.85)]" />
+                  <span className="text-sm font-medium text-[rgb(var(--reg-ink))]">{t("paymentMethod.fixedAmount")}</span>
                 </div>
-                <p className="text-xs text-gray-500">Enter discount as fixed amount</p>
+                <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.enterDiscountAsFixedAmount")}</p>
               </button>
             </div>
 
             {/* Discount Value Input */}
             <div className="space-y-2">
               <Label>
-                {discountType === "percentage" ? "Discount Percentage (%)" : `Discount Amount (${currencySymbol()})`}
+                {discountType === "percentage" ? t("paymentMethod.discountPercentage") : t("paymentMethod.discountAmount", { value: currencySymbol() })}
               </Label>
               <div className="relative">
                 {discountType === "percentage" ? (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">%</span>
                 ) : (
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
                 )}
                 <Input
                   type="number"
-                  placeholder={discountType === "percentage" ? "Enter percentage" : "Enter amount"}
+                  placeholder={discountType === "percentage" ? t("paymentMethod.enterPercentage") : t("paymentMethod.enterAmount")}
                   value={discountValue}
                   onChange={(e) => setDiscountValue(e.target.value)}
                   className={discountType === "percentage" ? "pr-10" : "pl-10"}
@@ -1083,11 +1154,11 @@ export default function PaymentMethodPage({
                 />
               </div>
               {discountValue && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[rgb(var(--reg-muted))]">
                   {discountType === "percentage" ? (
-                    <>Discount amount: {(subtotal * (parseFloat(discountValue) || 0) / 100).toFixed(2)} {currencySymbol()}</>
+                    <>{t("paymentMethod.discountAmount2", { value: (subtotal * (parseFloat(discountValue) || 0) / 100).toFixed(2), value2: currencySymbol() })}</>
                   ) : (
-                    <>Discount percentage: {subtotal > 0 ? ((parseFloat(discountValue) || 0) / subtotal * 100).toFixed(2) : 0}%</>
+                    <>{t("paymentMethod.discountPercentage2", { value: subtotal > 0 ? ((parseFloat(discountValue) || 0) / subtotal * 100).toFixed(2) : 0 })}</>
                   )}
                 </p>
               )}
@@ -1102,14 +1173,14 @@ export default function PaymentMethodPage({
                   setDiscountValue("");
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleDiscountConfirm}
                 disabled={!discountValue || parseFloat(discountValue) <= 0}
                 className="bg-gray-900 hover:bg-gray-800"
               >
-                Confirm
+                {t("paymentMethod.confirm")}
               </Button>
             </div>
           </div>
@@ -1120,27 +1191,27 @@ export default function PaymentMethodPage({
       <Dialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Split Payment</DialogTitle>
+            <DialogTitle>{t("paymentMethod.splitPayment")}</DialogTitle>
             <DialogDescription>
-              Enter how much to pay with cash and how much with card
+              {t("paymentMethod.enterHowMuchToPay")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
+            <div className="p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
               <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-gray-600">Total Amount</span>
-                <span className="font-semibold text-gray-900">{total.toFixed(2)} {currencySymbol()}</span>
+                <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.totalAmount")}</span>
+                <span className="font-semibold text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
               </div>
             </div>
 
             {/* Cash Amount Input */}
             <div className="space-y-2">
-              <Label>Cash Amount ({currencySymbol()})</Label>
+              <Label>{t("paymentMethod.cashAmount", { value: currencySymbol() })}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
                 <Input
                   type="number"
-                  placeholder="Enter cash amount"
+                  placeholder={t("paymentMethod.enterCashAmount")}
                   value={splitCashAmount}
                   onChange={(e) => {
                     setSplitCashAmount(e.target.value);
@@ -1156,12 +1227,12 @@ export default function PaymentMethodPage({
 
             {/* Card Amount Input */}
             <div className="space-y-2">
-              <Label>Card Amount ({currencySymbol()})</Label>
+              <Label>{t("paymentMethod.cardAmount", { value: currencySymbol() })}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 font-medium">{currencySymbol()}</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
                 <Input
                   type="number"
-                  placeholder="Enter card amount"
+                  placeholder={t("paymentMethod.enterCardAmount")}
                   value={splitCardAmount}
                   onChange={(e) => {
                     setSplitCardAmount(e.target.value);
@@ -1177,17 +1248,17 @@ export default function PaymentMethodPage({
 
             {/* Split Summary */}
             {(splitCashAmount || splitCardAmount) && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg space-y-2">
+              <div className="mt-3 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Cash</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.cash")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Card</span>
-                  <span className="font-medium text-gray-900">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.card")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm pt-2 border-t border-gray-200">
-                  <span className="text-gray-600 font-semibold">Total</span>
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-[rgb(var(--reg-line)/0.8)]">
+                  <span className="text-[rgb(var(--reg-muted))] font-semibold">{t("common.total")}</span>
                   <span className={`font-semibold ${
                     Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) < 0.01
                       ? "text-green-600"
@@ -1198,7 +1269,7 @@ export default function PaymentMethodPage({
                 </div>
                 {Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) >= 0.01 && (
                   <p className="text-xs text-red-600 mt-1">
-                    Amounts must equal {total.toFixed(2)} {currencySymbol()}
+                    {t("paymentMethod.amountsMustEqual", { value: total.toFixed(2), value2: currencySymbol() })}
                   </p>
                 )}
               </div>
@@ -1214,7 +1285,7 @@ export default function PaymentMethodPage({
                   setSplitCardAmount("");
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 onClick={handleSplitConfirm}
@@ -1227,7 +1298,7 @@ export default function PaymentMethodPage({
                 }
                 className="bg-gray-900 hover:bg-gray-800"
               >
-                Confirm
+                {t("paymentMethod.confirm")}
               </Button>
             </div>
           </div>

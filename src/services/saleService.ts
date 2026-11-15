@@ -1,5 +1,5 @@
 import { apiClient } from '@/config/api';
-import { format } from 'date-fns';
+import { format } from '@/i18n/dateFns';
 
 export interface SaleItem {
   id?: number;

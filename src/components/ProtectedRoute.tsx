@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { clearAuthData, getAccessToken } from "@/utils/authUtils";
 import { refreshSession } from "@/config/api";
 import { authService } from "@/services/authService";
+import { t } from "@/i18n";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -71,7 +72,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   if (isAuth === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500">{t("common.loading")}</div>
       </div>
     );
   }

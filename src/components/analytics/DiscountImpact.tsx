@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { currencySymbol } from "@/lib/currency";
 import { analysisService, type DiscountImpact as Impact } from "@/services/analysisService";
+import { t } from "@/i18n";
 
 const money = (value: unknown) => {
   const n = Number(value);
@@ -61,12 +62,11 @@ export function DiscountImpact({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Offers</CardTitle>
+          <CardTitle className="text-base">{t("common.offers")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Nothing was on offer in this period. Cutting a price puts a badge on your card in
-            the app and on the web — it is under Marketing → Offers.
+            {t("analytics.nothingWasOnOfferIn")}
           </p>
         </CardContent>
       </Card>
@@ -80,22 +80,22 @@ export function DiscountImpact({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Given away</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("analytics.givenAway")}</p>
             <p className="mt-1 text-2xl font-semibold">{money(givenAway)}</p>
             <p className="text-xs text-muted-foreground">
-              off {discounted} of {bookings} bookings
+              {t("analytics.offOfBookings", { discounted, bookings })}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Taken on offer
+              {t("analytics.takenOnOffer")}
             </p>
             <p className="mt-1 text-2xl font-semibold">{money(discountedRevenue)}</p>
             <p className="text-xs text-muted-foreground">
               {givenAway > 0
-                ? `${(discountedRevenue / givenAway).toFixed(1)} earned per 1 given away`
+                ? t("analytics.earnedPerGivenAway", { value: (discountedRevenue / givenAway).toFixed(1) })
                 : ""}
             </p>
           </CardContent>
@@ -103,18 +103,18 @@ export function DiscountImpact({
         <Card>
           <CardContent className="pt-6">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Share of bookings
+              {t("analytics.shareOfBookings")}
             </p>
             <p className="mt-1 text-2xl font-semibold">
               {bookings > 0 ? `${Math.round((discounted / bookings) * 100)}%` : "—"}
             </p>
-            <p className="text-xs text-muted-foreground">came in on an offer</p>
+            <p className="text-xs text-muted-foreground">{t("analytics.cameInOnAnOffer")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              New clients on offer
+              {t("analytics.newClientsOnOffer")}
             </p>
             <p className="mt-1 text-2xl font-semibold">
               {firstVisitsOnOffer}
@@ -123,7 +123,7 @@ export function DiscountImpact({
               ) : null}
             </p>
             <p className="text-xs text-muted-foreground">
-              first visits that arrived on a cut price
+              {t("analytics.firstVisitsThatArrivedOn")}
             </p>
           </CardContent>
         </Card>
@@ -132,7 +132,7 @@ export function DiscountImpact({
       {data.byService.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Which services carried it</CardTitle>
+            <CardTitle className="text-base">{t("analytics.whichServicesCarriedIt")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -143,7 +143,7 @@ export function DiscountImpact({
                       {row.service}
                       {row.average_percent != null ? (
                         <span className="ml-2 text-xs text-muted-foreground">
-                          avg -{row.average_percent}%
+                          {t("analytics.avg", { average_percent: row.average_percent })}
                         </span>
                       ) : null}
                     </span>
@@ -158,7 +158,7 @@ export function DiscountImpact({
                     />
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {num(row.bookings)} bookings · {money(row.revenue)} taken
+                    {t("analytics.bookingsTaken", { value: num(row.bookings), value2: money(row.revenue) })}
                   </p>
                 </li>
               ))}
@@ -170,7 +170,7 @@ export function DiscountImpact({
       {data.byMonth.length > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">By month</CardTitle>
+            <CardTitle className="text-base">{t("analytics.byMonth")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
@@ -178,9 +178,9 @@ export function DiscountImpact({
                 <li key={row.month} className="flex items-center justify-between gap-3">
                   <span className="text-muted-foreground">{row.month}</span>
                   <span className="tabular-nums">
-                    {num(row.discounted_bookings)} on offer ·{" "}
+                    {t("analytics.onOffer", { value: num(row.discounted_bookings) })}{" "}
                     <span className="font-semibold">-{money(row.given_away)}</span> ·{" "}
-                    {money(row.revenue)} taken
+                    {t("analytics.taken", { value: money(row.revenue) })}
                   </span>
                 </li>
               ))}

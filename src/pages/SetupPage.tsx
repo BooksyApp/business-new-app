@@ -1,164 +1,123 @@
-import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useNavigation } from "@/utils/navigationUtils";
 import {
+  Bell,
   Building2,
+  CalendarClock,
+  ChevronRight,
   Clock,
   CreditCard,
-  Bell,
-  Shield,
+  Image,
+  LifeBuoy,
+  MapPin,
   Palette,
-  Globe,
+  Receipt,
+  Search,
+  Shield,
+  ShieldCheck,
+  Store,
   Users,
-  ChevronRight,
-  Star
+  type LucideIcon,
 } from "lucide-react";
 
-interface SettingsCategory {
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BooqiScope, PageHeader } from "@/components/page/booqi";
+import { pageBody } from "@/components/page/booqiStyles";
+import { fieldCls } from "@/components/page/kitStyles";
+import { cn } from "@/lib/utils";
+import { useNavigation } from "@/utils/navigationUtils";
+import { t } from "@/i18n";
+
+interface SettingRow {
+  label: string;
+  hint: string;
+  path: string;
+  icon: LucideIcon;
+}
+
+interface SettingsSection {
   id: string;
   title: string;
   description: string;
-  icon: React.ElementType;
-  items: Array<{ label: string; path?: string }>;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  mainPath?: string;
+  icon: LucideIcon;
+  tone: string;
+  rows: SettingRow[];
 }
 
-const settingsCategories: SettingsCategory[] = [
+/**
+ * Every setting, once. It used to be eight cards whose chips repeated the same few pages
+ * (opening hours appeared three times). Each row is a real screen that changes how the
+ * salon behaves; the work itself (calendar, till, catalogue) lives in the main nav.
+ */
+const SECTIONS: SettingsSection[] = [
   {
     id: "business",
-    title: "Business Settings",
-    description: "Manage your salon details and locations",
+    get title() { return t("common.business"); },
+    get description() { return t("setup.whoYouAreAndWhere"); },
     icon: Building2,
-    mainPath: "business",
-    items: [
-      { label: "Business Profile", path: "business" },
-      { label: "Opening Hours", path: "business-hours" },
-      { label: "Locations", path: "locations" },
+    tone: "bg-sky-50 text-sky-700",
+    rows: [
+      { get label() { return t("common.businessProfile"); }, get hint() { return t("setup.nameCategoryDescriptionContact"); }, path: "business", icon: Store },
+      { get label() { return t("common.photos"); }, get hint() { return t("setup.coverLogoAndGallery"); }, path: "photos", icon: Image },
+      { get label() { return t("common.openingHours"); }, get hint() { return t("setup.weeklyHoursClosedDays"); }, path: "business-hours", icon: Clock },
+      { get label() { return t("setup.locations"); }, get hint() { return t("setup.addressAndMapPin"); }, path: "locations", icon: MapPin },
+      { get label() { return t("setup.brandColourReceiptFooter"); }, get hint() { return t("setup.yourColourTheLineUnder"); }, path: "branding", icon: Palette },
     ],
-    color: "text-sky-600",
-    bgColor: "bg-sky-50",
-    borderColor: "border-l-sky-500",
   },
   {
     id: "booking",
-    title: "Booking Settings",
-    description: "Configure your booking preferences",
-    icon: Clock,
-    mainPath: "booking-rules",
-    items: [
-      // These were three labels for the same handful of fields on the business record:
-      // one redirected to the staff page and two did nothing. They are one screen now.
-      // These were shortcuts into the working app — "Services & pricing" opened the
-      // catalogue, which is the job rather than the settings for it. Every item here is
-      // now a control that changes how booking behaves.
-      { label: "Online booking on/off", path: "booking-rules" },
-      { label: "Notice & how far ahead", path: "booking-rules" },
-      { label: "Deposits & cancellations", path: "booking-rules" },
-      { label: "Opening hours", path: "business-hours" },
+    get title() { return t("setup.booking"); },
+    get description() { return t("setup.howAndWhenClientsCan"); },
+    icon: CalendarClock,
+    tone: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]",
+    rows: [
+      { get label() { return t("setup.onlineBooking"); }, get hint() { return t("setup.onOrOffNoticeHow"); }, path: "setup/online-booking", icon: CalendarClock },
+      { get label() { return t("setup.cancellationPolicy"); }, get hint() { return t("setup.howLateAClientCan"); }, path: "setup/cancellation", icon: Shield },
     ],
-    color: "text-violet-600",
-    bgColor: "bg-violet-50",
-    borderColor: "border-l-violet-500",
   },
   {
-    id: "payments",
-    title: "Payments",
-    description: "Manage payment methods and billing",
+    id: "money",
+    get title() { return t("setup.money"); },
+    get description() { return t("setup.clientsPayWhenTheyVisit"); },
     icon: CreditCard,
-    // #27: this page's own convention is "no badge = built, Soon = not". Payments broke
-    // it: it had no badge, implying real screens, while all three items just navigated to
-    // the Sales page. There is no Payment Methods, Invoices or Tax Settings screen, so the
-    // honest label is Soon — and the redirects are removed, because sending someone who
-    // asked for Tax Settings to a sales list is worse than doing nothing.
-    mainPath: "booking-rules",
-    items: [
-      // "Sales & receipts" opened the POS. The till is not a setting; what it offers is.
-      { label: "Payment methods", path: "booking-rules" },
-      { label: "Currency & tax", path: "booking-rules" },
-      { label: "Receipt footer", path: "branding" },
+    tone: "bg-emerald-50 text-emerald-700",
+    rows: [
+      { get label() { return t("bookingRules.paymentMethods"); }, get hint() { return t("setup.paymentMethodsHint"); }, path: "setup/payment-methods", icon: CreditCard },
+      { get label() { return t("setup.currencyTax"); }, get hint() { return t("setup.whatYourPricesAreIn"); }, path: "setup/currency-tax", icon: Receipt },
     ],
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-l-emerald-500",
   },
   {
     id: "notifications",
-    title: "Notifications",
-    description: "What your customers hear from you, and when",
+    get title() { return t("setup.notifications"); },
+    get description() { return t("setup.whatClientsHearFromYou"); },
     icon: Bell,
-    mainPath: "notifications",
-    items: [
-      { label: "Email notifications", path: "notifications" },
-      { label: "Reminder timing", path: "notifications" },
-      { label: "SMS & push", path: "notifications" },
+    tone: "bg-amber-50 text-amber-700",
+    rows: [
+      { get label() { return t("setup.emailReminders"); }, get hint() { return t("setup.confirmationsAndReminderTiming"); }, path: "setup/email", icon: Bell },
+      { get label() { return t("setup.smsPush"); }, get hint() { return t("setup.textsAndAppNotifications"); }, path: "setup/sms-push", icon: Bell },
     ],
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
-    borderColor: "border-l-amber-500",
-  },
-  {
-    id: "branding",
-    title: "Branding",
-    description: "How your salon looks to customers",
-    icon: Palette,
-    mainPath: "branding",
-    items: [
-      { label: "Photos: cover, logo, gallery", path: "photos" },
-      { label: "Brand colour", path: "branding" },
-      { label: "Receipt footer", path: "branding" },
-    ],
-    color: "text-violet-600",
-    bgColor: "bg-violet-50",
-    borderColor: "border-l-violet-500",
-  },
-  {
-    id: "security",
-    title: "Security",
-    description: "Manage access and permissions",
-    icon: Shield,
-    mainPath: "security",
-    items: [
-      { label: "Change password", path: "security" },
-    ],
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
-    borderColor: "border-l-amber-500",
-  },
-  {
-    id: "online",
-    title: "Online Presence",
-    description: "How your salon appears to customers",
-    icon: Globe,
-    mainPath: "business",
-    items: [
-      { label: "Salon profile", path: "business" },
-      { label: "Photo & branding", path: "branding" },
-      { label: "Online booking", path: "booking-rules" },
-    ],
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
-    borderColor: "border-l-amber-500",
   },
   {
     id: "team",
-    title: "Team Permissions",
-    description: "Control staff access levels",
+    get title() { return t("common.team"); },
+    get description() { return t("setup.whoWorksHereAndWhat"); },
     icon: Users,
-    mainPath: "roles",
-    items: [
-      { label: "Roles & permissions", path: "roles" },
-      { label: "Team members", path: "staff" },
-      { label: "Salon opening hours", path: "business-hours" },
+    tone: "bg-rose-50 text-rose-700",
+    rows: [
+      { get label() { return t("setup.teamMembers"); }, get hint() { return t("setup.profilesServicesWorkingHours"); }, path: "staff", icon: Users },
+      { get label() { return t("setup.rolesPermissions"); }, get hint() { return t("setup.whatEachRoleCanDo"); }, path: "roles", icon: ShieldCheck },
     ],
-    color: "text-amber-600",
-    bgColor: "bg-amber-50",
-    borderColor: "border-l-amber-500",
+  },
+  {
+    id: "account",
+    get title() { return t("setup.account"); },
+    get description() { return t("setup.yourOwnSignIn"); },
+    icon: Shield,
+    tone: "bg-[rgb(var(--reg-ink)/0.05)] text-[rgb(var(--reg-ink)/0.7)]",
+    rows: [
+      { get label() { return t("setup.passwordSecurity"); }, get hint() { return t("setup.changeYourPassword"); }, path: "security", icon: Shield },
+      { get label() { return t("setup.support"); }, get hint() { return t("setup.supportHint"); }, path: "support", icon: LifeBuoy },
+    ],
   },
 ];
 
@@ -166,87 +125,111 @@ export default function SetupPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { getPath } = useNavigation();
-  const businessCardRef = useRef<HTMLDivElement | null>(null);
-  const focusedCategory = useMemo(() => {
-    const query = new URLSearchParams(location.search);
-    return query.get("focus");
-  }, [location.search]);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(SECTIONS[0].id);
 
+  const focusedCategory = useMemo(() => new URLSearchParams(location.search).get("focus"), [location.search]);
+
+  // ?focus=business (from onboarding) scrolls that section into view and marks it.
   useEffect(() => {
-    if (focusedCategory !== "business") return;
-    businessCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!focusedCategory) return;
+    document.getElementById(`setup-${focusedCategory}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setActive(focusedCategory);
   }, [focusedCategory]);
 
-  const handleCardClick = (category: SettingsCategory) => {
-    if (category.mainPath) {
-      navigate(getPath(category.mainPath));
-    }
-  };
+  const q = query.trim().toLowerCase();
+  const sections = SECTIONS.map((s) => ({
+    ...s,
+    rows: q ? s.rows.filter((r) => `${s.title} ${r.label} ${r.hint}`.toLowerCase().includes(q)) : s.rows,
+  })).filter((s) => s.rows.length);
 
-  const handleItemClick = (e: React.MouseEvent, path?: string) => {
-    if (!path) return;
-    e.stopPropagation();
-    navigate(getPath(path));
+  const jump = (id: string) => {
+    setActive(id);
+    document.getElementById(`setup-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
     <AppLayout>
-      <PageHeader
-        title="Setup"
-        subtitle="Everything that changes how the app and the till behave"
-      />
+      <BooqiScope>
+        <PageHeader title={t("setup.settings")} subtitle={t("setup.everythingThatChangesHowBooking")} />
 
-      <div className="p-6">
-        <div className="grid gap-5 md:grid-cols-2">
-          {settingsCategories.map((category, index) => {
-            const Icon = category.icon;
-            const isFocused = focusedCategory === category.id;
-            const isClickable = !!category.mainPath;
-
-            return (
-              <Card
-                key={category.title}
-                ref={category.id === "business" ? businessCardRef : null}
-                onClick={() => handleCardClick(category)}
-                className={`group overflow-hidden border-l-4 bg-white transition-all hover:-translate-y-0.5 hover:shadow-md ${category.borderColor} ${isFocused ? "ring-2 ring-violet-300" : ""} ${isClickable ? "cursor-pointer" : "cursor-default"}`}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className={`p-3 rounded-xl ${category.bgColor} group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                        <Icon className={`h-6 w-6 ${category.color}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-base font-bold">{category.title}</CardTitle>
-                        </div>
-                        <CardDescription className="text-sm font-medium mt-0.5">{category.description}</CardDescription>
-                      </div>
-                    </div>
-                    <ChevronRight className={`h-5 w-5 text-muted-foreground transition-all ${isClickable ? "group-hover:text-accent group-hover:translate-x-1" : ""} ${category.color}`} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {category.items.map((item) => (
-                      <Button
-                        key={item.label}
-                        variant="secondary"
-                        size="sm"
-                        className="text-xs border-border/60 transition-all hover:border-accent/40 hover:bg-accent/5 cursor-pointer"
-                        onClick={(e) => handleItemClick(e, item.path)}
+        <div className={pageBody}>
+          <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <nav aria-label={t("setup.settingsSections")} className="hidden lg:block">
+              <ul className="sticky top-[132px] space-y-0.5 rounded-[20px] bg-white p-2 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                {SECTIONS.map((s) => {
+                  const Icon = s.icon;
+                  const on = active === s.id;
+                  return (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => jump(s.id)}
+                        aria-current={on ? "true" : undefined}
+                        className={cn(
+                          "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition",
+                          on ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-ink)/0.8)] hover:bg-[rgb(var(--reg-canvas))]",
+                        )}
                       >
-                        {item.label}
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                        <Icon size={16} /> {s.title}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            <div className="min-w-0 space-y-6">
+              <div className="relative max-w-md">
+                <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
+                <input aria-label={t("setup.searchSettings")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("setup.searchSettings")} value={query} onChange={(e) => setQuery(e.target.value)} />
+              </div>
+
+              {sections.length === 0 && (
+                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{t("setup.noSettingMatches", { query })}</p>
+              )}
+
+              {sections.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <section
+                    key={s.id}
+                    id={`setup-${s.id}`}
+                    className={cn("scroll-mt-[140px] overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]", focusedCategory === s.id && "ring-2 ring-[rgb(var(--reg-brand)/0.6)]")}
+                  >
+                    <header className="flex items-center gap-3 px-4 pb-2 pt-4 md:px-5">
+                      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", s.tone)}>
+                        <Icon size={18} strokeWidth={1.9} />
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="text-base font-extrabold tracking-[-0.01em]">{s.title}</h2>
+                        <p className="truncate text-sm text-[rgb(var(--reg-muted))]">{s.description}</p>
+                      </div>
+                    </header>
+                    <ul>
+                      {s.rows.map((r) => (
+                        <li key={r.label} className="border-t border-[rgb(var(--reg-line)/0.6)] first:border-t-0">
+                          <button
+                            type="button"
+                            onClick={() => navigate(getPath(r.path))}
+                            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-[rgb(var(--reg-canvas)/0.7)] focus-visible:bg-[rgb(var(--reg-canvas))] focus-visible:outline-none md:px-5"
+                          >
+                            <span className="min-w-0 flex-1 pl-[52px]">
+                              <span className="block text-[15px] font-semibold">{r.label}</span>
+                              <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{r.hint}</span>
+                            </span>
+                            <ChevronRight size={18} className="shrink-0 text-[rgb(var(--reg-ink)/0.35)]" aria-hidden />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
+      </BooqiScope>
     </AppLayout>
   );
 }

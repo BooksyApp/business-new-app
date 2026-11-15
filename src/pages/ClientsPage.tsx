@@ -11,10 +11,18 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, Filter, MoreHorizontal, Phone, Mail, TrendingUp, User, Loader2, Send, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { primaryBtn } from "@/components/page/booqiStyles";
+import { appointmentStatusStyle } from "@/lib/appointmentStatus";
+import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
+import "@/components/auth/auth-tokens.css";
 import { clientService, ClientWithStats, invitationService, Invitation } from "@/services/clientService";
 import { useBusinessId } from "@/hooks/useBusinessId";
-import { format } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -26,7 +34,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { appointmentService } from "@/services/appointmentService";
+import { appointmentService, type Appointment as AppointmentApi } from "@/services/appointmentService";
+import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
+import { salonDayService, type ClientRecord, type NoteKind } from "@/services/salonDayService";
 import { useServices } from "@/hooks/useServices";
 import { useStaff } from "@/hooks/useStaff";
 import {
@@ -35,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { t as tr } from "@/i18n";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientWithStats[]>([]);
@@ -43,6 +54,23 @@ export default function ClientsPage() {
 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [segment, setSegment] = useState<"all" | "new" | "regulars" | "cancelled" | "invited">("all");
+  const [sort, setSort] = useState<{ key: "name" | "last" | "visits" | "spent"; dir: "asc" | "desc" }>({ key: "last", dir: "desc" });
+  const navigate = useNavigate();
+  const [allAppts, setAllAppts] = useState<AppointmentApi[]>([]);
+  const [density, setDensity] = useState<"compact" | "detailed">(() => {
+    try {
+      return localStorage.getItem("booqi.clients.density") === "compact" ? "compact" : "detailed";
+    } catch {
+      return "detailed";
+    }
+  });
+  const [profileTab, setProfileTab] = useState<"overview" | "bookings" | "notes" | "marketing">("overview");
+  const [benefits, setBenefits] = useState<ClientBenefits | null>(null);
+  const [record, setRecord] = useState<ClientRecord | null>(null);
+  const [noteForm, setNoteForm] = useState<{ kind: NoteKind; body: string }>({ kind: "NOTE", body: "" });
+  const [noteBusy, setNoteBusy] = useState(false);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const [invitationDialogOpen, setInvitationDialogOpen] = useState(false);
   const [addClientDialogOpen, setAddClientDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientWithStats | null>(null);
@@ -77,7 +105,12 @@ export default function ClientsPage() {
 
   const loadVisits = (clientId: number) => {
     setClientVisits(null);
-    if (!businessId || !clientId) return;
+    // Walk-in clients have no record (id 0), so there is no history to fetch — say so
+    // instead of "Loading…" forever.
+    if (!businessId || !clientId) {
+      setClientVisits([]);
+      return;
+    }
     clientService
       .getAppointmentsAtBusiness(businessId, clientId)
       .then(setClientVisits)
@@ -115,6 +148,7 @@ export default function ClientsPage() {
     notes: "",
   });
   const businessId = useBusinessId();
+  useBrandFont();
 
 
   /**
@@ -136,11 +170,20 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const data = await clientService.getClientsWithAppointments(businessId);
+      // The salon's bookings from a year back to half a year ahead feed the list's
+      // insights (next booking, favourite service, master). Failing that is not fatal.
+      const now = new Date();
+      const [data, appts] = await Promise.all([
+        clientService.getClientsWithAppointments(businessId),
+        appointmentService
+          .getAppointmentsInRange(businessId, new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()), new Date(now.getFullYear(), now.getMonth() + 6, now.getDate()))
+          .catch(() => [] as AppointmentApi[]),
+      ]);
       setClients(data);
+      setAllAppts(appts || []);
     } catch (error) {
       console.error("Failed to load clients:", error);
-      toast.error((error instanceof Error && error.message) || "Failed to load clients");
+      toast.error((error instanceof Error && error.message) || tr("clients.failedToLoadClients"));
     } finally {
       setLoading(false);
     }
@@ -272,387 +315,465 @@ export default function ClientsPage() {
     return `${firstName}${lastName ? ` ${lastName}` : ""}`;
   };
 
+  // Segments the data actually supports (no "blocked" flag exists on a client yet).
+  const isPending = (c: ClientWithStats) => c.id < 0 || c.status === "PENDING";
+  const SEGMENTS: { key: typeof segment; label: string; test: (c: ClientWithStats) => boolean }[] = [
+    { key: "all", label: tr("common.all"), test: () => true },
+    { key: "new", label: tr("clients.new"), test: (c) => !isPending(c) && (c.totalVisits ?? 0) <= 1 },
+    { key: "regulars", label: tr("clients.regulars"), test: (c) => (c.totalVisits ?? 0) >= 5 },
+    { key: "cancelled", label: tr("clients.cancelledBefore"), test: (c) => (c.cancelledAppointments ?? 0) > 0 },
+    { key: "invited", label: tr("clients.invited"), test: isPending },
+  ];
+  const segmentCount = (key: typeof segment) => allClientsWithPending.filter(SEGMENTS.find((s) => s.key === key)!.test).length;
+  const shownSegments = SEGMENTS.filter((s) => s.key === "all" || segmentCount(s.key) > 0 || segment === s.key);
+  const visibleClients = filteredClients
+    .filter(SEGMENTS.find((s) => s.key === segment)!.test)
+    .sort((a, b) => {
+      const dir = sort.dir === "asc" ? 1 : -1;
+      if (sort.key === "name") return dir * getFullName(a.firstName, a.lastName).localeCompare(getFullName(b.firstName, b.lastName));
+      if (sort.key === "visits") return dir * ((a.totalVisits ?? 0) - (b.totalVisits ?? 0));
+      if (sort.key === "spent") return dir * (Number(a.totalSpent ?? 0) - Number(b.totalSpent ?? 0));
+      const ta = a.lastVisitDate ? new Date(a.lastVisitDate).getTime() : 0;
+      const tb = b.lastVisitDate ? new Date(b.lastVisitDate).getTime() : 0;
+      return dir * (ta - tb);
+    });
+  const toggleSort = (key: typeof sort.key) =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "name" ? "asc" : "desc" }));
+  const openClient = (client: ClientWithStats) => {
+    setDetailClient(client);
+    setClientDetailOpen(true);
+    loadLoyalty(client.id);
+    loadVisits(client.id);
+    setProfileTab("overview");
+    loadProfileExtras(client.id);
+  };
+  // Walk-in clients (built from bookings, no client record) all come back with id 0, so the
+  // id alone repeats; fall back to their contact + position.
+  const rowKey = (client: ClientWithStats, index: number) =>
+    client.id ? `c${client.id}` : `walk-in-${client.email ?? client.phone ?? ""}-${index}`;
+
+  /* ── Insights from the salon's own bookings (one range request, no new fields) ── */
+  const insightsFor = (client: ClientWithStats) => {
+    const name = getFullName(client.firstName, client.lastName).trim().toLowerCase();
+    const mine = allAppts.filter((a) =>
+      client.id > 0 && a.clientId ? a.clientId === client.id : (a.clientName || "").trim().toLowerCase() === name,
+    );
+    const now = new Date();
+    const at = (a: AppointmentApi) => new Date(`${a.appointmentDate}T${String(a.startTime).slice(0, 5)}`);
+    const live = mine.filter((a) => a.status !== "CANCELLED");
+    const upcoming = live.filter((a) => at(a) >= now).sort((x, y) => +at(x) - +at(y));
+    const past = mine.filter((a) => at(a) < now).sort((x, y) => +at(y) - +at(x));
+    const mode = (vals: (string | undefined)[]) => {
+      const n = new Map<string, number>();
+      vals.filter(Boolean).forEach((v) => n.set(v!, (n.get(v!) ?? 0) + 1));
+      return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    };
+    const firstAppt = [...mine].sort((x, y) => +at(x) - +at(y))[0];
+    const priced = live.filter((a) => typeof a.price === "number" && a.price > 0);
+    const visitsDone = Math.max(client.totalVisits ?? 0, past.filter((a) => a.status !== "CANCELLED" && a.status !== "NO_SHOW").length);
+    const spent = Number(client.totalSpent ?? 0);
+    return {
+      appts: mine,
+      next: upcoming[0] ?? null,
+      lastPast: past[0] ?? null,
+      since: client.createdAt || firstAppt?.appointmentDate || null,
+      favouriteService: mode(live.map((a) => a.serviceName)),
+      favouriteMaster: mode(live.map((a) => a.staffName)),
+      noShows: client.noShowAppointments ?? mine.filter((a) => a.status === "NO_SHOW").length,
+      cancels: client.cancelledAppointments ?? mine.filter((a) => a.status === "CANCELLED").length,
+      avgTicket: spent > 0 && visitsDone > 0 ? spent / visitsDone : priced.length ? priced.reduce((s, a) => s + (a.price ?? 0), 0) / priced.length : null,
+      visitsDone,
+    };
+  };
+  const insights = new Map(allClientsWithPending.map((c, i) => [rowKey(c, i), insightsFor(c)]));
+  const insightOf = (c: ClientWithStats) => {
+    const i = allClientsWithPending.indexOf(c);
+    return insights.get(rowKey(c, i)) ?? insightsFor(c);
+  };
+  const shortDate = (d: string | null | undefined) => {
+    if (!d) return null;
+    try {
+      return format(new Date(d.length <= 10 ? `${d}T00:00` : d.replace(" ", "T")), "d MMM yyyy");
+    } catch {
+      return d;
+    }
+  };
+  const nextLabel = (a: AppointmentApi | null) =>
+    a ? `${format(new Date(`${a.appointmentDate}T00:00`), "EEE d MMM")} · ${String(a.startTime).slice(0, 5)}` : null;
+  /** Where they come from, from what the data can tell (no booking-source field exists). */
+  const tagsOf = (c: ClientWithStats) => {
+    const t: { label: string; cls: string }[] = [];
+    if (isPending(c)) t.push({ label: tr("clients.invited"), cls: "bg-amber-100 text-amber-900" });
+    else if (!c.id) t.push({ label: tr("common.walkIn"), cls: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]" });
+    else {
+      let accepted = false;
+      try {
+        accepted = getClientInvitation(c.id)?.status === "ACCEPTED";
+      } catch {
+        accepted = false;
+      }
+      if (accepted) t.push({ label: "booqi account", cls: "bg-sky-100 text-sky-900" });
+      else if (insightOf(c).appts.length === 0 && (c.totalVisits ?? 0) === 0) t.push({ label: tr("clients.addedByYou"), cls: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]" });
+    }
+    return t;
+  };
+
+  // Summary, from the loaded data only.
+  const booked = allClientsWithPending.filter((c) => !isPending(c));
+  const withVisit = booked.filter((c) => insightOf(c).visitsDone >= 1 || insightOf(c).appts.length > 0);
+  const returning = booked.filter((c) => insightOf(c).visitsDone >= 2 || insightOf(c).appts.filter((a) => a.status !== "CANCELLED").length >= 2);
+  const spenders = booked.filter((c) => Number(c.totalSpent ?? 0) > 0);
+  const avgSpend = spenders.length ? spenders.reduce((s, c) => s + Number(c.totalSpent ?? 0), 0) / spenders.length : null;
+  const newThisMonth = booked.filter((c) => {
+    const since = insightOf(c).since;
+    if (!since) return false;
+    const d = new Date(since.length <= 10 ? `${since}T00:00` : since.replace(" ", "T"));
+    const n = new Date();
+    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+  }).length;
+
+  const setDensityPersist = (d: "compact" | "detailed") => {
+    setDensity(d);
+    try {
+      localStorage.setItem("booqi.clients.density", d);
+    } catch {
+      /* per-browser convenience only */
+    }
+  };
+
+  const loadProfileExtras = (clientId: number) => {
+    setBenefits(null);
+    setRecord(null);
+    if (!businessId || !clientId) return;
+    tillBenefitsService.get(businessId, clientId).then(setBenefits).catch(() => setBenefits(null));
+    salonDayService.getClientRecord(businessId, clientId).then(setRecord).catch(() => setRecord({ notes: [], photos: [], visits: [] }));
+  };
+
+  const addNote = async () => {
+    if (!detailClient?.id || !noteForm.body.trim()) return;
+    setNoteBusy(true);
+    try {
+      await salonDayService.addClientNote(businessId, detailClient.id, { kind: noteForm.kind, body: noteForm.body.trim() });
+      setNoteForm({ kind: noteForm.kind, body: "" });
+      toast.success(tr("clients.noteAdded"));
+      loadProfileExtras(detailClient.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : tr("clients.couldNotAddTheNote"));
+    } finally {
+      setNoteBusy(false);
+    }
+  };
+
+  const bookForClient = (c: ClientWithStats) => {
+    const q = new URLSearchParams({ new: "1", clientName: getFullName(c.firstName, c.lastName) });
+    if (c.id > 0) q.set("clientId", String(c.id));
+    if (c.phone) q.set("clientPhone", c.phone);
+    if (c.email) q.set("clientEmail", c.email);
+    navigate(`/${businessId}/calendar?${q.toString()}`);
+  };
+
+  const statusChip = (client: ClientWithStats) => {
+    if (isPending(client)) return { label: tr("clients.invited"), cls: "bg-amber-100 text-amber-900" };
+    const inv = (() => {
+      try {
+        return getClientInvitation(client.id);
+      } catch {
+        return null;
+      }
+    })();
+    if (inv?.status === "PENDING") return { label: tr("clients.invited"), cls: "bg-amber-100 text-amber-900" };
+    if ((client.totalVisits ?? 0) >= 5) return { label: tr("clients.regular"), cls: "bg-[rgb(var(--reg-brand)/0.12)] text-[rgb(var(--reg-brand-strong))]" };
+    if ((client.totalVisits ?? 0) <= 1) return { label: tr("clients.new"), cls: "bg-emerald-100 text-emerald-900" };
+    return null;
+  };
+
+  const SortHead = ({ k, label, className }: { k: typeof sort.key; label: string; className?: string }) => (
+    <th scope="col" aria-sort={sort.key === k ? (sort.dir === "asc" ? "ascending" : "descending") : "none"} className={cn("px-4 py-3 text-left", className)}>
+      <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
+        {label}
+        {sort.key === k ? (sort.dir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />) : <ArrowUpDown size={12} className="opacity-40" />}
+      </button>
+    </th>
+  );
+
+  const Avatar2 = ({ client, size = "h-10 w-10" }: { client: ClientWithStats; size?: string }) => (
+    <span className={cn("flex shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-xs font-bold text-[rgb(var(--reg-brand-strong))]", size)}>
+      {getInitials(client.firstName, client.lastName)}
+    </span>
+  );
+
   return (
     <AppLayout>
-      <PageHeader
-        title="Clients"
-        subtitle="View clients who have booked appointments with your business"
-        actions={
-          <Button 
-            className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90 shadow-sm hover:shadow-md transition-all"
-            onClick={() => setAddClientDialogOpen(true)}
-          >
-            <Plus size={16} />
-            Add Client
-          </Button>
-        }
-      />
-
-      <div className="p-6 space-y-6">
-        {/* The four numbers a salon actually opens this page for, above the table rather
-            than buried in eight columns of the same grey text. */}
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard icon={Users} label="Clients" value={clients.length} tone="violet" />
-          <StatCard
-            icon={UserPlus}
-            label="New this month"
-            value={
-              clients.filter((c) => {
-                if (!c.createdAt) return false;
-                const d = new Date(c.createdAt);
-                const now = new Date();
-                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-              }).length
-            }
-            tone="emerald"
-          />
-          <StatCard
-            icon={Star}
-            label="Regulars"
-            value={clients.filter((c) => (c.totalVisits ?? 0) >= 5).length}
-            hint="5 visits or more"
-            tone="amber"
-          />
-          <StatCard
-            icon={CalendarCheck}
-            label="Total visits"
-            value={clients.reduce((n, c) => n + (c.totalVisits ?? 0), 0)}
-            tone="sky"
-          />
-        </div>
-
-        {/* Enhanced Search and Filter */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search clients by name, email, or phone..." 
-              className="pl-10 border-border/60 focus:border-accent/50 transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button
-            variant="outline"
-            className={`gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all ${showFilters ? "bg-accent/10 border-accent/40" : ""}`}
-            onClick={() => {
-              setShowFilters(f => !f);
-              if (!showFilters) toast.info("Filters coming soon — use the search box for now");
-            }}
-          >
-            <Filter size={16} />
-            Filters
-          </Button>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Total Clients
-              </CardTitle>
-              <User className="h-5 w-5 text-appointment-blue" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{totalClients}</div>
-              {pendingClientsCount > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  {pendingClientsCount} pending invitation{pendingClientsCount !== 1 ? 's' : ''}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Success Book
-              </CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{totalSuccess}</div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Cancel Book
-              </CardTitle>
-              <XCircle className="h-5 w-5 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-red-600">{totalCancelled}</div>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Total Revenue
-              </CardTitle>
-              <TrendingUp className="h-5 w-5 text-appointment-purple" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {formatCurrency(totalRevenue)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Enhanced Clients Table */}
-        <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredClients.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title={searchQuery ? `Nothing matches "${searchQuery}"` : "No clients yet"}
-                body={
-                  searchQuery
-                    ? "Search runs over name, email and phone. Try part of one of those."
-                    : "Anyone who books lands here automatically. You can also add someone yourself."
-                }
-                action={
-                  searchQuery ? null : (
-                    <Button className="gap-2" onClick={() => setAddClientDialogOpen(true)}>
-                      <Plus size={16} />
-                      Add a client
-                    </Button>
-                  )
-                }
+      <div className="min-h-full bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ fontFamily: BRAND_FONT }}>
+        {/* Header: title + count, search, the one primary action. */}
+        <div className="sticky top-0 z-20 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 pb-3 pt-4 backdrop-blur-xl md:px-8 md:pt-6">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+            <h1 className="text-[28px] font-extrabold leading-none tracking-[-0.03em] md:text-[32px]">
+              {tr("common.clients")}{" "}<span className="text-[rgb(var(--reg-muted))]">{loading ? "" : allClientsWithPending.length}</span>
+            </h1>
+            <div className="order-last flex h-11 w-full items-center gap-2 rounded-full bg-white px-4 ring-1 ring-[rgb(var(--reg-line))] focus-within:ring-2 focus-within:ring-[rgb(var(--reg-brand)/0.5)] md:order-none md:ml-auto md:w-80">
+              <Search size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={tr("clients.searchNamePhoneOrEmail")}
+                aria-label={tr("clients.searchClients")}
+                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[rgb(var(--reg-muted))] md:text-sm"
               />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b bg-muted/40">
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Client</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Contact</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Visits</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Success</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Cancelled</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Total Spent</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide">Last Visit</th>
-                      <th className="text-left p-4 font-semibold text-xs text-muted-foreground uppercase tracking-wide"></th>
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery("")} aria-label={tr("clients.clearSearch")} className="text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
+                  <XCircle size={16} />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAddClientDialogOpen(true)}
+              className="ml-auto inline-flex h-11 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_24px_-10px_rgb(var(--reg-brand-strong)/0.7)] transition hover:brightness-110 md:ml-0"
+            >
+              <Plus size={16} strokeWidth={2.25} />
+              {tr("clients.addClient")}
+            </button>
+          </div>
+          {/* Segments as chips — only those with someone in them. */}
+          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:px-0" role="tablist" aria-label={tr("clients.clientSegments")}>
+            {shownSegments.map((s) => {
+              const on = segment === s.key;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setSegment(s.key)}
+                  className={cn(
+                    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold ring-1 transition",
+                    on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white text-[rgb(var(--reg-ink)/0.8)] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
+                  )}
+                >
+                  {s.label}
+                  <span className={cn("text-xs", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{segmentCount(s.key)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="px-4 py-5 md:px-8 md:py-6">
+          {!loading && allClientsWithPending.length > 0 && (
+            <div className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
+              {[
+                { label: tr("common.clients"), value: String(allClientsWithPending.length), hint: tr("clients.haveBooked", { count: withVisit.length }) },
+                { label: tr("clients.newThisMonth"), value: String(newThisMonth), hint: tr("clients.firstSeenThisMonth") },
+                { label: tr("clients.returning"), value: withVisit.length ? `${Math.round((returning.length / withVisit.length) * 100)}%` : "—", hint: tr("clients.booked2Plus") },
+                { label: tr("clients.avgSpend"), value: avgSpend != null ? formatCurrency(avgSpend) : "—", hint: tr("clients.perPayingClient") },
+              ].map((t) => (
+                <div key={t.label} className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  <p className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{t.label}</p>
+                  <p className="mt-1.5 text-[26px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">{t.value}</p>
+                  <p className="mt-1 text-xs text-[rgb(var(--reg-muted))]">{t.hint}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {loading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 className="h-7 w-7 animate-spin text-[rgb(var(--reg-brand))]" />
+            </div>
+          ) : allClientsWithPending.length === 0 ? (
+            <div className="mx-auto max-w-sm py-16 text-center">
+              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))]">
+                <Users className="h-7 w-7" strokeWidth={1.75} />
+              </span>
+              <h2 className="mt-5 text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.noClientsYet")}</h2>
+              <p className="mt-2 text-[rgb(var(--reg-muted))]">{tr("clients.anyoneWhoBooksLandsHere")}</p>
+              <button type="button" onClick={() => setAddClientDialogOpen(true)} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-6 font-semibold text-white">
+                <Plus size={18} />{" "}{tr("clients.addClient")}
+              </button>
+            </div>
+          ) : visibleClients.length === 0 ? (
+            <div className="mx-auto max-w-sm py-16 text-center">
+              <Search className="mx-auto h-8 w-8 text-[rgb(var(--reg-muted))]" strokeWidth={1.5} />
+              <h2 className="mt-4 text-xl font-extrabold tracking-[-0.02em]">{searchQuery ? tr("clients.nothingMatches", { searchQuery }) : tr("clients.nobodyHereYet")}</h2>
+              <p className="mt-2 text-[rgb(var(--reg-muted))]">{tr("clients.searchRunsOverNameEmail", { value: segment !== "all" ? tr("clients.orShowEveryone") : "" })}</p>
+              {(searchQuery || segment !== "all") && (
+                <button type="button" onClick={() => { setSearchQuery(""); setSegment("all"); }} className="mt-5 inline-flex h-11 items-center rounded-full bg-white px-5 font-semibold ring-1 ring-[rgb(var(--reg-line))]">
+                  {tr("clients.clearSearchAndFilters")}
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Desktop: a table on a white card — compact, or detailed with every fact we have. */}
+              <div className="mb-3 hidden items-center justify-end gap-2 md:flex">
+                <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.view")}</span>
+                <div role="tablist" aria-label={tr("clients.tableDensity")} className="flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
+                  {(["compact", "detailed"] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      role="tab"
+                      aria-selected={density === d}
+                      onClick={() => setDensityPersist(d)}
+                      className={cn(
+                        "h-8 rounded-full px-3.5 text-sm font-semibold capitalize",
+                        density === d ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06)]" : "text-[rgb(var(--reg-muted))]",
+                      )}
+                    >
+                      {d === "compact" ? tr("clients.densityCompact") : tr("clients.densityDetailed")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="hidden overflow-hidden rounded-[20px] bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_12px_32px_-16px_rgb(var(--reg-ink)/0.12)] ring-1 ring-[rgb(var(--reg-line)/0.8)] md:block">
+                {/* relative: the sr-only header text is absolutely positioned; without a
+                    positioned ancestor here it escaped the scroll box and widened the page. */}
+                <div className="relative overflow-x-auto">
+                <table className={cn("w-full", density === "detailed" ? "min-w-[1080px]" : "min-w-[720px]")}>
+                  <thead className="border-b border-[rgb(var(--reg-line)/0.8)] bg-white">
+                    <tr>
+                      <SortHead k="name" label={tr("common.client")} />
+                      {density === "detailed" && <th scope="col" className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{tr("clients.clientSince")}</th>}
+                      <SortHead k="last" label={tr("clients.lastVisit")} />
+                      <th scope="col" className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{tr("clients.next")}</th>
+                      {density === "detailed" && (
+                        <>
+                          <th scope="col" className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{tr("clients.favourite")}</th>
+                          <th scope="col" className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]" title={tr("clients.noShowsCancellations")}><span className="whitespace-nowrap">{tr("clients.noShowCancel")}</span></th>
+                          <th scope="col" className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{tr("clients.avgTicket")}</th>
+                        </>
+                      )}
+                      <SortHead k="visits" label={tr("clients.visits")} className="text-right" />
+                      <SortHead k="spent" label={tr("clients.spent")} className="text-right" />
+                      <th scope="col" className="w-12 px-2"><span className="sr-only">{tr("clients.actions")}</span></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredClients.map((client, index) => (
-                      // #22: the row carried cursor-pointer and a hover highlight but had
-                      // no onClick, so it advertised itself as clickable and did nothing —
-                      // View Details was only reachable through the ⋯ menu. Open the same
-                      // dialog the menu item opens.
-                      <tr
-                        key={client.id}
-                        className="border-b border-border/40 transition-colors hover:bg-violet-50/60 cursor-pointer group"
-                        style={{ animationDelay: `${index * 30}ms` }}
-                        onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); loadVisits(client.id); }}
-                      >
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            {/* The same colour this client has on the calendar, so the two
-                                screens agree about who is who. */}
-                            <Avatar className="ring-2 ring-background transition-all">
-                              <AvatarFallback
-                                className={`font-semibold ${clientColorClasses(
-                                  getFullName(client.firstName, client.lastName)
-                                )}`}
-                              >
-                                {getInitials(client.firstName, client.lastName)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-sm">{getFullName(client.firstName, client.lastName)}</span>
-                                {(client.totalVisits ?? 0) <= 1 && (
-                                  <Badge className="bg-emerald-600 text-[10px] px-1.5 py-0.5 text-white hover:bg-emerald-600">
-                                    New
-                                  </Badge>
-                                )}
-                                {(client.totalVisits ?? 0) >= 5 && (
-                                  <Badge className="bg-rose-600 text-[10px] px-1.5 py-0.5 text-white hover:bg-rose-600">
-                                    Regular
-                                  </Badge>
-                                )}
-                                {(() => {
-                                  try {
-                                    // Check if this is a pending client (negative ID or status is PENDING)
-                                    if (client.id < 0 || client.status === "PENDING") {
-                                      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] px-1.5 py-0.5">Pending Invitation</Badge>;
-                                    }
-                                    const invitation = getClientInvitation(client.id);
-                                    if (invitation && invitation.status === "PENDING") {
-                                      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] px-1.5 py-0.5">Pending Invitation</Badge>;
-                                    }
-                                    if (invitation && invitation.status === "ACCEPTED") {
-                                      return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] px-1.5 py-0.5">Registered</Badge>;
-                                    }
-                                    return null;
-                                  } catch (e) {
-                                    return null;
-                                  }
-                                })()}
+                    {visibleClients.map((client, index) => {
+                      const chip = statusChip(client);
+                      const pending = isPending(client);
+                      const ins = insightOf(client);
+                      return (
+                        <tr
+                          key={rowKey(client, index)}
+                          onClick={() => openClient(client)}
+                          className="group cursor-pointer border-b border-[rgb(var(--reg-line)/0.6)] transition-colors last:border-0 hover:bg-[rgb(var(--reg-brand-soft)/0.6)]"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar2 client={client} />
+                              <div className="min-w-0">
+                                <p className="flex items-center gap-1.5 truncate text-[15px] font-semibold">
+                                  {getFullName(client.firstName, client.lastName)}
+                                  {chip && <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold", chip.cls)}>{chip.label}</span>}
+                                </p>
+                                <p className="flex items-center gap-1.5 truncate text-sm text-[rgb(var(--reg-muted))]">
+                                  {client.phone || client.email || tr("clients.noContactInfo")}
+                                  {density === "detailed" && tagsOf(client).map((t) => (
+                                    <span key={t.label} className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", t.cls)}>{t.label}</span>
+                                  ))}
+                                </p>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="space-y-1.5">
-                            {client.email && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                                <Mail size={12} />
-                                <span className="truncate max-w-[200px]">{client.email}</span>
-                              </div>
-                            )}
-                            {client.phone && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                                <Phone size={12} />
-                                <span>{client.phone}</span>
-                              </div>
-                            )}
-                            {!client.email && !client.phone && (
-                              <span className="text-xs text-muted-foreground">No contact info</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          {client.id < 0 || client.status === "PENDING" ? (
-                            <span className="text-xs text-muted-foreground italic">Not registered</span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold">{client.totalVisits}</span>
-                              <span className="text-xs text-muted-foreground">visits</span>
-                            </div>
+                          </td>
+                          {density === "detailed" && <td className="whitespace-nowrap px-4 py-3 text-sm text-[rgb(var(--reg-ink)/0.8)]">{shortDate(ins.since) ?? "—"}</td>}
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-[rgb(var(--reg-ink)/0.8)]">{pending ? "—" : shortDate(client.lastVisitDate) ?? (ins.lastPast ? shortDate(ins.lastPast.appointmentDate) : tr("clients.notYet"))}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm">
+                            {ins.next ? <span className="font-semibold text-[rgb(var(--reg-brand-strong))]">{nextLabel(ins.next)}</span> : <span className="text-[rgb(var(--reg-muted))]">—</span>}
+                          </td>
+                          {density === "detailed" && (
+                            <>
+                              <td className="max-w-[200px] px-4 py-3 text-sm">
+                                <p className="truncate">{ins.favouriteService ?? "—"}</p>
+                                {ins.favouriteMaster && <p className="truncate text-xs text-[rgb(var(--reg-muted))]">{tr("clients.with", { favouriteMaster: ins.favouriteMaster })}</p>}
+                              </td>
+                              <td className={cn("whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums", ins.noShows + ins.cancels > 0 ? "font-semibold text-rose-700" : "text-[rgb(var(--reg-muted))]")}>
+                                {ins.noShows} / {ins.cancels}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums">{ins.avgTicket != null ? formatCurrency(ins.avgTicket) : "—"}</td>
+                            </>
                           )}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1.5">
-                            <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                            <span className="text-sm font-semibold text-green-600">
-                              {(client.confirmedAppointments || 0) + (client.completedAppointments || 0)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1.5">
-                            <XCircle className="h-3.5 w-3.5 text-red-600" />
-                            <span className="text-sm font-semibold text-red-600">
-                              {client.cancelledAppointments || 0}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          {client.id < 0 || client.status === "PENDING" ? (
-                            <span className="text-xs text-muted-foreground italic">—</span>
-                          ) : (
-                            <span className="text-sm font-bold text-status-completed">
-                              {formatCurrency(client.totalSpent)}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          {client.id < 0 || client.status === "PENDING" ? (
-                            <span className="text-xs text-muted-foreground italic">—</span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {formatDate(client.lastVisitDate)}
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1">
-                            {client.id < 0 || client.status === "PENDING" ? (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="h-7 text-xs gap-1.5 hover:bg-accent/10 hover:text-accent transition-all"
-                                onClick={() => {
-                                  // For pending clients, we can resend invitation or view details
-                                  toast.info("This client has a pending invitation. They will appear as registered once they complete registration.");
-                                }}
+                          <td className="px-4 py-3 text-right text-sm font-semibold tabular-nums">{pending ? "—" : ins.visitsDone}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold tabular-nums">{pending ? "—" : formatCurrency(client.totalSpent)}</td>
+                          <td className="px-2 py-3 text-right">
+                            {!pending && !hasAccount(client) && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setSelectedClient(client); setInvitationDialogOpen(true); }}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] opacity-0 transition hover:bg-white group-hover:opacity-100 focus-visible:opacity-100"
                               >
-                                <Clock className="h-3.5 w-3.5" />
-                                Pending
-                              </Button>
-                            ) : hasAccount(client) ? null : (
-                              /* Invite is for someone with no account yet. A client who
-                                 books through the app already has one, so offering to
-                                 invite them says the salon does not know who they are. */
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 gap-1.5 text-xs hover:bg-accent/10 hover:text-accent"
-                                onClick={(e) => {
-                                  // #22: the row opens the detail dialog now.
-                                  e.stopPropagation();
-                                  setSelectedClient(client);
-                                  setInvitationDialogOpen(true);
-                                }}
-                              >
-                                <Send className="h-3.5 w-3.5" />
-                                Invite
-                              </Button>
+                                <Send size={14} />{" "}{tr("clients.invite")}
+                              </button>
                             )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  aria-label="More actions"
-                                  className="h-8 w-8 hover:bg-accent/10 hover:text-accent transition-all"
-                                  // #22: the row opens the detail dialog now, so opening
-                                  // the menu must not also open it underneath.
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreHorizontal size={16} />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              {/* #22: the row is clickable now, so the menu must not also
-                                  open the detail dialog behind itself. */}
-                              {/* View only. A salon does not own the client's record — it
-                                  owns its own dealings with them — so editing and deleting
-                                  are gone rather than pretending ("coming soon"). */}
-                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem onClick={() => { setDetailClient(client); setClientDetailOpen(true); loadLoyalty(client.id); loadVisits(client.id); }}>
-                                  View details and visits
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
+              {/* Phone: cards with the three facts that matter at a glance. */}
+              <ul className="space-y-2 md:hidden">
+                {visibleClients.map((client, index) => {
+                  const chip = statusChip(client);
+                  const pending = isPending(client);
+                  const ins = insightOf(client);
+                  return (
+                    <li key={rowKey(client, index)}>
+                      <button
+                        type="button"
+                        onClick={() => openClient(client)}
+                        className="flex w-full items-start gap-3 rounded-2xl bg-white p-3.5 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)] transition active:scale-[0.99]"
+                      >
+                        <Avatar2 client={client} size="h-11 w-11" />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-[15px] font-semibold">{getFullName(client.firstName, client.lastName)}</span>
+                            {chip && <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold", chip.cls)}>{chip.label}</span>}
+                          </span>
+                          {ins.next ? (
+                            <span className="block truncate text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">{tr("clients.next2", { value: nextLabel(ins.next) })}</span>
+                          ) : (
+                            <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{pending ? client.phone || client.email || tr("clients.invited") : client.phone || client.email || tr("clients.noContactInfo")}</span>
+                          )}
+                          {!pending && (
+                            <span className="mt-0.5 block truncate text-xs text-[rgb(var(--reg-muted))]">
+                              {tr("clients.visitCount", { count: ins.visitsDone })}
+                              {ins.favouriteService ? ` · ${ins.favouriteService}` : ""}
+                            </span>
+                          )}
+                        </span>
+                        {!pending && <span className="shrink-0 text-sm font-semibold tabular-nums">{formatCurrency(client.totalSpent)}</span>}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Send Invitation Dialog */}
       <Dialog open={invitationDialogOpen} onOpenChange={setInvitationDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Send Appointment Invitation</DialogTitle>
+            <DialogTitle>{tr("clients.sendAppointmentInvitation")}</DialogTitle>
             <DialogDescription>
-              Send an invitation to {selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName || ""}`.trim() : "client"} to book an appointment
+              {tr("clients.sendAnInvitationToTo", { value: selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName || ""}`.trim() : tr("clients.client") })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Service *</Label>
+              <Label>{tr("clients.service")}</Label>
               <Select
                 value={invitationForm.serviceId}
                 onValueChange={(value) => setInvitationForm(prev => ({ ...prev, serviceId: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a service" />
+                  <SelectValue placeholder={tr("clients.selectAService")} />
                 </SelectTrigger>
                 <SelectContent>
                   {services.map((service) => (
@@ -665,13 +786,13 @@ export default function ClientsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Staff *</Label>
+              <Label>{tr("clients.staff")}</Label>
               <Select
                 value={invitationForm.staffId}
                 onValueChange={(value) => setInvitationForm(prev => ({ ...prev, staffId: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select staff member" />
+                  <SelectValue placeholder={tr("common.selectStaffMember")} />
                 </SelectTrigger>
                 <SelectContent>
                   {staff.map((s) => (
@@ -685,7 +806,7 @@ export default function ClientsPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Date *</Label>
+                <Label>{tr("clients.date")}</Label>
                 <Input
                   type="date"
                   value={invitationForm.appointmentDate}
@@ -693,17 +814,17 @@ export default function ClientsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Time *</Label>
+                <Label>{tr("clients.time")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Input
                     type="time"
-                    placeholder="Start"
+                    placeholder={tr("clients.start")}
                     value={invitationForm.startTime}
                     onChange={(e) => setInvitationForm(prev => ({ ...prev, startTime: e.target.value }))}
                   />
                   <Input
                     type="time"
-                    placeholder="End"
+                    placeholder={tr("clients.end")}
                     value={invitationForm.endTime}
                     onChange={(e) => setInvitationForm(prev => ({ ...prev, endTime: e.target.value }))}
                   />
@@ -712,9 +833,9 @@ export default function ClientsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Notes (optional)</Label>
+              <Label>{tr("clients.notesOptional")}</Label>
               <Input
-                placeholder="Add notes..."
+                placeholder={tr("clients.addNotes")}
                 value={invitationForm.notes}
                 onChange={(e) => setInvitationForm(prev => ({ ...prev, notes: e.target.value }))}
               />
@@ -725,7 +846,7 @@ export default function ClientsPage() {
                 every client's consent was permanently NULL and any campaign would have had
                 zero opted-in recipients. */}
             <div className="space-y-3 rounded-lg border border-border/60 p-3">
-              <p className="text-sm font-medium">Marketing consent</p>
+              <p className="text-sm font-medium">{tr("clients.marketingConsent")}</p>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={newClientForm.allowMarketingEmails}
@@ -733,7 +854,7 @@ export default function ClientsPage() {
                     setNewClientForm(prev => ({ ...prev, allowMarketingEmails: checked === true }))
                   }
                 />
-                Client agreed to marketing emails
+                {tr("clients.clientAgreedToMarketingEmails")}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
@@ -742,13 +863,14 @@ export default function ClientsPage() {
                     setNewClientForm(prev => ({ ...prev, allowSmsNotifications: checked === true }))
                   }
                 />
-                Client agreed to SMS notifications
+                {tr("clients.clientAgreedToSmsNotifications")}
               </label>
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
+                className="h-12 rounded-full border-[rgb(var(--reg-line))] bg-white px-6 text-base font-semibold"
                 onClick={() => {
                   setInvitationDialogOpen(false);
                   setSelectedClient(null);
@@ -762,12 +884,12 @@ export default function ClientsPage() {
                   });
                 }}
               >
-                Cancel
+                {tr("common.cancel")}
               </Button>
               <Button
                 onClick={async () => {
                   if (!invitationForm.serviceId || !invitationForm.staffId || !invitationForm.appointmentDate || !invitationForm.startTime || !invitationForm.endTime) {
-                    toast.error("Please fill in all required fields");
+                    toast.error(tr("common.pleaseFillInAllRequired"));
                     return;
                   }
 
@@ -798,7 +920,7 @@ export default function ClientsPage() {
                           recipientPhone: selectedClient.phone || undefined,
                           type: "APPOINTMENT_INVITATION",
                           appointmentId: appointment.id,
-                          message: `You have been invited to book an appointment on ${format(new Date(invitationForm.appointmentDate), "MMM d, yyyy")} at ${invitationForm.startTime}. Please register to confirm your appointment.`,
+                          message: tr("clients.youHaveBeenInvitedTo", { value: format(new Date(invitationForm.appointmentDate), "MMM d, yyyy"), startTime: invitationForm.startTime }),
                           expirationDays: 30,
                         });
                         await loadInvitations(); // Refresh invitations
@@ -808,7 +930,7 @@ export default function ClientsPage() {
                       }
                     }
                     
-                    toast.success("Appointment booked and invitation sent! The client will receive a referral code to register.");
+                    toast.success(tr("clients.appointmentBookedAndInvitationSent"));
                     setInvitationDialogOpen(false);
                     setSelectedClient(null);
                     setInvitationForm({
@@ -821,12 +943,12 @@ export default function ClientsPage() {
                     });
                     loadClients(); // Refresh clients list
                   } catch (error) {
-                    toast.error((error instanceof Error && error.message) || "Failed to send invitation");
+                    toast.error((error instanceof Error && error.message) || tr("clients.failedToSendInvitation"));
                   }
                 }}
                 disabled={!invitationForm.serviceId || !invitationForm.staffId || !invitationForm.appointmentDate || !invitationForm.startTime || !invitationForm.endTime}
               >
-                Send Invitation
+                {tr("clients.sendInvitation")}
               </Button>
             </div>
           </div>
@@ -835,29 +957,31 @@ export default function ClientsPage() {
 
       {/* Add Client Dialog */}
       <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="rounded-[24px] border-0 bg-[rgb(var(--reg-canvas))] p-6 text-[rgb(var(--reg-ink))] sm:max-w-[480px]" style={{ fontFamily: BRAND_FONT }}>
           <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
+            <DialogTitle className="text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.addClient")}</DialogTitle>
             <DialogDescription>
-              Add a new client to your business. You can send them an invitation after adding.
+              {tr("clients.addANewClientTo")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
+                <Label htmlFor="firstName">{tr("clients.firstName")}</Label>
                 <Input
+                  className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
                   id="firstName"
-                  placeholder="First name"
+                  placeholder={tr("clients.firstName2")}
                   value={newClientForm.firstName}
                   onChange={(e) => setNewClientForm(prev => ({ ...prev, firstName: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">{tr("clients.lastName")}</Label>
                 <Input
+                  className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
                   id="lastName"
-                  placeholder="Last name"
+                  placeholder={tr("clients.lastName2")}
                   value={newClientForm.lastName}
                   onChange={(e) => setNewClientForm(prev => ({ ...prev, lastName: e.target.value }))}
                 />
@@ -865,19 +989,21 @@ export default function ClientsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{tr("common.email")}</Label>
               <Input
+                className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
                 id="email"
                 type="email"
-                placeholder="email@example.com"
+                placeholder={tr("clients.emailExampleCom")}
                 value={newClientForm.email}
                 onChange={(e) => setNewClientForm(prev => ({ ...prev, email: e.target.value }))}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
+              <Label htmlFor="phone">{tr("common.phone")}</Label>
               <Input
+                className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
                 id="phone"
                 type="tel"
                 placeholder="+44 123 456 7890"
@@ -901,23 +1027,23 @@ export default function ClientsPage() {
                   });
                 }}
               >
-                Cancel
+                {tr("common.cancel")}
               </Button>
               <Button
                 onClick={async () => {
                   if (!newClientForm.firstName.trim()) {
-                    toast.error("First name is required");
+                    toast.error(tr("clients.firstNameIsRequired"));
                     return;
                   }
 
                   if (!newClientForm.email && !newClientForm.phone) {
-                    toast.error("Please provide either email or phone number");
+                    toast.error(tr("clients.pleaseProvideEitherEmailOr"));
                     return;
                   }
 
                   try {
                     // Ask if user wants to send invitation before creating client
-                    const shouldInvite = window.confirm("Would you like to send an invitation to this client? They will receive a referral code to register. If invitation fails, client will not be created.");
+                    const shouldInvite = window.confirm(tr("clients.wouldYouLikeToSend"));
                     
                     const newClient = await clientService.createClient(businessId, {
                       firstName: newClientForm.firstName,
@@ -931,9 +1057,9 @@ export default function ClientsPage() {
                     });
                     
                     if (shouldInvite) {
-                      toast.success("Client added and invitation sent successfully! The invitation will show as 'Pending' until the client registers.");
+                      toast.success(tr("clients.clientAddedAndInvitationSent"));
                     } else {
-                      toast.success("Client added successfully!");
+                      toast.success(tr("clients.clientAddedSuccessfully"));
                     }
                     
                     setAddClientDialogOpen(false);
@@ -952,150 +1078,423 @@ export default function ClientsPage() {
                       await loadInvitations();
                     }
                   } catch (error) {
-                    toast.error((error instanceof Error && error.message) || "Failed to add client. If invitation was requested, it may have failed.");
+                    toast.error((error instanceof Error && error.message) || tr("clients.failedToAddClientIf"));
                   }
                 }}
                 disabled={!newClientForm.firstName.trim() || (!newClientForm.email && !newClientForm.phone)}
+                className="h-12 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-6 text-base font-semibold text-white hover:brightness-110"
               >
-                Add Client
+                {tr("clients.addClient")}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Client Detail Dialog */}
-      <Dialog
+      {/* Client card — a right-hand sheet (full screen on a phone) with four tabs. */}
+      <Sheet
         open={clientDetailOpen}
         onOpenChange={(open) => {
           setClientDetailOpen(open);
           if (!open) setLoyaltyPoints(null);
         }}
       >
-        <DialogContent className="sm:max-w-[640px]">
-          <DialogHeader>
-            <DialogTitle>
-              {detailClient ? getFullName(detailClient.firstName, detailClient.lastName) : "Client"}
-            </DialogTitle>
-            <DialogDescription>
-              What this client has done at your salon. Read-only — their account is theirs.
-            </DialogDescription>
-          </DialogHeader>
-          {detailClient && (
-            <div className="max-h-[65vh] space-y-4 overflow-y-auto py-1">
-              <div className="flex items-center gap-3 rounded-xl border p-3">
-                <span
-                  className={`flex h-11 w-11 items-center justify-center rounded-full font-semibold ${clientColorClasses(
-                    getFullName(detailClient.firstName, detailClient.lastName)
-                  )}`}
-                >
-                  {getInitials(detailClient.firstName, detailClient.lastName)}
-                </span>
-                <div className="min-w-0 text-sm">
-                  <p className="truncate">{detailClient.email || "No email"}</p>
-                  <p className="truncate text-muted-foreground">{detailClient.phone || "No phone"}</p>
+        <SheetContent
+          side="right"
+          style={{ fontFamily: BRAND_FONT }}
+          className="!max-w-full flex h-[100dvh] max-h-[100dvh] w-full flex-col gap-0 border-0 bg-[rgb(var(--reg-canvas))] p-0 text-[rgb(var(--reg-ink))] sm:w-[520px] sm:border-l sm:border-[rgb(var(--reg-line))]"
+        >
+          {detailClient && (() => {
+            const c = detailClient;
+            const pending = isPending(c);
+            const chip = statusChip(c);
+            const ins = insightOf(c);
+            const inv = (() => {
+              try {
+                return getClientInvitation(c.id);
+              } catch {
+                return null;
+              }
+            })();
+            const now = new Date();
+            // Visits from the per-client endpoint when there is a record; walk-ins (no record)
+            // fall back to the bookings found by name.
+            const rows: ClientAppointmentRow[] =
+              clientVisits && clientVisits.length
+                ? clientVisits
+                : ins.appts.map((a, i) => ({
+                    id: i,
+                    appointment_date: a.appointmentDate,
+                    start_time: a.startTime,
+                    end_time: a.endTime,
+                    status: a.status,
+                    payment_status: a.paymentStatus ?? null,
+                    price: a.price ?? null,
+                    notes: null,
+                    service_name: a.serviceName ?? null,
+                    staff_name: a.staffName ?? null,
+                  }));
+            const isUpcoming = (v: ClientAppointmentRow) =>
+              new Date(`${v.appointment_date}T${String(v.start_time).slice(0, 5)}`) >= now && v.status !== "CANCELLED";
+            const upcoming = rows.filter(isUpcoming).sort((a, b) => (a.appointment_date + a.start_time).localeCompare(b.appointment_date + b.start_time));
+            const past = rows.filter((v) => !isUpcoming(v)).sort((a, b) => (b.appointment_date + b.start_time).localeCompare(a.appointment_date + a.start_time));
+            const label = "text-[12px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]";
+            const box = "rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]";
+            const visitRow = (v: ClientAppointmentRow) => {
+              const st = appointmentStatusStyle(v.status, "PENDING");
+              return (
+                <li key={`${v.id}-${v.appointment_date}-${v.start_time}`} className="relative overflow-hidden rounded-2xl bg-white p-3.5 pl-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", st.accent)} />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold">
+                        {v.service_name || tr("common.service")}
+                        {v.staff_name ? <span className="font-normal text-[rgb(var(--reg-muted))]"> · {v.staff_name}</span> : null}
+                      </p>
+                      <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">
+                        {shortDate(v.appointment_date)} · {String(v.start_time).slice(0, 5)}–{String(v.end_time).slice(0, 5)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold">{v.price != null ? `${v.price} ${currencySymbol()}` : "—"}</p>
+                      <div className="mt-1 flex justify-end gap-1">
+                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", st.chip)}>{st.label}</span>
+                        {v.payment_status && (
+                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", v.payment_status === "PAID" ? "bg-emerald-100 text-emerald-900" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]")}>
+                            {v.payment_status === "PAID" ? tr("common.paid") : v.payment_status.charAt(0) + v.payment_status.slice(1).toLowerCase().replace(/_/g, " ")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {v.notes && <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm text-amber-900">{v.notes}</p>}
+                </li>
+              );
+            };
+            const consent = (v: boolean | null | undefined) =>
+              v == null ? <span className="text-[rgb(var(--reg-muted))]">{tr("clients.notAsked")}</span> : v ? <span className="font-semibold text-emerald-700">{tr("clients.yes")}</span> : <span className="font-semibold text-rose-700">{tr("clients.no")}</span>;
+            const NOTE_KINDS: { v: NoteKind; l: string }[] = [
+              { v: "NOTE", l: "Note" },
+              { v: "FORMULA", l: "Formula" },
+              { v: "ALLERGY", l: "Allergy" },
+              { v: "PREFERENCE", l: "Preference" },
+            ];
+            return (
+              <>
+                <div className="shrink-0 px-5 pb-3 pr-14 pt-6 md:px-6">
+                  <div className="flex items-center gap-4">
+                    <Avatar2 client={c} size="h-16 w-16 text-lg" />
+                    <div className="min-w-0">
+                      <SheetTitle className="truncate text-[24px] font-extrabold leading-tight tracking-[-0.02em] text-[rgb(var(--reg-ink))]">
+                        {getFullName(c.firstName, c.lastName)}
+                      </SheetTitle>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {chip && <span className={cn("rounded-full px-2.5 py-1 text-xs font-bold", chip.cls)}>{chip.label}</span>}
+                        {tagsOf(c).map((t) => <span key={t.label} className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", t.cls)}>{t.label}</span>)}
+                      </div>
+                    </div>
+                  </div>
+                  <div role="tablist" aria-label={tr("clients.clientCard")} className="mt-4 flex gap-1 overflow-x-auto rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1 [scrollbar-width:none]">
+                    {([["overview", tr("clients.tabOverview")], ["bookings", rows.length ? tr("clients.tabBookingsCount", { count: rows.length }) : tr("clients.tabBookings")], ["notes", tr("clients.tabNotes")], ["marketing", tr("clients.tabMarketing")]] as const).map(([k, l]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        role="tab"
+                        aria-selected={profileTab === k}
+                        onClick={() => setProfileTab(k)}
+                        className={cn(
+                          "h-9 shrink-0 rounded-full px-3.5 text-sm font-semibold transition-colors",
+                          profileTab === k ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]" : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]",
+                        )}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <StatCard icon={CalendarCheck} label="Visits" value={detailClient.totalVisits ?? 0} tone="violet" />
-                <StatCard icon={Coins} label="Spent" value={formatCurrency(detailClient.totalSpent)} tone="emerald" />
-                <StatCard
-                  icon={XCircle}
-                  label="Cancelled"
-                  value={detailClient.cancelledAppointments ?? 0}
-                  tone={(detailClient.cancelledAppointments ?? 0) > 0 ? "amber" : "slate"}
-                />
-                <StatCard
-                  icon={Star}
-                  label="Points"
-                  value={loyaltyPoints != null ? loyaltyPoints : "—"}
-                  tone="sky"
-                />
-              </div>
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-6 pt-2 md:px-6">
+                  {profileTab === "overview" && (
+                    <>
+                      <section className={cn(box, "space-y-2 text-sm")}>
+                        {c.phone && (
+                          <a href={`tel:${c.phone}`} className="flex items-center gap-2 font-semibold hover:text-[rgb(var(--reg-brand-strong))]">
+                            <Phone size={15} className="text-[rgb(var(--reg-muted))]" /> {c.phone}
+                          </a>
+                        )}
+                        {c.email && (
+                          <a href={`mailto:${c.email}`} className="flex items-center gap-2 font-semibold hover:text-[rgb(var(--reg-brand-strong))]">
+                            <Mail size={15} className="text-[rgb(var(--reg-muted))]" /> <span className="truncate">{c.email}</span>
+                          </a>
+                        )}
+                        {!c.phone && !c.email && <p className="text-[rgb(var(--reg-muted))]">{tr("clients.noContactInfo")}</p>}
+                        <p className="flex items-center gap-2 text-[rgb(var(--reg-muted))]">
+                          <Clock size={15} />{" "}{tr("clients.clientSince2", { value: shortDate(ins.since) ?? "—" })}
+                        </p>
+                      </section>
 
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <p className="text-sm font-medium">History at your salon</p>
-                  {clientVisits && clientVisits.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {clientVisits.length} booking{clientVisits.length === 1 ? "" : "s"} · first on{" "}
-                      {clientVisits[clientVisits.length - 1].appointment_date}
-                    </p>
+                      {ins.next && (
+                        <section className="rounded-2xl bg-[rgb(var(--reg-brand-soft))] p-4 ring-1 ring-[rgb(var(--reg-brand)/0.2)]">
+                          <p className={label}>{tr("clients.nextBooking")}</p>
+                          <p className="mt-1 text-[15px] font-bold">{nextLabel(ins.next)}</p>
+                          <p className="text-sm text-[rgb(var(--reg-ink)/0.75)]">
+                            {ins.next.serviceName || tr("common.service")}
+                            {ins.next.staffName ? tr("clients.with2", { staffName: ins.next.staffName }) : ""}
+                          </p>
+                        </section>
+                      )}
+
+                      {!pending && (
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {[
+                            { l: tr("clients.visitsLabel"), v: ins.visitsDone },
+                            { l: tr("clients.spentLabel"), v: formatCurrency(c.totalSpent) },
+                            { l: tr("clients.avgTicket"), v: ins.avgTicket != null ? formatCurrency(ins.avgTicket) : "—" },
+                            { l: tr("clients.noShowsCancels"), v: `${ins.noShows} / ${ins.cancels}` },
+                          ].map((t) => (
+                            <div key={t.l} className={box}>
+                              <p className="text-xs font-semibold text-[rgb(var(--reg-muted))]">{t.l}</p>
+                              <p className="mt-1 text-xl font-extrabold tabular-nums tracking-[-0.02em]">{t.v}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {(ins.favouriteService || ins.favouriteMaster) && (
+                        <section className={cn(box, "grid grid-cols-2 gap-3 text-sm")}>
+                          <div>
+                            <p className={label}>{tr("clients.favouriteService")}</p>
+                            <p className="mt-1 font-semibold">{ins.favouriteService ?? "—"}</p>
+                          </div>
+                          <div>
+                            <p className={label}>{tr("clients.usuallyWith")}</p>
+                            <p className="mt-1 font-semibold">{ins.favouriteMaster ?? "—"}</p>
+                          </div>
+                        </section>
+                      )}
+
+                      {c.id > 0 && (
+                        <section className="space-y-2">
+                          <p className={label}>{tr("clients.loyaltyBenefits")}</p>
+                          {benefits === null ? (
+                            <p className="text-sm text-[rgb(var(--reg-muted))]">{loyaltyPoints != null ? `${loyaltyPoints} points` : tr("common.loading2")}</p>
+                          ) : (
+                            <div className={cn(box, "space-y-3 text-sm")}>
+                              {benefits.visitsForReward > 0 && (
+                                <div>
+                                  <div className="flex justify-between">
+                                    <span className="font-semibold">{tr("clients.stampCard")}</span>
+                                    <span className="tabular-nums text-[rgb(var(--reg-muted))]">
+                                      {benefits.visits % benefits.visitsForReward}/{benefits.visitsForReward}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[rgb(var(--reg-ink)/0.06)]">
+                                    <div
+                                      className="h-full rounded-full bg-[linear-gradient(90deg,rgb(var(--reg-brand)),rgb(var(--reg-mesh-2)))]"
+                                      style={{ width: `${((benefits.visits % benefits.visitsForReward) / benefits.visitsForReward) * 100}%` }}
+                                    />
+                                  </div>
+                                  {benefits.rewardsAvailable > 0 && (
+                                    <p className="mt-1.5 font-semibold text-emerald-700">{tr("clients.freeServicesToUse", { count: benefits.rewardsAvailable })}</p>
+                                  )}
+                                </div>
+                              )}
+                              <p className="flex justify-between"><span>{tr("clients.points")}</span><span className="font-semibold tabular-nums">{benefits.points}</span></p>
+                              {benefits.memberships.map((m) => (
+                                <p key={m.id} className="flex justify-between gap-3">
+                                  <span className="truncate">{m.name}</span>
+                                  <span className="shrink-0 text-[rgb(var(--reg-muted))]">{tr("clients.leftOff", { sessions_remaining: m.sessions_remaining, discount_percent: m.discount_percent })}</span>
+                                </p>
+                              ))}
+                              {benefits.packages.map((p) => (
+                                <p key={p.id} className="flex justify-between gap-3">
+                                  <span className="truncate">{p.name}</span>
+                                  <span className="shrink-0 text-[rgb(var(--reg-muted))]">{tr("clients.sessionsLeft", { sessions_remaining: p.sessions_remaining })}</span>
+                                </p>
+                              ))}
+                              {benefits.giftCards.map((g) => (
+                                <p key={g.code} className="flex justify-between gap-3">
+                                  <span>{tr("clients.giftCard", { code: g.code })}</span>
+                                  <span className="shrink-0 font-semibold">{formatCurrency(g.balance)}</span>
+                                </p>
+                              ))}
+                              {!benefits.visitsForReward && !benefits.memberships.length && !benefits.packages.length && !benefits.giftCards.length && benefits.points === 0 && (
+                                <p className="text-[rgb(var(--reg-muted))]">{tr("clients.noPointsCardsOrGift")}</p>
+                              )}
+                            </div>
+                          )}
+                        </section>
+                      )}
+
+                      {c.notes && (
+                        <section>
+                          <p className={cn(label, "mb-2")}>{tr("clients.profileNote")}</p>
+                          <p className={cn(box, "text-sm")}>{c.notes}</p>
+                        </section>
+                      )}
+                    </>
+                  )}
+
+                  {profileTab === "bookings" && (
+                    pending ? (
+                      <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">{tr("clients.invitedTheyAppearAsA")}</p>
+                    ) : c.id > 0 && clientVisits === null ? (
+                      <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.loadingBookings")}</p>
+                    ) : rows.length === 0 ? (
+                      <p className="rounded-2xl border border-dashed border-[rgb(var(--reg-line))] p-4 text-sm text-[rgb(var(--reg-muted))]">{tr("clients.noBookingsWithYouYet")}</p>
+                    ) : (
+                      <>
+                        {upcoming.length > 0 && (
+                          <section>
+                            <p className={cn(label, "mb-2")}>{tr("clients.upcoming", { count: upcoming.length })}</p>
+                            <ul className="space-y-2">{upcoming.map(visitRow)}</ul>
+                          </section>
+                        )}
+                        {past.length > 0 && (
+                          <section>
+                            <p className={cn(label, "mb-2")}>{tr("clients.history", { count: past.length })}</p>
+                            <ul className="space-y-2">{past.map(visitRow)}</ul>
+                          </section>
+                        )}
+                      </>
+                    )
+                  )}
+
+                  {profileTab === "notes" && (
+                    !c.id ? (
+                      <p className="rounded-2xl border border-dashed border-[rgb(var(--reg-line))] p-4 text-sm text-[rgb(var(--reg-muted))]">
+                        {tr("clients.walkInClientsHaveNo")}
+                      </p>
+                    ) : (
+                      <>
+                        <section className={cn(box, "space-y-3")}>
+                          <p className={label}>{tr("clients.addToTheRecord")}</p>
+                          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={tr("clients.noteType")}>
+                            {NOTE_KINDS.map((k) => (
+                              <button
+                                key={k.v}
+                                type="button"
+                                role="radio"
+                                aria-checked={noteForm.kind === k.v}
+                                onClick={() => setNoteForm((f) => ({ ...f, kind: k.v }))}
+                                className={cn(
+                                  "h-8 rounded-full px-3 text-sm font-semibold ring-1",
+                                  noteForm.kind === k.v ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))]",
+                                )}
+                              >
+                                {k.l}
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            ref={noteRef}
+                            value={noteForm.body}
+                            onChange={(e) => setNoteForm((f) => ({ ...f, body: e.target.value }))}
+                            rows={3}
+                            aria-label={tr("clients.note")}
+                            placeholder={noteForm.kind === "FORMULA" ? tr("clients.eGMin") : noteForm.kind === "ALLERGY" ? tr("clients.eGPpdPatchTest") : tr("clients.whatShouldTheTeamKnow")}
+                            className="w-full rounded-[14px] border border-[rgb(var(--reg-line))] bg-white px-4 py-3 text-base outline-none focus:border-[rgb(var(--reg-brand))] focus:ring-4 focus:ring-[rgb(var(--reg-brand)/0.12)]"
+                          />
+                          <div className="flex justify-end">
+                            <Button className={primaryBtn} disabled={noteBusy || !noteForm.body.trim()} onClick={() => void addNote()}>
+                              {noteBusy ? tr("common.saving") : tr("clients.addNote")}
+                            </Button>
+                          </div>
+                        </section>
+                        {record === null ? (
+                          <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.loadingRecord")}</p>
+                        ) : (
+                          <>
+                            <section>
+                              <p className={cn(label, "mb-2")}>{tr("clients.notes", { count: record.notes.length })}</p>
+                              {record.notes.length === 0 ? (
+                                <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.nothingOnTheRecordYet")}</p>
+                              ) : (
+                                <ul className="space-y-2">
+                                  {record.notes.map((n) => (
+                                    <li key={n.id} className={cn(box, "p-3.5")}>
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", n.kind === "ALLERGY" ? "bg-rose-100 text-rose-900" : n.kind === "FORMULA" ? "bg-[rgb(var(--reg-brand)/0.12)] text-[rgb(var(--reg-brand-strong))]" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]")}>
+                                          {n.kind.charAt(0) + n.kind.slice(1).toLowerCase()}
+                                        </span>
+                                        <span className="text-xs text-[rgb(var(--reg-muted))]">{shortDate(n.created_at)}{n.author_name ? ` · ${n.author_name}` : ""}</span>
+                                      </div>
+                                      <p className="mt-1.5 whitespace-pre-wrap text-sm">{n.body}</p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </section>
+                            {record.photos.length > 0 && (
+                              <section>
+                                <p className={cn(label, "mb-2")}>{tr("clients.photos", { count: record.photos.length })}</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {record.photos.map((ph) => (
+                                    <figure key={ph.id} className="overflow-hidden rounded-xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+                                      <img src={ph.url} alt={ph.caption || `${ph.kind.toLowerCase()} photo`} className="aspect-square w-full object-cover" />
+                                      <figcaption className="px-2 py-1 text-[11px] font-semibold">{ph.kind === "BEFORE" ? tr("clients.before") : tr("clients.after")} · {shortDate(ph.taken_on)}</figcaption>
+                                    </figure>
+                                  ))}
+                                </div>
+                              </section>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )
+                  )}
+
+                  {profileTab === "marketing" && (
+                    <section className={cn(box, "divide-y divide-[rgb(var(--reg-line)/0.6)] p-0 text-sm")}>
+                      {[
+                        [tr("clients.marketingEmails"), consent(c.allowMarketingEmails)],
+                        ["SMS", consent(c.allowSmsNotifications)],
+                        [tr("clients.prefers"), c.preferredContactMethod ? <span className="font-semibold">{c.preferredContactMethod}</span> : <span className="text-[rgb(var(--reg-muted))]">—</span>],
+                        [tr("clients.language"), c.preferredLanguage ? <span className="font-semibold">{c.preferredLanguage}</span> : <span className="text-[rgb(var(--reg-muted))]">—</span>],
+                        [tr("clients.booqiAccount"), pending ? <span className="font-semibold text-amber-800">{tr("clients.invited")}</span> : hasAccount(c) ? <span className="font-semibold text-emerald-700">{tr("clients.yes")}</span> : <span className="text-[rgb(var(--reg-muted))]">{tr("clients.no")}</span>],
+                        [tr("clients.invitation"), inv ? <span className="font-semibold">{inv.status.charAt(0) + inv.status.slice(1).toLowerCase()}</span> : <span className="text-[rgb(var(--reg-muted))]">{tr("clients.notSent")}</span>],
+                      ].map(([k, v]) => (
+                        <div key={k as string} className="flex items-center justify-between gap-3 px-4 py-3">
+                          <span className="text-[rgb(var(--reg-muted))]">{k}</span>
+                          {v}
+                        </div>
+                      ))}
+                    </section>
                   )}
                 </div>
-                {clientVisits === null ? (
-                  <p className="text-sm text-muted-foreground">Loading…</p>
-                ) : clientVisits.length === 0 ? (
-                  <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    No bookings with you yet.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {clientVisits.map((v) => {
-                      const tone =
-                        v.status === "CANCELLED"
-                          ? "border-l-rose-400"
-                          : v.status === "NO_SHOW"
-                            ? "border-l-amber-400"
-                            : v.status === "PENDING"
-                              ? "border-l-slate-300"
-                              : "border-l-emerald-400";
-                      return (
-                        <div key={v.id} className={`rounded-lg border border-l-4 bg-white p-3 ${tone}`}>
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium">
-                                {v.service_name || "Service"}
-                                {v.staff_name ? (
-                                  <span className="font-normal text-muted-foreground"> with {v.staff_name}</span>
-                                ) : null}
-                              </p>
-                              <p className="mt-0.5 text-xs text-muted-foreground">
-                                {v.appointment_date} · {String(v.start_time).slice(0, 5)}–
-                                {String(v.end_time).slice(0, 5)}
-                              </p>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <p className="text-sm font-semibold">
-                                {v.price != null ? `${v.price} ${currencySymbol()}` : "—"}
-                              </p>
-                              <div className="mt-1 flex justify-end gap-1">
-                                <Badge variant="outline" className="text-[10px]">
-                                  {v.status}
-                                </Badge>
-                                {/* Whether it was actually paid for is half the history. */}
-                                {v.payment_status && (
-                                  <Badge
-                                    className={`text-[10px] ${
-                                      v.payment_status === "PAID"
-                                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100"
-                                        : "bg-slate-100 text-slate-700 hover:bg-slate-100"
-                                    }`}
-                                  >
-                                    {v.payment_status}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {/* What the client asked for when booking. It was recorded and
-                              never shown anywhere the salon would look. */}
-                          {v.notes && (
-                            <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
-                              {v.notes}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+                <div className="flex shrink-0 gap-2 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/90 px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:px-6">
+                  {c.id > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setProfileTab("notes"); setTimeout(() => noteRef.current?.focus(), 50); }}
+                      className="inline-flex h-[52px] flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 font-semibold ring-1 ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-canvas))]"
+                    >
+                      <Plus size={16} />{" "}{tr("clients.note")}
+                    </button>
+                  )}
+                  {!pending && !hasAccount(c) && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedClient(c); setInvitationDialogOpen(true); }}
+                      className="inline-flex h-[52px] flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 font-semibold ring-1 ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-canvas))]"
+                    >
+                      <Send size={16} />{" "}{tr("clients.invite")}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => bookForClient(c)}
+                    className="inline-flex h-[52px] flex-[1.6] items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] font-semibold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110"
+                  >
+                    <Plus size={18} />{" "}{tr("common.newBooking")}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </AppLayout>
   );
 }

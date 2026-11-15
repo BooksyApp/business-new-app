@@ -3,6 +3,7 @@ import { useVisibleNavGroups } from "@/components/layout/navigation";
 import { useNavigation } from "@/utils/navigationUtils";
 import { ChevronRight } from "lucide-react";
 import { Navigate, NavLink, useParams } from "react-router-dom";
+import { t } from "@/i18n";
 
 const TONES = [
   "bg-violet-50 text-violet-600",
@@ -28,7 +29,7 @@ export default function SectionPage() {
 
   return (
     <AppLayout>
-      <PageHeader title={group.label} subtitle={`${group.items.length} pages in this section`} />
+      <PageHeader title={group.label} subtitle={t("section.pagesInThisSection", { count: group.items.length })} />
 
       <div className="p-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

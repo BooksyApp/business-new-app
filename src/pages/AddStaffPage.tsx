@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { RouteSheet } from "@/components/page/RouteSheet";
+import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import StaffPage from "./StaffPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +42,7 @@ import {
   scheduleToPayload,
   type WeekSchedule,
 } from "@/components/staff/workingHours";
+import { t, formatMinutes } from "@/i18n";
 
 export default function AddStaffPage() {
   const navigate = useNavigate();
@@ -100,12 +103,12 @@ export default function AddStaffPage() {
     // Email format validation
     const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
     if (formData.email && !emailRegex.test(formData.email)) {
-      toast.error("Invalid email address format");
+      toast.error(t("addStaff.invalidEmailAddressFormat"));
       return;
     }
     // Name length check
     if (formData.name && formData.name.length > 255) {
-      toast.error("Name is too long (max 255 characters)");
+      toast.error(t("addStaff.nameIsTooLongMax"));
       return;
     }
 
@@ -132,64 +135,41 @@ export default function AddStaffPage() {
       // layer (backend #496: notifications are disabled by default and the sending
       // domain has no SPF/DKIM/DMARC), so do not claim delivery here.
       if (willInvite) {
-        toast.success(`Staff member added and invited at ${formData.email.trim()}`);
+        toast.success(t("addStaff.staffMemberAddedAndInvited", { value: formData.email.trim() }));
       } else if (formData.inviteAndCreateAccount) {
-        toast.success("Staff member added. No invitation sent — add an email address to invite them.");
+        toast.success(t("addStaff.staffMemberAddedNoInvitation"));
       } else {
-        toast.success("Staff member added");
+        toast.success(t("addStaff.staffMemberAdded"));
       }
       navigate(getPath("staff"));
     } catch (error) {
       console.error("Failed to create staff:", error);
-      toast.error((error instanceof Error && error.message) || "Failed to create staff member");
+      toast.error((error instanceof Error && error.message) || t("addStaff.failedToCreateStaffMember"));
     }
   };
 
-  return (
-    <AppLayout>
-      <div className="h-full flex flex-col bg-gray-50">
-        {/* Header */}
-        <div className="border-b border-gray-200 bg-gray-900 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X size={20} />
-              </button>
-              <h1 className="text-xl font-bold text-white">
-                Add New Staff Member
-              </h1>
-            </div>
-            <Button
-              onClick={handleAddAndSendInvite}
-              size="sm"
-              className="bg-gray-800 hover:bg-gray-700 text-white gap-2"
-              disabled={!formData.name.trim() || creating}
-            >
-              {creating ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  CREATING...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  {willInvite ? "ADD AND SEND INVITE" : "ADD STAFF"}
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+  const close = () => navigate(getPath("staff"));
 
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-2 gap-6">
+  return (
+    <RouteSheet
+      backdrop={<StaffPage />}
+      onClose={close}
+      size="lg"
+      title={t("addStaff.newTeamMember")}
+      description={t("addStaff.theyGetTheirOwnCalendar")}
+      footer={
+        <>
+          <Button variant="outline" className={sheetSecondary} onClick={close}>{t("common.cancel")}</Button>
+          <Button className={sheetPrimary} onClick={handleAddAndSendInvite} disabled={!formData.name.trim() || creating}>
+            {creating ? t("common.creating") : willInvite ? t("addStaff.addAndSendInvite") : t("common.addTeamMember")}
+          </Button>
+        </>
+      }
+    >
+            <div className="grid gap-6">
               {/* Left Panel - Staff Member Details */}
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] space-y-6">
                   {/* Profile Picture */}
                   {/* The camera button used to do nothing. */}
                   <StaffAvatarPicker
@@ -199,45 +179,45 @@ export default function AddStaffPage() {
 
                   {/* Name */}
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name">{t("common.name")}</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="Enter name"
+                      placeholder={t("addStaff.enterName")}
                       autoFocus
                     />
                   </div>
 
                   {/* Phone Number */}
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone number</Label>
+                    <Label htmlFor="phone">{t("addStaff.phoneNumber")}</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
-                      placeholder="Enter phone number"
+                      placeholder={t("addStaff.enterPhoneNumber")}
                     />
                   </div>
 
                   {/* E-mail */}
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-mail</Label>
+                    <Label htmlFor="email">{t("addStaff.eMail")}</Label>
                     <Input
                       id="email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
-                      placeholder="Enter email"
+                      placeholder={t("addStaff.enterEmail")}
                     />
                   </div>
 
                   {/* Invite and create booqi account? */}
-                  <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="space-y-3 p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="invite-account" className="text-sm font-medium">
-                        Invite and create booqi account?
+                        {t("addStaff.inviteAndCreateBooqiAccount")}
                       </Label>
                       <Switch
                         id="invite-account"
@@ -247,9 +227,8 @@ export default function AddStaffPage() {
                         }
                       />
                     </div>
-                    <p className="text-xs text-gray-600">
-                      We'll send them a link to download the booqi app so that
-                      they can start managing their calendar.
+                    <p className="text-xs text-[rgb(var(--reg-muted))]">
+                      {t("addStaff.weLlSendThemA")}
                     </p>
                   </div>
 
@@ -261,12 +240,12 @@ export default function AddStaffPage() {
 
                   {/* Position */}
                   <div className="space-y-2">
-                    <Label htmlFor="position">Position</Label>
+                    <Label htmlFor="position">{t("common.position")}</Label>
                     <Input
                       id="position"
                       value={formData.position}
                       onChange={(e) => handleInputChange("position", e.target.value)}
-                      placeholder="Enter position"
+                      placeholder={t("addStaff.enterPosition")}
                     />
                   </div>
 
@@ -275,27 +254,27 @@ export default function AddStaffPage() {
 
               {/* Right Panel - Services Management */}
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6 min-h-[600px] flex flex-col">
+                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] space-y-6 min-h-[600px] flex flex-col">
                   {/* Services Tab */}
-                  <div className="border-b border-gray-200">
-                    <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-gray-900">
-                      SERVICES
+                  <div className="border-b border-[rgb(var(--reg-line)/0.8)]">
+                    <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-[rgb(var(--reg-ink))]">
+                      {t("addStaff.services")}
                     </button>
                   </div>
 
                   {/* Services List */}
                   {servicesLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
-                      <p className="text-sm text-gray-600">Loading services...</p>
+                      <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--reg-muted)/0.8)] mb-4" />
+                      <p className="text-sm text-[rgb(var(--reg-muted))]">{t("addStaff.loadingServices")}</p>
                     </div>
                   ) : !services || services.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
                       <div className="mb-4">
                         <Layers size={64} className="text-gray-300 mx-auto" />
                       </div>
-                      <p className="text-sm text-gray-600 mb-6 max-w-xs">
-                        No services available. Create services first.
+                      <p className="text-sm text-[rgb(var(--reg-muted))] mb-6 max-w-xs">
+                        {t("addStaff.noServicesAvailableCreateServices")}
                       </p>
                     </div>
                   ) : (
@@ -305,7 +284,7 @@ export default function AddStaffPage() {
                         return (
                           <div
                             key={service.id}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="flex items-center gap-3 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors"
                           >
                             <Checkbox
                               checked={isSelected}
@@ -318,17 +297,17 @@ export default function AddStaffPage() {
                               className="h-5 w-5"
                             />
                             <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">
+                              <h4 className="font-medium text-[rgb(var(--reg-ink))]">
                                 {service.name}
                               </h4>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                              <div className="flex items-center gap-4 text-sm text-[rgb(var(--reg-muted))] mt-1">
                                 <span>
                                   {service.durationMinutes
-                                    ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`
-                                    : "N/A"}
+                                    ? formatMinutes(service.durationMinutes)
+                                    : t("common.nA")}
                                 </span>
-                                <span className="font-semibold text-gray-900">
-                                  {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
+                                <span className="font-semibold text-[rgb(var(--reg-ink))]">
+                                  {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : t("common.nA")}
                                 </span>
                               </div>
                             </div>
@@ -342,17 +321,14 @@ export default function AddStaffPage() {
             </div>
 
             {/* Working Hours */}
-            <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">Working hours</h3>
-              <p className="text-xs text-gray-600 mb-4">
-                Clients can only book this staff member during these hours. Turn a day off to mark it closed.
+            <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <h3 className="text-sm font-semibold text-[rgb(var(--reg-ink))] mb-1">{t("addStaff.workingHours")}</h3>
+              <p className="text-xs text-[rgb(var(--reg-muted))] mb-4">
+                {t("addStaff.clientsCanOnlyBookThis")}
               </p>
               <WorkingHoursEditor value={schedule} onChange={setSchedule} />
             </div>
-          </div>
-        </div>
-      </div>
-    </AppLayout>
+    </RouteSheet>
   );
 }
 

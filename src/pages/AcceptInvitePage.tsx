@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { API_BASE_URL } from "@/config/api";
 import { authService } from "@/services/authService";
 import { startSession } from "@/utils/session";
+import { t } from "@/i18n";
 
 type Invite = { salonName: string; staffName: string; email: string; accountExists: boolean };
 
@@ -29,13 +30,13 @@ const AcceptInvitePage = () => {
 
   useEffect(() => {
     if (!token) {
-      setProblem("This invitation link is not complete. Open it again from the email.");
+      setProblem(t("acceptInvite.linkIncomplete"));
       return;
     }
     fetch(`${API_BASE_URL}/public/staff-invites/${encodeURIComponent(token)}`)
       .then(async (r) => {
         const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.detail || data.message || "This invitation link is not valid");
+        if (!r.ok) throw new Error(data.detail || data.message || t("acceptInvite.thisInvitationLinkIsNot"));
         setInvite(data);
       })
       .catch((e) => setProblem(e.message));
@@ -45,8 +46,8 @@ const AcceptInvitePage = () => {
     e.preventDefault();
     if (!invite) return;
     if (!invite.accountExists) {
-      if (password.length < 8) return toast.error("Use at least 8 characters");
-      if (password !== confirm) return toast.error("The passwords do not match");
+      if (password.length < 8) return toast.error(t("acceptInvite.useAtLeastCharacters"));
+      if (password !== confirm) return toast.error(t("acceptInvite.thePasswordsDoNotMatch"));
     }
     setBusy(true);
     try {
@@ -56,13 +57,13 @@ const AcceptInvitePage = () => {
         body: JSON.stringify({ password }),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.detail || data.message || "Could not accept the invitation");
+      if (!r.ok) throw new Error(data.detail || data.message || t("acceptInvite.couldNotAcceptTheInvitation"));
       const auth = await authService.login({ email: invite.email, password });
       await startSession(auth);
-      toast.success(`Welcome to ${invite.salonName}`);
+      toast.success(t("acceptInvite.welcomeTo", { salonName: invite.salonName }));
       navigate("/");
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || "Could not accept the invitation");
+      toast.error((err instanceof Error && err.message) || t("acceptInvite.couldNotAcceptTheInvitation"));
     } finally {
       setBusy(false);
     }
@@ -71,25 +72,24 @@ const AcceptInvitePage = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-bold">Join your salon on booqi</h1>
+        <h1 className="text-2xl font-bold">{t("acceptInvite.joinYourSalonOnBooqi")}</h1>
         {problem ? (
           <>
             <p className="mt-3 text-sm text-destructive">{problem}</p>
             <Link to="/login" className="mt-6 inline-block text-sm font-semibold text-primary">
-              Go to sign in
+              {t("acceptInvite.goToSignIn")}
             </Link>
           </>
         ) : !invite ? (
-          <p className="mt-3 text-sm text-muted-foreground">Checking your invitation…</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("acceptInvite.checkingYourInvitation")}</p>
         ) : (
           <form onSubmit={submit} className="mt-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">{invite.salonName}</strong> added you, {invite.staffName}, to their
-              team. You will sign in with <strong className="text-foreground">{invite.email}</strong>.
+              <strong className="text-foreground">{invite.salonName}</strong>{" "}{t("acceptInvite.addedYouToTheirTeam", { staffName: invite.staffName })}{" "}<strong className="text-foreground">{invite.email}</strong>.
             </p>
             <div className="space-y-2">
               <Label htmlFor="invite-password">
-                {invite.accountExists ? "Your booqi password" : "Choose a password"}
+                {invite.accountExists ? t("acceptInvite.yourBooqiPassword") : t("acceptInvite.chooseAPassword")}
               </Label>
               <Input
                 id="invite-password"
@@ -102,7 +102,7 @@ const AcceptInvitePage = () => {
             </div>
             {!invite.accountExists && (
               <div className="space-y-2">
-                <Label htmlFor="invite-confirm">Repeat the password</Label>
+                <Label htmlFor="invite-confirm">{t("acceptInvite.repeatThePassword")}</Label>
                 <Input
                   id="invite-confirm"
                   type="password"
@@ -114,7 +114,7 @@ const AcceptInvitePage = () => {
               </div>
             )}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Joining…" : "Join the team"}
+              {busy ? t("acceptInvite.joining") : t("acceptInvite.joinTheTeam")}
             </Button>
           </form>
         )}

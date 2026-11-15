@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { staffService, type Staff, type CreateStaffRequest, type UpdateStaffRequest } from '@/services/staffService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
+import { t } from "@/i18n";
 
 export function useStaff(businessIdParam?: number) {
   const routeBusinessId = useBusinessId();
@@ -18,8 +19,8 @@ export function useStaff(businessIdParam?: number) {
       setStaff(data);
     } catch (err) {
       console.error('Failed to load staff:', err);
-      setError((err instanceof Error && err.message) || 'Failed to load staff');
-      toast.error('Failed to load staff');
+      setError((err instanceof Error && err.message) || t("hooks.failedToLoadStaff"));
+      toast.error(t("hooks.failedToLoadStaff"));
     } finally {
       setLoading(false);
     }
@@ -33,10 +34,10 @@ export function useStaff(businessIdParam?: number) {
     try {
       const created = await staffService.createStaff(businessId, request);
       setStaff(prev => [...prev, created]);
-      toast.success('Staff member created successfully');
+      toast.success(t("hooks.staffMemberCreatedSuccessfully"));
       return created;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to create staff member');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateStaffMember"));
       throw err;
     }
   }, [businessId]);
@@ -45,10 +46,10 @@ export function useStaff(businessIdParam?: number) {
     try {
       const updated = await staffService.updateStaff(id, businessId, request);
       setStaff(prev => prev.map(s => s.id === id ? updated : s));
-      toast.success('Staff member updated successfully');
+      toast.success(t("hooks.staffMemberUpdatedSuccessfully"));
       return updated;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to update staff member');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateStaffMember"));
       throw err;
     }
   }, [businessId]);
@@ -57,9 +58,9 @@ export function useStaff(businessIdParam?: number) {
     try {
       await staffService.deleteStaff(id, businessId);
       setStaff(prev => prev.filter(s => s.id !== id));
-      toast.success('Staff member deleted successfully');
+      toast.success(t("hooks.staffMemberDeletedSuccessfully"));
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to delete staff member');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToDeleteStaffMember"));
       throw err;
     }
   }, [businessId]);

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { assetUrl } from "@/config/api";
 import { uploadImage, type UploadPurpose } from "@/services/uploadService";
 import { cn } from "@/lib/utils";
+import { t } from "@/i18n";
 
 interface Props {
   /** The stored URL ("/api/public/uploads/<id>.jpg", or an older absolute link). */
@@ -31,7 +32,7 @@ export function ImageUploadField({ value, onChange, purpose, shape = "square", l
       const up = await uploadImage(file, purpose);
       onChange(up.url);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "The photo could not be uploaded.");
+      toast.error(e instanceof Error ? e.message : t("media.thePhotoCouldNotBe"));
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -57,19 +58,19 @@ export function ImageUploadField({ value, onChange, purpose, shape = "square", l
           )}
           {busy && (
             <div className="absolute inset-0 flex items-center justify-center bg-white/70">
-              <Loader2 className="h-5 w-5 animate-spin" aria-label="Uploading" />
+              <Loader2 className="h-5 w-5 animate-spin" aria-label={t("media.uploading")} />
             </div>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => input.current?.click()}>
             <ImagePlus className="mr-2 h-4 w-4" />
-            {value ? "Change photo" : "Upload photo"}
+            {value ? t("media.changePhoto") : t("media.uploadPhoto")}
           </Button>
           {value && (
             <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => onChange("")}>
               <Trash2 className="mr-2 h-4 w-4" />
-              Remove
+              {t("common.remove")}
             </Button>
           )}
           {hint && <p className="w-full text-xs text-muted-foreground">{hint}</p>}

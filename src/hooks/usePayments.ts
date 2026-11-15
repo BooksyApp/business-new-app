@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { paymentService, Payment, CreatePaymentRequest, PaymentStatus } from '@/services/paymentService';
 import { useBusinessId } from './useBusinessId';
+import { t } from "@/i18n";
 
 interface UsePaymentsOptions {
   staffId?: number;
@@ -25,7 +26,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
       const result = await paymentService.getPaymentsByStaff(businessId, staffId);
       setPayments(result);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load payments'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadPayments")));
       console.error('Error loading payments:', err);
     } finally {
       setLoading(false);
@@ -48,7 +49,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
       await refresh();
       return payment;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to create payment'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToCreatePayment")));
       console.error('Error creating payment:', err);
       throw err;
     } finally {
@@ -65,7 +66,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
       const result = await paymentService.getPaymentsByDateRange(businessId, staffId, startDate, endDate);
       return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load payments by date range'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToLoadPaymentsBy")));
       console.error('Error loading payments by date range:', err);
       return [];
     } finally {
@@ -81,7 +82,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
       await refresh();
       return payment;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to update payment status'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToUpdatePaymentStatus")));
       console.error('Error updating payment status:', err);
       throw err;
     } finally {
@@ -96,7 +97,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
       await paymentService.cancelPayment(id);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to cancel payment'));
+      setError(err instanceof Error ? err : new Error(t("hooks.failedToCancelPayment")));
       console.error('Error cancelling payment:', err);
       throw err;
     } finally {

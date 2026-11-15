@@ -11,8 +11,10 @@ import { businessService, type Business } from "@/services/businessService";
 import { toast } from "sonner";
 import { analysisService, type AnalyticsOverview } from "@/services/analysisService";
 import { appointmentService, type Appointment } from "@/services/appointmentService";
-import { format } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { t } from "@/i18n";
+import { VisibilityBanner } from "@/components/VisibilityBanner";
 
 export default function HomePage() {
   const { businessId } = useParams<{ businessId?: string }>();
@@ -106,7 +108,7 @@ export default function HomePage() {
   }, [businessId, navigate, forceSwitch]);
 
   const handleCreateBusiness = async () => {
-    if (!newBizName.trim()) { toast.error("Enter your business name"); return; }
+    if (!newBizName.trim()) { toast.error(t("home.enterYourBusinessName")); return; }
     setCreatingBiz(true);
     try {
       const userStr = localStorage.getItem("user");
@@ -114,10 +116,10 @@ export default function HomePage() {
       const business = await businessService.createBusiness({ ownerId: user?.id, name: newBizName.trim() });
       localStorage.setItem("currentBusinessId", business.id.toString());
       localStorage.setItem("currentBusiness", JSON.stringify(business));
-      toast.success("Business created!");
+      toast.success(t("home.businessCreated"));
       navigate(`/${business.id}/calendar`, { replace: true });
     } catch {
-      toast.error("Failed to create business. Please try again.");
+      toast.error(t("home.failedToCreateBusinessPlease"));
     } finally {
       setCreatingBiz(false);
     }
@@ -131,22 +133,22 @@ export default function HomePage() {
           <Card className="w-full max-w-md">
             <CardHeader>
               <Building2 className="h-10 w-10 text-primary mb-2" />
-              <CardTitle>Set up your business</CardTitle>
-              <CardDescription>Create your first business to get started with booqi.</CardDescription>
+              <CardTitle>{t("home.setUpYourBusiness")}</CardTitle>
+              <CardDescription>{t("home.createYourFirstBusinessTo")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="bizName">Business name</Label>
+                <Label htmlFor="bizName">{t("common.businessName")}</Label>
                 <Input
                   id="bizName"
-                  placeholder="e.g. Glamour Studio"
+                  placeholder={t("home.eGGlamourStudio")}
                   value={newBizName}
                   onChange={e => setNewBizName(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleCreateBusiness()}
                 />
               </div>
               <Button className="w-full" onClick={handleCreateBusiness} disabled={creatingBiz}>
-                {creatingBiz ? "Creating…" : "Create Business"}
+                {creatingBiz ? t("common.creating") : t("home.createBusiness")}
               </Button>
             </CardContent>
           </Card>
@@ -159,33 +161,33 @@ export default function HomePage() {
   if (businessId) {
     const liveStats = [
       {
-        title: "Today's Bookings",
+        title: t("home.todaySBookings"),
         value: statsLoading ? null : (overview?.totalBookings ?? todayAppointments.length).toString(),
-        change: overview ? `${overview.bookingsChange >= 0 ? "+" : ""}${overview.bookingsChange}% from avg` : "No data yet",
+        change: overview ? t("home.fromAvg", { value: overview.bookingsChange >= 0 ? "+" : "", bookingsChange: overview.bookingsChange }) : t("home.noDataYet"),
         icon: Calendar,
         color: "text-appointment-blue",
         bgColor: "bg-appointment-blue/10",
       },
       {
-        title: "Revenue Today",
+        title: t("home.revenueToday"),
         value: statsLoading ? null : overview ? (overview.totalRevenue ?? 0).toFixed(2) : "0.00",
-        change: overview ? `${overview.revenueChange >= 0 ? "+" : ""}${overview.revenueChange}% from avg` : "No revenue yet",
+        change: overview ? t("home.fromAvg2", { value: overview.revenueChange >= 0 ? "+" : "", revenueChange: overview.revenueChange }) : t("home.noRevenueYet"),
         icon: DollarSign,
         color: "text-status-completed",
         bgColor: "bg-status-completed/10",
       },
       {
-        title: "New Clients",
+        title: t("home.newClients"),
         value: statsLoading ? null : overview ? overview.newClients.toString() : "0",
-        change: overview ? `${overview.newClientsChange >= 0 ? "+" : ""}${overview.newClientsChange}% from avg` : "No clients yet",
+        change: overview ? t("home.fromAvg3", { value: overview.newClientsChange >= 0 ? "+" : "", newClientsChange: overview.newClientsChange }) : t("home.noClientsYet"),
         icon: Users,
         color: "text-appointment-purple",
         bgColor: "bg-appointment-purple/10",
       },
       {
-        title: "Avg Ticket",
+        title: t("home.avgTicket"),
         value: statsLoading ? null : overview ? (overview.averageTicket ?? 0).toFixed(2) : "0.00",
-        change: overview ? `${overview.averageTicketChange >= 0 ? "+" : ""}${overview.averageTicketChange}% from avg` : "No data yet",
+        change: overview ? t("home.fromAvg4", { value: overview.averageTicketChange >= 0 ? "+" : "", averageTicketChange: overview.averageTicketChange }) : t("home.noDataYet"),
         icon: Star,
         color: "text-appointment-yellow",
         bgColor: "bg-appointment-yellow/10",
@@ -195,18 +197,19 @@ export default function HomePage() {
     return (
       <AppLayout>
         <PageHeader
-          title="Dashboard"
-          subtitle="Welcome back! Here's what's happening today."
+          title={t("home.dashboard")}
+          subtitle={t("home.welcomeBackHereSWhat")}
           actions={
             <Link to={`/${businessId}/calendar`}>
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-                View Calendar
+                {t("home.viewCalendar")}
               </Button>
             </Link>
           }
         />
 
       <div className="p-6 space-y-6">
+        {numericBusinessId ? <VisibilityBanner businessId={numericBusinessId} /> : null}
         {/* Stats Grid */}
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {liveStats.map((stat, index) => {
@@ -245,8 +248,8 @@ export default function HomePage() {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-bold">Upcoming Appointments</CardTitle>
-                  <CardDescription className="mt-1">Next appointments for today</CardDescription>
+                  <CardTitle className="text-lg font-bold">{t("home.upcomingAppointments")}</CardTitle>
+                  <CardDescription className="mt-1">{t("home.nextAppointmentsForToday")}</CardDescription>
                 </div>
                 <div className="p-2.5 rounded-xl bg-accent/10">
                   <Clock className="h-5 w-5 text-accent" />
@@ -259,7 +262,7 @@ export default function HomePage() {
                   {[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
                 </div>
               ) : todayAppointments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No appointments scheduled for today.</p>
+                <p className="text-sm text-muted-foreground text-center py-6">{t("home.noAppointmentsScheduledForToday")}</p>
               ) : (
                 <div className="space-y-3">
                   {todayAppointments.map((apt) => (
@@ -271,11 +274,11 @@ export default function HomePage() {
                         {apt.startTime}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-foreground truncate">{apt.clientName || "Walk-in"}</p>
+                        <p className="font-semibold text-sm text-foreground truncate">{apt.clientName || t("common.walkIn")}</p>
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{apt.serviceName}</p>
                       </div>
                       <div className="text-sm font-medium text-muted-foreground bg-background/50 px-3 py-1.5 rounded-lg">
-                        {apt.staffName || "Staff"}
+                        {apt.staffName || t("common.staff")}
                       </div>
                     </div>
                   ))}
@@ -288,8 +291,8 @@ export default function HomePage() {
           <Card className="border-border/60 shadow-sm hover:shadow-md transition-all duration-300 bg-gradient-to-br from-card to-card/95 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <div>
-                <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
-                <CardDescription className="mt-1">Common tasks and shortcuts</CardDescription>
+                <CardTitle className="text-lg font-bold">{t("home.quickActions")}</CardTitle>
+                <CardDescription className="mt-1">{t("home.commonTasksAndShortcuts")}</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -300,7 +303,7 @@ export default function HomePage() {
                     className="w-full h-auto py-5 flex flex-col gap-2.5 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 group"
                   >
                     <Calendar className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                    <span className="font-semibold text-sm">New Booking</span>
+                    <span className="font-semibold text-sm">{t("home.newBooking")}</span>
                   </Button>
                 </Link>
                 <Link to={`/${businessId}/clients`}>
@@ -309,7 +312,7 @@ export default function HomePage() {
                     className="w-full h-auto py-5 flex flex-col gap-2.5 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 group"
                   >
                     <Users className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                    <span className="font-semibold text-sm">Add Client</span>
+                    <span className="font-semibold text-sm">{t("home.addClient")}</span>
                   </Button>
                 </Link>
                 <Link to={`/${businessId}/sales`}>
@@ -318,7 +321,7 @@ export default function HomePage() {
                     className="w-full h-auto py-5 flex flex-col gap-2.5 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 group"
                   >
                     <DollarSign className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                    <span className="font-semibold text-sm">Quick Sale</span>
+                    <span className="font-semibold text-sm">{t("home.quickSale")}</span>
                   </Button>
                 </Link>
                 <Link to={`/${businessId}/analytics`}>
@@ -327,7 +330,7 @@ export default function HomePage() {
                     className="w-full h-auto py-5 flex flex-col gap-2.5 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all duration-300 group"
                   >
                     <TrendingUp className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                    <span className="font-semibold text-sm">View Reports</span>
+                    <span className="font-semibold text-sm">{t("home.viewReports")}</span>
                   </Button>
                 </Link>
               </div>
@@ -344,7 +347,7 @@ export default function HomePage() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-screen">
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500">{t("common.loading")}</div>
         </div>
       </AppLayout>
     );
@@ -358,8 +361,8 @@ export default function HomePage() {
     return (
       <AppLayout>
         <PageHeader
-          title="Select Business"
-          subtitle="Choose a business to manage"
+          title={t("home.selectBusiness")}
+          subtitle={t("home.chooseABusinessToManage")}
         />
         <div className="p-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
@@ -393,7 +396,7 @@ export default function HomePage() {
                     variant="outline"
                     onClick={() => navigate(`/${business.id}/calendar`)}
                   >
-                    Manage Business
+                    {t("home.manageBusiness")}
                   </Button>
                 </CardContent>
               </Card>
@@ -410,7 +413,7 @@ export default function HomePage() {
                 <div className="p-3 rounded-lg bg-accent/10">
                   <Plus className="h-6 w-6 text-accent" />
                 </div>
-                <CardTitle className="text-lg">Add a business</CardTitle>
+                <CardTitle className="text-lg">{t("home.addABusiness")}</CardTitle>
               </CardContent>
             </Card>
           </div>
@@ -423,12 +426,12 @@ export default function HomePage() {
   return (
     <AppLayout>
       <PageHeader
-        title="Dashboard"
-        subtitle="Welcome back! Here's what's happening today."
+        title={t("home.dashboard")}
+        subtitle={t("home.welcomeBackHereSWhat")}
         actions={
           <Link to="/calendar">
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-              View Calendar
+              {t("home.viewCalendar")}
             </Button>
           </Link>
         }
@@ -436,33 +439,33 @@ export default function HomePage() {
       <div className="p-6">
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
+            <CardTitle className="text-lg font-bold">{t("home.quickActions")}</CardTitle>
+            <CardDescription>{t("home.commonTasksAndShortcuts")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Link to="/calendar">
                 <Button variant="outline" className="w-full h-auto py-5 flex flex-col gap-2.5 group">
                   <Calendar className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-sm">New Booking</span>
+                  <span className="font-semibold text-sm">{t("home.newBooking")}</span>
                 </Button>
               </Link>
               <Link to="/clients">
                 <Button variant="outline" className="w-full h-auto py-5 flex flex-col gap-2.5 group">
                   <Users className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-sm">Add Client</span>
+                  <span className="font-semibold text-sm">{t("home.addClient")}</span>
                 </Button>
               </Link>
               <Link to="/sales">
                 <Button variant="outline" className="w-full h-auto py-5 flex flex-col gap-2.5 group">
                   <DollarSign className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-sm">Quick Sale</span>
+                  <span className="font-semibold text-sm">{t("home.quickSale")}</span>
                 </Button>
               </Link>
               <Link to="/analytics">
                 <Button variant="outline" className="w-full h-auto py-5 flex flex-col gap-2.5 group">
                   <TrendingUp className="h-6 w-6 text-accent group-hover:scale-110 transition-transform" />
-                  <span className="font-semibold text-sm">View Reports</span>
+                  <span className="font-semibold text-sm">{t("home.viewReports")}</span>
                 </Button>
               </Link>
             </div>

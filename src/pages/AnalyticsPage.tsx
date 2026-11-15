@@ -3,11 +3,11 @@ import { toast } from "sonner";
 import { DiscountImpact } from "@/components/analytics/DiscountImpact";
 import { NoShowImpact } from "@/components/analytics/NoShowImpact";
 import { currencySymbol } from "@/lib/currency";
-import { money, pct } from "@/lib/utils";
-import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { cn, money, pct } from "@/lib/utils";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BooqiScope, PageHeader, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/page/booqi";
+import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -46,7 +46,8 @@ import {
   type ProfitabilityAnalytics,
   type PaymentMethodsAnalytics
 } from "@/services/analysisService";
-import { format, subDays } from "date-fns";
+import { subDays } from "date-fns";
+import { format, monthName } from "@/i18n/dateFns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import OverviewTab from "@/components/analytics/OverviewTab";
@@ -56,6 +57,7 @@ import BookingsTab from "@/components/analytics/BookingsTab";
 import ClientsTab from "@/components/analytics/ClientsTab";
 import ServicesTab from "@/components/analytics/ServicesTab";
 import StaffTab from "@/components/analytics/StaffTab";
+import { t, formatMinutes } from "@/i18n";
 
 interface SeasonalAnalytics {
   bestMonth?: string;
@@ -145,7 +147,7 @@ export default function AnalyticsPage() {
     link.download = `analytics-${period}-days-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`Exported ${(revenue.revenueByDay ?? []).length} days`);
+    toast.success(t("analytics.exportedDays", { count: (revenue.revenueByDay ?? []).length }));
   };
 
   useEffect(() => {
@@ -232,7 +234,7 @@ export default function AnalyticsPage() {
       } catch (err) {
         if (currentFetchId !== fetchIdRef.current) return; // stale fetch — a newer one is in flight
         console.error("Error fetching analytics:", err);
-        setError("Failed to load analytics data");
+        setError(t("analytics.failedToLoadAnalyticsData"));
       } finally {
         if (currentFetchId === fetchIdRef.current) {
           setLoading(false);
@@ -264,25 +266,29 @@ export default function AnalyticsPage() {
   if (loading && !overview && !revenue && !bookings && !clients && !services) {
     return (
       <AppLayout>
-        <PageHeader title="Analytics" subtitle="Insights and performance metrics" />
+      <BooqiScope>
+        <PageHeader title={t("analytics.analytics")} subtitle={t("analytics.insightsAndPerformanceMetrics")} />
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-      </AppLayout>
+      </BooqiScope>
+    </AppLayout>
     );
   }
 
   if (error) {
     return (
       <AppLayout>
-        <PageHeader title="Analytics" subtitle="Insights and performance metrics" />
+      <BooqiScope>
+        <PageHeader title={t("analytics.analytics")} subtitle={t("analytics.insightsAndPerformanceMetrics")} />
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">{error}</p>
           </div>
         </div>
-      </AppLayout>
+      </BooqiScope>
+    </AppLayout>
     );
   }
 
@@ -301,61 +307,65 @@ export default function AnalyticsPage() {
 
   return (
     <AppLayout>
+      <BooqiScope>
       <PageHeader
-        title="Analytics"
-        subtitle="Comprehensive business insights and performance metrics"
+        title={t("analytics.analytics")}
+        subtitle={t("analytics.revenueBookingsClientsAndTeam")}
         actions={
-          <div className="flex items-center gap-2">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[140px] border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 Days</SelectItem>
-                <SelectItem value="30">Last 30 Days</SelectItem>
-                <SelectItem value="90">Last 90 Days</SelectItem>
-                <SelectItem value="365">Last Year</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="tablist" aria-label={t("common.period")} className="flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
+              {([["7", t("analytics.range7")], ["30", t("analytics.range30")], ["90", t("analytics.range90")], ["365", t("analytics.rangeYear")]] as const).map(([v, l]) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={period === v}
+                  onClick={() => setPeriod(v)}
+                  className={cn("h-9 rounded-full px-3.5 text-sm font-semibold", period === v ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06)]" : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]")}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
             <Button
               variant="outline"
-              className="gap-2 border-border/60 hover:border-accent/30 hover:bg-accent/5 transition-all"
+              className={secondaryBtn}
               onClick={exportCsv}
               disabled={loading || !revenue}
             >
               <Download size={16} />
-              Export
+              {t("analytics.export")}
             </Button>
           </div>
         }
       />
 
-      <div className="p-6">
+      <div className={pageBody}>
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <div className="overflow-x-auto mb-6">
             {/* Nineteen tabs, several of them one number each, and no order to them:
                 nobody reads a nav bar that long. Five groups, each answering a question a
                 salon actually asks, with the sections stacked inside. */}
-            <TabsList className="inline-flex min-w-full bg-muted/50">
+            <TabsList>
               <TabsTrigger value="overview" className="flex items-center gap-2 whitespace-nowrap">
                 <BarChart3 className="h-4 w-4" />
-                Overview
+                {t("analytics.overview")}
               </TabsTrigger>
               <TabsTrigger value="money" className="flex items-center gap-2 whitespace-nowrap">
                 <DollarSign className="h-4 w-4" />
-                Money
+                {t("common.money")}
               </TabsTrigger>
               <TabsTrigger value="diary" className="flex items-center gap-2 whitespace-nowrap">
                 <Calendar className="h-4 w-4" />
-                The diary
+                {t("analytics.theDiary")}
               </TabsTrigger>
               <TabsTrigger value="people" className="flex items-center gap-2 whitespace-nowrap">
                 <Users className="h-4 w-4" />
-                Clients
+                {t("common.clients")}
               </TabsTrigger>
               <TabsTrigger value="team" className="flex items-center gap-2 whitespace-nowrap">
                 <UserCheck className="h-4 w-4" />
-                Team &amp; services
+                {t("analytics.teamServices")}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -375,9 +385,9 @@ export default function AnalyticsPage() {
                 know how much of it was bought with a discount. */}
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Offers</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("common.offers")}</h2>
                 <p className="text-xs text-muted-foreground">
-                  What the cut prices cost you, and what they brought back.
+                  {t("analytics.whatTheCutPricesCost")}
                 </p>
               </div>
               <DiscountImpact
@@ -392,10 +402,10 @@ export default function AnalyticsPage() {
             <section className="space-y-4">
               <div>
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Empty chairs
+                  {t("analytics.emptyChairs")}
                 </h2>
                 <p className="text-xs text-muted-foreground">
-                  No-shows, late cancellations, and what your policy recorded for them.
+                  {t("analytics.noShowsLateCancellationsAnd")}
                 </p>
               </div>
               <NoShowImpact
@@ -407,8 +417,8 @@ export default function AnalyticsPage() {
 
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Revenue</h2>
-                <p className="text-xs text-muted-foreground">What came in, and when.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("common.revenue")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whatCameInAndWhen")}</p>
               </div>
             {revenue ? (
               <RevenueTab data={revenue} loading={loading} />
@@ -420,41 +430,41 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Profitability</h2>
-                <p className="text-xs text-muted-foreground">What is left after staff and commission.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.profitability")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whatIsLeftAfterStaff")}</p>
               </div>
             {profitability ? (
               <div className="space-y-4">
                 <Insights
                   items={[
                     {
-                      text: `Of ${money(profitability.totalRevenue)} ${currencySymbol()} taken, roughly ${money(profitability.estimatedProfit)} ${currencySymbol()} is yours after costs — a ${pct(profitability.profitMargin)}% margin.`,
+                      text: t("analytics.ofTakenRoughlyIsYours", { value: money(profitability.totalRevenue), value2: currencySymbol(), value3: money(profitability.estimatedProfit), value4: currencySymbol(), value5: pct(profitability.profitMargin) }),
                       tone: (profitability.profitMargin ?? 0) >= 30 ? ("emerald" as const) : ("amber" as const),
                     },
                     {
-                      text: "This is an estimate from staff cost and commission. It does not know your rent, stock or bills.",
+                      text: t("analytics.thisIsAnEstimateFrom"),
                       tone: "slate" as const,
                     },
                   ]}
                 />
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={DollarSign} label="Revenue" value={`${money(profitability.totalRevenue)} ${currencySymbol()}`} tone="sky" />
-                  <Metric icon={TrendingUp} label="Estimated profit" value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="emerald" />
+                  <Metric icon={DollarSign} label={t("common.revenue")} value={`${money(profitability.totalRevenue)} ${currencySymbol()}`} tone="sky" />
+                  <Metric icon={TrendingUp} label={t("analytics.estimatedProfit")} value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="emerald" />
                   <Metric
                     icon={Target}
-                    label="Margin"
+                    label={t("analytics.margin")}
                     value={`${pct(profitability.profitMargin)}%`}
                     tone={(profitability.profitMargin ?? 0) >= 30 ? "emerald" : "amber"}
                   />
                 </div>
                 <BarList
-                  title="Where the money goes"
+                  title={t("analytics.whereTheMoneyGoes")}
                   tone="emerald"
                   formatValue={(v) => `${money(v)} ${currencySymbol()}`}
                   rows={[
-                    { label: "Kept (estimated profit)", value: profitability.estimatedProfit ?? 0 },
+                    { label: t("analytics.keptEstimatedProfit"), value: profitability.estimatedProfit ?? 0 },
                     {
-                      label: "Costs (staff and commission)",
+                      label: t("analytics.costsStaffAndCommission"),
                       value: Math.max(0, (profitability.totalRevenue ?? 0) - (profitability.estimatedProfit ?? 0)),
                     },
                   ]}
@@ -468,8 +478,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Payments</h2>
-                <p className="text-xs text-muted-foreground">How the money is being taken.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.payments")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.howTheMoneyIsBeing")}</p>
               </div>
             {paymentMethods ? (
               <div className="space-y-4">
@@ -478,7 +488,7 @@ export default function AnalyticsPage() {
                     topPaymentMethod
                       ? [
                           {
-                            text: `${topPaymentMethod.method} takes ${pct(topPaymentMethod.percentage)}% of your revenue across ${topPaymentMethod.transactions} transactions.`,
+                            text: t("analytics.takesOfYourRevenueAcross", { method: topPaymentMethod.method, value: pct(topPaymentMethod.percentage), transactions: topPaymentMethod.transactions }),
                             tone: "sky" as const,
                           },
                         ]
@@ -486,8 +496,8 @@ export default function AnalyticsPage() {
                   }
                 />
                 <BarList
-                  title="Revenue by payment method"
-                  description="What the till is actually taking."
+                  title={t("analytics.revenueByPaymentMethod2")}
+                  description={t("analytics.whatTheTillIsActually")}
                   tone="sky"
                   formatValue={(v) => `${money(v)} ${currencySymbol()}`}
                   rows={(paymentMethods.paymentMethods ?? []).map((m) => ({
@@ -507,8 +517,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Across the year</h2>
-                <p className="text-xs text-muted-foreground">The shape of your season.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.acrossTheYear")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.theShapeOfYourSeason")}</p>
               </div>
             {seasonal ? (
               <div className="space-y-4">
@@ -516,26 +526,26 @@ export default function AnalyticsPage() {
                   items={[
                     ...(seasonal.bestMonth
                       ? [{
-                          text: `${seasonal.bestMonth} is your strongest month and ${seasonal.worstMonth ?? "the quietest"} your weakest. Staff and stock for the first; run offers in the second.`,
+                          text: seasonal.worstMonth ? t("analytics.isYourStrongestMonthAnd", { bestMonth: monthName(seasonal.bestMonth), value: monthName(seasonal.worstMonth) }) : t("analytics.strongestMonthOnly", { bestMonth: monthName(seasonal.bestMonth) }),
                           tone: "sky" as const,
                         }]
                       : []),
                   ]}
                 />
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Metric icon={TrendingUp} label="Best month" value={seasonal.bestMonth || "—"} tone="emerald" />
-                  <Metric icon={TrendingDown} label="Weakest month" value={seasonal.worstMonth || "—"} tone="amber" />
+                  <Metric icon={TrendingUp} label={t("analytics.bestMonth")} value={monthName(seasonal.bestMonth) || "—"} tone="emerald" />
+                  <Metric icon={TrendingDown} label={t("analytics.weakestMonth")} value={monthName(seasonal.worstMonth) || "—"} tone="amber" />
                 </div>
                 <BarList
-                  title="Revenue by month"
-                  description="The shape of your year."
+                  title={t("analytics.revenueByMonth")}
+                  description={t("analytics.theShapeOfYourYear")}
                   tone="sky"
                   formatValue={(v) => `${money(v)} ${currencySymbol()}`}
                   rows={(seasonal.monthlyData ?? seasonal.monthlyRevenue ?? []).map((m: { month?: string; period?: string; revenue: number }) => ({
                     label: m.month ?? m.period ?? "",
                     value: m.revenue,
                   }))}
-                  emptyText="Not enough history yet — a year of takings is what makes this readable."
+                  emptyText={t("analytics.notEnoughHistoryYetA")}
                 />
               </div>
             ) : (
@@ -549,8 +559,8 @@ export default function AnalyticsPage() {
           <TabsContent value="diary" className="mt-0 space-y-8">
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Bookings</h2>
-                <p className="text-xs text-muted-foreground">How full the diary is.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.bookings3")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.howFullTheDiaryIs")}</p>
               </div>
             {bookings ? (
               <BookingsTab data={bookings} loading={loading} />
@@ -562,8 +572,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Peak hours</h2>
-                <p className="text-xs text-muted-foreground">When the chairs are busy, and when they are not.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.peakHours")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whenTheChairsAreBusy")}</p>
               </div>
             {peakHours ? (
               <div className="space-y-4">
@@ -572,12 +582,12 @@ export default function AnalyticsPage() {
                     busiestHour
                       ? [
                           {
-                            text: `${String(busiestHour.hour).padStart(2, "0")}:00 is your busiest hour with ${busiestHour.bookings} bookings. Staff it first.`,
+                            text: t("analytics.isYourBusiestHourWith", { value: String(busiestHour.hour).padStart(2, "0"), bookings: busiestHour.bookings }),
                             tone: "sky" as const,
                           },
                           ...(quietestHour && quietestHour.hour !== busiestHour.hour
                             ? [{
-                                text: `${String(quietestHour.hour).padStart(2, "0")}:00 is the quietest with ${quietestHour.bookings}. A promotion belongs here, not at your busiest time.`,
+                                text: t("analytics.isTheQuietestWithA", { value: String(quietestHour.hour).padStart(2, "0"), bookings: quietestHour.bookings }),
                                 tone: "amber" as const,
                               }]
                             : []),
@@ -588,22 +598,22 @@ export default function AnalyticsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Metric
                     icon={Clock}
-                    label="Busiest hour"
+                    label={t("analytics.busiestHour")}
                     value={busiestHour ? `${String(busiestHour.hour).padStart(2, "0")}:00` : "—"}
-                    hint={busiestHour ? `${busiestHour.bookings} bookings` : undefined}
+                    hint={busiestHour ? t("common.bookingCount", { count: busiestHour.bookings }) : undefined}
                     tone="sky"
                   />
                   <Metric
                     icon={Clock}
-                    label="Quietest hour"
+                    label={t("analytics.quietestHour")}
                     value={quietestHour ? `${String(quietestHour.hour).padStart(2, "0")}:00` : "—"}
-                    hint={quietestHour ? `${quietestHour.bookings} bookings` : undefined}
+                    hint={quietestHour ? t("common.bookingCount", { count: quietestHour.bookings }) : undefined}
                     tone="amber"
                   />
                 </div>
                 <BarList
-                  title="Bookings by hour"
-                  description="When the chairs are actually full."
+                  title={t("analytics.bookingsByHour2")}
+                  description={t("analytics.whenTheChairsAreActually")}
                   tone="sky"
                   rows={(peakHours.peakHours ?? []).map((h) => ({
                     label: `${String(h.hour).padStart(2, "0")}:00`,
@@ -619,8 +629,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Cancellations and no-shows</h2>
-                <p className="text-xs text-muted-foreground">The chair time nobody paid for.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.cancellationsAndNoShows")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.theChairTimeNobodyPaid")}</p>
               </div>
             {cancellations ? (
               <div className="space-y-4">
@@ -628,40 +638,40 @@ export default function AnalyticsPage() {
                   items={[
                     ...(cancellations.totalCancellations > 0 && overview?.totalBookings
                       ? [{
-                          text: `${cancellations.totalCancellations} cancellations against ${overview.totalBookings} bookings — roughly ${money(cancellations.totalCancellations * (overview.averageTicket || 0))} ${currencySymbol()} of chair time nobody paid for.`,
+                          text: t("analytics.cancellationsAgainstBookingsRoughlyOf", { totalCancellations: cancellations.totalCancellations, totalBookings: overview.totalBookings, value: money(cancellations.totalCancellations * (overview.averageTicket || 0)), value2: currencySymbol() }),
                           tone: "rose" as const,
                         }]
                       : []),
                     ...(worstCancelDay
                       ? [{
-                          text: `${worstCancelDay.date} lost the most: ${worstCancelDay.cancellations} bookings. Worth checking what was in the diary that day.`,
+                          text: t("analytics.lostTheMostBookingsWorth", { date: worstCancelDay.date, cancellations: worstCancelDay.cancellations }),
                           tone: "amber" as const,
                         }]
                       : []),
                   ]}
                 />
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={XCircle} label="Cancellations" value={cancellations.totalCancellations} tone="rose" />
+                  <Metric icon={XCircle} label={t("common.cancellations")} value={cancellations.totalCancellations} tone="rose" />
                   <Metric
                     icon={TrendingDown}
-                    label="Share of bookings"
+                    label={t("analytics.shareOfBookings")}
                     value={overview?.totalBookings ? `${Math.round((cancellations.totalCancellations / overview.totalBookings) * 100)}%` : "—"}
                     tone="amber"
                   />
                   <Metric
                     icon={DollarSign}
-                    label="Revenue lost"
+                    label={t("analytics.revenueLost")}
                     value={`${money(cancellations.totalCancellations * (overview?.averageTicket || 0))} ${currencySymbol()}`}
-                    hint="At your average ticket"
+                    hint={t("analytics.atYourAverageTicket")}
                     tone="slate"
                   />
                 </div>
                 <BarList
-                  title="Cancellations by day"
-                  description="The tallest bars are the days to look at."
+                  title={t("analytics.cancellationsByDay")}
+                  description={t("analytics.theTallestBarsAreThe")}
                   tone="rose"
                   rows={(cancellations.cancellationsByDay ?? []).map((d) => ({ label: d.date, value: d.cancellations }))}
-                  emptyText="No cancellations in this period. "
+                  emptyText={t("analytics.noCancellationsInThisPeriod")}
                 />
               </div>
             ) : (
@@ -672,8 +682,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Running to time</h2>
-                <p className="text-xs text-muted-foreground">Whether the diary matches reality.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.runningToTime")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whetherTheDiaryMatchesReality")}</p>
               </div>
             {serviceDuration ? (
               <div className="space-y-4">
@@ -682,18 +692,18 @@ export default function AnalyticsPage() {
                     {
                       text:
                         (serviceDuration.durationEfficiency ?? 100) < 95
-                          ? `Appointments run about ${Math.abs(Math.round((serviceDuration.averageActualDuration ?? 0) - (serviceDuration.averageScheduledDuration ?? 0)))} minutes over what you book them for. Every one of those pushes the next client back.`
-                          : "Appointments finish close to the time you book them for, so the diary is realistic.",
+                          ? t("analytics.appointmentsRunAboutMinutesOver", { value: Math.abs(Math.round((serviceDuration.averageActualDuration ?? 0) - (serviceDuration.averageScheduledDuration ?? 0))) })
+                          : t("analytics.appointmentsFinishCloseToThe"),
                       tone: (serviceDuration.durationEfficiency ?? 100) < 95 ? ("amber" as const) : ("emerald" as const),
                     },
                   ]}
                 />
                 <div className="grid gap-4 md:grid-cols-3">
-                  <Metric icon={Clock} label="Booked for" value={`${Math.round(serviceDuration.averageScheduledDuration ?? 0)} min`} tone="sky" />
-                  <Metric icon={Timer} label="Actually takes" value={`${Math.round(serviceDuration.averageActualDuration ?? 0)} min`} tone="violet" />
+                  <Metric icon={Clock} label={t("analytics.bookedFor")} value={formatMinutes(serviceDuration.averageScheduledDuration ?? 0)} tone="sky" />
+                  <Metric icon={Timer} label={t("analytics.actuallyTakes")} value={formatMinutes(serviceDuration.averageActualDuration ?? 0)} tone="violet" />
                   <Metric
                     icon={Target}
-                    label="On time"
+                    label={t("analytics.onTime")}
                     value={`${pct(serviceDuration.durationEfficiency)}%`}
                     tone={(serviceDuration.durationEfficiency ?? 100) >= 95 ? "emerald" : "amber"}
                   />
@@ -709,11 +719,11 @@ export default function AnalyticsPage() {
                 <Insights
                   items={[
                     {
-                      text: `Clients wait about ${pct(waitTimes.averageWaitTime)} minutes past their time.`,
+                      text: t("analytics.clientsWaitAboutMinutesPast", { value: pct(waitTimes.averageWaitTime) }),
                       tone: (waitTimes.averageWaitTime ?? 0) > 10 ? ("rose" as const) : ("emerald" as const),
                     },
                     {
-                      text: `Chairs sit empty about ${pct(waitTimes.averageGapTime)} minutes between bookings — that gap is unsold time, not a break unless you meant it to be.`,
+                      text: t("analytics.chairsSitEmptyAboutMinutes", { value: pct(waitTimes.averageGapTime) }),
                       tone: "amber" as const,
                     },
                   ]}
@@ -721,16 +731,16 @@ export default function AnalyticsPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Metric
                     icon={Clock}
-                    label="Average wait"
-                    value={`${pct(waitTimes.averageWaitTime)} min`}
-                    hint="Past the booked start"
+                    label={t("analytics.averageWait")}
+                    value={formatMinutes(Number(pct(waitTimes.averageWaitTime)))}
+                    hint={t("analytics.pastTheBookedStart")}
                     tone={(waitTimes.averageWaitTime ?? 0) > 10 ? "rose" : "emerald"}
                   />
                   <Metric
                     icon={Timer}
-                    label="Gap between bookings"
-                    value={`${pct(waitTimes.averageGapTime)} min`}
-                    hint="Unsold chair time"
+                    label={t("analytics.gapBetweenBookings")}
+                    value={formatMinutes(Number(pct(waitTimes.averageGapTime)))}
+                    hint={t("analytics.unsoldChairTime")}
                     tone="amber"
                   />
                 </div>
@@ -746,8 +756,8 @@ export default function AnalyticsPage() {
           <TabsContent value="people" className="mt-0 space-y-8">
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Clients</h2>
-                <p className="text-xs text-muted-foreground">Who is coming in.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("common.clients")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whoIsComingIn")}</p>
               </div>
             {clients ? (
               <ClientsTab data={clients} loading={loading} />
@@ -759,8 +769,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Coming back</h2>
-                <p className="text-xs text-muted-foreground">Whether they return, which is the whole business.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.comingBack")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whetherTheyReturnWhichIs")}</p>
               </div>
             {customerRetention ? (
               <div className="space-y-4">
@@ -769,12 +779,12 @@ export default function AnalyticsPage() {
                     {
                       text:
                         (customerRetention.retentionRate ?? 0) >= 50
-                          ? `${pct(customerRetention.retentionRate)}% of clients came back. Repeat custom is carrying the salon — protect it before chasing new names.`
-                          : `Only ${pct(customerRetention.retentionRate)}% came back. Every month starts from nearly zero, which is the most expensive way to run a salon.`,
+                          ? t("analytics.ofClientsCameBackRepeat", { value: pct(customerRetention.retentionRate) })
+                          : t("analytics.onlyCameBackEveryMonth", { value: pct(customerRetention.retentionRate) }),
                       tone: (customerRetention.retentionRate ?? 0) >= 50 ? ("emerald" as const) : ("rose" as const),
                     },
                     {
-                      text: `${customerRetention.totalClients - customerRetention.returningClients} clients visited once and have not been back. That is the list worth a message.`,
+                      text: t("analytics.clientsVisitedOnceAndHave", { value: customerRetention.totalClients - customerRetention.returningClients }),
                       tone: "amber" as const,
                     },
                   ]}
@@ -782,20 +792,20 @@ export default function AnalyticsPage() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <Metric
                     icon={Repeat}
-                    label="Retention rate"
+                    label={t("analytics.retentionRate")}
                     value={`${pct(customerRetention.retentionRate)}%`}
                     tone={(customerRetention.retentionRate ?? 0) >= 50 ? "emerald" : "rose"}
                   />
-                  <Metric icon={Users} label="Total clients" value={customerRetention.totalClients} tone="violet" />
-                  <Metric icon={UserCheck} label="Came back" value={customerRetention.returningClients} tone="emerald" />
+                  <Metric icon={Users} label={t("analytics.totalClients2")} value={customerRetention.totalClients} tone="violet" />
+                  <Metric icon={UserCheck} label={t("analytics.cameBack")} value={customerRetention.returningClients} tone="emerald" />
                 </div>
                 <BarList
-                  title="Who is coming back"
+                  title={t("analytics.whoIsComingBack")}
                   tone="emerald"
                   rows={[
-                    { label: "Returning clients", value: customerRetention.returningClients },
+                    { label: t("analytics.returningClients"), value: customerRetention.returningClients },
                     {
-                      label: "One visit only",
+                      label: t("analytics.oneVisitOnly"),
                       value: Math.max(0, customerRetention.totalClients - customerRetention.returningClients),
                     },
                   ]}
@@ -809,28 +819,28 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Where they come from</h2>
-                <p className="text-xs text-muted-foreground">How new clients found you.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("analytics.whereTheyComeFrom")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.howNewClientsFoundYou")}</p>
               </div>
             {acquisition ? (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Customer Acquisition Analytics</CardTitle>
-                    <CardDescription>New customer metrics</CardDescription>
+                    <CardTitle>{t("analytics.customerAcquisitionAnalytics")}</CardTitle>
+                    <CardDescription>{t("analytics.newCustomerMetrics")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">New Customers</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.newCustomers")}</p>
                         <p className="text-2xl font-bold">{acquisition.newCustomers || 0}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Avg First Visit Value</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.avgFirstVisitValue")}</p>
                         <p className="text-2xl font-bold">{acquisition.averageFirstVisitValue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Acquisition Cost</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.acquisitionCost")}</p>
                         <p className="text-2xl font-bold">{acquisition.customerAcquisitionCost?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                     </div>
@@ -848,15 +858,15 @@ export default function AnalyticsPage() {
           <TabsContent value="team" className="mt-0 space-y-8">
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Staff</h2>
-                <p className="text-xs text-muted-foreground">Who is bringing in the work.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("common.staff")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whoIsBringingInThe")}</p>
               </div>
             {overview?.staffPerformance ? (
               <StaffTab data={overview.staffPerformance} loading={loading} />
             ) : error ? (
               <div className="flex flex-col items-center justify-center h-64 gap-3">
-                <p className="text-sm text-red-500">Failed to load staff data</p>
-                <button onClick={() => { setError(null); setOverview(null); }} className="text-sm text-blue-600 underline">Retry</button>
+                <p className="text-sm text-red-500">{t("analytics.failedToLoadStaffData")}</p>
+                <button onClick={() => { setError(null); setOverview(null); }} className="text-sm text-blue-600 underline">{t("analytics.retry")}</button>
               </div>
             ) : (
               <div className="flex items-center justify-center h-64">
@@ -867,21 +877,21 @@ export default function AnalyticsPage() {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Performance Analytics</CardTitle>
-                    <CardDescription>Staff revenue and booking metrics</CardDescription>
+                    <CardTitle>{t("analytics.performanceAnalytics")}</CardTitle>
+                    <CardDescription>{t("analytics.staffRevenueAndBookingMetrics")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
-                        <p className="text-sm text-muted-foreground">Total Staff Revenue</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.totalStaffRevenue")}</p>
                         <p className="text-2xl font-bold">{performance.totalStaffRevenue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Total Staff Bookings</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.totalStaffBookings")}</p>
                         <p className="text-2xl font-bold">{performance.totalStaffBookings}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Avg Revenue/Staff</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.avgRevenueStaff")}</p>
                         <p className="text-2xl font-bold">{performance.averageRevenuePerStaff?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                     </div>
@@ -890,15 +900,15 @@ export default function AnalyticsPage() {
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="border-b text-left text-muted-foreground">
-                              <th className="pb-2 font-medium">Staff Name</th>
-                              <th className="pb-2 font-medium">Bookings</th>
-                              <th className="pb-2 font-medium">Completion Rate</th>
+                              <th className="pb-2 font-medium">{t("analytics.staffName")}</th>
+                              <th className="pb-2 font-medium">{t("analytics.bookings3")}</th>
+                              <th className="pb-2 font-medium">{t("analytics.completionRate")}</th>
                             </tr>
                           </thead>
                           <tbody>
                             {performance.staffDetails.map((staff) => (
                               <tr key={staff.staffId} className="border-b hover:bg-muted/50">
-                                <td className="py-2">{staff.staffName || `Staff ${staff.staffId}`}</td>
+                                <td className="py-2">{staff.staffName || t("analytics.staff", { staffId: staff.staffId })}</td>
                                 <td className="py-2">{staff.bookings}</td>
                                 <td className="py-2">{staff.completionRate?.toFixed(1)}%</td>
                               </tr>
@@ -918,8 +928,8 @@ export default function AnalyticsPage() {
             </section>
             <section className="space-y-4">
               <div>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Services</h2>
-                <p className="text-xs text-muted-foreground">What sells, and what does not.</p>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t("common.services")}</h2>
+                <p className="text-xs text-muted-foreground">{t("analytics.whatSellsAndWhatDoes")}</p>
               </div>
             {services ? (
               <ServicesTab data={services} loading={loading} />
@@ -932,25 +942,25 @@ export default function AnalyticsPage() {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Service Bundle Analytics</CardTitle>
-                    <CardDescription>Bundle performance metrics</CardDescription>
+                    <CardTitle>{t("analytics.serviceBundleAnalytics")}</CardTitle>
+                    <CardDescription>{t("analytics.bundlePerformanceMetrics")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-4 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Total Bundles Sold</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.totalBundlesSold")}</p>
                         <p className="text-2xl font-bold">{bundles.totalBundlesSold || 0}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Bundle Revenue</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.bundleRevenue")}</p>
                         <p className="text-2xl font-bold">{bundles.bundleRevenue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Avg Bundle Value</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.avgBundleValue")}</p>
                         <p className="text-2xl font-bold">{bundles.averageBundleValue?.toFixed(2)} {currencySymbol()}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Revenue %</p>
+                        <p className="text-sm text-muted-foreground">{t("analytics.revenue2")}</p>
                         <p className="text-2xl font-bold">{bundles.bundleRevenuePercentage?.toFixed(1)}%</p>
                       </div>
                     </div>
@@ -967,6 +977,7 @@ export default function AnalyticsPage() {
 
         </Tabs>
       </div>
+    </BooqiScope>
     </AppLayout>
   );
 }

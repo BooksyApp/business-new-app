@@ -3,6 +3,7 @@ import { currencySymbol } from "@/lib/currency";
 import { pct } from "@/lib/utils";
 import { Users, TrendingUp, UserCheck, UserX } from "lucide-react";
 import type { ClientAnalytics } from "@/services/analysisService";
+import { t } from "@/i18n";
 
 interface ClientsTabProps {
   data: ClientAnalytics;
@@ -13,7 +14,7 @@ export default function ClientsTab({ data }: ClientsTabProps) {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">No client data available</p>
+        <p className="text-muted-foreground">{t("analytics.noClientDataAvailable")}</p>
       </div>
     );
   }
@@ -34,7 +35,7 @@ export default function ClientsTab({ data }: ClientsTabProps) {
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Clients</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.totalClients")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalClients}</div>
@@ -42,18 +43,18 @@ export default function ClientsTab({ data }: ClientsTabProps) {
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">New Clients</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.newClients")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-status-completed">{newClients}</div>
             {newClientRate > 0 && (
-              <div className="text-xs text-muted-foreground mt-1">{pct(newClientRate)}% of total</div>
+              <div className="text-xs text-muted-foreground mt-1">{t("analytics.ofTotal", { value: pct(newClientRate) })}</div>
             )}
           </CardContent>
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Active Clients</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.activeClients")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-appointment-blue">{activeClients}</div>
@@ -61,12 +62,12 @@ export default function ClientsTab({ data }: ClientsTabProps) {
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Avg Client Value</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.avgClientValue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{averageClientValue.toFixed(2)} {currencySymbol()}</div>
             {averageVisitsPerClient > 0 && (
-              <div className="text-xs text-muted-foreground mt-1">{pct(averageVisitsPerClient)} avg visits</div>
+              <div className="text-xs text-muted-foreground mt-1">{t("analytics.avgVisits", { value: pct(averageVisitsPerClient) })}</div>
             )}
           </CardContent>
         </Card>
@@ -76,8 +77,8 @@ export default function ClientsTab({ data }: ClientsTabProps) {
       {topClients.length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Top Clients</CardTitle>
-            <CardDescription>Highest value clients this period</CardDescription>
+            <CardTitle>{t("analytics.topClients")}</CardTitle>
+            <CardDescription>{t("analytics.highestValueClientsThisPeriod")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -91,9 +92,9 @@ export default function ClientsTab({ data }: ClientsTabProps) {
                       {index + 1}
                     </span>
                     <div>
-                      <p className="font-semibold text-sm">{client.clientName || 'Unknown Client'}</p>
+                      <p className="font-semibold text-sm">{client.clientName || t("analytics.unknownClient")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {client.totalBookings ?? 0} bookings • Avg: {(client.averageTicket ?? 0).toFixed(2)} {currencySymbol()}
+                        {t("analytics.bookingsAvg", { value: client.totalBookings ?? 0, value2: (client.averageTicket ?? 0).toFixed(2), value3: currencySymbol() })}
                       </p>
                     </div>
                   </div>
@@ -101,7 +102,7 @@ export default function ClientsTab({ data }: ClientsTabProps) {
                     <div className="font-bold text-status-completed text-base">{(client.totalSpent ?? 0).toFixed(2)} {currencySymbol()}</div>
                     {client.lastVisitDaysAgo !== null && client.lastVisitDaysAgo !== undefined && (
                       <div className="text-xs text-muted-foreground">
-                        {client.lastVisitDaysAgo === 0 ? 'Today' : `${client.lastVisitDaysAgo} days ago`}
+                        {client.lastVisitDaysAgo === 0 ? t("common.today") : t("analytics.daysAgo", { lastVisitDaysAgo: client.lastVisitDaysAgo })}
                       </div>
                     )}
                   </div>
@@ -116,8 +117,8 @@ export default function ClientsTab({ data }: ClientsTabProps) {
       {clientSegments.length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Client Segments</CardTitle>
-            <CardDescription>Client categorization by value</CardDescription>
+            <CardTitle>{t("analytics.clientSegments")}</CardTitle>
+            <CardDescription>{t("analytics.clientCategorizationByValue")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
@@ -127,11 +128,11 @@ export default function ClientsTab({ data }: ClientsTabProps) {
                   className="p-4 rounded-xl bg-gradient-to-br from-muted/30 to-muted/10 border border-border/30"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold">{segment.segment || 'Unknown'}</span>
+                    <span className="font-semibold">{segment.segment || t("analytics.unknown")}</span>
                     <span className="text-sm text-muted-foreground">{(segment.percentage ?? 0).toFixed(1)}%</span>
                   </div>
                   <div className="text-2xl font-bold mb-1">{segment.count ?? 0}</div>
-                  <div className="text-sm text-muted-foreground">{(segment.totalRevenue ?? 0).toFixed(2)} {currencySymbol()} revenue</div>
+                  <div className="text-sm text-muted-foreground">{t("analytics.revenue", { value: (segment.totalRevenue ?? 0).toFixed(2), value2: currencySymbol() })}</div>
                 </div>
               ))}
             </div>

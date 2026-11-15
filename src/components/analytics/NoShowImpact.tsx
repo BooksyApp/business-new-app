@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { currencySymbol } from "@/lib/currency";
 import { analysisService, type NoShowImpact as Impact } from "@/services/analysisService";
+import { t, fmtDate as formatLocaleDate } from "@/i18n";
 
 const money = (value: unknown) => {
   const n = Number(value);
@@ -17,7 +18,7 @@ const num = (value: unknown) => {
 const day = (value: unknown) => {
   if (!value) return "—";
   const d = new Date(String(value));
-  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
+  return Number.isNaN(d.getTime()) ? String(value) : formatLocaleDate(d, { year: "numeric", month: "numeric", day: "numeric" });
 };
 
 /**
@@ -66,11 +67,11 @@ export function NoShowImpact({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">No-shows</CardTitle>
+          <CardTitle className="text-base">{t("analytics.noShows2")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Nobody missed an appointment in this period.
+            {t("analytics.nobodyMissedAnAppointmentIn")}
           </p>
         </CardContent>
       </Card>
@@ -85,30 +86,30 @@ export function NoShowImpact({
         <Tile
           icon={UserX}
           tone="bg-rose-50 text-rose-700"
-          label="No-shows"
+          label={t("analytics.noShows2")}
           value={String(noShows)}
-          hint={bookings > 0 ? `${Math.round((noShows / bookings) * 100)}% of bookings` : undefined}
+          hint={bookings > 0 ? t("analytics.ofBookings", { value: Math.round((noShows / bookings) * 100) }) : undefined}
         />
         <Tile
           icon={CalendarX}
           tone="bg-amber-50 text-amber-700"
-          label="Cancellations"
+          label={t("common.cancellations")}
           value={String(cancellations)}
-          hint={hasPolicy ? `${num(data.policy?.window_hours)}h notice window` : "no policy set"}
+          hint={hasPolicy ? t("analytics.hNoticeWindow", { value: num(data.policy?.window_hours) }) : t("analytics.noPolicySet")}
         />
         <Tile
           icon={Coins}
           tone="bg-slate-100 text-slate-700"
-          label="Empty chairs cost"
+          label={t("analytics.emptyChairsCost")}
           value={money(lost)}
-          hint="what those appointments were worth"
+          hint={t("analytics.whatThoseAppointmentsWereWorth")}
         />
         <Tile
           icon={Coins}
           tone="bg-emerald-50 text-emerald-700"
-          label="Fees recorded"
+          label={t("analytics.feesRecorded")}
           value={money(fees)}
-          hint={`on ${num(data.totals?.fees_count)} bookings`}
+          hint={t("analytics.onBookings", { value: num(data.totals?.fees_count) })}
         />
       </div>
 
@@ -118,11 +119,10 @@ export function NoShowImpact({
         <Card className="border-amber-200 bg-amber-50/60">
           <CardContent className="pt-6">
             <p className="text-sm font-semibold text-amber-900">
-              You have no cancellation policy, so none of this was charged for.
+              {t("analytics.youHaveNoCancellationPolicy")}
             </p>
             <p className="mt-1 text-sm text-amber-800">
-              A notice window and a late fee are under Settings → Booking rules. The fee is
-              recorded on the booking for you to collect; nothing is charged automatically.
+              {t("analytics.aNoticeWindowAndA")}
             </p>
           </CardContent>
         </Card>
@@ -131,12 +131,11 @@ export function NoShowImpact({
       {data.repeatOffenders.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Clients who keep missing</CardTitle>
+            <CardTitle className="text-base">{t("analytics.clientsWhoKeepMissing")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-muted-foreground">
-              Two or more no-shows. One is an accident; four is a decision, and whether to
-              keep taking their bookings is yours.
+              {t("analytics.twoOrMoreNoShows")}
             </p>
             <div className="space-y-2">
               {data.repeatOffenders.map((row) => (
@@ -147,15 +146,15 @@ export function NoShowImpact({
                   <div className="min-w-0">
                     <p className="truncate font-medium">{row.client}</p>
                     <p className="text-xs text-muted-foreground">
-                      {row.client_email ?? "no email"} · last {day(row.latest)}
+                      {t("analytics.last", { value: row.client_email ?? t("analytics.noEmail"), value2: day(row.latest) })}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge className="bg-rose-600 hover:bg-rose-600">
-                      {num(row.no_shows)} no-shows
+                      {t("analytics.noShows3", { value: num(row.no_shows) })}
                     </Badge>
                     {num(row.cancellations) > 0 && (
-                      <Badge variant="secondary">{num(row.cancellations)} cancelled</Badge>
+                      <Badge variant="secondary">{t("analytics.cancelled", { value: num(row.cancellations) })}</Badge>
                     )}
                     {num(row.fees_recorded) > 0 && (
                       <span className="text-sm font-semibold">{money(row.fees_recorded)}</span>
@@ -171,7 +170,7 @@ export function NoShowImpact({
       {data.byMonth.length > 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">By month</CardTitle>
+            <CardTitle className="text-base">{t("analytics.byMonth")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -180,7 +179,7 @@ export function NoShowImpact({
                   <div className="flex items-baseline justify-between gap-3 text-sm">
                     <span className="text-muted-foreground">{row.month}</span>
                     <span className="tabular-nums">
-                      {num(row.no_shows)} no-shows · {num(row.cancellations)} cancelled
+                      {t("analytics.noShowsCancelled", { value: num(row.no_shows), value2: num(row.cancellations) })}
                       {num(row.fees_recorded) > 0 && (
                         <span className="ml-2 font-semibold">{money(row.fees_recorded)}</span>
                       )}

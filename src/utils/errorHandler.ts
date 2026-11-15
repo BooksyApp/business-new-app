@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 /**
  * Error response structure from backend
  */
@@ -44,7 +45,7 @@ export function extractErrorMessage(error: unknown): string {
   }
 
   // Default fallback
-  return 'An unexpected error occurred. Please try again.';
+  return t("utils.anUnexpectedErrorOccurredPlease");
 }
 
 /**

@@ -2,8 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import { DollarSign, TrendingUp, Clock, CreditCard } from "lucide-react";
-import { format } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import type { RevenueAnalytics } from "@/services/analysisService";
+import { t } from "@/i18n";
 
 interface RevenueTabProps {
   data: RevenueAnalytics;
@@ -17,7 +18,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Revenue</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.totalRevenue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{money(data.totalRevenue)} {currencySymbol()}</div>
@@ -25,7 +26,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Avg Daily Revenue</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.avgDailyRevenue")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{money(data.averageDailyRevenue)} {currencySymbol()}</div>
@@ -33,7 +34,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Peak Day</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.peakDay")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{money(data.peakDayRevenue)} {currencySymbol()}</div>
@@ -41,7 +42,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Lowest Day</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.lowestDay")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{money(data.lowestDayRevenue)} {currencySymbol()}</div>
@@ -52,8 +53,8 @@ export default function RevenueTab({ data }: RevenueTabProps) {
       {/* Revenue by Day */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader>
-          <CardTitle>Daily Revenue</CardTitle>
-          <CardDescription>Revenue breakdown by day</CardDescription>
+          <CardTitle>{t("analytics.dailyRevenue")}</CardTitle>
+          <CardDescription>{t("analytics.revenueBreakdownByDay")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-end justify-between gap-1 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border border-border/60">
@@ -75,7 +76,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
                 );
               })
             ) : (
-              <p className="text-muted-foreground">No data available</p>
+              <p className="text-muted-foreground">{t("analytics.noDataAvailable")}</p>
             )}
           </div>
         </CardContent>
@@ -84,8 +85,8 @@ export default function RevenueTab({ data }: RevenueTabProps) {
       {/* Revenue by Hour */}
       <Card className="border-border/60 shadow-sm">
         <CardHeader>
-          <CardTitle>Hourly Revenue Pattern</CardTitle>
-          <CardDescription>Revenue distribution throughout the day</CardDescription>
+          <CardTitle>{t("analytics.hourlyRevenuePattern")}</CardTitle>
+          <CardDescription>{t("analytics.revenueDistributionThroughoutTheDay")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-64 flex items-end justify-between gap-1 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border border-border/60">
@@ -105,7 +106,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
                 );
               })
             ) : (
-              <p className="text-muted-foreground">No data available</p>
+              <p className="text-muted-foreground">{t("analytics.noDataAvailable")}</p>
             )}
           </div>
         </CardContent>
@@ -115,8 +116,8 @@ export default function RevenueTab({ data }: RevenueTabProps) {
       {data.revenueByPaymentMethod && data.revenueByPaymentMethod.length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Revenue by Payment Method</CardTitle>
-            <CardDescription>Breakdown of revenue by payment type</CardDescription>
+            <CardTitle>{t("analytics.revenueByPaymentMethod")}</CardTitle>
+            <CardDescription>{t("analytics.breakdownOfRevenueByPayment")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -126,7 +127,7 @@ export default function RevenueTab({ data }: RevenueTabProps) {
                     <CreditCard className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <p className="font-semibold">{method.paymentMethod}</p>
-                      <p className="text-xs text-muted-foreground">{method.transactions} transactions</p>
+                      <p className="text-xs text-muted-foreground">{t("analytics.transactions", { transactions: method.transactions })}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -144,8 +145,8 @@ export default function RevenueTab({ data }: RevenueTabProps) {
       {data.revenueByDayOfWeek && Object.keys(data.revenueByDayOfWeek).length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Revenue by Day of Week</CardTitle>
-            <CardDescription>Weekly revenue patterns</CardDescription>
+            <CardTitle>{t("analytics.revenueByDayOfWeek")}</CardTitle>
+            <CardDescription>{t("analytics.weeklyRevenuePatterns")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

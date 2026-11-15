@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { RouteSheet, SheetTabs } from "@/components/page/RouteSheet";
+import { ClientPreview } from "@/components/page/kit";
+import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import ItemsCategoryPage from "./ItemsCategoryPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,12 +34,13 @@ import { useCategories } from "@/hooks/useCategories";
 import { useStaff } from "@/hooks/useStaff";
 import { useNavigation } from "@/utils/navigationUtils";
 import { toast } from "sonner";
+import { t as tr, formatMinutes } from "@/i18n";
 
 const sidebarItems = [
-  { id: "general", label: "GENERAL", active: true },
-  { id: "staff", label: "STAFF" },
-  { id: "settings", label: "SETTINGS" },
-  { id: "for-client", label: "FOR CLIENT" },
+  { id: "general", get label() { return tr("addService.tabGeneral"); }, active: true },
+  { id: "staff", get label() { return tr("addService.tabStaff"); } },
+  { id: "settings", get label() { return tr("addService.tabSettings"); } },
+  { id: "for-client", get label() { return tr("addService.forClient"); } },
 ];
 
 // Scheduling fields in the SETTINGS tab are split into hours + minutes selects;
@@ -59,7 +63,7 @@ export default function AddServicePage() {
   // Verify businessId is available
   useEffect(() => {
     if (!businessId || businessId <= 0) {
-      toast.error("Business ID is missing. Please ensure you are accessing this page from a business context.");
+      toast.error(tr("addService.businessIdIsMissingPlease"));
       console.error("Business ID is missing:", businessId);
     }
   }, [businessId]);
@@ -82,11 +86,12 @@ export default function AddServicePage() {
     processingTimeAfterHours: "0",
     processingTimeAfterMinutes: "0",
     parallelClients: "Not allowed",
-    taxRate: "23%",
+    // "default" = the business tax rate (Business > Tax); a number overrides it for this service.
+    taxRate: "default",
   });
   const [clientData, setClientData] = useState({
     messageToClient: "",
-    questions: [] as string[],
+    questions: [] as { text: string; required: boolean }[],
   });
   const [formData, setFormData] = useState({
     serviceName: "",
@@ -107,11 +112,11 @@ export default function AddServicePage() {
   // Ensure createService and updateService are functions
   const safeCreateService = typeof createService === 'function' ? createService : async () => {
     console.error('createService is not available');
-    throw new Error('Service creation is not available');
+    throw new Error(tr("addService.serviceCreationIsNotAvailable"));
   };
   const safeUpdateService = typeof updateService === 'function' ? updateService : async () => {
     console.error('updateService is not available');
-    throw new Error('Service update is not available');
+    throw new Error(tr("addService.serviceUpdateIsNotAvailable"));
   };
 
   // Load service data if in edit mode
@@ -164,7 +169,13 @@ export default function AddServicePage() {
           processingTimeDuringMinutes: pd.minutes,
           processingTimeAfterHours: paf.hours,
           processingTimeAfterMinutes: paf.minutes,
+          parallelClients: parallelLabel(service.parallelClients),
+          taxRate: service.taxRate != null ? String(service.taxRate) : "default",
         }));
+        setClientData({
+          messageToClient: service.messageToClient ?? "",
+          questions: (service.questions ?? []).map((q) => ({ text: q.text, required: !!q.required })),
+        });
       }
     }
   }, [isEditMode, id, services]);
@@ -193,11 +204,27 @@ export default function AddServicePage() {
     };
   };
 
+  // Stored as "clients one staff member can take at once": 1 = one at a time, 0 = no limit.
+  const parallelLabel = (n?: number | null) =>
+    n == null || n === 1 ? "Not allowed" : n === 0 ? "Unlimited" : String(n - 1);
+  const parallelValue = (label: string) =>
+    label === "Not allowed" ? 1 : label === "Unlimited" ? 0 : parseInt(label) + 1;
+
+  /** What the client sees: the questions, the note after booking, and how many may overlap. */
+  const buildClientSettings = () => ({
+    questions: clientData.questions
+      .filter((q) => q.text.trim())
+      .map((q) => ({ text: q.text.trim(), required: q.required })),
+    messageToClient: clientData.messageToClient.trim(),
+    parallelClients: parallelValue(settingsData.parallelClients),
+    taxRate: settingsData.taxRate === "default" ? null : parseFloat(settingsData.taxRate),
+  });
+
   const handleSave = async () => {
     try {
       // Validate required fields
       if (!formData.serviceName.trim()) {
-        toast.error("Service name is required");
+        toast.error(tr("addService.serviceNameIsRequired"));
         return;
       }
 
@@ -217,20 +244,21 @@ export default function AddServicePage() {
         virtualAppointment: settingsData.virtualAppointments,
         // Scheduling engine (Phase 2): booking interval, padding, processing time.
         ...buildScheduling(),
+        ...buildClientSettings(),
       };
 
       if (isEditMode && id) {
         await safeUpdateService(parseInt(id), serviceData);
-        toast.success("Service updated successfully");
+        toast.success(tr("addService.serviceUpdatedSuccessfully"));
       } else {
         await safeCreateService(serviceData);
-        toast.success("Service created successfully");
+        toast.success(tr("addService.serviceCreatedSuccessfully"));
       }
       navigate(getPath("items-category"));
     } catch (error) {
       console.error(`Failed to ${isEditMode ? 'update' : 'create'} service:`, error);
       const e = error as { message?: string; response?: { data?: { message?: string } } };
-      const errorMessage = e?.response?.data?.message || e?.message || `Failed to ${isEditMode ? 'update' : 'create'} service`;
+      const errorMessage = e?.response?.data?.message || e?.message || (isEditMode ? tr("addService.failedToUpdate") : tr("addService.failedToCreate"));
       toast.error(errorMessage);
     }
   };
@@ -244,7 +272,7 @@ export default function AddServicePage() {
     try {
       // Validate required fields
       if (!formData.serviceName.trim()) {
-        toast.error("Service name is required");
+        toast.error(tr("addService.serviceNameIsRequired"));
         return;
       }
 
@@ -263,8 +291,9 @@ export default function AddServicePage() {
         mobileService: settingsData.mobileService,
         virtualAppointment: settingsData.virtualAppointments,
         ...buildScheduling(),
+        ...buildClientSettings(),
       });
-      toast.success("Service created successfully");
+      toast.success(tr("addService.serviceCreatedSuccessfully"));
       // Reset form for next service
       setFormData({
         serviceName: "",
@@ -278,10 +307,11 @@ export default function AddServicePage() {
         color: "#3b82f6",
       });
       setSelectedStaff([]);
+      setClientData({ messageToClient: "", questions: [] });
     } catch (error) {
       console.error("Failed to create service:", error);
       const e = error as { message?: string; response?: { data?: { message?: string } } };
-      const errorMessage = e?.response?.data?.message || e?.message || "Failed to create service";
+      const errorMessage = e?.response?.data?.message || e?.message || tr("addService.failedToCreateService");
       toast.error(errorMessage);
     }
   };
@@ -304,123 +334,103 @@ export default function AddServicePage() {
 
   const isAllSelected = safeStaff.length > 0 && selectedStaff.length === safeStaff.length;
 
+  const durationMin = (parseInt(formData.durationHours) || 0) * 60 + (parseInt(formData.durationMinutes) || 0);
+  const close = () => navigate(getPath("items-category"));
+
   return (
-    <AppLayout>
-      <div className="h-full flex flex-col bg-white">
-        {/* Header */}
-        <div className="border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(getPath("items-category"))}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h1 className="text-xl font-bold text-gray-900">{isEditMode ? "Edit Service" : "Add Service"}</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              {!isEditMode && (
-                <Button
-                  variant="outline"
-                  onClick={handleSaveAndAddNext}
-                  className="bg-gray-100 text-gray-900 hover:bg-gray-200 border-gray-300"
-                >
-                  SAVE & ADD NEXT SERVICE
-                </Button>
-              )}
-              <Button
-                onClick={handleSave}
-                className="bg-gray-900 text-white hover:bg-gray-800"
-                disabled={!formData.serviceName.trim() || creating}
-              >
-                {creating ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin mr-2" />
-                    {isEditMode ? "UPDATING..." : "SAVING..."}
-                  </>
-                ) : (
-                  isEditMode ? "UPDATE SERVICE" : "SAVE SERVICE"
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar */}
-          <div className="w-64 bg-gray-50 border-r border-gray-200">
-            <div className="p-4 space-y-1">
-              {sidebarItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSidebarItem(item.id)}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors relative ${
-                    activeSidebarItem === item.id
-                      ? "text-gray-900 bg-white"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  {activeSidebarItem === item.id && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900" />
-                  )}
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Main Content Area - Form */}
-          <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
+    <RouteSheet
+      backdrop={<ItemsCategoryPage />}
+      onClose={close}
+      size="lg"
+      title={isEditMode ? formData.serviceName || tr("addService.editService") : tr("addService.newService")}
+      description={isEditMode ? tr("addService.changesShowOnBooqiAs") : tr("addService.clientsCanBookItOnline")}
+      header={
+        <SheetTabs
+          label={tr("addService.serviceSections")}
+          value={activeSidebarItem}
+          onChange={setActiveSidebarItem}
+          items={sidebarItems.map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
+        />
+      }
+      footer={
+        <>
+          {!isEditMode ? (
+            <Button variant="outline" className={sheetSecondary} onClick={handleSaveAndAddNext} disabled={!formData.serviceName.trim() || creating}>
+              {tr("common.saveAddNext")}
+            </Button>
+          ) : (
+            <Button variant="outline" className={sheetSecondary} onClick={close}>{tr("common.cancel")}</Button>
+          )}
+          <Button className={sheetPrimary} onClick={handleSave} disabled={!formData.serviceName.trim() || creating}>
+            {creating ? (isEditMode ? tr("addService.updating") : tr("common.saving")) : isEditMode ? tr("common.saveChanges") : tr("addService.saveService")}
+          </Button>
+        </>
+      }
+    >
+            {activeSidebarItem === "general" && (
+              <ClientPreview where={tr("addService.yourMenuOnBooqi")}>
+                <div className="flex items-center gap-4 rounded-2xl bg-white p-4 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-semibold">{formData.serviceName.trim() || tr("addService.serviceName")}</span>
+                    <span className="mt-0.5 block line-clamp-2 text-sm text-[rgb(var(--reg-muted))]">
+                      {[durationMin ? formatMinutes(durationMin) : null, formData.description.trim() || null].filter(Boolean).join(" · ") || "\u00a0"}
+                    </span>
+                    <span className="mt-1 block text-sm font-bold tabular-nums">
+                      {formData.priceType === "FROM" ? tr("common.from") : ""}{formData.price || "0"} {currencySymbol()}
+                    </span>
+                  </span>
+                  <span className="inline-flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-semibold ring-1 ring-inset ring-[rgb(var(--reg-line))]">{tr("common.book")}</span>
+                </div>
+              </ClientPreview>
+            )}
             {activeSidebarItem === "general" ? (
-              <div className="max-w-3xl space-y-8 bg-white p-6 rounded-lg shadow-sm">
+              <div className="space-y-8">
               {/* Main details (required) section */}
               <div className="space-y-6">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Main details (required)
+                <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">
+                  {tr("addService.mainDetailsRequired")}
                 </h2>
 
                 {/* Service Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="serviceName" className="text-sm font-medium text-gray-700">
-                    Service Name
+                  <Label htmlFor="serviceName" className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">
+                    {tr("addService.serviceName2")}
                   </Label>
                   <Input
                     id="serviceName"
                     value={formData.serviceName}
                     onChange={(e) => handleInputChange("serviceName", e.target.value)}
-                    placeholder="Enter service name"
-                    className="w-full"
+                    placeholder={tr("addService.enterServiceName")}
+                    className="h-12 w-full rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
                   />
                 </div>
 
                 {/* Service Type */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="serviceType" className="text-sm font-medium text-gray-700">
-                      Service Type
+                    <Label htmlFor="serviceType" className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">
+                      {tr("addService.serviceType")}
                     </Label>
-                    <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                    <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                   </div>
                   <Select
                     value={formData.serviceType}
                     onValueChange={(value) => handleInputChange("serviceType", value)}
                   >
                     <SelectTrigger id="serviceType" className="w-full">
-                      <SelectValue placeholder="Select service type" />
+                      <SelectValue placeholder={tr("addService.selectServiceType")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="standard">Standard</SelectItem>
-                      <SelectItem value="package">Package</SelectItem>
-                      <SelectItem value="course">Course</SelectItem>
+                      <SelectItem value="standard">{tr("addService.standard")}</SelectItem>
+                      <SelectItem value="package">{tr("addService.package")}</SelectItem>
+                      <SelectItem value="course">{tr("addService.course")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {/* Duration */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Duration</Label>
+                  <Label className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">{tr("common.duration")}</Label>
                   <div className="flex items-center gap-3">
                     <Select
                       value={formData.durationHours}
@@ -432,12 +442,12 @@ export default function AddServicePage() {
                       <SelectContent>
                         {Array.from({ length: 24 }, (_, i) => (
                           <SelectItem key={i} value={i.toString()}>
-                            {i}h
+                            {tr("addService.h", { i })}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-sm text-gray-600">hour(s)</span>
+                    <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.hourS")}</span>
                     <Select
                       value={formData.durationMinutes}
                       onValueChange={(value) => handleInputChange("durationMinutes", value)}
@@ -448,18 +458,18 @@ export default function AddServicePage() {
                       <SelectContent>
                         {[0, 15, 30, 45].map((min) => (
                           <SelectItem key={min} value={min.toString()}>
-                            {min}min
+                            {tr("addService.min", { min })}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <span className="text-sm text-gray-600">minutes</span>
+                    <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                   </div>
                 </div>
 
                 {/* Price type and Price */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Price type</Label>
+                  <Label className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">{tr("common.priceType")}</Label>
                   <div className="flex items-center gap-3">
                     <Select
                       value={formData.priceType}
@@ -469,17 +479,17 @@ export default function AddServicePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="FIXED">Fixed</SelectItem>
-                        <SelectItem value="FROM">From</SelectItem>
-                        <SelectItem value="RANGE">Range</SelectItem>
+                        <SelectItem value="FIXED">{tr("common.fixed")}</SelectItem>
+                        <SelectItem value="FROM">{tr("common.from2")}</SelectItem>
+                        <SelectItem value="RANGE">{tr("addService.range")}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span className="text-sm text-gray-600">{currencySymbol()}</span>
+                    <span className="text-sm text-[rgb(var(--reg-muted))]">{currencySymbol()}</span>
                     <Input
                       type="number"
                       value={formData.price}
                       onChange={(e) => handleInputChange("price", e.target.value)}
-                      placeholder="Price"
+                      placeholder={tr("common.price")}
                       className="flex-1"
                     />
                   </div>
@@ -487,12 +497,12 @@ export default function AddServicePage() {
               </div>
 
               {/* Additional details section */}
-              <div className="space-y-6 pt-6 border-t border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Additional details</h2>
+              <div className="space-y-6 pt-6 border-t border-[rgb(var(--reg-line)/0.8)]">
+                <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("addService.additionalDetails")}</h2>
 
                 {/* Service Category */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Service Category</Label>
+                  <Label className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">{tr("addService.serviceCategory")}</Label>
                   <Select
                     value={formData.categoryId}
                     onValueChange={(value) => handleInputChange("categoryId", value)}
@@ -501,7 +511,7 @@ export default function AddServicePage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Not categorized</SelectItem>
+                      <SelectItem value="none">{tr("common.notCategorized")}</SelectItem>
                       {safeCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           {category.name}
@@ -513,15 +523,15 @@ export default function AddServicePage() {
 
                 {/* Service Color */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Service Color</Label>
+                  <Label className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">{tr("addService.serviceColor")}</Label>
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <input
                         type="color"
                         value={formData.color}
                         onChange={(e) => handleInputChange("color", e.target.value)}
-                        className="w-16 h-10 rounded border border-gray-300 cursor-pointer"
-                        title="Select color"
+                        className="w-16 h-10 rounded border border-[rgb(var(--reg-line))] cursor-pointer"
+                        title={tr("addService.selectColor")}
                       />
                     </div>
                     <Input
@@ -539,51 +549,51 @@ export default function AddServicePage() {
                       maxLength={7}
                     />
                     <div
-                      className="w-10 h-10 rounded border border-gray-300 flex-shrink-0"
+                      className="w-10 h-10 rounded border border-[rgb(var(--reg-line))] flex-shrink-0"
                       style={{ backgroundColor: formData.color }}
-                      title="Color preview"
+                      title={tr("addService.colorPreview")}
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
-                    This color will be used to display appointments for this service in the calendar
+                  <p className="text-xs text-[rgb(var(--reg-muted))]">
+                    {tr("addService.thisColorWillBeUsed")}
                   </p>
                 </div>
 
                 {/* Text Editor Toolbar */}
-                <div className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="flex items-center gap-2 p-2 border border-[rgb(var(--reg-line)/0.8)] rounded-2xl bg-[rgb(var(--reg-canvas))]">
                   <button className="p-2 hover:bg-gray-200 rounded">
-                    <Bold size={16} className="text-gray-600" />
+                    <Bold size={16} className="text-[rgb(var(--reg-muted))]" />
                   </button>
                   <button className="p-2 hover:bg-gray-200 rounded">
-                    <Italic size={16} className="text-gray-600" />
+                    <Italic size={16} className="text-[rgb(var(--reg-muted))]" />
                   </button>
                   <button className="p-2 hover:bg-gray-200 rounded">
-                    <Strikethrough size={16} className="text-gray-600" />
+                    <Strikethrough size={16} className="text-[rgb(var(--reg-muted))]" />
                   </button>
                   <div className="w-px h-6 bg-gray-300" />
                   <button className="p-2 hover:bg-gray-200 rounded">
-                    <List size={16} className="text-gray-600" />
+                    <List size={16} className="text-[rgb(var(--reg-muted))]" />
                   </button>
                   <button className="p-2 hover:bg-gray-200 rounded">
-                    <ListOrdered size={16} className="text-gray-600" />
+                    <ListOrdered size={16} className="text-[rgb(var(--reg-muted))]" />
                   </button>
                 </div>
 
                 {/* Service Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-                    Service Description
+                  <Label htmlFor="description" className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">
+                    {tr("addService.serviceDescription")}
                   </Label>
                   <div className="relative">
                     <textarea
                       id="description"
                       value={formData.description}
                       onChange={(e) => handleInputChange("description", e.target.value)}
-                      placeholder="Enter service description..."
+                      placeholder={tr("addService.enterServiceDescription")}
                       rows={8}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+                      className="w-full px-4 py-3 border border-[rgb(var(--reg-line))] rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
                     />
-                    <button className="absolute bottom-3 right-3 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                    <button className="absolute bottom-3 right-3 p-2 text-[rgb(var(--reg-muted)/0.8)] hover:text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)] rounded">
                       <ImageIcon size={20} />
                     </button>
                   </div>
@@ -591,17 +601,17 @@ export default function AddServicePage() {
               </div>
             </div>
             ) : activeSidebarItem === "staff" ? (
-              <div className="max-w-3xl bg-white rounded-lg shadow-sm">
+              <div className="max-w-3xl bg-white rounded-2xl shadow-sm">
                 <div className="p-6">
                   {/* Select All */}
-                  <div className="flex items-center gap-3 py-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3 py-4 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <Checkbox
                       checked={isAllSelected}
                       onCheckedChange={handleSelectAll}
                       className="h-5 w-5 border-gray-400 data-[state=checked]:bg-gray-900 data-[state=checked]:border-gray-900"
                     />
-                    <Label className="text-sm font-medium text-gray-900 cursor-pointer">
-                      Select All ({selectedStaff.length})
+                    <Label className="text-sm font-medium text-[rgb(var(--reg-ink))] cursor-pointer">
+                      {tr("addService.selectAll", { count: selectedStaff.length })}
                     </Label>
                   </div>
 
@@ -609,7 +619,7 @@ export default function AddServicePage() {
                   <div className="divide-y divide-gray-200">
                     {staffLoading ? (
                       <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                        <Loader2 className="h-6 w-6 animate-spin text-[rgb(var(--reg-muted)/0.8)]" />
                       </div>
                     ) : safeStaff.length > 0 ? (
                       safeStaff.map((staffMember) => {
@@ -626,34 +636,34 @@ export default function AddServicePage() {
                               className="h-5 w-5 border-gray-400 data-[state=checked]:bg-gray-900 data-[state=checked]:border-gray-900"
                             />
                             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-sm font-medium text-gray-700">
+                              <span className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">
                                 {initials}
                               </span>
                             </div>
-                            <Label className="text-sm font-medium text-gray-900 cursor-pointer flex-1">
+                            <Label className="text-sm font-medium text-[rgb(var(--reg-ink))] cursor-pointer flex-1">
                               {staffMember.name}
                             </Label>
                           </div>
                         );
                       })
                     ) : (
-                      <div className="py-8 text-center text-gray-500 text-sm">
-                        No staff members available
+                      <div className="py-8 text-center text-[rgb(var(--reg-muted))] text-sm">
+                        {tr("addService.noStaffMembersAvailable")}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             ) : activeSidebarItem === "settings" ? (
-              <div className="max-w-3xl bg-white rounded-lg shadow-sm">
+              <div className="max-w-3xl bg-white rounded-2xl shadow-sm">
                 <div className="p-6 space-y-6">
                   {/* Allow self-booking */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                  <div className="flex items-center justify-between py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium text-gray-900 cursor-pointer">
-                        Allow self-booking
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))] cursor-pointer">
+                        {tr("addService.allowSelfBooking")}
                       </Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <Switch
                       checked={settingsData.allowSelfBooking}
@@ -665,12 +675,12 @@ export default function AddServicePage() {
                   </div>
 
                   {/* Mobile Service */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                  <div className="flex items-center justify-between py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium text-gray-900 cursor-pointer">
-                        Mobile Service
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))] cursor-pointer">
+                        {tr("addService.mobileService")}
                       </Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <Switch
                       checked={settingsData.mobileService}
@@ -681,12 +691,12 @@ export default function AddServicePage() {
                   </div>
 
                   {/* Virtual Appointments */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                  <div className="flex items-center justify-between py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium text-gray-900 cursor-pointer">
-                        Virtual Appointments
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))] cursor-pointer">
+                        {tr("addService.virtualAppointments")}
                       </Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <Switch
                       checked={settingsData.virtualAppointments}
@@ -697,12 +707,12 @@ export default function AddServicePage() {
                   </div>
 
                   {/* Booking Intervals */}
-                  <div className="py-3 border-b border-gray-200">
+                  <div className="py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2 mb-3">
-                      <Label className="text-sm font-medium text-gray-900">
-                        Booking Intervals
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">
+                        {tr("addService.bookingIntervals")}
                       </Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <div className="flex items-center gap-3">
                       <Select
@@ -722,7 +732,7 @@ export default function AddServicePage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-sm text-gray-600">hour...</span>
+                      <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.hour")}</span>
                       <Select
                         value={settingsData.bookingIntervalMinutes}
                         onValueChange={(value) =>
@@ -735,20 +745,20 @@ export default function AddServicePage() {
                         <SelectContent>
                           {[0, 15, 30, 45].map((min) => (
                             <SelectItem key={min} value={min.toString()}>
-                              {min}min
+                              {tr("addService.min", { min })}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-sm text-gray-600">minutes</span>
+                      <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                     </div>
                   </div>
 
                   {/* Padding Time */}
-                  <div className="py-3 border-b border-gray-200">
+                  <div className="py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2 mb-3">
-                      <Label className="text-sm font-medium text-gray-900">Padding Time</Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">{tr("addService.paddingTime")}</Label>
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
@@ -763,11 +773,11 @@ export default function AddServicePage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="-">-</SelectItem>
-                            <SelectItem value="fixed">Fixed</SelectItem>
-                            <SelectItem value="percentage">Percentage</SelectItem>
+                            <SelectItem value="fixed">{tr("common.fixed")}</SelectItem>
+                            <SelectItem value="percentage">{tr("common.percentage")}</SelectItem>
                           </SelectContent>
                         </Select>
-                        <span className="text-sm text-gray-600">Rule</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.rule")}</span>
                         <Select
                           value={settingsData.paddingTimeMinutes}
                           onValueChange={(value) =>
@@ -778,13 +788,13 @@ export default function AddServicePage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Not set">Not set</SelectItem>
-                            <SelectItem value="5">5min</SelectItem>
-                            <SelectItem value="10">10min</SelectItem>
-                            <SelectItem value="15">15min</SelectItem>
+                            <SelectItem value="Not set">{tr("addService.notSet")}</SelectItem>
+                            <SelectItem value="5">{tr("addService.min2")}</SelectItem>
+                            <SelectItem value="10">{tr("addService.min3")}</SelectItem>
+                            <SelectItem value="15">{tr("addService.min4")}</SelectItem>
                           </SelectContent>
                         </Select>
-                        <span className="text-sm text-gray-600">minutes</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <Select
@@ -804,7 +814,7 @@ export default function AddServicePage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-sm text-gray-600">hour...</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.hour")}</span>
                         <Select
                           value={settingsData.paddingTimeBeforeMinutes}
                           onValueChange={(value) =>
@@ -817,15 +827,15 @@ export default function AddServicePage() {
                           <SelectContent>
                             {[0, 15, 30, 45].map((min) => (
                               <SelectItem key={min} value={min.toString()}>
-                                {min}min
+                                {tr("addService.min", { min })}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-sm text-gray-600">minutes</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-600 w-20">after</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))] w-20">{tr("addService.after")}</span>
                         <Select
                           value={settingsData.paddingTimeAfterHours}
                           onValueChange={(value) =>
@@ -843,7 +853,7 @@ export default function AddServicePage() {
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-sm text-gray-600">hour...</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.hour")}</span>
                         <Select
                           value={settingsData.paddingTimeAfterMinutes}
                           onValueChange={(value) =>
@@ -856,23 +866,23 @@ export default function AddServicePage() {
                           <SelectContent>
                             {[0, 15, 30, 45].map((min) => (
                               <SelectItem key={min} value={min.toString()}>
-                                {min}min
+                                {tr("addService.min", { min })}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <span className="text-sm text-gray-600">minutes</span>
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Processing time during the service */}
-                  <div className="py-3 border-b border-gray-200">
+                  <div className="py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2 mb-3">
-                      <Label className="text-sm font-medium text-gray-900">
-                        Processing time during the service
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">
+                        {tr("addService.processingTimeDuringTheService")}
                       </Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <div className="flex items-center gap-3">
                       <Select
@@ -892,7 +902,7 @@ export default function AddServicePage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-sm text-gray-600">hour...</span>
+                      <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.hour")}</span>
                       <Select
                         value={settingsData.processingTimeDuringMinutes}
                         onValueChange={(value) =>
@@ -905,22 +915,22 @@ export default function AddServicePage() {
                         <SelectContent>
                           {[0, 15, 30, 45].map((min) => (
                             <SelectItem key={min} value={min.toString()}>
-                              {min}min
+                              {tr("addService.min", { min })}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-sm text-gray-600">minutes</span>
+                      <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                     </div>
                   </div>
 
                   {/* Processing time after the service */}
-                  <div className="py-3 border-b border-gray-200">
+                  <div className="py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2 mb-3">
-                      <Label className="text-sm font-medium text-gray-900">
-                        Processing time after the service
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">
+                        {tr("addService.processingTimeAfterTheService")}
                       </Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <div className="flex items-center gap-3">
                       <Select
@@ -940,7 +950,7 @@ export default function AddServicePage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-sm text-gray-600">hour...</span>
+                      <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.hour")}</span>
                       <Select
                         value={settingsData.processingTimeAfterMinutes}
                         onValueChange={(value) =>
@@ -953,20 +963,20 @@ export default function AddServicePage() {
                         <SelectContent>
                           {[0, 15, 30, 45].map((min) => (
                             <SelectItem key={min} value={min.toString()}>
-                              {min}min
+                              {tr("addService.min", { min })}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-sm text-gray-600">minutes</span>
+                      <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.minutes")}</span>
                     </div>
                   </div>
 
                   {/* Parallel Clients */}
-                  <div className="py-3 border-b border-gray-200">
+                  <div className="py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center gap-2 mb-3">
-                      <Label className="text-sm font-medium text-gray-900">Parallel Clients</Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">{tr("addService.parallelClients")}</Label>
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <Select
                       value={settingsData.parallelClients}
@@ -978,11 +988,11 @@ export default function AddServicePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Not allowed">Not allowed</SelectItem>
+                        <SelectItem value="Not allowed">{tr("addService.notAllowed")}</SelectItem>
                         <SelectItem value="1">1</SelectItem>
                         <SelectItem value="2">2</SelectItem>
                         <SelectItem value="3">3</SelectItem>
-                        <SelectItem value="Unlimited">Unlimited</SelectItem>
+                        <SelectItem value="Unlimited">{tr("addService.unlimited")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -990,8 +1000,8 @@ export default function AddServicePage() {
                   {/* Tax Rate */}
                   <div className="py-3">
                     <div className="flex items-center gap-2 mb-3">
-                      <Label className="text-sm font-medium text-gray-900">Tax Rate</Label>
-                      <HelpCircle size={16} className="text-gray-400 cursor-help" />
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">{tr("addService.taxRate")}</Label>
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)] cursor-help" />
                     </div>
                     <Select
                       value={settingsData.taxRate}
@@ -1003,68 +1013,82 @@ export default function AddServicePage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0%">0%</SelectItem>
-                        <SelectItem value="5%">5%</SelectItem>
-                        <SelectItem value="8%">8%</SelectItem>
-                        <SelectItem value="23%">23%</SelectItem>
+                        <SelectItem value="default">{tr("addService.businessDefault")}</SelectItem>
+                        <SelectItem value="0">0%</SelectItem>
+                        <SelectItem value="5">5%</SelectItem>
+                        <SelectItem value="8">8%</SelectItem>
+                        <SelectItem value="18">18%</SelectItem>
+                        <SelectItem value="23">23%</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
               </div>
             ) : activeSidebarItem === "for-client" ? (
-              <div className="max-w-3xl bg-white rounded-lg shadow-sm">
+              <div className="max-w-3xl bg-white rounded-2xl shadow-sm">
                 <div className="p-6 space-y-8">
                   {/* Message to Client */}
                   <div className="space-y-3">
-                    <h2 className="text-lg font-semibold text-gray-900">Message to Client</h2>
+                    <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("addService.messageToClient")}</h2>
                     <div className="space-y-2">
                       <textarea
                         value={clientData.messageToClient}
                         onChange={(e) =>
                           setClientData((prev) => ({ ...prev, messageToClient: e.target.value }))
                         }
-                        placeholder="E.g. Please do not eat 1 hour before the appointment."
+                        placeholder={tr("addService.eGPleaseDoNot")}
                         rows={6}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400 resize-y"
+                        className="w-full px-4 py-3 border border-[rgb(var(--reg-line))] rounded-2xl focus:outline-none focus:ring-2 focus:ring-gray-400 resize-y"
                       />
-                      <p className="text-sm text-gray-500">
-                        This message will be sent to your client before the appointment.
+                      <p className="text-sm text-[rgb(var(--reg-muted))]">
+                        {tr("addService.shownToTheClientOnce")}
                       </p>
                     </div>
                   </div>
 
                   {/* Questions to Client */}
                   <div className="space-y-3">
-                    <h2 className="text-lg font-semibold text-gray-900">Questions to Client</h2>
+                    <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("addService.questionsToClient")}</h2>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
                         setClientData((prev) => ({
                           ...prev,
-                          questions: [...prev.questions, ""],
+                          questions: [...prev.questions, { text: "", required: false }],
                         }));
                       }}
-                      className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
+                      className="flex items-center gap-2 border-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-canvas))]"
                     >
                       <Plus size={16} />
-                      Add Question
+                      {tr("addService.addQuestion")}
                     </Button>
                     {clientData.questions.length > 0 && (
                       <div className="space-y-3 mt-4">
                         {clientData.questions.map((question, index) => (
                           <div key={index} className="flex items-center gap-3">
                             <Input
-                              value={question}
+                              value={question.text}
                               onChange={(e) => {
                                 const newQuestions = [...clientData.questions];
-                                newQuestions[index] = e.target.value;
+                                newQuestions[index] = { ...question, text: e.target.value };
                                 setClientData((prev) => ({ ...prev, questions: newQuestions }));
                               }}
-                              placeholder="Enter your question..."
+                              placeholder={tr("addService.enterYourQuestion")}
                               className="flex-1"
                             />
+                            <label className="flex shrink-0 items-center gap-1.5 text-sm text-[rgb(var(--reg-muted))]">
+                              <input
+                                type="checkbox"
+                                checked={question.required}
+                                onChange={(e) => {
+                                  const newQuestions = [...clientData.questions];
+                                  newQuestions[index] = { ...question, required: e.target.checked };
+                                  setClientData((prev) => ({ ...prev, questions: newQuestions }));
+                                }}
+                              />
+                              {tr("addService.required")}
+                            </label>
                             <Button
                               type="button"
                               variant="ghost"
@@ -1077,7 +1101,7 @@ export default function AddServicePage() {
                               }}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              Remove
+                              {tr("common.remove")}
                             </Button>
                           </div>
                         ))}
@@ -1087,16 +1111,13 @@ export default function AddServicePage() {
                 </div>
               </div>
             ) : (
-              <div className="max-w-3xl bg-white rounded-lg shadow-sm p-6">
-                <p className="text-gray-500">
-                  {sidebarItems.find((item) => item.id === activeSidebarItem)?.label} section coming soon...
+              <div className="space-y-6">
+                <p className="text-[rgb(var(--reg-muted))]">
+                  {sidebarItems.find((item) => item.id === activeSidebarItem)?.label}{" "}{tr("addService.sectionComingSoon")}
                 </p>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-    </AppLayout>
+    </RouteSheet>
   );
 }
 

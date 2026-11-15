@@ -7,6 +7,7 @@ import type { SalePayment } from "@/services/paymentConfirmationService";
 import { useFeatureFlags } from "@/services/platformService";
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
 import { useEffect, useState } from "react";
+import { t } from "@/i18n";
 
 export type Coverage = Record<string, "MEMBERSHIP" | "PACKAGE" | "VISIT_REWARD" | undefined>;
 
@@ -96,7 +97,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
     return (
       <Card>
         <CardContent className="p-4 text-sm text-muted-foreground">
-          Pick a client to use a membership, a package, points or an earned free service.
+          {t("checkout.pickAClientToUse")}
         </CardContent>
       </Card>
     );
@@ -105,14 +106,13 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Benefits and payment</CardTitle>
+        <CardTitle className="text-base">{t("checkout.benefitsAndPayment")}</CardTitle>
         {benefits && (
           <div className="flex flex-wrap gap-2 pt-1">
-            <Badge variant="secondary">{benefits.points} points</Badge>
+            <Badge variant="secondary">{t("checkout.points", { points: benefits.points })}</Badge>
             {benefits.visitsForReward > 0 && (
               <Badge variant="secondary">
-                {benefits.visits}/{benefits.visitsForReward} visits
-                {benefits.rewardsAvailable > 0 ? ` · ${benefits.rewardsAvailable} free` : ""}
+                {t("checkout.visits", { visits: benefits.visits, visitsForReward: benefits.visitsForReward, value: benefits.rewardsAvailable > 0 ? t("checkout.free", { rewardsAvailable: benefits.rewardsAvailable }) : "" })}
               </Badge>
             )}
 
@@ -123,23 +123,23 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
         <div className="space-y-2">
           {orderItems.map((item) => {
             const options: Array<{ value: Coverage[string]; label: string; enabled: boolean }> = [
-              { value: undefined, label: "Pay", enabled: true },
+              { value: undefined, label: t("checkout.pay"), enabled: true },
               // The platform decides whether these exist. It was a literal `false` here, so
               // a till could never price a bill against a membership however the back
               // office was configured.
               {
                 value: "MEMBERSHIP",
-                label: "Membership",
+                label: t("checkout.membership"),
                 enabled: flags.memberships === true && membershipCovers(item.serviceId),
               },
               {
                 value: "PACKAGE",
-                label: "Package",
+                label: t("checkout.package"),
                 enabled: flags.packages === true && packageCovers(item.serviceId),
               },
               {
                 value: "VISIT_REWARD",
-                label: "Free (earned)",
+                label: t("checkout.freeEarned"),
                 enabled: (benefits?.rewardsAvailable ?? 0) > 0,
               },
             ];
@@ -179,11 +179,11 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
           {flags.gift_cards !== false && (
           <>
           <div>
-            <label className="text-xs text-muted-foreground">Gift card code</label>
+            <label className="text-xs text-muted-foreground">{t("checkout.giftCardCode")}</label>
             <Input
               value={giftCode}
               onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
-              placeholder={benefits?.giftCards[0]?.code ?? "CODE"}
+              placeholder={benefits?.giftCards[0]?.code ?? t("checkout.code")}
             />
             {benefits && benefits.giftCards.length > 0 && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -192,7 +192,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
             )}
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Take from the card</label>
+            <label className="text-xs text-muted-foreground">{t("checkout.takeFromTheCard")}</label>
             <Input
               type="number"
               min={0}
@@ -205,7 +205,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
           )}
           <div>
             <label className="text-xs text-muted-foreground">
-              Points to spend (100 = 1 {currencySymbol()})
+              {t("checkout.pointsToSpend", { value: currencySymbol() })}
             </label>
             <Input
               type="number"
@@ -218,7 +218,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
           </div>
           <div />
           <div>
-            <label className="text-xs text-muted-foreground">Cash</label>
+            <label className="text-xs text-muted-foreground">{t("common.cash")}</label>
             <Input
               type="number"
               min={0}
@@ -228,7 +228,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
             />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Card</label>
+            <label className="text-xs text-muted-foreground">{t("common.card")}</label>
             <Input
               type="number"
               min={0}
@@ -241,19 +241,19 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
 
         <div className="rounded-md bg-muted p-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Covered by benefits</span>
+            <span className="text-muted-foreground">{t("checkout.coveredByBenefits")}</span>
             <span>
               {covered.toFixed(2)} {currencySymbol()}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Due</span>
+            <span className="text-muted-foreground">{t("checkout.due")}</span>
             <span className="font-medium">
               {due.toFixed(2)} {currencySymbol()}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Still to pay</span>
+            <span className="text-muted-foreground">{t("checkout.stillToPay")}</span>
             <span
               className={
                 remaining > 0.009 ? "font-medium text-destructive" : "font-medium text-green-600"

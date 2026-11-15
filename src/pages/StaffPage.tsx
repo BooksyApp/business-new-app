@@ -6,44 +6,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Search,
-  Plus,
-  Edit,
-  Menu,
-  Calendar,
-  Star,
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Printer,
-  HelpCircle,
-  Clock,
-  Pencil,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  X,
-  UserPlus,
-  Send,
-  Layers,
-} from "lucide-react";
+import { Search, Plus, Calendar, Copy, HelpCircle, Clock, Pencil, CheckCircle2, XCircle, X, UserPlus, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format, addDays, subDays, parse, isSameDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { parse } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import { useStaff } from "@/hooks/useStaff";
 import { invitationService, type Invitation } from "@/services/clientService";
-import { shiftService, type Shift } from "@/services/shiftService";
 import { useServices } from "@/hooks/useServices";
 import { serviceService } from "@/services/serviceService";
 import { useTimeOff } from "@/hooks/useTimeOff";
@@ -54,35 +24,30 @@ import { usePayments } from "@/hooks/usePayments";
 import { CommissionCategory, CommissionType, type CommissionRule } from "@/services/commissionService";
 import type { Staff } from "@/services/staffService";
 import { PaymentMethod } from "@/services/paymentService";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Dialog } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { ShiftsWeek } from "@/components/team/ShiftsWeek";
+import { StatCard } from "@/components/page/booqi";
+import { ActionMenu, FilterChips } from "@/components/page/kit";
+import { money } from "@/components/page/kitStyles";
+import { Coins, Percent, TrendingUp, Layers as LayersIcon } from "lucide-react";
+import { BooqiScope, EmptyState, FormSheet, PageHeader } from "@/components/page/booqi";
+import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { Field, RowAction, StatusChip } from "@/components/page/kit";
+import { fieldCls } from "@/components/page/kitStyles";
+import { cn } from "@/lib/utils";
+import { roleService, type BusinessRole } from "@/services/roleService";
+import { staffService } from "@/services/staffService";
+import { t as tr, fmtDate as formatLocaleDate, formatMinutes } from "@/i18n";
 
+import { roleName, roleDescription } from "@/lib/roleLabel";
 // Helper function to format duration
 const formatDuration = (minutes?: number): string => {
-  if (!minutes) return "N/A";
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0 && mins > 0) {
-    return `${hours}h ${mins}min`;
-  } else if (hours > 0) {
-    return `${hours}h`;
-  } else {
-    return `${mins}min`;
-  }
+  if (!minutes) return tr("common.nA");
+  return formatMinutes(minutes);
 };
 
 // Helper function to format price
@@ -138,16 +103,12 @@ export default function StaffPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("staff-members");
   const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
-  const [activeContentTab, setActiveContentTab] = useState("services");
   const [searchQuery, setSearchQuery] = useState("");
   const [servicesSearchQuery, setServicesSearchQuery] = useState("");
   const [selectedServicesForStaff, setSelectedServicesForStaff] = useState<number[]>([]);
   const [workingHoursForm, setWorkingHoursForm] = useState<Record<string, { start: string; end: string; isClosed: boolean }>>({});
-  const [viewType, setViewType] = useState("Day");
   const [selectedDate, setSelectedDate] = useState(new Date()); // Today
-  const [selectedStaffFilter, setSelectedStaffFilter] = useState("All");
   const [selectedStaffer, setSelectedStaffer] = useState("All");
-  const [selectedCommissionCategory, setSelectedCommissionCategory] = useState("default");
 
   // Fetch data from API
   const businessId = useBusinessId();
@@ -178,7 +139,7 @@ export default function StaffPage() {
     const name = resourceForm.name.trim();
     const quantity = Number(resourceForm.quantity);
     if (!name || !Number.isFinite(quantity) || quantity < 1) {
-      toast.error("Name and a quantity of at least 1 are required");
+      toast.error(tr("staff.nameAndAQuantityOf"));
       return;
     }
     setResourceBusy(true);
@@ -186,9 +147,9 @@ export default function StaffPage() {
       await resourceTypeService.create(businessId, name, quantity);
       setResourceForm({ name: "", quantity: "1" });
       loadResourceTypes();
-      toast.success("Resource added");
+      toast.success(tr("staff.resourceAdded"));
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not add the resource");
+      toast.error(error instanceof Error ? error.message : tr("staff.couldNotAddTheResource"));
     } finally {
       setResourceBusy(false);
     }
@@ -200,19 +161,14 @@ export default function StaffPage() {
       // Backend deactivates rather than deleting, so existing bookings keep resolving.
       await resourceTypeService.deactivate(businessId, id);
       loadResourceTypes();
-      toast.success("Resource deactivated");
+      toast.success(tr("staff.resourceDeactivated"));
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not remove the resource");
+      toast.error(error instanceof Error ? error.message : tr("staff.couldNotRemoveTheResource"));
     } finally {
       setResourceBusy(false);
     }
   };
 
-  // #49: the SHIFTS tab rendered each staff member's weekly working hours and their
-  // time off, and never called shiftService at all — so a shift scheduled for a
-  // specific date (the whole point of the shifts table) appeared nowhere. The tab was
-  // permanently blind to the data it is named after.
-  const [shifts, setShifts] = useState<Shift[]>([]);
 
   // #48: PUT /api/time-off/{id}/approve and timeOffService.approveTimeOff have existed
   // all along with no caller. Backend create() also approved everything unconditionally,
@@ -224,26 +180,17 @@ export default function StaffPage() {
     setApprovingTimeOffId(timeOffId);
     try {
       await timeOffService.approveTimeOff(timeOffId, businessId);
-      toast.success("Time off approved");
-      await refreshStaff();
+      toast.success(tr("staff.timeOffApproved"));
+      // The pending list reads timeOffs; without this the approved request stayed listed.
+      await Promise.all([refreshStaff(), fetchTimeOffs()]);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not approve the time off");
+      toast.error(error instanceof Error ? error.message : tr("staff.couldNotApproveTheTime"));
     } finally {
       setApprovingTimeOffId(null);
     }
   };
-  useEffect(() => {
-    if (!businessId) return;
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
-    shiftService
-      .getShiftsByBusinessAndDate(businessId, dateStr)
-      .then((data) => setShifts(data || []))
-      // A failed shift fetch must leave the rest of the tab usable.
-      .catch(() => setShifts([]));
-  }, [businessId, selectedDate]);
 
   /** A shift row overrides the staff member's default weekly hours for that date. */
-  const shiftForStaff = (staffId: number) => shifts.find((sh) => sh.staffId === staffId);
   useEffect(() => {
     if (!businessId) return;
     invitationService
@@ -261,7 +208,7 @@ export default function StaffPage() {
     );
   };
   const { services: apiServices, loading: servicesLoading, updateService, refresh: refreshServices } = useServices(businessId);
-  const { timeOffs, createTimeOff, loading: timeOffsLoading } = useTimeOff(businessId);
+  const { timeOffs, createTimeOff, loading: timeOffsLoading, fetchTimeOffs } = useTimeOff(businessId);
   const { businessHours, getDefaultHours, getHoursForDay } = useBusinessHours(businessId);
   
   // Commission and Payment hooks
@@ -295,22 +242,10 @@ export default function StaffPage() {
   const businessStartHour = defaultHours ? parseInt(defaultHours.startTime.split(':')[0]) : 10;
   const businessEndHour = defaultHours ? parseInt(defaultHours.endTime.split(':')[0]) : 19;
   
-  // Edit dialogs state
-  const [isEditBusinessHoursOpen, setIsEditBusinessHoursOpen] = useState(false);
   const [isAddTimeOffOpen, setIsAddTimeOffOpen] = useState(false);
   const [isCommissionRuleDialogOpen, setIsCommissionRuleDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [editingCommissionRule, setEditingCommissionRule] = useState<CommissionRule | null>(null);
-  const [editStaffForm, setEditStaffForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    position: "",
-    permissionLevel: "",
-    serviceIds: [] as number[],
-  });
   const [commissionRuleForm, setCommissionRuleForm] = useState({
     category: CommissionCategory.DEFAULT,
     type: CommissionType.PERCENTAGE,
@@ -341,24 +276,6 @@ export default function StaffPage() {
     isApproved: false,
   });
   
-  // Initialize business hours form from fetched data
-  const [businessHoursForm, setBusinessHoursForm] = useState({
-    startTime: defaultHours?.startTime || "10:00",
-    endTime: defaultHours?.endTime || "19:00",
-    isClosed: false,
-  });
-  
-  
-  // Update forms when business hours are loaded
-  useEffect(() => {
-    if (defaultHours) {
-      setBusinessHoursForm(prev => ({
-        ...prev,
-        startTime: prev.startTime === "10:00" ? defaultHours.startTime : prev.startTime,
-        endTime: prev.endTime === "19:00" ? defaultHours.endTime : prev.endTime,
-      }));
-    }
-  }, [defaultHours]);
 
   // Set default selected staff when data loads
   useEffect(() => {
@@ -408,109 +325,6 @@ export default function StaffPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- getHoursForDay is derived from businessHours, which is listed
   }, [selectedStaff, businessHours]);
 
-  // Get business hours for the selected date
-  const getBusinessHoursForSelectedDate = useCallback(() => {
-    const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-    const dayOfWeek = dayNames[selectedDate.getDay()];
-    const dayHours = getHoursForDay(dayOfWeek);
-    
-    // If we have hours for this day
-    if (dayHours) {
-      // If the day is closed (not enabled)
-      if (!dayHours.enabled) {
-        return {
-          startTime: dayHours.startTime || "00:00",
-          endTime: dayHours.endTime || "23:59",
-          isClosed: true
-        };
-      }
-      
-      // If the day is enabled and has times
-      if (dayHours.startTime && dayHours.endTime) {
-        return {
-          startTime: dayHours.startTime,
-          endTime: dayHours.endTime,
-          isClosed: false
-        };
-      }
-    }
-    
-    // Fallback to default hours
-    if (defaultHours) {
-      return {
-        startTime: defaultHours.startTime,
-        endTime: defaultHours.endTime,
-        isClosed: false
-      };
-    }
-    
-    return {
-      startTime: "10:00",
-      endTime: "19:00",
-      isClosed: false
-    };
-  }, [selectedDate, getHoursForDay, defaultHours]);
-  
-  const currentDayBusinessHours = getBusinessHoursForSelectedDate();
-  const isBusinessClosed = currentDayBusinessHours.isClosed;
-  
-  // Get dates to display based on view type
-  const getDatesToDisplay = useCallback(() => {
-    if (viewType === "Day") {
-      return [selectedDate];
-    } else if (viewType === "Week") {
-      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 }); // Monday
-      const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 }); // Sunday
-      return eachDayOfInterval({ start: weekStart, end: weekEnd });
-    } else if (viewType === "Month") {
-      const monthStart = startOfMonth(selectedDate);
-      const monthEnd = endOfMonth(selectedDate);
-      return eachDayOfInterval({ start: monthStart, end: monthEnd });
-    }
-    return [selectedDate];
-  }, [viewType, selectedDate]);
-  
-  const datesToDisplay = getDatesToDisplay();
-  
-  // Update date navigation handlers
-  const handlePreviousDate = useCallback(() => {
-    if (viewType === "Day") {
-      setSelectedDate(subDays(selectedDate, 1));
-    } else if (viewType === "Week") {
-      setSelectedDate(subWeeks(selectedDate, 1));
-    } else if (viewType === "Month") {
-      setSelectedDate(subMonths(selectedDate, 1));
-    }
-  }, [viewType, selectedDate]);
-  
-  const handleNextDate = useCallback(() => {
-    if (viewType === "Day") {
-      setSelectedDate(addDays(selectedDate, 1));
-    } else if (viewType === "Week") {
-      setSelectedDate(addWeeks(selectedDate, 1));
-    } else if (viewType === "Month") {
-      setSelectedDate(addMonths(selectedDate, 1));
-    }
-  }, [viewType, selectedDate]);
-  
-  // Get date range display text
-  const getDateRangeText = useCallback(() => {
-    if (viewType === "Day") {
-      return format(selectedDate, "EEEE, MMMM d");
-    } else if (viewType === "Week") {
-      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
-      if (weekStart.getMonth() === weekEnd.getMonth()) {
-        return `${format(weekStart, "MMM d")} - ${format(weekEnd, "d, yyyy")}`;
-      } else {
-        return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
-      }
-    } else if (viewType === "Month") {
-      return format(selectedDate, "MMMM yyyy");
-    }
-    return format(selectedDate, "EEEE, MMMM d");
-  }, [viewType, selectedDate]);
-  
   // Filter all services by search query (for services tab)
   const filteredAllServices = useMemo(() => {
     if (!apiServices) return [];
@@ -525,7 +339,7 @@ export default function StaffPage() {
   // Group services by category
   const servicesByCategory = useMemo(() => {
     return filteredAllServices.reduce((acc, service) => {
-      const category = service.categoryName || "Not categorized";
+      const category = service.categoryName || tr("common.notCategorized");
       if (!acc[category]) {
         acc[category] = [];
       }
@@ -542,6 +356,118 @@ export default function StaffPage() {
   }, [apiStaff, searchQuery]);
 
   const loading = staffLoading || servicesLoading;
+
+  // ── resources: cards + a sheet to create one or link services to it ──
+  const [resourceSheet, setResourceSheet] = useState<ResourceType | null | false>(false);
+  const [resourceLinks, setResourceLinks] = useState<number[]>([]);
+  const activeResources = resourceTypes.filter((r) => r.isActive !== false);
+  const openResource = (r: ResourceType | null) => {
+    setResourceLinks([]);
+    if (!r) setResourceForm({ name: "", quantity: "1" });
+    setResourceSheet(r);
+  };
+  const saveResource = async () => {
+    if (resourceSheet === false) return;
+    if (resourceSheet === null) {
+      if (!resourceForm.name.trim()) return toast.error(tr("staff.giveTheResourceAName"));
+      await addResourceType();
+      setResourceSheet(false);
+      return;
+    }
+    // The service API sets a resource but cannot clear one, so this only adds links.
+    setResourceBusy(true);
+    try {
+      await Promise.all(resourceLinks.map((id) => serviceService.updateService(id, businessId, { resourceTypeId: resourceSheet.id })));
+      if (resourceLinks.length) toast.success(tr("staff.servicesNowNeed", { count: resourceLinks.length, name: resourceSheet.name }));
+      await refreshServices();
+      setResourceSheet(false);
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || tr("staff.couldNotLinkTheServices"));
+    } finally {
+      setResourceBusy(false);
+    }
+  };
+
+  // ── commissions: this month's numbers ──
+  const monthKey = format(new Date(), "yyyy-MM");
+  const monthEarned = commissions.filter((c) => (c.commissionDate || "").startsWith(monthKey)).reduce((n, c) => n + (c.commissionAmount ?? 0), 0);
+  const monthPaid = payments.filter((p) => (p.paymentDate || "").startsWith(monthKey)).reduce((n, p) => n + (p.amount ?? 0), 0);
+
+  // ── the member sheet: Profile / Services / Hours / Access ──
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [memberTab, setMemberTab] = useState<"profile" | "services" | "hours" | "permissions">("profile");
+  const [roles, setRoles] = useState<BusinessRole[]>([]);
+  const [pickedRoleId, setPickedRoleId] = useState<number | null>(null);
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: "", position: "", phone: "", email: "" });
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [inviteBusy, setInviteBusy] = useState(false);
+
+  // Roles are owner-only on the server; anyone else simply gets no Access choices.
+  const loadRoles = useCallback(() => {
+    if (!businessId) return;
+    roleService.list(businessId).then(setRoles).catch(() => setRoles([]));
+  }, [businessId]);
+  useEffect(() => { loadRoles(); }, [loadRoles]);
+
+  const roleOf = (staffId: number) => roles.find((r) => r.memberIds?.includes(staffId));
+
+  const openMember = (id: number, tab: "profile" | "services" | "hours" | "permissions") => {
+    const s = apiStaff.find((x) => x.id === id);
+    setSelectedStaffId(id);
+    setMemberTab(tab);
+    setServicesSearchQuery("");
+    if (s) setProfileForm({ name: s.name || "", position: s.position || "", phone: s.phone || "", email: s.email || "" });
+    setPickedRoleId(roleOf(id)?.id ?? null);
+    setMemberOpen(true);
+  };
+
+  const saveProfile = async () => {
+    if (!selectedStaff || !profileForm.name.trim()) return;
+    setProfileBusy(true);
+    try {
+      await updateStaff(selectedStaff.id, {
+        name: profileForm.name.trim(),
+        phone: profileForm.phone.trim() || undefined,
+        email: profileForm.email.trim() || undefined,
+        position: profileForm.position.trim() || undefined,
+      });
+      await refreshStaff();
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || tr("staff.couldNotSaveTheProfile"));
+    } finally {
+      setProfileBusy(false);
+    }
+  };
+
+  const saveRole = async () => {
+    if (!selectedStaff || !pickedRoleId) return;
+    setRoleBusy(true);
+    try {
+      await roleService.assign(selectedStaff.id, pickedRoleId);
+      toast.success((() => { const pr = roles.find((r) => r.id === pickedRoleId); return pr ? tr("staff.isNow", { name: selectedStaff.name, value: roleName(pr) }) : tr("staff.roleUpdated", { name: selectedStaff.name }); })());
+      loadRoles();
+      await refreshStaff();
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || tr("staff.couldNotChangeTheRole"));
+    } finally {
+      setRoleBusy(false);
+    }
+  };
+
+  /** Email (or re-email) the link that lets this person set up their own sign-in. */
+  const sendInvite = async () => {
+    if (!selectedStaff) return;
+    setInviteBusy(true);
+    try {
+      const r = await staffService.sendInvite(selectedStaff.id);
+      toast.success(r.sent ? tr("staff.signInLinkSentTo", { email: r.email }) : tr("staff.linkCreatedForEmailIs", { email: r.email }));
+    } catch (error) {
+      toast.error((error instanceof Error && error.message) || tr("staff.couldNotSendTheLink"));
+    } finally {
+      setInviteBusy(false);
+    }
+  };
 
 
   // Toggle service selection for staff
@@ -586,9 +512,9 @@ export default function StaffPage() {
 
       await Promise.all(updatePromises);
       await refreshServices();
-      toast.success("Services updated successfully");
+      toast.success(tr("staff.servicesUpdatedSuccessfully"));
     } catch (error) {
-      toast.error((error instanceof Error && error.message) || "Failed to save services");
+      toast.error((error instanceof Error && error.message) || tr("staff.failedToSaveServices"));
     }
   };
 
@@ -606,7 +532,7 @@ export default function StaffPage() {
   // click on this same tab's own Save button.
   const saveWorkingHoursSchedule = async (
     hoursForm: Record<string, { start: string; end: string; isClosed: boolean }>,
-    successMessage = "Working hours updated successfully"
+    successMessage = tr("staff.workingHoursUpdatedSuccessfully")
   ) => {
     if (!selectedStaff) return;
 
@@ -618,15 +544,12 @@ export default function StaffPage() {
         }
       });
       await updateStaff(selectedStaff.id, { schedule });
+      // The refreshed staff object re-runs the hours effect; clearing the selection to
+      // force it (as before) briefly fell back to the first member.
       await refreshStaff();
-      const currentId = selectedStaffId;
-      setSelectedStaffId(null);
-      setTimeout(() => {
-        setSelectedStaffId(currentId);
-      }, 100);
       toast.success(successMessage);
     } catch (error) {
-      toast.error((error instanceof Error && error.message) || "Failed to save working hours");
+      toast.error((error instanceof Error && error.message) || tr("staff.failedToSaveWorkingHours"));
     }
   };
 
@@ -643,7 +566,7 @@ export default function StaffPage() {
       updated[day] = { ...sourceHours };
     });
     setWorkingHoursForm(updated);
-    toast.success(`Copied ${sourceDay} hours to all days`);
+    toast.success(tr("staff.copiedHoursToAllDays", { sourceDay }));
   };
 
   const handleSetWeekdays = () => {
@@ -656,7 +579,7 @@ export default function StaffPage() {
       updated[day] = { ...mondayHours };
     });
     setWorkingHoursForm(updated);
-    toast.success("Set same hours for all weekdays");
+    toast.success(tr("staff.setSameHoursForAll"));
   };
 
   const handleSetWeekends = () => {
@@ -669,32 +592,12 @@ export default function StaffPage() {
       updated[day] = { ...saturdayHours };
     });
     setWorkingHoursForm(updated);
-    toast.success("Set same hours for weekends");
+    toast.success(tr("staff.setSameHoursForWeekends"));
   };
 
-  // Generate time slots from 00:00 to 23:59 (24 hours, every hour)
-  const timeSlots = Array.from({ length: 24 }, (_, i) => i);
 
-  // Calculate position percentage for a given time (00:00 to 23:59)
-  const getTimePosition = (hour: number, minute: number = 0) => {
-    const totalMinutes = hour * 60 + minute;
-    const totalRange = 24 * 60; // 00:00 to 23:59 = 24 hours
-    return (totalMinutes / totalRange) * 100;
-  };
 
-  // Calculate width percentage for a time range
-  const getTimeWidth = (startHour: number, startMinute: number, endHour: number, endMinute: number) => {
-    const startMinutes = startHour * 60 + startMinute;
-    const endMinutes = endHour * 60 + endMinute;
-    const totalRange = 24 * 60;
-    return ((endMinutes - startMinutes) / totalRange) * 100;
-  };
 
-  // Parse time string (HH:MM) to hours and minutes
-  const parseTimeString = (timeStr: string) => {
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    return { hours, minutes };
-  };
 
   // Parse time string to total minutes for comparison
   const parseTimeToMinutes = (timeStr: string): number => {
@@ -751,1422 +654,470 @@ export default function StaffPage() {
     });
   };
 
-  // Get time offs for a specific staff member and date
-  const getTimeOffsForStaff = (staffId: number, date: Date) => {
-    if (!timeOffs || timeOffs.length === 0) {
-      return [];
-    }
-    const dateStr = format(date, "yyyy-MM-dd");
-    const filtered = timeOffs.filter((to) => {
-      if (to.staffId !== staffId) return false;
-      const startDate = parse(to.startDate, "yyyy-MM-dd", new Date());
-      const endDate = parse(to.endDate, "yyyy-MM-dd", new Date());
-      const currentDate = parse(dateStr, "yyyy-MM-dd", new Date());
-      
-      // Reset time to midnight for accurate date comparison
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-      currentDate.setHours(0, 0, 0, 0);
-      
-      const isInRange = currentDate >= startDate && currentDate <= endDate;
-      
-      return isInRange;
-    });
-    return filtered;
-  };
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-white">
-        {/* Top Navigation Tabs */}
-        <div className="border-b border-gray-200 bg-white px-3 sm:px-6">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 overflow-x-auto sm:gap-6">
+      <BooqiScope>
+      <div className="flex flex-col">
+        <PageHeader
+          title={tr("common.team")}
+          subtitle={tr("staff.whoWorksHereWhatThey")}
+          actions={
+            <Button className={primaryBtn} onClick={() => navigate(getPath("add-staff"))}>
+              <UserPlus size={16} />{" "}{tr("common.addTeamMember")}
+            </Button>
+          }
+        />
+        <div className="px-4 pt-5 md:px-8">
+          <div role="tablist" aria-label={tr("staff.teamSections")} className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1 [scrollbar-width:none]">
+            {[
+              { key: "staff-members", label: tr("staff.members") },
+              { key: "shifts", label: tr("staff.shifts") },
+              // #43: resource types — shared equipment a booking consumes.
+              { key: "resources", label: tr("staff.resources") },
+              { key: "commissions", label: tr("staff.commissions") },
+            ].map((t) => (
               <button
-                onClick={() => setActiveTab("staff-members")}
-                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === "staff-members"
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={cn(
+                  "inline-flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-colors",
+                  activeTab === t.key
+                    ? "bg-white text-[rgb(var(--reg-ink))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
+                    : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]",
+                )}
               >
-                STAFF MEMBERS
+                {t.label}
               </button>
-              <button
-                onClick={() => setActiveTab("shifts")}
-                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === "shifts"
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                SHIFTS
-              </button>
-              {/* #43: this tab was commented out and ResourceTypeController had zero
-                  callers, so a salon could not record the shared equipment its bookings
-                  depend on — chairs, washbasins, lasers. */}
-              <button
-                onClick={() => setActiveTab("resources")}
-                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === "resources"
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                RESOURCES
-              </button>
-              <button
-                onClick={() => setActiveTab("commissions")}
-                className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                  activeTab === "commissions"
-                    ? "border-gray-900 text-gray-900"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                COMMISSIONS
-              </button>
-            </div>
-            {(activeTab === "shifts" || activeTab === "commissions") && (
-              <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-                <HelpCircle size={16} />
-                How it works
-              </button>
-            )}
+            ))}
           </div>
         </div>
-
         {/* Shifts View */}
         {activeTab === "resources" && (
-          <div className="p-6 space-y-4">
-            <div className="flex flex-wrap items-end gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Resource name</Label>
-                <Input
-                  value={resourceForm.name}
-                  onChange={(e) => setResourceForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Washbasin"
-                  className="h-9 w-56"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Quantity</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={resourceForm.quantity}
-                  onChange={(e) => setResourceForm((f) => ({ ...f, quantity: e.target.value }))}
-                  className="h-9 w-24"
-                />
-              </div>
-              <Button className="h-9" disabled={resourceBusy} onClick={addResourceType}>
-                ADD RESOURCE
-              </Button>
-            </div>
-
-            {resourceTypes.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No resources yet. Add the equipment your bookings share — chairs, washbasins,
-                treatment rooms.
+          <div className={pageBody}>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <p className="max-w-xl text-sm text-[rgb(var(--reg-muted))]">
+                {tr("staff.theEquipmentBookingsShareChairs")}
               </p>
+              <Button className={primaryBtn} onClick={() => openResource(null)}><Plus size={16} />{" "}{tr("staff.newResource")}</Button>
+            </div>
+            {activeResources.length === 0 ? (
+              <EmptyState
+                icon={LayersIcon}
+                title={tr("staff.noResourcesYet")}
+                body={tr("staff.addTheRoomsAndEquipment")}
+                action={<Button className={primaryBtn} onClick={() => openResource(null)}><Plus size={16} />{" "}{tr("staff.newResource")}</Button>}
+              />
             ) : (
-              <div className="rounded-lg border border-gray-200 divide-y">
-                {resourceTypes.filter((r) => r.isActive !== false).map((r) => (
-                  <div key={r.id} className="flex items-center justify-between px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{r.name}</p>
-                      <p className="text-xs text-gray-500">Quantity: {r.quantity}</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={resourceBusy}
-                      onClick={() => removeResourceType(r.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-              </div>
+              <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {activeResources.map((r) => {
+                  const linked = apiServices.filter((s) => (s as { resourceTypeId?: number | null }).resourceTypeId === r.id);
+                  return (
+                    <li key={r.id} className="flex flex-col rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]"><LayersIcon size={20} /></span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[16px] font-bold">{r.name}</p>
+                          <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("staff.capacityAtATime", { quantity: r.quantity })}</p>
+                        </div>
+                        <ActionMenu
+                          label={tr("common.moreFor", { name: r.name })}
+                          actions={[
+                            { label: tr("staff.linkServices"), icon: Pencil, onSelect: () => openResource(r) },
+                            { label: tr("common.remove"), icon: X, danger: true, disabled: resourceBusy, onSelect: () => { if (confirm(tr("staff.removeExistingBookingsKeepIt", { name: r.name }))) void removeResourceType(r.id); } },
+                          ]}
+                        />
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {linked.length === 0 ? (
+                          <span className="text-xs text-[rgb(var(--reg-muted))]">{tr("staff.noServicesUseItYet")}</span>
+                        ) : (
+                          linked.map((s) => (
+                            <span key={s.id} className="rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-2.5 py-1 text-xs font-semibold">{s.name}</span>
+                          ))
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         )}
 
-        {activeTab === "shifts" && (
-          <>
-            {/* Print Styles */}
-            <style>{`
-              @media print {
-                @page {
-                  margin: 1cm;
-                }
-                body * {
-                  visibility: hidden;
-                }
-                .print-section, .print-section * {
-                  visibility: visible;
-                }
-                .print-section {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                  display: block !important;
-                }
-                .no-print {
-                  display: none !important;
-                }
-                .print-section table {
-                  border-collapse: collapse;
-                  width: 100%;
-                  margin-top: 20px;
-                }
-                .print-section th, .print-section td {
-                  border: 1px solid #ddd;
-                  padding: 8px;
-                  text-align: left;
-                }
-                .print-section th {
-                  background-color: #f2f2f2;
-                  font-weight: bold;
-                }
-                .print-section h1 {
-                  margin-bottom: 10px;
-                }
-                .print-section h2 {
-                  margin-top: 20px;
-                  margin-bottom: 10px;
-                }
-              }
-              @media screen {
-                .print-section {
-                  display: none;
-                }
-              }
-            `}</style>
-            
-            {/* Print View - Hidden on screen, visible when printing */}
-            <div className="print-section">
-              <div className="p-6">
-                <h1 className="text-2xl font-bold mb-2">Staff Schedule</h1>
-                <p className="text-lg mb-6">{format(selectedDate, "EEEE, MMMM d, yyyy")}</p>
-                
-                {/* Business Hours */}
-                <div className="mb-6">
-                  <h2 className="text-xl font-semibold mb-3">Business Hours</h2>
-                  <div className="border border-gray-300 rounded p-4">
-                    {isBusinessClosed ? (
-                      <p className="text-red-600 font-medium">Closed</p>
-                    ) : (
-                      <p className="text-gray-900">
-                        {currentDayBusinessHours.startTime} - {currentDayBusinessHours.endTime}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Staff Schedule Table */}
-                <table className="w-full">
-                  <thead>
-                    <tr>
-                      <th className="w-48">Staff Member</th>
-                      <th>Working Hours</th>
-                      <th>Time Off</th>
-                      <th>Total Working Hours</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {apiStaff?.map((staff) => {
-                      const staffTimeOffs = getTimeOffsForStaff(staff.id, selectedDate);
-                      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                      const dayOfWeek = dayNames[selectedDate.getDay()];
-                      const staffWorkingHours = getStaffDayHours(staff, dayOfWeek);
-                      // #49: a scheduled shift is an override for this date — prefer it
-                      // over the weekly default, which is what the tab used to show alone.
-                      const scheduledShift = shiftForStaff(staff.id);
-                      const isStaffClosed = scheduledShift ? false : staffWorkingHours.isClosed;
-                      const staffStartTime = scheduledShift?.startTime ?? staffWorkingHours.start;
-                      const staffEndTime = scheduledShift?.endTime ?? staffWorkingHours.end;
-
-                      // Calculate total working hours excluding time off
-                      const calculateWorkingHours = () => {
-                        if (isStaffClosed || !staffStartTime || !staffEndTime) {
-                          return "0h";
-                        }
-                        
-                        // Parse working hours
-                        const [startHour, startMin] = staffStartTime.split(':').map(Number);
-                        const [endHour, endMin] = staffEndTime.split(':').map(Number);
-                        const startMinutes = startHour * 60 + startMin;
-                        const endMinutes = endHour * 60 + endMin;
-                        let totalMinutes = endMinutes - startMinutes;
-                        
-                        // Subtract time off periods
-                        staffTimeOffs.forEach((timeOff) => {
-                          if (timeOff.isFullDay) {
-                            totalMinutes = 0;
-                            return;
-                          }
-                          
-                          const toStartTime = timeOff.startTime || "00:00";
-                          const toEndTime = timeOff.endTime || "23:59";
-                          const [toStartHour, toStartMin] = toStartTime.split(':').map(Number);
-                          const [toEndHour, toEndMin] = toEndTime.split(':').map(Number);
-                          const toStartMinutes = toStartHour * 60 + toStartMin;
-                          const toEndMinutes = toEndHour * 60 + toEndMin;
-                          
-                          // Check if time off overlaps with working hours
-                          const overlapStart = Math.max(startMinutes, toStartMinutes);
-                          const overlapEnd = Math.min(endMinutes, toEndMinutes);
-                          
-                          if (overlapStart < overlapEnd) {
-                            totalMinutes -= (overlapEnd - overlapStart);
-                          }
-                        });
-                        
-                        // Ensure non-negative
-                        totalMinutes = Math.max(0, totalMinutes);
-                        
-                        // Format as hours and minutes
-                        const hours = Math.floor(totalMinutes / 60);
-                        const minutes = totalMinutes % 60;
-                        
-                        if (hours > 0 && minutes > 0) {
-                          return `${hours}h ${minutes}min`;
-                        } else if (hours > 0) {
-                          return `${hours}h`;
-                        } else if (minutes > 0) {
-                          return `${minutes}min`;
-                        } else {
-                          return "0h";
-                        }
-                      };
-                      
-                      return (
-                        <tr key={staff.id}>
-                          <td className="font-medium">{staff.name}</td>
-                          <td>
-                            {isStaffClosed ? (
-                              <span className="text-red-600">Closed</span>
-                            ) : staffStartTime && staffEndTime ? (
-                              <span className="inline-flex items-center gap-2">
-                                {staffStartTime} - {staffEndTime}
-                                {scheduledShift && (
-                                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
-                                    Shift
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">Not set</span>
-                            )}
-                          </td>
-                          <td>
-                            {staffTimeOffs.length > 0 ? (
-                              <div className="space-y-1">
-                                {staffTimeOffs.map((timeOff) => {
-                                  const startTime = timeOff.isFullDay ? "00:00" : (timeOff.startTime || "00:00");
-                                  const endTime = timeOff.isFullDay ? "23:59" : (timeOff.endTime || "23:59");
-                                  return (
-                                    <div key={timeOff.id} className="text-sm flex items-center gap-2">
-                                      <span>
-                                        {timeOff.isFullDay ? 'Full Day' : `${startTime} - ${endTime}`}
-                                        {timeOff.reason && <span className="text-gray-600 ml-2">({timeOff.reason})</span>}
-                                      </span>
-                                      {/* #48: nothing anywhere showed whether time off was
-                                          approved, and approveTimeOff() had zero callers —
-                                          so a request left pending was invisible and could
-                                          never be approved. */}
-                                      {!timeOff.isApproved && (
-                                        <>
-                                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
-                                            Pending
-                                          </span>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-6 px-2 text-[11px]"
-                                            disabled={approvingTimeOffId === timeOff.id}
-                                            onClick={() => approveTimeOffRequest(timeOff.id)}
-                                          >
-                                            Approve
-                                          </Button>
-                                        </>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className="font-semibold">
-                            {calculateWorkingHours()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+        <FormSheet
+          open={resourceSheet !== false}
+          onOpenChange={(o) => !o && setResourceSheet(false)}
+          title={resourceSheet ? resourceSheet.name : tr("staff.newResource")}
+          description={resourceSheet ? tr("staff.capacityPickTheServicesThat", { quantity: resourceSheet.quantity }) : tr("staff.aRoomOrAPiece")}
+          footer={
+            <>
+              <Button variant="outline" className={sheetSecondary} onClick={() => setResourceSheet(false)}>{tr("common.cancel")}</Button>
+              <Button className={sheetPrimary} disabled={resourceBusy} onClick={() => void saveResource()}>
+                {resourceBusy ? tr("common.saving") : resourceSheet ? tr("common.save") : tr("staff.createResource")}
+              </Button>
+            </>
+          }
+        >
+          {!resourceSheet && (
+            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3">
+              <Field label={tr("common.name")} htmlFor="rs-name">
+                <input id="rs-name" className={fieldCls} value={resourceForm.name} placeholder={tr("staff.washbasin")} onChange={(e) => setResourceForm((f) => ({ ...f, name: e.target.value }))} />
+              </Field>
+              <Field label={tr("staff.capacity")} htmlFor="rs-qty">
+                <input id="rs-qty" type="number" min={1} className={fieldCls} value={resourceForm.quantity} onChange={(e) => setResourceForm((f) => ({ ...f, quantity: e.target.value }))} />
+              </Field>
             </div>
-            
-            {/* Regular View - Hidden when printing */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-white no-print">
-            {/* Control Panel */}
-            <div className="border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">View:</Label>
-                    <Select value={viewType} onValueChange={setViewType}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Day">Day</SelectItem>
-                        <SelectItem value="Week">Week</SelectItem>
-                        <SelectItem value="Month">Month</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-gray-700 whitespace-nowrap">Staff:</Label>
-                    <Select
-                      value={selectedStaffFilter}
-                      onValueChange={setSelectedStaffFilter}
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="All">All Staff</SelectItem>
-                        {apiStaff?.map((staff) => (
-                          <SelectItem key={staff.id} value={staff.id.toString()}>
-                            {staff.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-                    <button
-                      onClick={handlePreviousDate}
-                      className="p-1.5 hover:bg-gray-200 rounded transition-colors"
-                      aria-label="Previous day"
-                    >
-                      <ChevronLeft size={18} className="text-gray-600" />
-                    </button>
-                    <div className="text-center min-w-[140px]">
-                      <Input
-                        type="date"
-                        value={format(selectedDate, "yyyy-MM-dd")}
-                        onChange={(e) => {
-                          const newDate = parse(e.target.value, "yyyy-MM-dd", new Date());
-                          if (!isNaN(newDate.getTime())) {
-                            setSelectedDate(newDate);
-                          }
-                        }}
-                        className="h-8 text-xs text-center font-semibold border-0 bg-transparent p-0 cursor-pointer hover:bg-gray-100 rounded px-2"
-                        title="Click to change date"
-                      />
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {getDateRangeText()}
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleNextDate}
-                      className="p-1.5 hover:bg-gray-200 rounded transition-colors"
-                      aria-label="Next day"
-                    >
-                      <ChevronRight size={18} className="text-gray-600" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => setIsAddTimeOffOpen(true)}
-                  >
-                    <Calendar size={16} />
-                    Add Time Off
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={async () => {
-                      // Copy the selected day's hours to all staff working hour entries for that day.
-                      // #16: this used to only mutate local form state (with a success toast implying
-                      // it was saved) — nothing persisted until a separate visit to the WORKING HOURS
-                      // tab's own Save button. Now saves immediately, same as that button does.
-                      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                      const dayOfWeek = dayNames[selectedDate.getDay()];
-                      const sourceHours = workingHoursForm[dayOfWeek];
-                      if (!sourceHours) {
-                        toast.info("No hours set for the selected day");
-                        return;
-                      }
-                      const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-                      const updated = { ...workingHoursForm };
-                      days.forEach(day => {
-                        updated[day] = { ...sourceHours };
-                      });
-                      setWorkingHoursForm(updated);
-                      await saveWorkingHoursSchedule(updated, `Copied ${dayOfWeek} schedule to all days and saved`);
-                    }}
-                  >
-                    <Copy size={16} />
-                    Copy Schedule
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => window.print()}
-                  >
-                    <Printer size={16} />
-                    Print
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Calendar Grid View */}
-            <div className="flex-1 overflow-auto bg-gray-50">
-              <div className={`px-4 pt-8 pb-4 ${viewType === "Day" ? "min-w-[2400px]" : viewType === "Week" ? "min-w-[16800px]" : "min-w-[72000px]"}`}>
-                {/* Time Header Row (X-axis: 00:00 - 23:59) */}
-                <div className="sticky top-0 bg-white z-30 border-b-2 border-gray-300 pt-6">
-                  <div className="flex">
-                    {/* Left column for row labels */}
-                    <div className="w-64 flex-shrink-0 border-r border-gray-300 bg-white"></div>
-                    {/* Day columns header */}
-                    <div className="flex-1 flex">
-                      {datesToDisplay.map((date, dateIndex) => (
-                        <div key={dateIndex} className="flex-1 border-l border-gray-300 relative">
-                          {/* Day header */}
-                          <div className="absolute top-0 left-0 right-0 h-6 bg-gray-50 border-b border-gray-300 flex items-center justify-center">
-                            <div className="text-xs font-semibold text-gray-700">
-                              {format(date, "EEE")}
-                            </div>
-                            <div className="text-xs text-gray-500 ml-1">
-                              {format(date, "d")}
-                            </div>
-                          </div>
-                          {/* Time slots header */}
-                          <div className="relative h-10 mt-6">
-                            {timeSlots.map((hour) => (
-                              <div
-                                key={hour}
-                                className="absolute top-0 bottom-0 border-l border-gray-300"
-                                style={{ left: `${(hour / 24) * 100}%` }}
-                              >
-                                {dateIndex === 0 && (
-                                  <span className="absolute -top-6 left-0 text-xs font-semibold text-gray-700 whitespace-nowrap">
-                                    {hour.toString().padStart(2, "0")}:00
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Business Hours Row (Y-axis: first row) */}
-                <div className="flex border-b border-gray-200 bg-white hover:bg-gray-50 transition-colors">
-                  <div className="w-64 flex-shrink-0 border-r border-gray-200 p-3 flex items-center gap-3 bg-blue-50">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <Clock size={16} className="text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-gray-900">Business Hours</div>
-                      <div className="text-xs text-gray-500">Store operating hours</div>
-                    </div>
-                  </div>
-                  <div className="flex-1 flex">
-                    {datesToDisplay.map((date, dateIndex) => {
-                      const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-                      const dayOfWeek = dayNames[date.getDay()];
-                      const dayHours = getHoursForDay(dayOfWeek);
-                      const isDayClosed = !dayHours?.enabled;
-                      const dayStartTime = dayHours?.startTime || "10:00";
-                      const dayEndTime = dayHours?.endTime || "19:00";
-                      
-                      return (
-                        <div key={dateIndex} className="flex-1 relative h-14 bg-white border-l border-gray-200">
-                          {isDayClosed ? (
-                            <div
-                              className="absolute top-2 bottom-2 bg-gray-600 rounded flex items-center justify-between px-4 text-white text-sm font-medium shadow-md hover:bg-gray-700 transition-colors cursor-pointer"
-                              style={{
-                                left: `${getTimePosition(0)}%`,
-                                width: `${getTimeWidth(0, 0, 23, 59)}%`,
-                              }}
-                              onClick={() => {
-                                setSelectedDate(date);
-                                setBusinessHoursForm({ 
-                                  startTime: dayStartTime, 
-                                  endTime: dayEndTime, 
-                                  isClosed: true 
-                                });
-                                setIsEditBusinessHoursOpen(true);
-                              }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <AlertCircle size={14} />
-                                <span>Closed</span>
-                              </div>
-                              <button 
-                                className="p-1.5 hover:bg-gray-700 rounded transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedDate(date);
-                                  setBusinessHoursForm({ startTime: "10:00", endTime: "19:00", isClosed: true });
-                                  setIsEditBusinessHoursOpen(true);
-                                }}
-                              >
-                                <Pencil size={12} />
-                              </button>
-                            </div>
-                          ) : (
-                            <div
-                              className="absolute top-2 bottom-2 bg-blue-500 rounded flex items-center justify-between px-4 text-white text-sm font-medium shadow-md hover:bg-blue-600 transition-colors cursor-pointer"
-                              style={{
-                                left: `${getTimePosition(
-                                  parseInt(dayStartTime.split(':')[0]), 
-                                  parseInt(dayStartTime.split(':')[1])
-                                )}%`,
-                                width: `${getTimeWidth(
-                                  parseInt(dayStartTime.split(':')[0]), 
-                                  parseInt(dayStartTime.split(':')[1]),
-                                  parseInt(dayEndTime.split(':')[0]), 
-                                  parseInt(dayEndTime.split(':')[1])
-                                )}%`,
-                              }}
-                              onClick={() => {
-                                setSelectedDate(date);
-                                setBusinessHoursForm({ 
-                                  startTime: dayStartTime, 
-                                  endTime: dayEndTime, 
-                                  isClosed: false 
-                                });
-                                setIsEditBusinessHoursOpen(true);
-                              }}
-                            >
-                              <span>{dayStartTime} - {dayEndTime}</span>
-                              <button 
-                                className="p-1.5 hover:bg-blue-600 rounded transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedDate(date);
-                                  setBusinessHoursForm({ startTime: "10:00", endTime: "19:00", isClosed: false });
-                                  setIsEditBusinessHoursOpen(true);
-                                }}
-                              >
-                                <Pencil size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Staff Rows (Y-axis: each staff member) */}
-                {apiStaff?.map((staff) => {
+          )}
+          <Field label={tr("staff.servicesThatNeedIt")} hint={resourceSheet ? tr("staff.linkingTakesEffectForNew") : tr("staff.youCanLinkServicesAfter")}>
+            {resourceSheet ? (
+              <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
+                {apiServices.map((s) => {
+                  const current = (s as { resourceTypeId?: number | null }).resourceTypeId;
+                  const already = current === resourceSheet.id;
                   return (
-                    <div key={staff.id} className="flex border-b border-gray-200 bg-white hover:bg-gray-50 transition-colors">
-                      <div className="w-64 flex-shrink-0 border-r border-gray-200 p-3 flex items-center gap-3">
-                        <Avatar className="h-9 w-9 flex-shrink-0">
-                          <AvatarFallback className="bg-gray-200 text-gray-700 text-sm font-medium">
-                            {staff.initials || getInitials(staff.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 truncate">
-                            {staff.name}
-                          </div>
-                          <div className="text-xs text-gray-500">Staff member</div>
-                        </div>
-                      </div>
-                      <div className="flex-1 flex">
-                        {datesToDisplay.map((date, dateIndex) => {
-                          const staffTimeOffs = getTimeOffsForStaff(staff.id, date);
-                          const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                          const dayOfWeek = dayNames[date.getDay()];
-                          const staffWorkingHours = getStaffDayHours(staff, dayOfWeek);
-                          const isStaffClosed = staffWorkingHours.isClosed;
-                          const staffStartTime = staffWorkingHours.start;
-                          const staffEndTime = staffWorkingHours.end;
-
-                          return (
-                            <div key={dateIndex} className="flex-1 relative bg-white border-l border-gray-200" style={{ minHeight: staffTimeOffs.length > 0 ? '113px' : '56px' }}>
-                              {/* Staff Working Hours Block - shows staff's working hours for this day */}
-                              <div className="relative h-14">
-                                {isStaffClosed ? (
-                                  <div
-                                    className="absolute top-1 bottom-1 bg-gray-600 rounded flex items-center justify-between px-4 text-white text-sm font-medium shadow-md hover:bg-gray-700 transition-colors cursor-pointer"
-                                    style={{
-                                      left: `${getTimePosition(0, 0)}%`,
-                                      width: `${getTimeWidth(0, 0, 23, 59)}%`,
-                                    }}
-                                    onClick={() => {
-                                      setSelectedDate(date);
-                                      setSelectedStaffId(staff.id);
-                                      setActiveContentTab("working-hours");
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <AlertCircle size={14} />
-                                      <span>Closed</span>
-                                    </div>
-                                    <button 
-                                      className="p-1.5 hover:bg-gray-700 rounded transition-colors"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedDate(date);
-                                        setSelectedStaffId(staff.id);
-                                        setActiveContentTab("working-hours");
-                                      }}
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
-                                  </div>
-                                ) : staffStartTime && staffEndTime ? (
-                                  <div
-                                    className="absolute top-1 bottom-1 bg-green-500 rounded flex items-center justify-between px-4 text-white text-sm font-medium shadow-md hover:bg-green-600 transition-colors cursor-pointer"
-                                    style={{
-                                      left: `${getTimePosition(
-                                        parseInt(staffStartTime.split(':')[0]),
-                                        parseInt(staffStartTime.split(':')[1])
-                                      )}%`,
-                                      width: `${getTimeWidth(
-                                        parseInt(staffStartTime.split(':')[0]),
-                                        parseInt(staffStartTime.split(':')[1]),
-                                        parseInt(staffEndTime.split(':')[0]),
-                                        parseInt(staffEndTime.split(':')[1])
-                                      )}%`,
-                                    }}
-                                    onClick={() => {
-                                      setSelectedDate(date);
-                                      setSelectedStaffId(staff.id);
-                                      setActiveContentTab("working-hours");
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Clock size={14} />
-                                      <span>{staffStartTime} - {staffEndTime}</span>
-                                    </div>
-                                    <button 
-                                      className="p-1.5 hover:bg-green-600 rounded transition-colors"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedDate(date);
-                                        setSelectedStaffId(staff.id);
-                                        setActiveContentTab("working-hours");
-                                      }}
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div
-                                    className="absolute top-1 bottom-1 left-0 right-0 flex items-center justify-center border-2 border-dashed border-gray-300 rounded hover:border-gray-400 transition-colors cursor-pointer"
-                                    onClick={() => {
-                                      setSelectedDate(date);
-                                      setSelectedStaffId(staff.id);
-                                      setActiveContentTab("working-hours");
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-2 text-gray-400 text-sm">
-                                      <Plus size={14} />
-                                      <span>Set Working Hours</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Time Off Blocks - render below working hours */}
-                              {staffTimeOffs.length > 0 && (
-                                <div className="relative h-14" style={{ marginTop: '0px' }}>
-                                  {staffTimeOffs.map((timeOff) => {
-                                    const startTime = timeOff.isFullDay ? "00:00" : (timeOff.startTime || "00:00");
-                                    const endTime = timeOff.isFullDay ? "23:59" : (timeOff.endTime || "23:59");
-                                    const start = parseTimeString(startTime);
-                                    const end = parseTimeString(endTime);
-                                    
-                                    return (
-                                      <div
-                                        key={timeOff.id}
-                                        className="absolute top-1 bottom-1 bg-gray-100 rounded border-2 border-gray-300 flex items-center justify-between px-3 text-gray-700 text-xs font-medium"
-                                        style={{
-                                          left: `${getTimePosition(start.hours, start.minutes)}%`,
-                                          width: `${getTimeWidth(start.hours, start.minutes, end.hours, end.minutes)}%`,
-                                          backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.08) 8px, rgba(0,0,0,0.08) 16px)",
-                                          minWidth: '120px'
-                                        }}
-                                        title={`Time Off: ${startTime} - ${endTime}${timeOff.reason ? ` (${timeOff.reason})` : ''}`}
-                                      >
-                                        <div className="flex items-center gap-1.5 truncate">
-                                          <Calendar size={12} className="text-gray-500 flex-shrink-0" />
-                                          <span className="truncate">
-                                            {timeOff.isFullDay ? 'Full Day' : `${startTime} - ${endTime}`}
-                                          </span>
-                                        </div>
-                                        {timeOff.reason && (
-                                          <span className="text-gray-600 truncate ml-2 max-w-[100px]" title={timeOff.reason}>
-                                            {timeOff.reason}
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <li key={s.id}>
+                      <label className={cn("flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5 ring-1 ring-[rgb(var(--reg-line)/0.8)]", already && "opacity-70")}>
+                        <Checkbox checked={already || resourceLinks.includes(s.id)} disabled={already} onCheckedChange={() => setResourceLinks((l) => (l.includes(s.id) ? l.filter((x) => x !== s.id) : [...l, s.id]))} />
+                        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s.name}</span>
+                        {current && !already && <span className="text-[11px] text-[rgb(var(--reg-muted))]">{tr("staff.usesAnother")}</span>}
+                      </label>
+                    </li>
                   );
                 })}
+              </ul>
+            ) : null}
+          </Field>
+        </FormSheet>
 
-                {apiStaff?.length === 0 && (
-                  <div className="flex border-b border-gray-200 bg-white">
-                    <div className="w-64 flex-shrink-0 border-r border-gray-200 p-4"></div>
-                    <div className="flex-1 p-12 text-center text-gray-500">
-                      <Clock size={48} className="mx-auto mb-4 text-gray-300" />
-                      <p className="text-sm font-medium">No staff members found</p>
-                      <p className="text-xs text-gray-400 mt-1">Add staff members to see their shifts</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-            </div>
+        {activeTab === "shifts" && (
+          <div className={pageBody}>
+            <ShiftsWeek
+              businessId={businessId}
+              timeOffs={timeOffs}
+              approvingId={approvingTimeOffId}
+              onApprove={approveTimeOffRequest}
+              onAddTimeOff={() => setIsAddTimeOffOpen(true)}
+            />
           </div>
-          </>
         )}
 
         {/* Edit Business Hours Dialog */}
-        <Dialog open={isEditBusinessHoursOpen} onOpenChange={setIsEditBusinessHoursOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit Business Hours</DialogTitle>
-              <DialogDescription>
-                Update the business operating hours for {format(selectedDate, "EEEE, MMMM d, yyyy")}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="closed"
-                  checked={businessHoursForm.isClosed}
-                  onChange={(e) => setBusinessHoursForm(prev => ({ ...prev, isClosed: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                <Label htmlFor="closed" className="text-sm font-medium cursor-pointer">
-                  Closed
-                </Label>
-              </div>
-              
-              {!businessHoursForm.isClosed && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Start Time</Label>
-                    <Input
-                      type="time"
-                      value={businessHoursForm.startTime}
-                      onChange={(e) => setBusinessHoursForm(prev => ({ ...prev, startTime: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">End Time</Label>
-                    <Input
-                      type="time"
-                      value={businessHoursForm.endTime}
-                      onChange={(e) => setBusinessHoursForm(prev => ({ ...prev, endTime: e.target.value }))}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setIsEditBusinessHoursOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-gray-900 hover:bg-gray-800"
-                onClick={async () => {
-                  const dayOfWeek = format(selectedDate, "EEEE").toUpperCase();
-                  try {
-                    // Merge the edited day into the full schedule and save all days
-                    const { businessHoursService } = await import('@/services/businessHoursService');
-                    const existing = businessHours.filter(h => h.dayOfWeek !== dayOfWeek);
-                    const updated = [
-                      ...existing.map(h => ({
-                        dayOfWeek: h.dayOfWeek,
-                        enabled: h.enabled,
-                        startTime: h.startTime ?? "09:00",
-                        endTime: h.endTime ?? "18:00",
-                      })),
-                      {
-                        dayOfWeek,
-                        enabled: !businessHoursForm.isClosed,
-                        startTime: businessHoursForm.startTime,
-                        endTime: businessHoursForm.endTime,
-                      },
-                    ];
-                    const currentBizId = typeof businessId === 'number' ? businessId : parseInt(String(businessId) || '0');
-                    await businessHoursService.updateBusinessHours(currentBizId, updated);
-                    toast.success(`${format(selectedDate, "EEEE")} hours updated`);
-                  } catch {
-                    toast.error("Failed to save business hours");
-                  }
-                  setIsEditBusinessHoursOpen(false);
-                }}
-              >
-                Save
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
 
 
         {/* Commissions View */}
         {activeTab === "commissions" && (
-          <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
-            {/* Left Sidebar — on phones it sits above the details instead of beside them */}
-            <div className="w-full shrink-0 bg-gray-50 border-b border-gray-200 flex flex-col md:w-80 md:border-b-0 md:border-r">
-              <div className="p-4 space-y-4">
-                {/* Select Staffer */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Select staffer
-                  </Label>
-                  <Select
-                    value={selectedStaffer}
-                    onValueChange={setSelectedStaffer}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All">All staffers</SelectItem>
-                      {apiStaff?.map((staff) => (
-                        <SelectItem key={staff.id} value={staff.id.toString()}>
-                          {staff.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Commission Categories */}
-                <div className="space-y-1">
-                  <button
-                    onClick={() => setSelectedCommissionCategory("default")}
-                    className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory === "default"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    Default Commissions
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedCommissionCategory("services")}
-                    className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory.startsWith("services")
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    Services
-                  </button>
-
-                  {/* Services Sub-categories */}
-                  {/* Kept open while a sub-category is picked: it closed on the click, so
-                      "Not categorized" vanished the moment it was chosen. */}
-                  {selectedCommissionCategory.startsWith("services") && (
-                    <div className="ml-4 space-y-1">
-                      <button
-                        onClick={() =>
-                          setSelectedCommissionCategory("services-not-categorized")
-                        }
-                        className={`w-full text-left px-4 py-3 text-sm rounded-lg transition-colors ${
-                          selectedCommissionCategory === "services-not-categorized"
-                            ? "bg-white text-gray-900 shadow-sm"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        Not categorized
-                      </button>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => setSelectedCommissionCategory("products")}
-                    className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory === "products"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    Products
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedCommissionCategory("gift-cards")}
-                    className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory === "gift-cards"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    Gift Cards
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      setSelectedCommissionCategory("memberships")
-                    }
-                    className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory === "memberships"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    Memberships
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedCommissionCategory("packages")}
-                    className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                      selectedCommissionCategory === "packages"
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                  >
-                    Packages
-                  </button>
-                </div>
-              </div>
-
-              {/* Clear all commissions button */}
-              <div className="p-4 mt-auto border-t border-gray-200">
-                <Button
-                  variant="outline"
-                  className="w-full border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  onClick={async () => {
-                    if (window.confirm("Are you sure you want to delete all commission rules? This action cannot be undone.")) {
-                      try {
-                        await deleteAllCommissionRules();
-                        toast.success("All commission rules deleted successfully");
-                      } catch (error) {
-                        toast.error("Failed to delete commission rules");
-                      }
-                    }
-                  }}
-                >
-                  Clear all commissions
-                </Button>
+          <div className={pageBody}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <FilterChips<string>
+                label={tr("common.teamMember")}
+                value={selectedStaffer}
+                onChange={setSelectedStaffer}
+                options={[{ value: "All", label: tr("staff.everyone") }, ...apiStaff.map((s) => ({ value: String(s.id), label: s.name }))]}
+              />
+              <div className="flex gap-2">
+                {selectedStaffer !== "All" && pendingCommissions.length > 0 && (
+                  <Button className={primaryBtn} onClick={() => setIsPaymentDialogOpen(true)}><Coins size={16} />{" "}{tr("staff.payOut", { value: money(totalPending, currencySymbol()) })}</Button>
+                )}
               </div>
             </div>
 
-            {/* Right Panel - Commission Details */}
-            <div className="flex-1 overflow-y-auto bg-white p-6">
-              <div className="max-w-3xl">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {selectedCommissionCategory === "default" ? "Default Commissions" : 
-                     selectedCommissionCategory.charAt(0).toUpperCase() + selectedCommissionCategory.slice(1) + " Commissions"}
-                    {selectedStaffer !== "All" && (
-                      <span className="text-lg font-normal text-gray-600 ml-2">
-                        - {apiStaff?.find(s => s.id.toString() === selectedStaffer)?.name}
-                      </span>
-                    )}
-                  </h2>
-                </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatCard icon={TrendingUp} label={tr("staff.earnedThisMonth")} value={money(Math.round(monthEarned * 100) / 100, currencySymbol())} hint={selectedStaffer === "All" ? tr("staff.wholeTeam") : apiStaff.find((s) => String(s.id) === selectedStaffer)?.name} tone="violet" />
+              <StatCard icon={Clock} label={tr("staff.waitingToBePaid")} value={money(Math.round(totalPending * 100) / 100, currencySymbol())} hint={`${pendingCommissions.length} item${pendingCommissions.length === 1 ? "" : "s"}`} tone="amber" />
+              <StatCard icon={Coins} label={tr("staff.paidOutThisMonth")} value={money(Math.round(monthPaid * 100) / 100, currencySymbol())} tone="emerald" />
+              <StatCard icon={Percent} label={tr("staff.rules")} value={commissionRules.length} hint={rulesError ? tr("staff.couldNotLoad") : tr("staff.defaultAndPerPerson")} tone="sky" />
+            </div>
 
-                {/* Pending Commissions Summary */}
-                {selectedStaffer !== "All" && (
-                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Pending Commissions</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {pendingCommissions.length} commission{pendingCommissions.length !== 1 ? 's' : ''} • 
-                          Total: {totalPending.toFixed(2)} {currencySymbol()}
-                        </p>
-                      </div>
-                      {pendingCommissions.length > 0 && (
-                        <Button
-                          onClick={() => setIsPaymentDialogOpen(true)}
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          Create Payment
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+            <section className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4 md:px-5">
+                <h2 className="text-base font-extrabold">{tr("staff.commissionRates")}</h2>
+                {commissionRules.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-rose-700 hover:underline"
+                    onClick={async () => {
+                      if (window.confirm(tr("staff.deleteAllCommissionRulesThis"))) {
+                        try {
+                          await deleteAllCommissionRules();
+                          toast.success(tr("staff.allCommissionRulesDeleted"));
+                        } catch {
+                          toast.error(tr("staff.failedToDeleteCommissionRules"));
+                        }
+                      }
+                    }}
+                  >
+                    {tr("staff.deleteAllRules")}
+                  </button>
                 )}
-
-                {/* Commission Settings List */}
-                {rulesLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="animate-spin text-gray-400" size={24} />
-                  </div>
-                ) : rulesError ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-                    <p className="text-sm font-medium text-red-600">Commission settings unavailable</p>
-                    <p className="text-xs text-gray-400">The commission service is not reachable right now.</p>
-                    <button
-                      onClick={refreshCommissionRules}
-                      className="mt-2 text-xs text-blue-600 underline hover:text-blue-800"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
-                    {[
-                      { name: "Services", category: CommissionCategory.SERVICES },
-                      { name: "Products", category: CommissionCategory.PRODUCTS },
-                      { name: "Gift Cards", category: CommissionCategory.GIFT_CARDS },
-                      { name: "Memberships", category: CommissionCategory.MEMBERSHIPS },
-                      { name: "Packages", category: CommissionCategory.PACKAGES },
-                    ].map((item, index) => {
-                      const categoryRules = commissionRules.filter(r => r.category === item.category);
-                      const defaultRule = categoryRules.find(r => !r.staffId && !r.serviceId);
-                      
-                      // If a staff is selected from dropdown, find that staff's rule, otherwise use default
-                      const ruleToShow = selectedStaffIdForCommissions 
-                        ? categoryRules.find(r => r.staffId === selectedStaffIdForCommissions && !r.serviceId) || defaultRule
-                        : defaultRule;
-                      
-                      const staffSpecificRules = categoryRules.filter(r => r.staffId && !r.serviceId);
-                      
-                      // Display value based on selected staff or default
-                      const displayValue = ruleToShow 
-                        ? ruleToShow.type === CommissionType.PERCENTAGE 
-                          ? `${ruleToShow.value}%` 
-                          : `${ruleToShow.value.toFixed(2)} ${currencySymbol()}`
-                        : "Not set";
-                      
+              </div>
+              {rulesLoading ? (
+                <div className="m-4 h-40 animate-pulse rounded-2xl bg-[rgb(var(--reg-canvas))]" />
+              ) : (
+                <table className="mt-2 w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">
+                      <th scope="col" className="px-4 py-2 font-bold md:px-5">{tr("staff.sold")}</th>
+                      <th scope="col" className="px-2 py-2 font-bold">{tr("staff.everyone")}</th>
+                      {selectedStaffIdForCommissions && <th scope="col" className="px-2 py-2 font-bold">{apiStaff.find((s) => s.id === selectedStaffIdForCommissions)?.name.split(" ")[0]}</th>}
+                      <th scope="col" className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {COMMISSION_ROWS.map((item) => {
+                      const categoryRules = commissionRules.filter((r) => r.category === item.category);
+                      const defaultRule = categoryRules.find((r) => !r.staffId && !r.serviceId);
+                      const memberRule = selectedStaffIdForCommissions ? categoryRules.find((r) => r.staffId === selectedStaffIdForCommissions && !r.serviceId) : undefined;
+                      const others = categoryRules.filter((r) => r.staffId && !r.serviceId).length;
+                      const ruleToEdit = selectedStaffIdForCommissions ? memberRule : defaultRule;
                       return (
-                        <div key={item.name}>
-                          <div className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-gray-900">
-                                  {item.name}
-                                </h3>
-                                {ruleToShow && !ruleToShow.staffId && (
-                                  <Badge variant="outline" className="text-xs">Default</Badge>
-                                )}
-                                {ruleToShow && ruleToShow.staffId && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {apiStaff?.find(s => s.id === ruleToShow.staffId)?.name || 'Staff-specific'}
-                                  </Badge>
-                                )}
-                                {!ruleToShow && staffSpecificRules.length > 0 && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {staffSpecificRules.length} staff-specific
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {ruleToShow 
-                                  ? selectedStaffIdForCommissions && ruleToShow.staffId === selectedStaffIdForCommissions
-                                    ? `Staff-specific: ${displayValue}`
-                                    : `Default: ${displayValue}`
-                                  : "Not set"}
-                                {!selectedStaffIdForCommissions && staffSpecificRules.length > 0 && (
-                                  <span className="ml-2">
-                                    • {staffSpecificRules.length} staff-specific rule{staffSpecificRules.length !== 1 ? 's' : ''}
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <button 
+                        <tr key={item.category} className="border-t border-[rgb(var(--reg-line)/0.6)]">
+                          <th scope="row" className="px-4 py-3 text-left font-semibold md:px-5">
+                            {item.name}
+                            {!selectedStaffIdForCommissions && others > 0 && <span className="block text-xs font-normal text-[rgb(var(--reg-muted))]">{tr("staff.personalRates", { count: others })}</span>}
+                          </th>
+                          <td className="px-2 py-3 tabular-nums">{rateText(defaultRule)}</td>
+                          {selectedStaffIdForCommissions && <td className="px-2 py-3 font-semibold tabular-nums">{memberRule ? rateText(memberRule) : <span className="font-normal text-[rgb(var(--reg-muted))]">{tr("staff.usesDefault")}</span>}</td>}
+                          <td className="pr-3">
+                            <button
+                              type="button"
+                              aria-label={tr("staff.editRate", { name: item.name })}
+                              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[rgb(var(--reg-ink)/0.06)]"
                               onClick={() => {
-                                // If staff is selected from dropdown, use that staff's rule or create new for that staff
-                                // Otherwise, use the default rule
-                                const ruleToEdit = selectedStaffIdForCommissions 
-                                  ? categoryRules.find(r => r.staffId === selectedStaffIdForCommissions && !r.serviceId)
-                                  : defaultRule;
-                                
                                 setEditingCommissionRule(ruleToEdit || null);
                                 setCommissionRuleForm({
                                   category: item.category,
                                   type: ruleToEdit?.type || CommissionType.PERCENTAGE,
                                   value: ruleToEdit?.value || 0,
                                   description: ruleToEdit?.description || "",
-                                  // Use selected staff from dropdown if available, otherwise use rule's staffId or undefined
                                   staffId: selectedStaffIdForCommissions || ruleToEdit?.staffId || undefined,
                                   serviceId: ruleToEdit?.serviceId || undefined,
                                   scope: ruleToEdit?.serviceId ? "service" : "category",
                                 });
                                 setIsCommissionRuleDialogOpen(true);
                               }}
-                              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                             >
-                              <span className="text-sm font-medium text-gray-900">
-                                {displayValue}
-                              </span>
-                              <ChevronRight size={16} className="text-gray-400" />
+                              <Pencil size={15} />
                             </button>
-                          </div>
-                          {index < 4 && (
-                            <div className="h-px bg-gray-200 mx-4" />
-                          )}
-                        </div>
+                          </td>
+                        </tr>
                       );
                     })}
-                  </div>
-                )}
-
-                {/* Pending Commissions List */}
-                {selectedStaffer !== "All" && pendingCommissions.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Commissions</h3>
-                    <div className="space-y-2 border border-gray-200 rounded-lg overflow-hidden">
-                      {pendingCommissions.map((commission) => (
-                        <div key={commission.id} className="p-4 bg-white border-b border-gray-200 last:border-b-0">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {commission.category.replace('_', ' ')}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Sale: {commission.saleAmount.toFixed(2)} {currencySymbol()} •
-                                Date: {new Date(commission.commissionDate).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-green-600">
-                                {commission.commissionAmount.toFixed(2)} {currencySymbol()}
-                              </p>
-                              <Badge variant="outline" className="mt-1">
-                                {commission.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
+                    {commissionRules
+                      .filter((r) => r.serviceId && (!selectedStaffIdForCommissions || !r.staffId || r.staffId === selectedStaffIdForCommissions))
+                      .map((r) => (
+                        <tr key={r.id} className="border-t border-[rgb(var(--reg-line)/0.6)] bg-[rgb(var(--reg-canvas)/0.5)]">
+                          <th scope="row" className="px-4 py-2.5 text-left font-normal md:px-5">
+                            <span className="font-semibold">{apiServices.find((s) => s.id === r.serviceId)?.name ?? tr("staff.aService")}</span>
+                            <span className="block text-xs text-[rgb(var(--reg-muted))]">{r.staffId ? apiStaff.find((s) => s.id === r.staffId)?.name : tr("staff.everyone")}{" "}{tr("staff.thisServiceOnly")}</span>
+                          </th>
+                          <td className="px-2 py-2.5 tabular-nums" colSpan={selectedStaffIdForCommissions ? 2 : 1}>{rateText(r)}</td>
+                          <td className="pr-3">
+                            <ActionMenu
+                              label={tr("staff.moreForThisRule")}
+                              actions={[
+                                {
+                                  label: tr("common.edit"),
+                                  icon: Pencil,
+                                  onSelect: () => {
+                                    setEditingCommissionRule(r);
+                                    setCommissionRuleForm({ category: r.category, type: r.type, value: r.value, description: r.description || "", staffId: r.staffId || undefined, serviceId: r.serviceId, scope: "service" });
+                                    setIsCommissionRuleDialogOpen(true);
+                                  },
+                                },
+                                { label: tr("common.delete"), icon: X, danger: true, onSelect: () => { if (r.id && confirm(tr("staff.deleteThisRule"))) void deleteCommissionRule(r.id).then(() => toast.success(tr("staff.ruleDeleted"))).catch(() => toast.error(tr("staff.couldNotDeleteTheRule"))); } },
+                              ]}
+                            />
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  </div>
+                  </tbody>
+                </table>
+              )}
+              <p className="px-4 pb-4 pt-2 text-xs text-[rgb(var(--reg-muted))] md:px-5">{tr("staff.aPersonalRateBeatsThe")}</p>
+            </section>
+
+            {selectedStaffer !== "All" && (
+              <section className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <h2 className="px-4 pt-4 text-base font-extrabold md:px-5">{tr("staff.waitingToBePaid")}</h2>
+                {commissionsLoading ? (
+                  <div className="m-4 h-20 animate-pulse rounded-2xl bg-[rgb(var(--reg-canvas))]" />
+                ) : pendingCommissions.length === 0 ? (
+                  <p className="px-4 pb-5 pt-2 text-sm text-[rgb(var(--reg-muted))] md:px-5">{tr("staff.nothingOwedRightNow")}</p>
+                ) : (
+                  <ul className="mt-2">
+                    {pendingCommissions.map((c) => (
+                      <li key={c.id} className="flex items-center justify-between gap-3 border-t border-[rgb(var(--reg-line)/0.6)] px-4 py-3 md:px-5">
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold capitalize">{c.category.replace("_", " ").toLowerCase()}</span>
+                          <span className="block text-xs text-[rgb(var(--reg-muted))]">{tr("staff.sale", { value: money(c.saleAmount, currencySymbol()), value2: formatLocaleDate(new Date(c.commissionDate), { day: "numeric", month: "short" }) })}</span>
+                        </span>
+                        <span className="text-sm font-extrabold tabular-nums text-emerald-700">{money(c.commissionAmount, currencySymbol())}</span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-              </div>
-            </div>
+              </section>
+            )}
           </div>
         )}
 
         {/* Staff Members View */}
         {activeTab === "staff-members" && (
-          <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
-            {/* Left Sidebar — on phones it sits above the details instead of beside them */}
-            <div className="w-full shrink-0 bg-gray-50 border-b border-gray-200 flex flex-col md:w-80 md:border-b-0 md:border-r">
-            {/* Search Bar */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="relative">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-                <Input
-                  type="text"
-                  placeholder="Search Staff Members..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+          <div className={pageBody}>
+            {apiStaff.length > 3 && (
+              <div className="relative max-w-md">
+                <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
+                <input aria-label={tr("staff.searchTeam")} className={cn(fieldCls, "h-11 pl-10")} placeholder={tr("staff.searchTeam")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-        </div>
-
-            {/* Staff List */}
-            <div className="flex-1 overflow-y-auto p-2">
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                </div>
-              ) : filteredStaff.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-gray-500 text-sm">
-                  No staff members found
-                </div>
-              ) : (
-                filteredStaff.map((staff) => (
-                  <div
-                    key={staff.id}
-                    className={`w-full flex items-center gap-2 px-4 py-3 rounded-lg transition-colors mb-1 ${
-                      selectedStaffId === staff.id
-                        ? "bg-white shadow-sm"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <button
-                      onClick={() => setSelectedStaffId(staff.id)}
-                      className="flex-1 flex items-center gap-3"
-                    >
-                      <Menu size={16} className="text-gray-400" />
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-gray-200 text-gray-700 text-sm font-medium">
-                          {staff.initials || getInitials(staff.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 text-left">
-                        <p className="text-sm font-medium text-gray-900">
-                          {staff.name}
-                        </p>
-                        {/* #55: pending means the invitation exists and the person has
-                            not registered yet. It does not mean the email was delivered
-                            — that is backend #496. */}
-                        {pendingInviteFor(staff.email) && (
-                          <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
-                            Invited
+            )}
+            {loading ? (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy>
+                {[0, 1, 2].map((i) => <div key={i} className="h-44 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />)}
+              </div>
+            ) : apiStaff.length === 0 ? (
+              <EmptyState
+                icon={UserPlus}
+                title={tr("staff.justYouSoFar")}
+                body={tr("staff.addThePeopleWhoDo")}
+                action={<Button className={primaryBtn} onClick={() => navigate(getPath("add-staff"))}><UserPlus size={16} />{" "}{tr("common.addTeamMember")}</Button>}
+              />
+            ) : filteredStaff.length === 0 ? (
+              <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{tr("staff.nobodyMatches", { searchQuery })}</p>
+            ) : (
+              <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {filteredStaff.map((staff) => {
+                  const invite = pendingInviteFor(staff.email);
+                  const role = roleOf(staff.id);
+                  const serviceCount = apiServices.filter((s) => s.staffIds?.includes(staff.id)).length;
+                  return (
+                    <li key={staff.id}>
+                      <button
+                        type="button"
+                        onClick={() => openMember(staff.id, "profile")}
+                        className="flex h-full w-full flex-col rounded-[20px] bg-white p-4 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)] transition hover:-translate-y-0.5 hover:ring-[rgb(var(--reg-brand)/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)]"
+                      >
+                        <span className="flex items-start gap-3">
+                          <MemberAvatar name={staff.name} id={staff.id} url={staff.avatarUrl} size="h-14 w-14 text-lg" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[16px] font-bold">{staff.name}</span>
+                            <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{staff.position || tr("staff.noPositionSet")}</span>
+                            <span className="mt-1.5 flex flex-wrap gap-1.5">
+                              {role && (
+                                <span className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-2 py-0.5 text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">{roleName(role)}</span>
+                              )}
+                              {/* #55: pending means the invitation exists and the person has
+                                  not registered yet — not that the email was delivered. */}
+                              {invite && <StatusChip status="draft" label={tr("staff.invited")} className="px-2 py-0.5 text-[11px]" />}
+                            </span>
                           </span>
+                        </span>
+                        <span className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-2 text-sm">
+                          <span className="rounded-xl bg-[rgb(var(--reg-canvas))] px-3 py-2">
+                            <span className="block text-[11px] font-semibold text-[rgb(var(--reg-muted))]">{tr("common.services")}</span>
+                            <span className="block font-bold tabular-nums">{serviceCount}</span>
+                          </span>
+                          <span className="rounded-xl bg-[rgb(var(--reg-canvas))] px-3 py-2">
+                            <span className="block text-[11px] font-semibold text-[rgb(var(--reg-muted))]">{tr("staff.works")}</span>
+                            <span className="block truncate font-bold">{hoursSummary(staff).split(" · ")[0]}</span>
+                            <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{hoursSummary(staff).split(" · ")[1] ?? ""}</span>
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <FormSheet
+          open={memberOpen && !!selectedStaff}
+          onOpenChange={setMemberOpen}
+          title={selectedStaff?.name ?? tr("common.teamMember")}
+          description={selectedStaff ? [selectedStaff.position, (() => { const ro = roleOf(selectedStaff.id); return ro ? roleName(ro) : undefined; })()].filter(Boolean).join(" · ") || undefined : undefined}
+          footer={
+            memberTab === "profile" ? (
+              <>
+                <Button variant="outline" className={sheetSecondary} onClick={() => setMemberOpen(false)}>{tr("common.close")}</Button>
+                <Button className={sheetPrimary} disabled={profileBusy || !profileForm.name.trim()} onClick={() => void saveProfile()}>
+                  {profileBusy ? tr("common.saving") : tr("staff.saveProfile")}
+                </Button>
+              </>
+            ) : memberTab === "permissions" ? (
+              <>
+                <Button variant="outline" className={sheetSecondary} onClick={() => setMemberOpen(false)}>{tr("common.close")}</Button>
+                <Button className={sheetPrimary} disabled={roleBusy || !pickedRoleId || pickedRoleId === roleOf(selectedStaff?.id ?? 0)?.id} onClick={() => void saveRole()}>
+                  {roleBusy ? tr("common.saving") : tr("staff.saveRole")}
+                </Button>
+              </>
+            ) : undefined
+          }
+        >
+          {selectedStaff && (
+            <>
+              <div role="tablist" aria-label={tr("staff.memberSections")} className="grid grid-cols-4 gap-1 rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
+                {([
+                  ["profile", tr("staff.tabProfile")],
+                  ["services", tr("staff.tabServices")],
+                  ["hours", tr("staff.tabHours")],
+                  ["permissions", tr("staff.tabAccess")],
+                ] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={memberTab === k}
+                    onClick={() => setMemberTab(k)}
+                    className={cn(
+                      "h-9 rounded-full text-sm font-semibold transition-colors",
+                      memberTab === k ? "bg-white text-[rgb(var(--reg-ink))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.08)]" : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {memberTab === "profile" && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    <MemberAvatar name={selectedStaff.name} id={selectedStaff.id} url={selectedStaff.avatarUrl} size="h-16 w-16 text-xl" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-lg font-extrabold">{selectedStaff.name}</p>
+                      <p className="text-sm text-[rgb(var(--reg-muted))]">{hoursSummary(selectedStaff)}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <RowAction icon={Calendar} tone="ink" onClick={() => navigate(getPath("calendar"))}>{tr("common.calendar")}</RowAction>
+                        {selectedStaff.email && (
+                          <RowAction icon={Send} disabled={inviteBusy} onClick={() => void sendInvite()}>
+                            {pendingInviteFor(selectedStaff.email) ? tr("staff.resendSignInLink") : tr("staff.sendSignInLink")}
+                          </RowAction>
                         )}
                       </div>
-                    </button>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        setEditingStaff(staff);
-                        // #13: `staff.role` is the real field (no such thing as
-                        // canBookAppointments on the backend); service assignments
-                        // live in service-catalog, not on the staff record itself, so
-                        // they need their own fetch — staff.serviceIds is never
-                        // populated and this used to always open with nothing checked.
-                        const role = staff.role
-                          ? staff.role.charAt(0) + staff.role.slice(1).toLowerCase()
-                          : "";
-                        let serviceIds: number[] = [];
-                        try {
-                          serviceIds = await serviceService.getStaffServiceIds(businessId, staff.id);
-                        } catch (err) {
-                          console.error("Failed to load staff service assignments:", err);
-                        }
-                        setEditStaffForm({
-                          name: staff.name || "",
-                          phone: staff.phone || "",
-                          email: staff.email || "",
-                          position: staff.position || "",
-                          permissionLevel: role,
-                          serviceIds,
-                        });
-                        setIsEditStaffDialogOpen(true);
-                      }}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
-                      title="Edit staff member"
-                    >
-                      <Edit size={16} />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Floating Action Button */}
-            <div className="p-4">
-              <button
-                aria-label="Add staff"
-                onClick={() => navigate(getPath("add-staff"))}
-                className="w-12 h-12 bg-black text-white rounded-full shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center"
-              >
-                <Plus size={24} />
-              </button>
-                  </div>
-                </div>
-
-          {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto bg-white">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              </div>
-            ) : selectedStaff ? (
-              <div className="p-6">
-                {/* Staff Profile Header */}
-                <div className="flex items-start gap-6 mb-6">
-                  <Avatar className="h-24 w-24">
-                    <AvatarFallback className="bg-gray-200 text-gray-700 text-2xl font-medium">
-                      {selectedStaff.initials || getInitials(selectedStaff.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                      {selectedStaff.name}
-                    </h1>
-                    <div className="flex items-center gap-3 mb-2">
-                      <Badge
-                        variant="outline"
-                        className="bg-gray-100 text-gray-700 border-gray-300"
-                      >
-                        <Star size={12} className="mr-1" />
-                        {selectedStaff.position || "Staff"}
-                      </Badge>
-                      {selectedStaff.email && (
-                        <span className="text-sm text-gray-600">
-                          {selectedStaff.email}
-                        </span>
-                      )}
                     </div>
-                    <Button
-                      variant="outline"
-                      className="gap-2 mt-2"
-                      onClick={() => navigate(getPath("calendar"))}
-                    >
-                      <Calendar size={16} />
-                      SHOW CALENDAR
-                    </Button>
+                  </div>
+                  <Field label={tr("common.name")} htmlFor="m-name">
+                    <input id="m-name" className={fieldCls} value={profileForm.name} onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))} />
+                  </Field>
+                  <Field label={tr("common.position")} htmlFor="m-position" hint={tr("staff.clientsSeeItWhenThey")}>
+                    <input id="m-position" className={fieldCls} value={profileForm.position} placeholder={tr("staff.stylist")} onChange={(e) => setProfileForm((f) => ({ ...f, position: e.target.value }))} />
+                  </Field>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label={tr("common.phone")} htmlFor="m-phone">
+                      <input id="m-phone" type="tel" className={fieldCls} value={profileForm.phone} onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))} />
+                    </Field>
+                    <Field label={tr("common.email")} htmlFor="m-email">
+                      <input id="m-email" type="email" className={fieldCls} value={profileForm.email} onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))} />
+                    </Field>
                   </div>
                 </div>
+              )}
 
-                {/* Content Tabs */}
-                <div className="border-b border-gray-200 mb-6">
-                  <div className="flex gap-6">
-                    <button
-                      onClick={() => setActiveContentTab("services")}
-                      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                        activeContentTab === "services"
-                          ? "border-gray-900 text-gray-900"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      SERVICES ({selectedServicesForStaff.length})
-                    </button>
-                    <button
-                      onClick={() => setActiveContentTab("working-hours")}
-                      className={`shrink-0 whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                        activeContentTab === "working-hours"
-                          ? "border-gray-900 text-gray-900"
-                          : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      WORKING HOURS
-                    </button>
-                  </div>
-                </div>
-
-                {/* Services Tab Content */}
-                {activeContentTab === "services" && (
+                {memberTab === "services" && (
                   <div className="space-y-6">
                     {/* Search Services */}
                     <div className="relative max-w-md">
@@ -2176,7 +1127,7 @@ export default function StaffPage() {
                       />
                       <Input
                         type="text"
-                        placeholder="Search services..."
+                        placeholder={tr("common.searchServices")}
                         className="pl-10"
                         value={servicesSearchQuery}
                         onChange={(e) => setServicesSearchQuery(e.target.value)}
@@ -2189,9 +1140,9 @@ export default function StaffPage() {
                         <p className="text-sm">
                           {selectedStaff 
                             ? servicesSearchQuery 
-                              ? "No services found matching your search"
-                              : "No services assigned to this staff member"
-                            : "Select a staff member to view their services"}
+                              ? tr("staff.noServicesFoundMatchingYour")
+                              : tr("staff.noServicesAssignedToThis")
+                            : tr("staff.selectAStaffMemberTo")}
                         </p>
                       </div>
                     ) : (
@@ -2247,33 +1198,33 @@ export default function StaffPage() {
                     {selectedStaff && (
                       <div className="pt-4">
                         <Button 
-                          className="w-full"
+                          className={cn(sheetPrimary, "w-full")}
                           onClick={handleSaveServices}
                           disabled={servicesLoading}
                         >
-                          SAVE CHANGES
+                          {tr("staff.saveServices")}
                         </Button>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Working Hours Tab Content */}
-                {activeContentTab === "working-hours" && (
+
+                {memberTab === "hours" && (
                   <div className="space-y-6">
                     {!selectedStaff ? (
                       <div className="text-center py-12 text-gray-500">
                         <Clock size={48} className="mx-auto mb-4 text-gray-300" />
-                        <p className="text-sm font-medium">Select a staff member to manage their working hours</p>
+                        <p className="text-sm font-medium">{tr("staff.selectAStaffMemberTo2")}</p>
                       </div>
                     ) : (
                       <>
                         {/* Quick Actions */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                              <Clock size={16} className="text-blue-600" />
-                              Quick Actions
+                              <Clock size={16} className="text-[rgb(var(--reg-brand))]" />
+                              {tr("staff.quickActions")}
                             </h3>
                           </div>
                           <div className="flex flex-wrap gap-2">
@@ -2284,7 +1235,7 @@ export default function StaffPage() {
                               className="text-xs"
                             >
                               <Copy size={14} className="mr-1" />
-                              Copy Monday to Weekdays
+                              {tr("staff.copyMondayToWeekdays")}
                             </Button>
                             <Button
                               variant="outline"
@@ -2293,7 +1244,7 @@ export default function StaffPage() {
                               className="text-xs"
                             >
                               <Copy size={14} className="mr-1" />
-                              Copy Saturday to Weekends
+                              {tr("staff.copySaturdayToWeekends")}
                             </Button>
                             <Button
                               variant="outline"
@@ -2302,7 +1253,7 @@ export default function StaffPage() {
                               className="text-xs"
                             >
                               <Copy size={14} className="mr-1" />
-                              Copy Monday to All Days
+                              {tr("staff.copyMondayToAllDays")}
                             </Button>
                           </div>
                         </div>
@@ -2310,22 +1261,22 @@ export default function StaffPage() {
                         {/* Weekdays Section */}
                         <div className="space-y-3">
                           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                            Weekdays
+                            {tr("staff.weekdays")}
                           </h3>
                           <div className="space-y-2">
                             {[
-                              { key: "monday", label: "Monday", short: "Mon" },
-                              { key: "tuesday", label: "Tuesday", short: "Tue" },
-                              { key: "wednesday", label: "Wednesday", short: "Wed" },
-                              { key: "thursday", label: "Thursday", short: "Thu" },
-                              { key: "friday", label: "Friday", short: "Fri" },
+                              { key: "monday", label: tr("common.monday"), get short() { return tr("common.dayMon"); } },
+                              { key: "tuesday", label: tr("common.tuesday"), get short() { return tr("common.dayTue"); } },
+                              { key: "wednesday", label: tr("common.wednesday"), get short() { return tr("common.dayWed"); } },
+                              { key: "thursday", label: tr("common.thursday"), get short() { return tr("common.dayThu"); } },
+                              { key: "friday", label: tr("common.friday"), get short() { return tr("common.dayFri"); } },
                             ].map((day) => {
                               const dayHours = workingHoursForm[day.key] || { start: "10:00", end: "19:00", isClosed: false };
                               
                               return (
                                 <div
                                   key={day.key}
-                                  className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white p-3 ring-1 ring-[rgb(var(--reg-line)/0.8)]"
                                 >
                                   <div className="w-20 flex-shrink-0">
                                     <div className="flex items-center gap-2">
@@ -2357,12 +1308,12 @@ export default function StaffPage() {
                                       htmlFor={`${day.key}-closed`}
                                       className="text-xs text-gray-600 cursor-pointer"
                                     >
-                                      Closed
+                                      {tr("common.closed")}
                                     </Label>
                                   </div>
                                   {!dayHours.isClosed && (
-                                    <div className="flex-1 flex items-center gap-3">
-                                      <div className="flex items-center gap-2 flex-1">
+                                    <div className="flex min-w-[230px] flex-1 items-center gap-2">
+                                      <div className="flex flex-1 items-center gap-2">
                                         <Clock size={14} className="text-gray-400" />
                                         <Input
                                           type="time"
@@ -2399,7 +1350,7 @@ export default function StaffPage() {
                                         size="sm"
                                         onClick={() => handleCopyToAllDays(day.key)}
                                         className="h-8 px-2 text-xs"
-                                        title={`Copy ${day.label} hours to all days`}
+                                        title={tr("staff.copyHoursToAllDays", { label: day.label })}
                                       >
                                         <Copy size={12} />
                                       </Button>
@@ -2408,14 +1359,14 @@ export default function StaffPage() {
                                   {dayHours.isClosed && (
                                     <div className="flex-1 flex items-center justify-between">
                                       <span className="text-sm text-gray-500 italic">
-                                        Closed all day
+                                        {tr("staff.closedAllDay")}
                                       </span>
                                       <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleCopyToAllDays(day.key)}
                                         className="h-8 px-2 text-xs"
-                                        title={`Copy ${day.label} hours to all days`}
+                                        title={tr("staff.copyHoursToAllDays", { label: day.label })}
                                       >
                                         <Copy size={12} />
                                       </Button>
@@ -2430,19 +1381,19 @@ export default function StaffPage() {
                         {/* Weekends Section */}
                         <div className="space-y-3">
                           <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                            Weekends
+                            {tr("staff.weekends")}
                           </h3>
                           <div className="space-y-2">
                             {[
-                              { key: "saturday", label: "Saturday", short: "Sat" },
-                              { key: "sunday", label: "Sunday", short: "Sun" },
+                              { key: "saturday", label: tr("common.saturday"), get short() { return tr("common.daySat"); } },
+                              { key: "sunday", label: tr("common.sunday"), get short() { return tr("common.daySun"); } },
                             ].map((day) => {
                               const dayHours = workingHoursForm[day.key] || { start: "10:00", end: "19:00", isClosed: false };
                               
                               return (
                                 <div
                                   key={day.key}
-                                  className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-white p-3 ring-1 ring-[rgb(var(--reg-line)/0.8)]"
                                 >
                                   <div className="w-20 flex-shrink-0">
                                     <div className="flex items-center gap-2">
@@ -2474,12 +1425,12 @@ export default function StaffPage() {
                                       htmlFor={`${day.key}-closed`}
                                       className="text-xs text-gray-600 cursor-pointer"
                                     >
-                                      Closed
+                                      {tr("common.closed")}
                                     </Label>
                                   </div>
                                   {!dayHours.isClosed && (
-                                    <div className="flex-1 flex items-center gap-3">
-                                      <div className="flex items-center gap-2 flex-1">
+                                    <div className="flex min-w-[230px] flex-1 items-center gap-2">
+                                      <div className="flex flex-1 items-center gap-2">
                                         <Clock size={14} className="text-gray-400" />
                                         <Input
                                           type="time"
@@ -2516,7 +1467,7 @@ export default function StaffPage() {
                                         size="sm"
                                         onClick={() => handleCopyToAllDays(day.key)}
                                         className="h-8 px-2 text-xs"
-                                        title={`Copy ${day.label} hours to all days`}
+                                        title={tr("staff.copyHoursToAllDays", { label: day.label })}
                                       >
                                         <Copy size={12} />
                                       </Button>
@@ -2525,14 +1476,14 @@ export default function StaffPage() {
                                   {dayHours.isClosed && (
                                     <div className="flex-1 flex items-center justify-between">
                                       <span className="text-sm text-gray-500 italic">
-                                        Closed all day
+                                        {tr("staff.closedAllDay")}
                                       </span>
                                       <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleCopyToAllDays(day.key)}
                                         className="h-8 px-2 text-xs"
-                                        title={`Copy ${day.label} hours to all days`}
+                                        title={tr("staff.copyHoursToAllDays", { label: day.label })}
                                       >
                                         <Copy size={12} />
                                       </Button>
@@ -2547,28 +1498,59 @@ export default function StaffPage() {
                         {/* Save Button */}
                         <div className="pt-4 border-t border-gray-200">
                           <Button
-                            className="w-full bg-gray-900 hover:bg-gray-800"
+                            className={cn(sheetPrimary, "w-full")}
                             onClick={handleSaveWorkingHours}
                             disabled={staffLoading}
                             size="lg"
                           >
                             <Clock size={16} className="mr-2" />
-                            SAVE WORKING HOURS
+                            {tr("staff.saveWorkingHours")}
                           </Button>
                         </div>
                       </>
                     )}
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <p>Select a staff member to view details</p>
-              </div>
-            )}
-          </div>
-        </div>
-        )}
+
+              {memberTab === "permissions" && (
+                <div className="space-y-3">
+                  <p className="text-sm text-[rgb(var(--reg-muted))]">
+                    {tr("staff.everyoneSeesTheirOwnCalendar")}{" "}
+                    <button type="button" className="font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => navigate(getPath("roles"))}>{tr("staff.editRoles")}</button>
+                  </p>
+                  <div role="radiogroup" aria-label={tr("common.role")} className="space-y-2">
+                    {roles.filter((r) => !r.isOwner).map((r) => {
+                      const on = pickedRoleId === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          onClick={() => setPickedRoleId(r.id)}
+                          className={cn(
+                            "flex w-full items-start gap-3 rounded-2xl p-4 text-left ring-1 ring-inset transition",
+                            on ? "bg-[rgb(var(--reg-brand-soft))] ring-[rgb(var(--reg-brand))]" : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
+                          )}
+                        >
+                          <span className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ring-2", on ? "ring-[rgb(var(--reg-brand))]" : "ring-[rgb(var(--reg-line))]")}>
+                            {on && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-bold">{roleName(r)}</span>
+                            <span className="block text-xs text-[rgb(var(--reg-muted))]">
+                              {roleDescription(r) || (r.permissions.length ? `${r.permissions.length} permissions` : tr("staff.ownCalendarOnly"))}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </FormSheet>
       </div>
 
       {/* Add Time Off Sheet */}
@@ -2594,20 +1576,20 @@ export default function StaffPage() {
         <SheetContent side="right" className="w-full sm:w-[500px] !max-w-none p-0 flex flex-col h-screen max-h-screen">
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-            <SheetTitle className="text-base font-semibold text-gray-900">Add Time Off</SheetTitle>
+            <SheetTitle className="text-base font-semibold text-gray-900">{tr("staff.addTimeOff")}</SheetTitle>
           </div>
 
           {/* Form Content */}
           <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-0">
             {/* Staff Selection */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-700">Select Staff *</Label>
+              <Label className="text-xs font-medium text-gray-700">{tr("staff.selectStaff")}</Label>
               <Select
                 value={timeOffForm.staffId}
                 onValueChange={(value) => setTimeOffForm(prev => ({ ...prev, staffId: value }))}
               >
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Select staff member" />
+                  <SelectValue placeholder={tr("common.selectStaffMember")} />
                 </SelectTrigger>
                 <SelectContent>
                   {apiStaff?.map((s) => (
@@ -2621,7 +1603,7 @@ export default function StaffPage() {
 
             {/* Full Day / Hours Selection */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-700">Duration</Label>
+              <Label className="text-xs font-medium text-gray-700">{tr("common.duration")}</Label>
               <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -2635,7 +1617,7 @@ export default function StaffPage() {
                     }}
                   />
                   <Label htmlFor="full-day" className="text-sm font-normal cursor-pointer">
-                    Full Day
+                    {tr("staff.fullDay")}
                   </Label>
                 </div>
               </div>
@@ -2644,7 +1626,7 @@ export default function StaffPage() {
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-700">Start Date *</Label>
+                <Label className="text-xs font-medium text-gray-700">{tr("staff.startDate")}</Label>
                 <Input
                   type="date"
                   value={timeOffForm.startDate}
@@ -2653,7 +1635,7 @@ export default function StaffPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-700">End Date *</Label>
+                <Label className="text-xs font-medium text-gray-700">{tr("staff.endDate")}</Label>
                 <Input
                   type="date"
                   value={timeOffForm.endDate}
@@ -2668,7 +1650,7 @@ export default function StaffPage() {
             {!timeOffForm.isFullDay && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-gray-700">Start Time</Label>
+                  <Label className="text-xs font-medium text-gray-700">{tr("staff.startTime2")}</Label>
                   <Input
                     type="time"
                     value={timeOffForm.startTime}
@@ -2677,7 +1659,7 @@ export default function StaffPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium text-gray-700">End Time</Label>
+                  <Label className="text-xs font-medium text-gray-700">{tr("staff.endTime2")}</Label>
                   <Input
                     type="time"
                     value={timeOffForm.endTime}
@@ -2697,7 +1679,7 @@ export default function StaffPage() {
                   onCheckedChange={(checked) => setTimeOffForm(prev => ({ ...prev, isRecurring: checked === true }))}
                 />
                 <Label htmlFor="recurring" className="text-sm font-normal cursor-pointer">
-                  Repeat
+                  {tr("staff.repeat")}
                 </Label>
               </div>
               {timeOffForm.isRecurring && (
@@ -2707,17 +1689,17 @@ export default function StaffPage() {
                     onValueChange={(value) => setTimeOffForm(prev => ({ ...prev, recurrencePattern: value }))}
                   >
                     <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Select pattern" />
+                      <SelectValue placeholder={tr("staff.selectPattern")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="DAILY">Daily</SelectItem>
-                      <SelectItem value="WEEKLY">Weekly</SelectItem>
-                      <SelectItem value="MONTHLY">Monthly</SelectItem>
-                      <SelectItem value="YEARLY">Yearly</SelectItem>
+                      <SelectItem value="DAILY">{tr("common.daily")}</SelectItem>
+                      <SelectItem value="WEEKLY">{tr("staff.weekly")}</SelectItem>
+                      <SelectItem value="MONTHLY">{tr("staff.monthly")}</SelectItem>
+                      <SelectItem value="YEARLY">{tr("staff.yearly")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="space-y-2">
-                    <Label className="text-xs font-medium text-gray-700">Repeat Until</Label>
+                    <Label className="text-xs font-medium text-gray-700">{tr("staff.repeatUntil")}</Label>
                     <Input
                       type="date"
                       value={timeOffForm.recurrenceEndDate}
@@ -2732,11 +1714,11 @@ export default function StaffPage() {
 
             {/* Reason */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-700">Reason *</Label>
+              <Label className="text-xs font-medium text-gray-700">{tr("staff.reason")}</Label>
               <Textarea
                 value={timeOffForm.reason}
                 onChange={(e) => setTimeOffForm(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Enter reason for time off..."
+                placeholder={tr("staff.enterReasonForTimeOff")}
                 className="text-sm min-h-[80px]"
               />
             </div>
@@ -2750,13 +1732,13 @@ export default function StaffPage() {
                   onCheckedChange={(checked) => setTimeOffForm(prev => ({ ...prev, isApproved: checked === true }))}
                 />
                 <Label htmlFor="approved" className="text-sm font-normal cursor-pointer">
-                  Approved
+                  {tr("staff.approved")}
                 </Label>
                 <HelpCircle className="h-4 w-4 text-gray-400" />
                 <span className="text-xs text-gray-500">
                   {timeOffForm.isApproved 
-                    ? "(No manager approval needed)" 
-                    : "(Requires manager approval)"}
+                    ? tr("staff.noManagerApprovalNeeded") 
+                    : tr("staff.requiresManagerApproval")}
                 </span>
               </div>
             </div>
@@ -2769,14 +1751,14 @@ export default function StaffPage() {
               className="flex-1 h-9 text-sm"
               onClick={() => setIsAddTimeOffOpen(false)}
             >
-              CANCEL
+              {tr("staff.cancel")}
             </Button>
             <Button
               className="flex-1 h-9 text-sm bg-gray-900 hover:bg-gray-800 text-white"
               disabled={!timeOffForm.staffId || !timeOffForm.startDate || !timeOffForm.endDate || !timeOffForm.reason}
               onClick={async () => {
                 if (!timeOffForm.staffId || !timeOffForm.startDate || !timeOffForm.endDate || !timeOffForm.reason) {
-                  toast.error("Please fill in all required fields");
+                  toast.error(tr("common.pleaseFillInAllRequired"));
                   return;
                 }
 
@@ -2798,7 +1780,7 @@ export default function StaffPage() {
                 );
                 
                 if (hasConflict) {
-                  toast.error("This time off conflicts with an existing time off for this staff member. Please choose a different time.");
+                  toast.error(tr("staff.thisTimeOffConflictsWith"));
                   return;
                 }
 
@@ -2818,7 +1800,7 @@ export default function StaffPage() {
                     isApproved: timeOffForm.isApproved,
                   });
                   
-                  toast.success("Time off created successfully");
+                  toast.success(tr("staff.timeOffCreatedSuccessfully"));
                   setIsAddTimeOffOpen(false);
                   setTimeOffForm({
                     staffId: "",
@@ -2834,18 +1816,18 @@ export default function StaffPage() {
                     isApproved: false,
                   });
                 } catch (error) {
-                  toast.error((error instanceof Error && error.message) || "Failed to create time off");
+                  toast.error((error instanceof Error && error.message) || tr("staff.failedToCreateTimeOff"));
                 }
               }}
             >
-              SAVE
+              {tr("staff.save")}
             </Button>
           </div>
         </SheetContent>
       </Sheet>
 
       {/* Commission Rule Dialog */}
-      <Dialog open={isCommissionRuleDialogOpen} onOpenChange={(open) => {
+      <FormSheet title={editingCommissionRule ? tr("staff.editCommissionRate") : tr("staff.newCommissionRate")} description={tr("staff.whatATeamMemberEarns")} open={isCommissionRuleDialogOpen} onOpenChange={(open) => {
         setIsCommissionRuleDialogOpen(open);
         if (!open) {
           // Reset form when dialog closes
@@ -2861,20 +1843,12 @@ export default function StaffPage() {
           });
         }
       }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editingCommissionRule ? "Edit" : "Create"} Commission Rule</DialogTitle>
-            <DialogDescription>
-              {editingCommissionRule 
-                ? "Update the commission rule settings"
-                : "Create a new commission rule for this category"}
-            </DialogDescription>
-          </DialogHeader>
+        
           <div className="space-y-4 py-4">
             {/* Scope selection - Category or Service */}
             {commissionRuleForm.category === CommissionCategory.SERVICES && (
               <div className="space-y-2">
-                <Label>Rule Scope</Label>
+                <Label>{tr("staff.ruleScope")}</Label>
                 <Select
                   value={commissionRuleForm.scope}
                   onValueChange={(value) => setCommissionRuleForm(prev => ({ 
@@ -2893,14 +1867,14 @@ export default function StaffPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="category">All Services in Category</SelectItem>
-                    <SelectItem value="service">Specific Service</SelectItem>
+                    <SelectItem value="category">{tr("staff.allServicesInCategory")}</SelectItem>
+                    <SelectItem value="service">{tr("staff.specificService")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500">
                   {commissionRuleForm.scope === "category" 
-                    ? "This rule will apply to all services in this category"
-                    : "This rule will apply to a specific service only"}
+                    ? tr("staff.thisRuleWillApplyTo")
+                    : tr("staff.thisRuleWillApplyTo2")}
                 </p>
               </div>
             )}
@@ -2908,7 +1882,7 @@ export default function StaffPage() {
             {/* Service selection - only if scope is "service" */}
             {commissionRuleForm.scope === "service" && commissionRuleForm.category === CommissionCategory.SERVICES && (
               <div className="space-y-2">
-                <Label>Service</Label>
+                <Label>{tr("common.service")}</Label>
                 <Select
                   value={commissionRuleForm.serviceId ? commissionRuleForm.serviceId.toString() : ""}
                   onValueChange={(value) => setCommissionRuleForm(prev => ({ 
@@ -2924,7 +1898,7 @@ export default function StaffPage() {
                   }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a service" />
+                    <SelectValue placeholder={tr("staff.selectAService")} />
                   </SelectTrigger>
                   <SelectContent>
                     {apiServices?.filter(s => s.isActive).map((service) => (
@@ -2939,7 +1913,7 @@ export default function StaffPage() {
 
             {/* Staff selection */}
             <div className="space-y-2">
-              <Label>Apply To Staff</Label>
+              <Label>{tr("staff.applyToStaff")}</Label>
               <Select
                 value={commissionRuleForm.staffId ? commissionRuleForm.staffId.toString() : "all"}
                 onValueChange={(value) => {
@@ -2961,7 +1935,7 @@ export default function StaffPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Staff (Default)</SelectItem>
+                  <SelectItem value="all">{tr("staff.allStaffDefault")}</SelectItem>
                   {apiStaff?.filter(s => s.isActive).map((staff) => (
                     <SelectItem key={staff.id} value={staff.id.toString()}>
                       {staff.name}
@@ -2971,13 +1945,13 @@ export default function StaffPage() {
               </Select>
               <p className="text-xs text-gray-500">
                 {commissionRuleForm.staffId 
-                  ? "This rule will only apply to the selected staff member"
-                  : "This rule will apply to all staff members by default"}
+                  ? tr("staff.thisRuleWillOnlyApply")
+                  : tr("staff.thisRuleWillApplyTo3")}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>Commission Type</Label>
+              <Label>{tr("staff.commissionType")}</Label>
               <Select
                 value={commissionRuleForm.type}
                 onValueChange={(value) => setCommissionRuleForm(prev => ({ 
@@ -2996,15 +1970,15 @@ export default function StaffPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={CommissionType.PERCENTAGE}>Percentage</SelectItem>
-                  <SelectItem value={CommissionType.FIXED_AMOUNT}>Fixed Amount</SelectItem>
+                  <SelectItem value={CommissionType.PERCENTAGE}>{tr("common.percentage")}</SelectItem>
+                  <SelectItem value={CommissionType.FIXED_AMOUNT}>{tr("staff.fixedAmount")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label>
-                {commissionRuleForm.type === CommissionType.PERCENTAGE ? "Percentage (%)" : `Fixed Amount (${currencySymbol()})`}
+                {commissionRuleForm.type === CommissionType.PERCENTAGE ? tr("staff.percentage") : tr("staff.fixedAmount2", { value: currencySymbol() })}
               </Label>
               <Input
                 type="number"
@@ -3019,28 +1993,30 @@ export default function StaffPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Description (Optional)</Label>
+              <Label>{tr("staff.descriptionOptional")}</Label>
               <Textarea
                 value={commissionRuleForm.description}
                 onChange={(e) => setCommissionRuleForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Add a description for this commission rule"
+                placeholder={tr("staff.addADescriptionForThis")}
                 rows={3}
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
+                className={sheetSecondary}
                 onClick={() => setIsCommissionRuleDialogOpen(false)}
               >
-                Cancel
+                {tr("common.cancel")}
               </Button>
               <Button
+                className={sheetPrimary}
                 onClick={async () => {
                   try {
                     // Validation
                     if (commissionRuleForm.scope === "service" && !commissionRuleForm.serviceId) {
-                      toast.error("Please select a service");
+                      toast.error(tr("staff.pleaseSelectAService"));
                       return;
                     }
                     
@@ -3064,31 +2040,30 @@ export default function StaffPage() {
                     
                     if (editingCommissionRule) {
                       await updateCommissionRule(editingCommissionRule.id!, ruleData);
-                      toast.success("Commission rule updated successfully");
+                      toast.success(tr("staff.commissionRuleUpdatedSuccessfully"));
                     } else {
                       await createCommissionRule(ruleData);
                       toast.success(commissionRuleForm.staffId 
-                        ? "Staff-specific commission rule created successfully" 
-                        : "Commission rule created successfully");
+                        ? tr("staff.staffSpecificCommissionRuleCreated") 
+                        : tr("staff.commissionRuleCreatedSuccessfully"));
                     }
                     // Refresh the rules list to show the new/updated rule
                     await refreshCommissionRules();
                     setIsCommissionRuleDialogOpen(false);
                     // Form will be reset by onOpenChange handler
                   } catch (error) {
-                    toast.error("Failed to save commission rule");
+                    toast.error(tr("staff.failedToSaveCommissionRule"));
                   }
                 }}
               >
-                {editingCommissionRule ? "Update" : "Create"}
+                {editingCommissionRule ? tr("staff.update") : tr("staff.create")}
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </FormSheet>
 
       {/* Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => {
+      <FormSheet title={tr("staff.payOutCommission")} description={tr("staff.recordAPayoutToThis")} open={isPaymentDialogOpen} onOpenChange={(open) => {
         setIsPaymentDialogOpen(open);
         if (open) {
           // Initialize form with total pending when dialog opens
@@ -3110,22 +2085,16 @@ export default function StaffPage() {
           });
         }
       }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Payment</DialogTitle>
-            <DialogDescription>
-              Create a payment for {selectedStaffer !== "All" ? apiStaff?.find(s => s.id.toString() === selectedStaffer)?.name : "selected staff"}
-            </DialogDescription>
-          </DialogHeader>
+        
           <div className="space-y-4 py-4">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">Total Pending Commissions</p>
+              <p className="text-sm text-gray-600">{tr("staff.totalPendingCommissions")}</p>
               <p className="text-2xl font-bold text-gray-900">{totalPending.toFixed(2)} {currencySymbol()}</p>
-              <p className="text-xs text-gray-500 mt-1">{pendingCommissions.length} commission{pendingCommissions.length !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-gray-500 mt-1">{tr("staff.commissionCount", { count: pendingCommissions.length })}</p>
             </div>
 
             <div className="space-y-2">
-              <Label>Payment Amount</Label>
+              <Label>{tr("staff.paymentAmount")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -3136,7 +2105,7 @@ export default function StaffPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Payment Method</Label>
+              <Label>{tr("staff.paymentMethod")}</Label>
               <Select 
                 value={paymentForm.method} 
                 onValueChange={(value) => setPaymentForm(prev => ({ ...prev, method: value as PaymentMethod }))}
@@ -3145,18 +2114,18 @@ export default function StaffPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={PaymentMethod.CASH}>Cash</SelectItem>
-                  <SelectItem value={PaymentMethod.CHECK}>Check</SelectItem>
-                  <SelectItem value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</SelectItem>
-                  <SelectItem value={PaymentMethod.PAYPAL}>PayPal</SelectItem>
-                  <SelectItem value={PaymentMethod.VENMO}>Venmo</SelectItem>
-                  <SelectItem value={PaymentMethod.OTHER}>Other</SelectItem>
+                  <SelectItem value={PaymentMethod.CASH}>{tr("common.cash")}</SelectItem>
+                  <SelectItem value={PaymentMethod.CHECK}>{tr("staff.check")}</SelectItem>
+                  <SelectItem value={PaymentMethod.BANK_TRANSFER}>{tr("staff.bankTransfer")}</SelectItem>
+                  <SelectItem value={PaymentMethod.PAYPAL}>{tr("staff.paypal")}</SelectItem>
+                  <SelectItem value={PaymentMethod.VENMO}>{tr("staff.venmo")}</SelectItem>
+                  <SelectItem value={PaymentMethod.OTHER}>{tr("staff.other")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Payment Date</Label>
+              <Label>{tr("staff.paymentDate")}</Label>
               <Input
                 type="date"
                 value={paymentForm.paymentDate}
@@ -3165,33 +2134,35 @@ export default function StaffPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Reference Number (Optional)</Label>
+              <Label>{tr("staff.referenceNumberOptional")}</Label>
               <Input
                 type="text"
-                placeholder="Check number, transaction ID, etc."
+                placeholder={tr("staff.checkNumberTransactionIdEtc")}
                 value={paymentForm.referenceNumber}
                 onChange={(e) => setPaymentForm(prev => ({ ...prev, referenceNumber: e.target.value }))}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
+              <Label>{tr("staff.notesOptional")}</Label>
               <Textarea
-                placeholder="Add any notes about this payment"
+                placeholder={tr("staff.addAnyNotesAboutThis")}
                 rows={3}
                 value={paymentForm.notes}
                 onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
+                className={sheetSecondary}
                 onClick={() => setIsPaymentDialogOpen(false)}
               >
-                Cancel
+                {tr("common.cancel")}
               </Button>
               <Button
+                className={sheetPrimary}
                 onClick={async () => {
                   try {
                     await createPayment({
@@ -3208,7 +2179,7 @@ export default function StaffPage() {
                     // without this, the Pending Commissions panel kept showing the old
                     // (now stale) pending total/list until the staffer was re-selected.
                     await refreshCommissions();
-                    toast.success("Payment created successfully");
+                    toast.success(tr("staff.paymentCreatedSuccessfully"));
                     setIsPaymentDialogOpen(false);
                     // Reset form
                     setPaymentForm({
@@ -3219,265 +2190,70 @@ export default function StaffPage() {
                       notes: "",
                     });
                   } catch (error) {
-                    toast.error("Failed to create payment");
+                    toast.error(tr("staff.failedToCreatePayment"));
                   }
                 }}
               >
-                Create Payment
+                {tr("staff.createPayment")}
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </FormSheet>
 
       {/* Edit Staff Sheet - Same layout as Add Staff Page */}
-      <Sheet open={isEditStaffDialogOpen} onOpenChange={(open) => {
-        setIsEditStaffDialogOpen(open);
-        if (!open) {
-          setEditingStaff(null);
-          setEditStaffForm({
-            name: "",
-            phone: "",
-            email: "",
-            position: "",
-            permissionLevel: "",
-            serviceIds: [],
-          });
-        }
-      }}>
-        <SheetContent side="right" className="w-full sm:max-w-7xl overflow-y-auto p-0">
-          <div className="h-full flex flex-col bg-gray-50">
-            {/* Header */}
-            <div className="border-b border-gray-200 bg-gray-900 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setIsEditStaffDialogOpen(false)}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    <X size={20} />
-                  </button>
-                  <h1 className="text-xl font-bold text-white">
-                    Edit Staff Member
-                  </h1>
-                </div>
-                <Button
-                  onClick={async () => {
-                    if (!editingStaff || !editStaffForm.name.trim()) {
-                      toast.error("Name is required");
-                      return;
-                    }
-                    try {
-                      // #13: `serviceIds` isn't a field the backend's staff-update DTO
-                      // has — it was included here but silently ignored, so service
-                      // assignment changes made through this dialog never actually
-                      // saved. It's owned by service-catalog and needs its own call,
-                      // same as Add Staff already does correctly.
-                      await updateStaff(editingStaff.id, {
-                        name: editStaffForm.name,
-                        phone: editStaffForm.phone || undefined,
-                        email: editStaffForm.email || undefined,
-                        position: editStaffForm.position || undefined,
-                      });
-                      await serviceService.setStaffServiceIds(businessId, editingStaff.id, editStaffForm.serviceIds);
-                      // #13/#293: role has its own endpoint — updateStaff's DTO has no field for it.
-                      if (editStaffForm.permissionLevel) {
-                        await setStaffRole(editingStaff.id, editStaffForm.permissionLevel.toUpperCase());
-                      }
-                      toast.success("Staff member updated successfully");
-                      setIsEditStaffDialogOpen(false);
-                      refreshStaff();
-                    } catch (error) {
-                      toast.error((error instanceof Error && error.message) || "Failed to update staff member");
-                    }
-                  }}
-                  size="sm"
-                  className="bg-gray-800 hover:bg-gray-700 text-white gap-2"
-                  disabled={!editStaffForm.name.trim()}
-                >
-                  <Send size={16} />
-                  SAVE CHANGES
-                </Button>
-              </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="max-w-7xl mx-auto">
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Left Panel - Staff Member Details */}
-                  <div className="space-y-6">
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
-                      {/* Profile Picture */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative">
-                          <Avatar className="h-24 w-24">
-                            <AvatarFallback className="bg-gray-200 text-gray-700 text-2xl font-medium">
-                              {editingStaff ? (editingStaff.initials || getInitials(editingStaff.name)) : <UserPlus size={32} />}
-                            </AvatarFallback>
-                          </Avatar>
-                          <button className="absolute bottom-0 right-0 w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors">
-                            <Pencil size={16} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Name */}
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-name">Name</Label>
-                        <Input
-                          id="edit-name"
-                          value={editStaffForm.name}
-                          onChange={(e) => setEditStaffForm(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Enter name"
-                          autoFocus
-                        />
-                      </div>
-
-                      {/* Phone Number */}
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-phone">Phone number</Label>
-                        <Input
-                          id="edit-phone"
-                          type="tel"
-                          value={editStaffForm.phone}
-                          onChange={(e) => setEditStaffForm(prev => ({ ...prev, phone: e.target.value }))}
-                          placeholder="Enter phone number"
-                        />
-                      </div>
-
-                      {/* E-mail */}
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-email">E-mail</Label>
-                        <Input
-                          id="edit-email"
-                          type="email"
-                          value={editStaffForm.email}
-                          onChange={(e) => setEditStaffForm(prev => ({ ...prev, email: e.target.value }))}
-                          placeholder="Enter email"
-                        />
-                      </div>
-
-                      {/* Permission Level */}
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-permission-level">Permission Level</Label>
-                        <div className="relative">
-                          <Select
-                            value={editStaffForm.permissionLevel}
-                            onValueChange={(value) => setEditStaffForm(prev => ({ ...prev, permissionLevel: value }))}
-                          >
-                            <SelectTrigger id="edit-permission-level" className="pr-10">
-                              <SelectValue placeholder="Select permission level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Owner">Owner</SelectItem>
-                              <SelectItem value="Manager">Manager</SelectItem>
-                              <SelectItem value="Staff">Staff</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <ChevronRight
-                            size={16}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Position */}
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-position">Position</Label>
-                        <Input
-                          id="edit-position"
-                          value={editStaffForm.position}
-                          onChange={(e) => setEditStaffForm(prev => ({ ...prev, position: e.target.value }))}
-                          placeholder="Enter position"
-                        />
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* Right Panel - Services Management */}
-                  <div className="space-y-6">
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6 min-h-[600px] flex flex-col">
-                      {/* Services Tab */}
-                      <div className="border-b border-gray-200">
-                        <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-gray-900">
-                          SERVICES
-                        </button>
-                      </div>
-
-                      {/* Services List */}
-                      {servicesLoading ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                          <Loader2 className="h-8 w-8 animate-spin text-gray-400 mb-4" />
-                          <p className="text-sm text-gray-600">Loading services...</p>
-                        </div>
-                      ) : !apiServices || apiServices.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                          <div className="mb-4">
-                            <Layers size={64} className="text-gray-300 mx-auto" />
-                          </div>
-                          <p className="text-sm text-gray-600 mb-6 max-w-xs">
-                            No services available. Create services first.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                          {apiServices.map((service) => {
-                            const isSelected = editStaffForm.serviceIds.includes(service.id);
-                            return (
-                              <div
-                                key={service.id}
-                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                              >
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setEditStaffForm(prev => ({
-                                        ...prev,
-                                        serviceIds: [...prev.serviceIds, service.id]
-                                      }));
-                                    } else {
-                                      setEditStaffForm(prev => ({
-                                        ...prev,
-                                        serviceIds: prev.serviceIds.filter(id => id !== service.id)
-                                      }));
-                                    }
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                  className="h-5 w-5"
-                                />
-                                <div className="flex-1">
-                                  <h4 className="font-medium text-gray-900">
-                                    {service.name}
-                                  </h4>
-                                  <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                    <span>
-                                      {service.durationMinutes
-                                        ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`
-                                        : "N/A"}
-                                    </span>
-                                    <span className="font-semibold text-gray-900">
-                                      {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      </BooqiScope>
     </AppLayout>
   );
+}
+
+const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const dayShort = () => [tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")];
+
+/** "Mon–Sat · 10:00–19:00", "Mon, Wed · times vary", "No hours set". */
+function hoursSummary(staff: Staff): string {
+  const open = DAY_ORDER.map((d, i) => ({ i, h: getStaffDayHours(staff, d) })).filter((x) => !x.h.isClosed);
+  if (open.length === 0) return tr("staff.noHoursSet");
+  const contiguous = open.every((x, n) => n === 0 || x.i === open[n - 1].i + 1);
+  const DAY_SHORT = dayShort();
+  const days = contiguous && open.length > 2 ? `${DAY_SHORT[open[0].i]}–${DAY_SHORT[open[open.length - 1].i]}` : open.map((x) => DAY_SHORT[x.i]).join(", ");
+  return `${days} · ${commonRange(open.map((x) => `${x.h.start}–${x.h.end}`))}`;
+}
+
+/** The most common day's hours, marked when other days differ. */
+function commonRange(ranges: string[]): string {
+  const n = new Map<string, number>();
+  ranges.forEach((r) => n.set(r, (n.get(r) ?? 0) + 1));
+  const [top] = [...n.entries()].sort((a, b) => b[1] - a[1]);
+  return n.size === 1 ? top[0] : tr("staff.mostlyRange", { range: top[0] });
+}
+
+const AVATAR_TONES = [
+  "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]",
+  "bg-rose-50 text-rose-800",
+  "bg-amber-50 text-amber-900",
+  "bg-emerald-50 text-emerald-800",
+  "bg-sky-50 text-sky-800",
+];
+
+function MemberAvatar({ name, id, url, size }: { name: string; id: number; url?: string; size: string }) {
+  return url ? (
+    <img src={url} alt="" className={cn("shrink-0 rounded-full object-cover", size)} />
+  ) : (
+    <span className={cn("flex shrink-0 items-center justify-center rounded-full font-bold", AVATAR_TONES[id % AVATAR_TONES.length], size)}>
+      {getInitials(name)}
+    </span>
+  );
+}
+
+const COMMISSION_ROWS = [
+  { get name() { return tr("staff.rowServices"); }, category: CommissionCategory.SERVICES },
+  { get name() { return tr("staff.rowProducts"); }, category: CommissionCategory.PRODUCTS },
+  { get name() { return tr("staff.rowGiftCards"); }, category: CommissionCategory.GIFT_CARDS },
+  { get name() { return tr("staff.rowMemberships"); }, category: CommissionCategory.MEMBERSHIPS },
+  { get name() { return tr("staff.rowPackages"); }, category: CommissionCategory.PACKAGES },
+];
+
+function rateText(rule?: CommissionRule) {
+  if (!rule) return tr("staff.notSet");
+  return rule.type === CommissionType.PERCENTAGE ? `${rule.value}%` : money(rule.value, currencySymbol());
 }

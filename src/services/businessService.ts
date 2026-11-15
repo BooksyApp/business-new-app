@@ -136,6 +136,11 @@ class BusinessService {
     return apiClient.get<Business>(`/businesses/${id}`);
   }
 
+  /** What is still missing before customers can book this salon (same rules as admin Activation). */
+  async getReadiness(id: number): Promise<{ bookable: boolean; missing: string[]; recommended: string[] }> {
+    return apiClient.get(`/businesses/${id}/readiness`);
+  }
+
   async getBusinessesByOwner(ownerId: number, _accessToken?: string): Promise<Business[]> {
     return apiClient.get<Business[]>(`/businesses/owner/${ownerId}`);
   }

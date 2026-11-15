@@ -1,6 +1,11 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { subscriptionService, type SubscriptionStatus } from "@/services/subscriptionService";
-import { Check, ChevronRight, ExternalLink, Eye, MapPin, MessageSquare, Pencil, Share2, Loader2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, MapPin, Pencil, Share2 } from "lucide-react";
+import { BooqiScope, FormSheet, PageHeader } from "@/components/page/booqi";
+import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { ClientPreview, Field, Meter, SectionTitle } from "@/components/page/kit";
+import { fieldCls } from "@/components/page/kitStyles";
+import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { categoryService, type BusinessCategory } from "@/services/categoryService";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,9 +13,6 @@ import { businessService, type Business } from "@/services/businessService";
 import { serviceService, type Service } from "@/services/serviceService";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -18,24 +20,21 @@ import { formatPrice } from "@/lib/currency";
 import { reviewService, type Review, type RatingSummary } from "@/services/reviewService";
 import { ImageUploadField } from "@/components/media/ImageUploadField";
 import { assetUrl, publicSiteUrl } from "@/config/api";
+import { t, fmtDate as formatLocaleDate, formatMinutes } from "@/i18n";
 
 function formatMoney(value?: number) {
-  if (typeof value !== "number") return "Price not set";
+  if (typeof value !== "number") return t("business.priceNotSet");
   // With the salon's currency: a bare "120.00" said nothing about which money.
   return formatPrice(value);
 }
 
 function formatDuration(minutes?: number) {
   if (!minutes || minutes <= 0) return "";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}min`;
-  if (h > 0) return `${h}h`;
-  return `${m}min`;
+  return formatMinutes(minutes);
 }
 
 function formatAddress(business: Business | null) {
-  if (!business) return "Address not set";
+  if (!business) return t("business.addressNotSet");
   const parts = [
     business.address,
     business.buildingNumber,
@@ -44,16 +43,16 @@ function formatAddress(business: Business | null) {
     business.zipCode,
     business.country,
   ].filter(Boolean);
-  return parts.length ? parts.join(", ") : "Address not set";
+  return parts.length ? parts.join(", ") : t("business.addressNotSet");
 }
 
 function getCompletenessChecks(business: Business | null, services: Service[]) {
   return [
-    { label: "Business name", ok: Boolean(business?.name?.trim()) },
-    { label: "Address", ok: Boolean(formatAddress(business) !== "Address not set") },
-    { label: "Location coordinates", ok: typeof business?.latitude === "number" && typeof business?.longitude === "number" },
-    { label: "Contact (phone/email)", ok: Boolean(business?.phone || business?.email) },
-    { label: "At least one service", ok: services.length > 0 },
+    { label: t("common.businessName"), ok: Boolean(business?.name?.trim()) },
+    { label: t("common.address"), ok: Boolean(formatAddress(business) !== t("business.addressNotSet")) },
+    { label: t("business.locationCoordinates"), ok: typeof business?.latitude === "number" && typeof business?.longitude === "number" },
+    { label: t("business.contactPhoneEmail"), ok: Boolean(business?.phone || business?.email) },
+    { label: t("business.atLeastOneService"), ok: services.length > 0 },
   ];
 }
 
@@ -120,7 +119,7 @@ export default function BusinessPage() {
       // Stripe hosts the payment page; leaving the app is the intended flow.
       window.location.href = await subscriptionService.createCheckout(id, planKey);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not start checkout");
+      toast.error(e instanceof Error ? e.message : t("business.couldNotStartCheckout"));
       setCheckoutBusy(false);
     }
   };
@@ -138,7 +137,7 @@ export default function BusinessPage() {
     const businessId = businessIdRaw ? Number.parseInt(businessIdRaw, 10) : NaN;
 
     if (!accessToken || !Number.isFinite(businessId) || businessId <= 0) {
-      setError("Missing business context. Please log in again.");
+      setError(t("business.missingBusinessContextPleaseLog"));
       setIsLoading(false);
       return;
     }
@@ -169,7 +168,7 @@ export default function BusinessPage() {
         });
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : "Could not load business data.");
+        setError(e instanceof Error ? e.message : t("business.couldNotLoadBusinessData"));
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -190,6 +189,11 @@ export default function BusinessPage() {
     const businessIdRaw = localStorage.getItem("currentBusinessId");
     const businessId = businessIdRaw ? Number.parseInt(businessIdRaw, 10) : NaN;
     if (!Number.isFinite(businessId) || businessId <= 0) return;
+    // Founder decision: a salon always has a category.
+    if (!editForm.category) {
+      toast.error(t("business.categoryRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const updated = await businessService.updateBusiness(businessId, {
@@ -204,15 +208,14 @@ export default function BusinessPage() {
         coverImageUrl: editForm.coverImageUrl,
         email: editForm.email || undefined,
         // #37: only send what was actually filled in. undefined leaves the column alone.
-        depositPercent: editForm.depositPercent.trim() !== "" ? Number(editForm.depositPercent) : undefined,
+        // Deposits and late fees need online payment (not in v1): left untouched.
         cancellationWindowHours: editForm.cancellationWindowHours.trim() !== "" ? Number(editForm.cancellationWindowHours) : undefined,
-        lateCancellationFee: editForm.lateCancellationFee.trim() !== "" ? Number(editForm.lateCancellationFee) : undefined,
       });
       setBusiness(updated);
       setEditOpen(false);
-      toast.success("Business profile updated");
+      toast.success(t("business.businessProfileUpdated"));
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save changes");
+      toast.error(e instanceof Error ? e.message : t("business.failedToSaveChanges"));
     } finally {
       setSaving(false);
     }
@@ -230,8 +233,8 @@ export default function BusinessPage() {
     try {
       if (typeof navigator.share === "function") {
         await navigator.share({
-          title: business?.name || "Business profile",
-          text: "Check out our booking profile",
+          title: business?.name || t("common.businessProfile"),
+          text: t("business.checkOutOurBookingProfile"),
           url: normalized,
         });
         return;
@@ -252,7 +255,7 @@ export default function BusinessPage() {
   const locationLabel =
     hasCoords
       ? `${business.latitude!.toFixed(5)}, ${business.longitude!.toFixed(5)}`
-      : "Location not set";
+      : t("business.locationNotSet");
   const mapsUrl =
     hasCoords
       ? `https://www.google.com/maps?q=${business?.latitude},${business?.longitude}`
@@ -262,455 +265,318 @@ export default function BusinessPage() {
       ? `https://www.google.com/maps?q=${business?.latitude},${business?.longitude}&z=14&output=embed`
       : "";
 
+  const cover = editOpen ? editForm.coverImageUrl : business?.coverImageUrl;
+  const previewName = (editOpen ? editForm.name : business?.name) || t("common.yourSalon");
+  const previewCategory = (editOpen ? editForm.category : business?.category) || "";
+  const categoryLabel = categories.find((c) => c.name === previewCategory)?.label ?? previewCategory;
+  const previewAddress = editOpen ? editForm.address || formatAddress(business) : formatAddress(business);
+  const setF = (k: keyof typeof editForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setEditForm((f) => ({ ...f, [k]: e.target.value }));
+
+  /** The salon's header on booqi-web, drawn from whatever is in hand (saved or being edited). */
+  const webCard = (
+    <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-inset ring-[rgb(var(--reg-line))]">
+      <div className="relative aspect-[16/7] bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))]">
+        {cover ? <img src={assetUrl(cover)} alt="" className="absolute inset-0 h-full w-full object-cover" /> : null}
+      </div>
+      <div className="p-4">
+        <p className="truncate text-xl font-extrabold tracking-[-0.02em]">{previewName}</p>
+        <p className="mt-1 flex items-center gap-1.5 text-sm text-[rgb(var(--reg-muted))]">
+          <MapPin size={14} aria-hidden /> <span className="truncate">{previewAddress}</span>
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {ratingSummary?.average != null && (ratingSummary.count ?? 0) > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-3 py-1 text-xs font-bold">
+              ★ {ratingSummary.average.toFixed(1)} <span className="font-normal text-[rgb(var(--reg-muted))]">({ratingSummary.count})</span>
+            </span>
+          )}
+          {categoryLabel && (
+            <span className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-3 py-1 text-xs font-semibold capitalize text-[rgb(var(--reg-brand-strong))]">{categoryLabel}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-white relative">
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="w-full">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="space-y-6 lg:col-span-2">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-4">Profile</h1>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                        {business?.name || (isLoading ? "Loading..." : "Business")}
-                      </h2>
-                      <button
-                        onClick={handleCopyUrl}
-                        disabled={!publicUrl}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-60"
-                      >
-                        <span className="text-sm font-medium text-gray-700">
-                          {publicUrl || "Public URL unavailable"}
-                        </span>
-                        {copied ? (
-                          <Check size={14} className="text-green-600" />
-                        ) : (
-                          <ExternalLink size={14} className="text-gray-500" />
-                        )}
-                      </button>
-                    </div>
+      <BooqiScope>
+        <PageHeader
+          title={t("common.businessProfile")}
+          subtitle={t("business.whatClientsSeeWhenThey")}
+          actions={
+            <>
+              <Button variant="outline" className={cn(secondaryBtn, "hidden sm:inline-flex")} onClick={handlePreview} disabled={!publicUrl}>
+                <Eye size={16} />{" "}{t("business.preview")}
+              </Button>
+              <Button variant="outline" className={secondaryBtn} onClick={handleShare} disabled={!publicUrl} aria-label={t("business.sharePublicProfile")}>
+                <Share2 size={16} /> <span className="hidden sm:inline">{t("business.share")}</span>
+              </Button>
+              <Button className={primaryBtn} onClick={handleEditProfile} disabled={!business}>
+                <Pencil size={16} />{" "}{t("business.editProfile")}
+              </Button>
+            </>
+          }
+        />
 
-                    <div className="flex items-center gap-4">
-                      <div className="flex flex-col items-center gap-2">
-                        <button
-                          onClick={handleEditProfile}
-                          aria-label="Edit profile"
-                          className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md"
-                        >
-                          <Pencil size={20} />
-                        </button>
-                        <span className="text-xs text-gray-600">Edit profile</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-2">
-                        <button
-                          onClick={handlePreview}
-                          aria-label="Preview public profile"
-                          disabled={!publicUrl}
-                          className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md disabled:opacity-60"
-                        >
-                          <Eye size={20} />
-                        </button>
-                        <span className="text-xs text-gray-600">Preview</span>
-                      </div>
-                      <div className="flex flex-col items-center gap-2">
-                        <button
-                          onClick={handleShare}
-                          aria-label="Share public profile"
-                          disabled={!publicUrl}
-                          className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors shadow-md disabled:opacity-60"
-                        >
-                          <Share2 size={20} />
-                        </button>
-                        <span className="text-xs text-gray-600">Share</span>
-                      </div>
+        <div className={pageBody}>
+          {error ? (
+            <div className="rounded-[20px] bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-inset ring-rose-200">{error}</div>
+          ) : null}
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+            <div className="min-w-0 space-y-6">
+              <ClientPreview where={t("common.yourSalonPage")}>
+                {isLoading ? <div className="aspect-[16/9] animate-pulse rounded-2xl bg-white" /> : webCard}
+              </ClientPreview>
+
+              <button
+                type="button"
+                onClick={handleCopyUrl}
+                disabled={!publicUrl}
+                className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)] transition hover:ring-[rgb(var(--reg-brand)/0.4)] disabled:opacity-60"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold text-[rgb(var(--reg-muted))]">{t("business.yourBookingLink")}</span>
+                  <span className="block truncate text-sm font-semibold">{publicUrl || t("business.publicUrlUnavailable")}</span>
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">
+                  {copied ? <><Check size={15} />{" "}{t("business.copied")}</> : <><Copy size={15} />{" "}{t("common.copy")}</>}
+                </span>
+              </button>
+
+              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+                <SectionTitle>{t("business.about")}</SectionTitle>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-[rgb(var(--reg-ink)/0.85)]">
+                  {business?.description || <span className="text-[rgb(var(--reg-muted))]">{t("business.noDescriptionYetTwoLines")}</span>}
+                </p>
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                  {[
+                    [t("common.phone"), business?.phone],
+                    [t("common.email"), business?.email],
+                    [t("business.website"), business?.website],
+                  ].map(([k, v]) => (
+                    <div key={k} className="min-w-0 rounded-xl bg-[rgb(var(--reg-canvas))] px-3 py-2">
+                      <dt className="text-[11px] font-semibold text-[rgb(var(--reg-muted))]">{k}</dt>
+                      <dd className="truncate font-semibold">{v || "—"}</dd>
                     </div>
+                  ))}
+                </dl>
+              </section>
+
+              <section className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <div className="grid md:grid-cols-[minmax(0,1fr)_240px]">
+                  <div className="p-5 md:p-6">
+                    <SectionTitle>{t("business.location")}</SectionTitle>
+                    <p className="flex items-start gap-2 text-sm"><MapPin size={16} className="mt-0.5 shrink-0 text-[rgb(var(--reg-muted))]" /> {formatAddress(business)}</p>
+                    <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">{locationLabel}</p>
+                    {hasCoords && mapsUrl ? (
+                      <a href={mapsUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline">
+                        {t("business.openInMaps")}{" "}<ExternalLink size={13} />
+                      </a>
+                    ) : null}
                   </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="grid grid-cols-3 gap-0">
-                    <div className="col-span-2">
-                      {/* customer-app #4: this was a grey gradient standing in for a photo
-                          that had nowhere to live. Now it shows the salon's own cover when
-                          one is set, so saving a photo has a visible result here and not
-                          only in the customer app. */}
-                      <div className="h-64 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-800 flex items-center justify-center relative overflow-hidden">
-                        {business?.coverImageUrl ? (
-                          <img
-                            src={assetUrl(business.coverImageUrl)}
-                            alt={`${business?.name ?? "Salon"} cover`}
-                            className="absolute inset-0 h-full w-full object-cover"
-                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                          />
-                        ) : (
-                          <>
-                            <div className="absolute inset-0 bg-gradient-to-br from-gray-700 via-gray-600 to-gray-800 opacity-90"></div>
-                            <div className="relative z-10 w-full h-full flex items-center justify-center">
-                              <div className="absolute left-8 top-8 w-16 h-16 bg-gray-500/30 rounded-full"></div>
-                              <div className="absolute right-12 bottom-12 w-20 h-20 bg-gray-400/20 rounded-lg"></div>
-                              <div className="text-center">
-                                <div className="w-32 h-32 bg-white/10 rounded-lg mx-auto backdrop-blur-sm border border-white/20"></div>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 border-l border-gray-200 p-4">
-                      <div className="h-full flex flex-col justify-between">
-                        {mapsEmbedUrl ? (
-                          <div className="rounded-lg overflow-hidden border border-gray-200 bg-white h-36">
-                            <iframe
-                              title="Business location map"
-                              src={mapsEmbedUrl}
-                              className="w-full h-full border-0"
-                              loading="lazy"
-                              referrerPolicy="no-referrer-when-downgrade"
-                            />
-                          </div>
-                        ) : (
-                          <div className="rounded-lg border border-dashed border-gray-300 bg-white/70 h-36 flex items-center justify-center">
-                            <div className="text-center px-3">
-                              <MapPin size={22} className="text-gray-400 mx-auto mb-2" />
-                              <p className="text-xs text-gray-500">Location coordinates are not set yet</p>
-                            </div>
-                          </div>
-                        )}
-                        <div className="pt-3">
-                          <p className="text-xs uppercase tracking-wide text-gray-500">Location</p>
-                          <p className="text-xs text-gray-600 mt-1 break-all">{locationLabel}</p>
-                        </div>
-                        {hasCoords && mapsUrl ? (
-                          <a
-                            href={mapsUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 inline-flex items-center justify-center text-xs font-medium text-blue-700 hover:text-blue-800"
-                          >
-                            Open in Maps
-                            <ExternalLink size={12} className="ml-1" />
-                          </a>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{business?.name || "Business"}</h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-6">
-                      <MapPin size={16} />
-                      <span>{formatAddress(business)}</span>
-                    </div>
-
-                    <div>
-                      <h4 className="text-base font-bold text-gray-900 mb-4">Services</h4>
-                      {services.length ? (
-                        <div className="space-y-3">
-                          {services.map((service) => (
-                            <div
-                              key={service.id}
-                              className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-                            >
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{service.name}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {[formatDuration(service.durationMinutes), service.categoryName]
-                                    .filter(Boolean)
-                                    .join(" · ") || "No duration"}
-                                </p>
-                              </div>
-                              <p className="text-sm font-semibold text-gray-900">{formatMoney(service.price)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500">No services added yet.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-gray-900">Reviews</h3>
-                    {reviews.length > 0 && (
-                      <button
-                        onClick={() => navigate(getPath("reviews"))}
-                        className="text-sm font-semibold text-gray-700 hover:underline"
-                      >
-                        See all and reply
-                      </button>
-                    )}
-                  </div>
-                  {reviews.length === 0 ? (
-                    <p className="text-sm text-gray-500">
-                      No reviews yet. Clients can leave one after a completed visit, in the app or on the web.
-                    </p>
+                  {mapsEmbedUrl ? (
+                    <iframe title={t("business.businessLocationMap")} src={mapsEmbedUrl} className="h-48 w-full border-0 md:h-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
                   ) : (
-                    <>
-                      <p className="text-sm text-gray-700">
-                        <span className="text-2xl font-bold text-gray-900">
-                          {ratingSummary?.average != null ? ratingSummary.average.toFixed(1) : "–"}
-                        </span>{" "}
-                        ★ from {ratingSummary?.count ?? reviews.length} review
-                        {(ratingSummary?.count ?? reviews.length) === 1 ? "" : "s"}
-                      </p>
-                      <ul className="mt-3 space-y-3">
-                        {reviews.slice(0, 3).map((r) => (
-                          <li key={r.id} className="border-t border-gray-100 pt-3 text-sm">
-                            <span className="font-semibold">{"★".repeat(r.rating)}</span>{" "}
-                            <span className="text-gray-500">{r.authorName ?? "A client"}</span>
-                            {r.comment && <p className="mt-1 text-gray-700">{r.comment}</p>}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
+                    <div className="flex h-40 items-center justify-center bg-[rgb(var(--reg-canvas))] px-4 text-center text-xs text-[rgb(var(--reg-muted))] md:h-full">
+                      <span><MapPin size={20} className="mx-auto mb-1.5" />{" "}{t("business.locationCoordinatesAreNotSet")}</span>
+                    </div>
                   )}
                 </div>
+              </section>
 
-                {error ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                ) : null}
-              </div>
+              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+                <SectionTitle aside={<button type="button" className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => navigate(getPath("items-category"))}>{t("business.editMenu")}</button>}>
+                  {t("common.services")}
+                </SectionTitle>
+                {services.length ? (
+                  <ul className="divide-y divide-[rgb(var(--reg-line)/0.6)]">
+                    {services.slice(0, 6).map((service) => (
+                      <li key={service.id} className="flex items-center justify-between gap-3 py-2.5">
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">{service.name}</span>
+                          <span className="block text-xs text-[rgb(var(--reg-muted))]">
+                            {[formatDuration(service.durationMinutes), service.categoryName].filter(Boolean).join(" · ") || t("business.noDuration")}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-sm font-bold tabular-nums">{formatMoney(service.price)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-[rgb(var(--reg-muted))]">{t("business.noServicesAddedYet")}</p>
+                )}
+                {services.length > 6 && <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">{t("business.moreOnYourMenu", { value: services.length - 6 })}</p>}
+              </section>
+            </div>
 
-              <div className="col-span-1 space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-teal-500 to-green-500 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-white font-semibold">Profile Completeness</h3>
-                      <ChevronRight size={20} className="text-white" />
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="text-2xl font-bold text-gray-900">{completionTier}</h4>
-                        <ChevronRight size={16} className="text-gray-400" />
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        {completedCount} of {completenessChecks.length} completed
-                      </p>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: `${completionPercent}%` }}></div>
-                    </div>
-                    <ul className="mt-4 space-y-1">
-                      {completenessChecks.map((check) => (
-                        <li key={check.label} className="text-xs text-gray-600 flex items-center gap-2">
-                          <span className={check.ok ? "text-emerald-600" : "text-gray-400"}>{check.ok ? "●" : "○"}</span>
-                          {check.label}
+            <aside className="min-w-0 space-y-4">
+              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{t("business.profileCompleteness")}</p>
+                  <span className="text-sm font-bold">{completionTier}</span>
+                </div>
+                <p className="mt-1 text-[28px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">{completionPercent}%</p>
+                <Meter className="mt-3" value={completedCount} max={completenessChecks.length} label={t("business.ofCompleted", { completedCount, count: completenessChecks.length })} />
+                <ul className="mt-4 space-y-2">
+                  {completenessChecks.map((c) => (
+                    <li key={c.label} className="flex items-center gap-2 text-sm">
+                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", c.ok ? "bg-emerald-500 text-white" : "ring-2 ring-inset ring-[rgb(var(--reg-line))]")}>
+                        {c.ok && <Check size={12} strokeWidth={3} />}
+                      </span>
+                      <span className={c.ok ? "" : "font-semibold"}>{c.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <SectionTitle aside={reviews.length > 0 ? <button type="button" onClick={() => navigate(getPath("reviews"))} className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline">{t("business.seeAllAndReply")}</button> : undefined}>
+                  {t("common.reviews")}
+                </SectionTitle>
+                {reviews.length === 0 ? (
+                  <p className="text-sm text-[rgb(var(--reg-muted))]">{t("business.noReviewsYetClientsCan")}</p>
+                ) : (
+                  <>
+                    <p className="text-sm">
+                      <span className="text-2xl font-extrabold">{ratingSummary?.average != null ? ratingSummary.average.toFixed(1) : "–"}</span>{" "}{t("business.from")}{" "}
+                      {t("business.reviewCount", { count: ratingSummary?.count ?? reviews.length })}
+                    </p>
+                    <ul className="mt-3 space-y-3">
+                      {reviews.slice(0, 3).map((r) => (
+                        <li key={r.id} className="border-t border-[rgb(var(--reg-line)/0.6)] pt-3 text-sm">
+                          <span className="font-semibold text-amber-600">{"★".repeat(r.rating)}</span>{" "}
+                          <span className="text-[rgb(var(--reg-muted))]">{r.authorName ?? t("business.aClient")}</span>
+                          {r.comment && <p className="mt-1 line-clamp-3">{r.comment}</p>}
                         </li>
                       ))}
                     </ul>
-                  </div>
-                </div>
+                  </>
+                )}
+              </section>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-base font-semibold text-gray-900 mb-2">
-                        Create a social post and share it
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Use social media marketing to connect with clients
-                      </p>
-                    </div>
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center ml-4 flex-shrink-0">
-                      <Share2 size={32} className="text-blue-600" />
-                    </div>
+              {/* #42: subscription state and upgrade path (the salon's booqi plan). */}
+              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <SectionTitle>{t("business.yourBooqiPlan")}</SectionTitle>
+                <p className="text-sm text-[rgb(var(--reg-ink)/0.85)]">
+                  {subscription && subscription.status !== "NONE" ? (
+                    <>
+                      {t("business.plan")}{" "}<span className="font-semibold">{subscription.planKey || "—"}</span> · {subscription.status}
+                      {subscription.currentPeriodEnd ? t("business.renews", { value: formatLocaleDate(new Date(subscription.currentPeriodEnd), { year: "numeric", month: "numeric", day: "numeric" }) }) : ""}
+                    </>
+                  ) : (
+                    t("business.noActiveSubscription")
+                  )}
+                </p>
+                {plans.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {plans.map((planKey) => (
+                      <Button
+                        key={planKey}
+                        variant="outline"
+                        className={secondaryBtn}
+                        disabled={checkoutBusy || subscription?.planKey === planKey}
+                        onClick={() => startCheckout(planKey)}
+                      >
+                        {subscription?.planKey === planKey ? t("business.planCurrent", { planKey }) : t("business.choose", { planKey })}
+                      </Button>
+                    ))}
                   </div>
-                </div>
-              </div>
-            </div>
+                )}
+              </section>
+            </aside>
           </div>
         </div>
 
-        {/* #42: subscription state and upgrade path. */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-1">Subscription</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            {subscription && subscription.status !== "NONE" ? (
-              <>
-                Plan <span className="font-medium">{subscription.planKey || "—"}</span> •{" "}
-                {subscription.status}
-                {subscription.currentPeriodEnd
-                  ? ` • renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                  : ""}
-              </>
-            ) : (
-              "No active subscription."
-            )}
-          </p>
-          {plans.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              No plans are configured on the server yet.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {plans.map((planKey) => (
-                <Button
-                  key={planKey}
-                  variant={subscription?.planKey === planKey ? "outline" : "default"}
-                  disabled={checkoutBusy || subscription?.planKey === planKey}
-                  onClick={() => startCheckout(planKey)}
-                >
-                  {subscription?.planKey === planKey ? `${planKey} (current)` : `Choose ${planKey}`}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
+        <FormSheet
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          title={t("business.editBusinessProfile")}
+          description={t("business.changesShowOnBooqiAs")}
+          footer={
+            <>
+              <Button variant="outline" className={sheetSecondary} onClick={() => setEditOpen(false)}>{t("common.cancel")}</Button>
+              <Button className={sheetPrimary} onClick={handleSaveProfile} disabled={saving || !editForm.name.trim()}>
+                {saving ? t("common.saving") : t("common.saveChanges")}
+              </Button>
+            </>
+          }
+        >
+          <ClientPreview where={t("common.yourSalonPage")}>{webCard}</ClientPreview>
 
-        {isLoading ? (
-          <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center">
-            <div className="text-sm text-gray-600">Loading business data...</div>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Edit Business Profile Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit Business Profile</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Business Name *</Label>
-              <Input
-                value={editForm.name}
-                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Your business name"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Phone</Label>
-                <Input
-                  value={editForm.phone}
-                  onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
-                  placeholder="+1 555 0100"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={editForm.email}
-                  onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                  placeholder="hello@example.com"
-                />
-              </div>
-            </div>
-            {/* Was a free-text box, so the same trade was stored three different ways and
-                the customer app listed each spelling as its own category. */}
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select
-                value={editForm.category}
-                onValueChange={v => setEditForm(f => ({ ...f, category: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a category" />
+          <FormSection title={t("business.basics")}>
+            <Field label={t("common.businessName")} htmlFor="bz-name">
+              <input id="bz-name" className={fieldCls} value={editForm.name} onChange={setF("name")} />
+            </Field>
+            <Field label={`${t("common.category")} *`}>
+              <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
+                <SelectTrigger className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base">
+                  <SelectValue placeholder={t("business.chooseACategory")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map(c => (
-                    <SelectItem key={c.slug} value={c.name}>{c.name}</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.slug} value={c.name}>{c.label ?? c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {editForm.category && !categories.some(c => c.name === editForm.category) ? (
-                <p className="text-xs text-muted-foreground">
-                  Currently "{editForm.category}" — pick the closest match so customers can
-                  find you under it.
-                </p>
-              ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label>Address</Label>
-              <Input
-                value={editForm.address}
-                onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))}
-                placeholder="123 Main St, City, Country"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Website</Label>
-              <Input
-                value={editForm.website}
-                onChange={e => setEditForm(f => ({ ...f, website: e.target.value }))}
-                placeholder="https://example.com"
-              />
-            </div>
-            {/* customer-app #4: without this the salon shows a stock photo in the
-                customer app, same as every other salon. */}
+            </Field>
+            <Field label={t("business.description")} htmlFor="bz-desc" hint={`${editForm.description.length} characters`}>
+              <Textarea id="bz-desc" rows={4} className="rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base" value={editForm.description} onChange={setF("description")} placeholder={t("business.whatYouDoBestIn")} />
+            </Field>
+          </FormSection>
+
+          <FormSection title={t("business.coverPhoto")}>
+            {/* customer-app #4: without this the salon shows a stock photo, same as every other salon. */}
             <ImageUploadField
-              label="Cover photo"
+              label={t("business.coverPhoto")}
               purpose="BUSINESS_COVER"
               shape="wide"
               value={editForm.coverImageUrl}
-              onChange={url => setEditForm(f => ({ ...f, coverImageUrl: url }))}
-              hint="Shown to customers on the site and in the app. Logo and gallery: Business → Photos."
+              onChange={(url) => setEditForm((f) => ({ ...f, coverImageUrl: url }))}
+              hint={t("business.shownToCustomersOnThe")}
             />
-            {/* #37: deposit and cancellation policy shipped backend-only (#244/#308) and
-                was unreachable from the manager app — a salon could not set a deposit at
-                all. Leaving a field empty keeps the current value. */}
-            <div className="space-y-2 rounded-lg border border-border/60 p-3">
-              <p className="text-sm font-medium">Booking policy</p>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs">Deposit %</Label>
-                  <Input
-                    type="number" min="0" max="100" step="1"
-                    value={editForm.depositPercent}
-                    onChange={e => setEditForm(f => ({ ...f, depositPercent: e.target.value }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Free cancel (h)</Label>
-                  <Input
-                    type="number" min="0" step="1"
-                    value={editForm.cancellationWindowHours}
-                    onChange={e => setEditForm(f => ({ ...f, cancellationWindowHours: e.target.value }))}
-                    placeholder="24"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Late fee</Label>
-                  <Input
-                    type="number" min="0" step="0.01"
-                    value={editForm.lateCancellationFee}
-                    onChange={e => setEditForm(f => ({ ...f, lateCancellationFee: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
+          </FormSection>
+
+          <FormSection title={t("business.contact")}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={t("common.phone")} htmlFor="bz-phone">
+                <input id="bz-phone" type="tel" className={fieldCls} value={editForm.phone} onChange={setF("phone")} />
+              </Field>
+              <Field label={t("common.email")} htmlFor="bz-email">
+                <input id="bz-email" type="email" className={fieldCls} value={editForm.email} onChange={setF("email")} />
+              </Field>
             </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={editForm.description}
-                onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Tell clients what makes your business special..."
-                rows={3}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveProfile} disabled={saving || !editForm.name.trim()}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <Field label={t("business.website")} htmlFor="bz-web">
+              <input id="bz-web" className={fieldCls} value={editForm.website} onChange={setF("website")} placeholder="https://example.com" />
+            </Field>
+          </FormSection>
+
+          <FormSection title={t("business.location")}>
+            <Field label={t("common.address")} htmlFor="bz-address">
+              <input id="bz-address" className={fieldCls} value={editForm.address} onChange={setF("address")} placeholder={t("business.streetNumber")} />
+            </Field>
+          </FormSection>
+
+          {/* #37: cancellation policy. Empty keeps the current value. Deposits and late
+              fees need online payment, which v1 does not take (clients pay at the salon),
+              so those two stay off this form; their values are left untouched. */}
+          <FormSection title={t("common.cancellations")}>
+            <Field label={t("business.freeCancellationUpToHours")} htmlFor="bz-cancel" hint={t("business.emptyKeepsTheCurrentSetting")}>
+              <input id="bz-cancel" type="number" min={0} step={1} className={fieldCls} value={editForm.cancellationWindowHours} onChange={setF("cancellationWindowHours")} placeholder="24" />
+            </Field>
+          </FormSection>
+        </FormSheet>
+      </BooqiScope>
     </AppLayout>
+  );
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{title}</h3>
+      {children}
+    </section>
   );
 }

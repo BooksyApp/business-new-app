@@ -1,4 +1,5 @@
 import { apiClient } from "@/config/api";
+import { getLocale } from "@/i18n";
 
 /** A salon's own service category (Hair, Colour, …) — not the salon-type list above. */
 export interface Category {
@@ -27,7 +28,10 @@ export interface UpdateCategoryRequest {
 
 export interface BusinessCategory {
   slug: string;
+  /** The stable English key salons store. Never show it; show `label`. */
   name: string;
+  /** The name in the panel language (falls back to English server-side). */
+  label?: string;
 }
 
 /**
@@ -41,7 +45,7 @@ class CategoryService {
   async list(): Promise<BusinessCategory[]> {
     // Public, and read by the sign-up page before there is any account: asking for auth
     // here bounced every new salon owner to the login screen.
-    return apiClient.get<BusinessCategory[]>(`/public/business-categories`, false);
+    return apiClient.get<BusinessCategory[]>(`/public/business-categories?locale=${getLocale()}`, false);
   }
 
   // Service categories. fe55021 rewrote this file for the salon-type list and dropped

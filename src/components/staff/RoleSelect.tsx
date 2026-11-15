@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getCurrentBusinessId } from "@/config/api";
 import { myAccess } from "@/components/layout/navigation";
 import { roleService, type BusinessRole } from "@/services/roleService";
+import { t } from "@/i18n";
 
 interface Props {
   /** The team member being edited; omitted on Add Staff. */
@@ -45,10 +46,10 @@ export function RoleSelect({ staffId, value, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="permission-level">Role</Label>
+      <Label htmlFor="permission-level">{t("common.role")}</Label>
       <Select value={value} onValueChange={onChange} disabled={!isOwner || selected?.isOwner}>
         <SelectTrigger id="permission-level">
-          <SelectValue placeholder="Select a role" />
+          <SelectValue placeholder={t("staff.selectARole")} />
         </SelectTrigger>
         <SelectContent>
           {offered.map((r) => (
@@ -62,10 +63,10 @@ export function RoleSelect({ staffId, value, onChange }: Props) {
         {selected?.description ? `${selected.description} ` : ""}
         {isOwner ? (
           <Link to={`/${getCurrentBusinessId()}/roles`} className="font-medium text-primary">
-            Manage roles
+            {t("staff.manageRoles")}
           </Link>
         ) : (
-          "Only the owner can change roles."
+          t("staff.onlyTheOwnerCanChange")
         )}
       </p>
     </div>

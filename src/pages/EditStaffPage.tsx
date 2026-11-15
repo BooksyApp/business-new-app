@@ -4,7 +4,9 @@ import { RoleSelect } from "@/components/staff/RoleSelect";
 import { roleService } from "@/services/roleService";
 import { myAccess } from "@/components/layout/navigation";
 import { currencySymbol } from "@/lib/currency";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { RouteSheet } from "@/components/page/RouteSheet";
+import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import StaffPage from "./StaffPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +43,7 @@ import {
   weekFromWorkingHours,
   type WeekSchedule,
 } from "@/components/staff/workingHours";
+import { t, formatMinutes } from "@/i18n";
 
 export default function EditStaffPage() {
   const navigate = useNavigate();
@@ -152,7 +155,7 @@ export default function EditStaffPage() {
 
   // Group services by category
   const servicesByCategory = services.reduce((acc, service) => {
-    const category = service.categoryName || "Not categorized";
+    const category = service.categoryName || t("common.notCategorized");
     if (!acc[category]) {
       acc[category] = [];
     }
@@ -169,48 +172,28 @@ export default function EditStaffPage() {
       .toUpperCase();
   };
 
-  return (
-    <AppLayout>
-      <div className="h-full flex flex-col bg-gray-50">
-        {/* Header */}
-        <div className="border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <X size={20} />
-              </button>
-              <h1 className="text-xl font-bold text-gray-900">
-                Edit Staff Member
-              </h1>
-            </div>
-            <Button 
-              onClick={handleSave} 
-              size="sm" 
-              className="bg-gray-900 hover:bg-gray-800 text-white"
-              disabled={!formData.name.trim() || updating || loading}
-            >
-              {updating ? (
-                <>
-                  <Loader2 size={16} className="animate-spin mr-2" />
-                  SAVING...
-                </>
-              ) : (
-                "SAVE"
-              )}
-            </Button>
-          </div>
-        </div>
+  const close = () => navigate(getPath("staff"));
 
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-2 gap-6">
+  return (
+    <RouteSheet
+      backdrop={<StaffPage />}
+      onClose={close}
+      size="lg"
+      title={formData.name || t("editStaff.editTeamMember")}
+      description={t("editStaff.profileServicesAndWorkingHours")}
+      footer={
+        <>
+          <Button variant="outline" className={sheetSecondary} onClick={close}>{t("common.cancel")}</Button>
+          <Button className={sheetPrimary} onClick={handleSave} disabled={!formData.name.trim() || updating || loading}>
+            {updating ? t("common.saving") : t("common.saveChanges")}
+          </Button>
+        </>
+      }
+    >
+            <div className="grid gap-6">
               {/* Left Panel - Staff Member Details */}
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] space-y-6">
                   {/* Profile Picture */}
                   {/* The camera button used to do nothing. */}
                   <StaffAvatarPicker
@@ -221,7 +204,7 @@ export default function EditStaffPage() {
 
                   {/* Name */}
                   <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name">{t("common.name")}</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -231,19 +214,19 @@ export default function EditStaffPage() {
 
                   {/* Phone Number */}
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone number</Label>
+                    <Label htmlFor="phone">{t("editStaff.phoneNumber")}</Label>
                     <Input
                       id="phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
-                      placeholder="Enter phone number"
+                      placeholder={t("editStaff.enterPhoneNumber")}
                     />
                   </div>
 
                   {/* E-mail */}
                   <div className="space-y-2">
-                    <Label htmlFor="email">E-mail</Label>
+                    <Label htmlFor="email">{t("editStaff.eMail")}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -265,17 +248,17 @@ export default function EditStaffPage() {
                         setInviting(true);
                         try {
                           const r = await staffService.sendInvite(Number(id));
-                          toast.success(`Invitation sent to ${r.email}`);
+                          toast.success(t("editStaff.invitationSentTo", { email: r.email }));
                         } catch (err) {
-                          toast.error((err instanceof Error && err.message) || "Could not send the invitation");
+                          toast.error((err instanceof Error && err.message) || t("editStaff.couldNotSendTheInvitation"));
                         } finally {
                           setInviting(false);
                         }
                       }}
                     >
-                      {inviting ? "SENDING…" : "INVITE AGAIN"}
+                      {inviting ? t("editStaff.sending") : t("editStaff.inviteAgain")}
                     </Button>
-                    <HelpCircle size={16} className="text-gray-400" />
+                    <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)]" />
                   </div>
 
                   {/* Role — one of the salon's roles (Team → Roles). It always showed "Owner"
@@ -288,12 +271,12 @@ export default function EditStaffPage() {
 
                   {/* Position */}
                   <div className="space-y-2">
-                    <Label htmlFor="position">Position</Label>
+                    <Label htmlFor="position">{t("common.position")}</Label>
                     <Input
                       id="position"
                       value={formData.position}
                       onChange={(e) => handleInputChange("position", e.target.value)}
-                      placeholder="Enter position"
+                      placeholder={t("editStaff.enterPosition")}
                     />
                   </div>
 
@@ -309,10 +292,9 @@ export default function EditStaffPage() {
                     />
                     <Label
                       htmlFor="show-in-calendar"
-                      className="text-sm text-gray-700 cursor-pointer"
+                      className="text-sm text-[rgb(var(--reg-ink)/0.85)] cursor-pointer"
                     >
-                      Check the box if the Staff Member offers services and
-                      should be visible in your booqi Calendar.
+                      {t("editStaff.checkTheBoxIfThe")}
                     </Label>
                   </div>
 
@@ -331,22 +313,21 @@ export default function EditStaffPage() {
                     />
                     <Label
                       htmlFor="online-booking"
-                      className="text-sm text-gray-700 cursor-pointer"
+                      className="text-sm text-[rgb(var(--reg-ink)/0.85)] cursor-pointer"
                     >
-                      Check the box to allow clients to book services with
-                      this Staff Member online.
+                      {t("editStaff.checkTheBoxToAllow")}
                     </Label>
                   </div>
 
                   {/* Staffer description */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="description">Staffer description</Label>
-                      <HelpCircle size={16} className="text-gray-400" />
+                      <Label htmlFor="description">{t("editStaff.stafferDescription")}</Label>
+                      <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)]" />
                     </div>
                     <Textarea
                       id="description"
-                      placeholder="Enter description..."
+                      placeholder={t("editStaff.enterDescription")}
                       value={formData.description}
                       onChange={(e) =>
                         handleInputChange("description", e.target.value)
@@ -359,23 +340,23 @@ export default function EditStaffPage() {
 
               {/* Right Panel - Services Management */}
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-6">
+                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] space-y-6">
                   {/* Services Tab */}
-                  <div className="border-b border-gray-200">
-                    <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-gray-900">
-                      SERVICES
+                  <div className="border-b border-[rgb(var(--reg-line)/0.8)]">
+                    <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-[rgb(var(--reg-ink))]">
+                      {t("editStaff.services")}
                     </button>
                   </div>
 
                   {/* Search Services */}
                   <div className="relative">
                     <Search
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[rgb(var(--reg-muted)/0.8)]"
                       size={18}
                     />
                     <Input
                       type="text"
-                      placeholder="Search services..."
+                      placeholder={t("common.searchServices")}
                       className="pl-10"
                     />
                   </div>
@@ -383,14 +364,14 @@ export default function EditStaffPage() {
                   {/* Services by Category */}
                   {servicesLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                      <Loader2 className="h-6 w-6 animate-spin text-[rgb(var(--reg-muted)/0.8)]" />
                     </div>
                   ) : (
                     <div className="space-y-6 max-h-[500px] overflow-y-auto">
                       {Object.entries(servicesByCategory).map(
                         ([category, categoryServices]) => (
                           <div key={category} className="space-y-3">
-                            <h3 className="text-sm font-semibold text-gray-700 uppercase">
+                            <h3 className="text-sm font-semibold text-[rgb(var(--reg-ink)/0.85)] uppercase">
                               {category}
                             </h3>
                             <div className="space-y-2">
@@ -402,7 +383,7 @@ export default function EditStaffPage() {
                                 return (
                                   <div
                                     key={service.id}
-                                    className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                    className="flex items-center gap-4 p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors cursor-pointer"
                                     onClick={() => handleServiceToggle(service.id)}
                                   >
                                     <Checkbox
@@ -415,17 +396,17 @@ export default function EditStaffPage() {
                                       style={colorStyle}
                                     />
                                     <div className="flex-1">
-                                      <h4 className="font-medium text-gray-900">
+                                      <h4 className="font-medium text-[rgb(var(--reg-ink))]">
                                         {service.name}
                                       </h4>
-                                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                                      <div className="flex items-center gap-4 text-sm text-[rgb(var(--reg-muted))] mt-1">
                                         <span>
                                           {service.durationMinutes
-                                            ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`
-                                            : "N/A"}
+                                            ? formatMinutes(service.durationMinutes)
+                                            : t("common.nA")}
                                         </span>
-                                        <span className="font-semibold text-gray-900">
-                                          {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
+                                        <span className="font-semibold text-[rgb(var(--reg-ink))]">
+                                          {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : t("common.nA")}
                                         </span>
                                       </div>
                                     </div>
@@ -440,9 +421,9 @@ export default function EditStaffPage() {
                   )}
 
                   {/* Edit Services Button */}
-                  <div className="pt-4 border-t border-gray-200">
+                  <div className="pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
                     <Button variant="outline" className="w-full">
-                      EDIT SERVICES
+                      {t("editStaff.editServices")}
                     </Button>
                   </div>
                 </div>
@@ -450,17 +431,14 @@ export default function EditStaffPage() {
             </div>
 
             {/* Working Hours */}
-            <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">Working hours</h3>
-              <p className="text-xs text-gray-600 mb-4">
-                Clients can only book this staff member during these hours. Turn a day off to mark it closed.
+            <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <h3 className="text-sm font-semibold text-[rgb(var(--reg-ink))] mb-1">{t("editStaff.workingHours")}</h3>
+              <p className="text-xs text-[rgb(var(--reg-muted))] mb-4">
+                {t("editStaff.clientsCanOnlyBookThis")}
               </p>
               <WorkingHoursEditor value={schedule} onChange={setSchedule} />
             </div>
-          </div>
-        </div>
-      </div>
-    </AppLayout>
+    </RouteSheet>
   );
 }
 

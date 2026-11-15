@@ -3,7 +3,8 @@ import { saleService, type Sale, type CreateSaleRequest } from '@/services/saleS
 import { websocketService } from '@/services/websocketService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format } from '@/i18n/dateFns';
+import { t } from "@/i18n";
 
 export function useSales(businessIdParam?: number, date?: Date) {
   const routeBusinessId = useBusinessId();
@@ -20,8 +21,8 @@ export function useSales(businessIdParam?: number, date?: Date) {
       setSales(salesData);
     } catch (err) {
       console.error('Failed to load sales:', err);
-      setError((err instanceof Error && err.message) || 'Failed to load sales');
-      toast.error('Failed to load sales');
+      setError((err instanceof Error && err.message) || t("hooks.failedToLoadSales"));
+      toast.error(t("hooks.failedToLoadSales"));
     } finally {
       setLoading(false);
     }
@@ -69,10 +70,10 @@ export function useSales(businessIdParam?: number, date?: Date) {
     try {
       const created = await saleService.createSale(request);
       setSales(prev => [...prev, created]);
-      toast.success('Sale created successfully');
+      toast.success(t("hooks.saleCreatedSuccessfully"));
       return created;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to create sale');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateSale"));
       throw err;
     }
   }, []);
@@ -81,9 +82,9 @@ export function useSales(businessIdParam?: number, date?: Date) {
     try {
       await saleService.cancelSale(id);
       setSales(prev => prev.filter(s => s.id !== id));
-      toast.success('Sale cancelled successfully');
+      toast.success(t("hooks.saleCancelledSuccessfully"));
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to cancel sale');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCancelSale"));
       throw err;
     }
   }, []);

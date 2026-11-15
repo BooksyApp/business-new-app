@@ -1,7 +1,10 @@
 import { API_BASE_URL } from "@/config/api";
 import { getErrorMessage, ErrorResponse } from "@/utils/errorHandler";
+import { t } from "@/i18n";
 
 export interface RegisterRequest {
+  /** What the owner agreed to on the form; the server records it with the wording version. */
+  consent?: { acceptTerms: boolean; termsVersion: string; marketingOptIn: boolean; source: string };
   email: string;
   password: string;
   firstName?: string;
@@ -85,7 +88,7 @@ class AuthService {
             errorData = {
               status: response.status,
               error: response.statusText,
-              message: `Request failed with status ${response.status}`,
+              message: t("services.requestFailedWithStatus", { status: response.status }),
             };
           }
         } else {
@@ -94,7 +97,7 @@ class AuthService {
           errorData = {
             status: response.status,
             error: response.statusText,
-            message: text || `Request failed with status ${response.status}`,
+            message: text || t("services.requestFailedWithStatus", { status: response.status }),
           };
         }
 
@@ -130,13 +133,13 @@ class AuthService {
         console.error('Network error:', error);
         
         // Provide specific error messages based on error type
-        let errorMessage = 'Unable to connect to the server. ';
+        let errorMessage = t("services.unableToConnectToThe");
         if (e?.message?.includes('ERR_CONNECTION_TIMED_OUT') || e?.message?.includes('timeout')) {
-          errorMessage += 'Connection timed out. Please check if the API server is running and accessible.';
+          errorMessage += t("services.connTimedOut");
         } else if (e?.message?.includes('ERR_CONNECTION_REFUSED')) {
-          errorMessage += 'Connection refused. The server may be down or not accepting connections.';
+          errorMessage += t("services.connRefused");
         } else {
-          errorMessage += 'Please check your connection and try again.';
+          errorMessage += t("services.checkConnection");
         }
         
         throw new Error(errorMessage);
@@ -144,7 +147,7 @@ class AuthService {
       
       // Handle other unexpected errors
       console.error('Auth API request failed:', error);
-      const errorMessage = error?.message || 'An unexpected error occurred. Please try again.';
+      const errorMessage = error?.message || t("services.anUnexpectedErrorOccurredPlease");
       throw new Error(errorMessage);
     }
   }
@@ -221,21 +224,21 @@ class AuthService {
       // Only the server saying no ends the session. A restart (every deploy) answered
       // with a network error or a 5xx, and that signed every open manager out.
       if (response.status === 401 || response.status === 403) {
-        return { valid: false, message: 'Token validation failed' };
+        return { valid: false, message: t("services.tokenValidationFailed") };
       }
       if (!response.ok) {
-        return { valid: true, message: 'Could not check the session right now' };
+        return { valid: true, message: t("services.couldNotCheckTheSession") };
       }
 
       const data = await response.json();
       return {
         valid: data.valid || false,
-        message: data.message || 'Token validation failed',
+        message: data.message || t("services.tokenValidationFailed"),
         user: data.user,
       };
     } catch (error) {
       console.warn('Could not reach the server to check the session; keeping it:', error);
-      return { valid: true, message: 'Could not check the session right now' };
+      return { valid: true, message: t("services.couldNotCheckTheSession") };
     }
   }
 }

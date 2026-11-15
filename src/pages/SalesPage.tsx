@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
+import "@/components/auth/auth-tokens.css";
 import { Button } from "@/components/ui/button";
-import { User, Plus, Trash2, ArrowLeft, Search, Receipt, CreditCard, X, Send, MoreVertical, Edit2, Save, Check, X as XIcon } from "lucide-react";
-import { format } from "date-fns";
+import { User, Plus, Minus, Trash2, ArrowLeft, Search, Receipt, CreditCard, X, Send, MoreVertical, Edit2, Save, Check, X as XIcon } from "lucide-react";
+import { format } from "@/i18n/dateFns";
 import PaymentMethodPage from "./PaymentMethodPage";
 import { useServices } from "@/hooks/useServices";
 import { useAddons } from "@/hooks/useAddons";
@@ -13,11 +15,16 @@ import { useStaff } from "@/hooks/useStaff";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { FormSheet, StatCard } from "@/components/page/booqi";
+import { StatusChip } from "@/components/page/kit";
 import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import { quickSaleService, type QuickSaleItem as QuickSaleItemAPI } from "@/services/quickSaleService";
 import { membershipService, type Membership } from "@/services/membershipService";
 import { appointmentService, type Appointment } from "@/services/appointmentService";
+import { businessService } from "@/services/businessService";
 import { promoService } from "@/services/promoService";
 import { productService, type Product } from "@/services/productService";
 import { clientService, type ClientWithStats } from "@/services/clientService";
@@ -25,9 +32,26 @@ import { categoryService, type Category } from "@/services/categoryService";
 import { websocketService } from "@/services/websocketService";
 import { saleService, type CreateSaleRequest, type Sale } from "@/services/saleService";
 import { paymentConfirmationService, type PaymentConfirmationRequest } from "@/services/paymentConfirmationService";
+import { t as tr, tOpt, fmtDate as formatLocaleDate, getLocale, formatMinutes } from "@/i18n";
 
 // Open and not yet paid, on any day. The settle list adds "today"; "Take payment" from the
 // calendar can be for any day.
+/** Today's date (yyyy-MM-dd) on the salon's own clock; the browser's when the salon has none set. */
+const todayIn = (timeZone?: string | null): string => {
+  try {
+    if (timeZone) return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  } catch {
+    // an unknown zone name: fall through to the browser's day
+  }
+  return format(new Date(), "yyyy-MM-dd");
+};
+/** A local Date on that calendar day (noon, so formatting it back never slips a day). */
+const dayDate = (ymd: string, addDays = 0): Date => {
+  const d = new Date(`${ymd}T12:00:00`);
+  d.setDate(d.getDate() + addDays);
+  return d;
+};
+
 const isUnsettled = (apt: Appointment): boolean => {
   // payment_status had no default and nothing set it on create, so every ordinary
   // booking came back null and this list was permanently empty (fixed in V77, but a
@@ -42,8 +66,7 @@ const isUnsettled = (apt: Appointment): boolean => {
 };
 
 // Helper function to filter and sort unsettled appointments
-const filterAndSortUnsettledAppointments = (appointments: Appointment[]): Appointment[] => {
-  const today = format(new Date(), 'yyyy-MM-dd');
+const filterAndSortUnsettledAppointments = (appointments: Appointment[], today: string): Appointment[] => {
   return appointments
     .filter(apt => format(new Date(apt.appointmentDate), 'yyyy-MM-dd') === today && isUnsettled(apt))
     .sort((a, b) => {
@@ -56,12 +79,38 @@ const filterAndSortUnsettledAppointments = (appointments: Appointment[]): Appoin
     });
 };
 
+/** One visit = the services booked together (same visitId), or a booking on its own. */
+interface VisitRow {
+  key: string;
+  members: Appointment[];
+}
+const groupIntoVisits = (appointments: Appointment[]): VisitRow[] => {
+  const rows: VisitRow[] = [];
+  for (const apt of appointments) {
+    const row = apt.visitId ? rows.find((r) => r.members[0].visitId === apt.visitId) : undefined;
+    if (row) row.members.push(apt);
+    else rows.push({ key: apt.visitId ? `visit-${apt.visitId}` : `appt-${apt.id}`, members: [apt] });
+  }
+  return rows;
+};
+
+/** The ticket line for one booking. */
+const bookingLine = (a: Appointment, serviceName?: string): BasketItem => ({
+  id: `appointment-${a.id}`,
+  appointmentId: a.id,
+  name: a.serviceName || serviceName || "Service",
+  price: String(a.price ?? 0),
+  type: "service",
+  serviceId: a.serviceId,
+  duration: `${a.startTime?.slice(0, 5)} - ${a.endTime?.slice(0, 5)}`,
+});
+
 // Sidebar category definitions (module-level constant — not the categories state inside the component)
 const SALE_CATEGORIES = [
-  { id: "quick-sale", name: "QUICK SALE", active: true },
-  { id: "to-be-settled", name: "TO BE SETTLED" },
-  { id: "services", name: "SERVICES" },
-  { id: "extras", name: "EXTRAS" },
+  { id: "quick-sale", get name() { return tr("sales.tabQuickSale"); }, active: true },
+  { id: "to-be-settled", get name() { return tr("sales.tabToBeSettled"); } },
+  { id: "services", get name() { return tr("sales.tabServices"); } },
+  { id: "extras", get name() { return tr("sales.tabExtras"); } },
 ];
 
 // Transaction interface for display
@@ -142,17 +191,68 @@ function servicePriceLabel(
 ): string {
   const offer = offers.get(service.id);
   const payable = offer ? offer.price : service.price;
-  if (payable == null) return 'Price on request';
+  if (payable == null) return tr("sales.priceOnRequest");
   const shown = `${payable.toFixed(2)} ${currencySymbol()}`;
-  if (offer?.wasPrice != null) return `${shown} (was ${offer.wasPrice.toFixed(2)})`;
-  return service.priceType === 'FROM' ? `From ${shown}` : shown;
+  if (offer?.wasPrice != null) return tr("sales.was", { shown, value: offer.wasPrice.toFixed(2) });
+  return service.priceType === 'FROM' ? tr("sales.from", { shown }) : shown;
+}
+
+/** Tax of a sale's items; null when no tax applies. A service's own rate wins over the salon's. */
+function receiptTax(
+  sale: { total: number; items: { serviceId?: number; serviceName?: string; unitPrice: number; quantity: number }[] },
+  salonRate: number,
+  services: Service[],
+) {
+  const lines = sale.items.map((it) => {
+    const svc = services.find((x) => (it.serviceId ? x.id === it.serviceId : x.name === it.serviceName));
+    return { gross: it.unitPrice * it.quantity, rate: svc?.taxRate != null ? Number(svc.taxRate) : salonRate };
+  });
+  const sum = lines.reduce((n, l) => n + l.gross, 0);
+  if (!sum || lines.every((l) => l.rate <= 0)) return null;
+  // The sale total already has any discount in it, so each line takes its share of it.
+  let net = 0;
+  for (const l of lines) net += ((l.gross / sum) * sale.total) / (1 + l.rate / 100);
+  const rates = [...new Set(lines.map((l) => l.rate))];
+  return {
+    rate: rates.length === 1 ? `${rates[0]}%` : "Mixed",
+    net,
+    tax: sale.total - net,
+  };
+}
+
+function saleStatusChip(status: string) {
+  if (status === "PAID") return <StatusChip status="active" label={tr("common.paid")} />;
+  if (status === "CANCELLED") return <StatusChip status="ended" label={tr("sales.voided")} />;
+  if (status === "REFUNDED") return <StatusChip status="failed" label={tr("sales.refunded")} />;
+  return <StatusChip status="draft" label={status.charAt(0) + status.slice(1).toLowerCase()} />;
 }
 
 export default function SalesPage() {
+  useBrandFont();
   const navigate = useNavigate();
   const businessId = useBusinessId();
   const { services, loading: servicesLoading } = useServices(businessId);
   const { addons, loading: addonsLoading } = useAddons(businessId);
+  // The salon's tax rate, receipt footer and brand colour (Business > Branding / Booking rules).
+  const [salonInfo, setSalonInfo] = useState<{ taxRate: number; receiptFooter: string; brandColor: string }>(
+    { taxRate: 0, receiptFooter: "", brandColor: "" }
+  );
+  // null until the salon is loaded: "today" is the salon's day, so nothing date-based runs before.
+  const [salonTz, setSalonTz] = useState<string | null>(null);
+  useEffect(() => {
+    if (!businessId) return;
+    businessService
+      .getBusiness(businessId)
+      .then((b) => {
+        setSalonTz(b.timezone || "");
+        setSalonInfo({
+          taxRate: Number(b.taxRate ?? 0) || 0,
+          receiptFooter: b.receiptFooter ?? "",
+          brandColor: /^#[0-9a-fA-F]{6}$/.test(b.brandColor ?? "") ? (b.brandColor as string) : "",
+        });
+      })
+      .catch(() => setSalonTz(""));
+  }, [businessId]);
   const { staff } = useStaff(businessId);
   // The catalogue carries the list price; this carries what the offer makes it today.
   const offers = useServiceOffers(businessId);
@@ -161,16 +261,16 @@ export default function SalesPage() {
   
   // Sidebar categories - defined inside component to ensure accessibility
   const sidebarCategories = [
-    { id: "quick-sale", name: "QUICK SALE", active: true },
-    { id: "to-be-settled", name: "TO BE SETTLED" },
-    { id: "services", name: "SERVICES" },
-    { id: "extras", name: "EXTRAS" },
+    { id: "quick-sale", get name() { return tr("sales.tabQuickSale"); }, active: true },
+    { id: "to-be-settled", get name() { return tr("sales.tabToBeSettled"); } },
+    { id: "services", get name() { return tr("sales.tabServices"); } },
+    { id: "extras", get name() { return tr("sales.tabExtras"); } },
     // Memberships are off until the plans and their billing are signed off.
     // { id: "memberships", name: "MEMBERSHIPS" },
-    { id: "gift-cards", name: "GIFT CARDS" },
+    { id: "gift-cards", get name() { return tr("sales.tabGiftCards"); } },
     // Retail from Inventory. It was commented out, so a product could be stocked but
     // never sold, while Inventory promised that a sale takes it off the shelf.
-    { id: "products", name: "PRODUCTS" },
+    { id: "products", get name() { return tr("sales.tabProducts"); } },
     // Disabled sections from own amount to timepass
     // { id: "own-amount", name: "OWN AMOUNT" },
     // { id: "packages", name: "PACKAGES" },
@@ -184,6 +284,11 @@ export default function SalesPage() {
   // #118: "how much went through on card today" and "what did Anna take" are the two
   // questions asked of this list, and neither could be answered without reading every row.
   const [methodFilter, setMethodFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [rangeFrom, setRangeFrom] = useState(() => format(new Date(Date.now() - 30 * 86400000), "yyyy-MM-dd"));
+  const [rangeTo, setRangeTo] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [voiding, setVoiding] = useState(false);
+  const [txReload, setTxReload] = useState(0);
   const [staffFilter, setStaffFilter] = useState("All");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
@@ -206,7 +311,15 @@ export default function SalesPage() {
   // Arriving from the calendar's "Take payment": open on the settle list with this
   // booking already picked, instead of making the cashier find it again.
   const location = useLocation();
-  const incomingAppointmentId = (location.state as { appointmentId?: string } | null)?.appointmentId;
+  const incomingState = location.state as { appointmentId?: string; appointmentIds?: string[] } | null;
+  const incomingAppointmentId = incomingState?.appointmentId ?? incomingState?.appointmentIds?.[0];
+  // A whole visit from the calendar: every active service goes on the one ticket.
+  const incomingAppointmentIds = incomingState?.appointmentIds?.length
+    ? incomingState.appointmentIds
+    : incomingAppointmentId
+      ? [incomingAppointmentId]
+      : [];
+  const incomingKey = incomingAppointmentIds.join(",");
   const [selectedAppointmentStaffId, setSelectedAppointmentStaffId] = useState<number | null>(null);
   // The promo code the selected booking was made with, priced by the server.
   const [bookedPromo, setBookedPromo] = useState<{ code: string; discount: number } | null>(null);
@@ -220,6 +333,18 @@ export default function SalesPage() {
   const [loadingClients, setLoadingClients] = useState(false);
   const [searchQueryClient, setSearchQueryClient] = useState("");
   const [showClientPicker, setShowClientPicker] = useState(false);
+  const [ticketOpen, setTicketOpen] = useState(false);
+  const [ticketNote, setTicketNote] = useState("");
+  // The sale just taken, for the success screen (receipt, change to give, "New sale").
+  const [lastSale, setLastSale] = useState<{
+    saleId: number;
+    total: number;
+    change: number;
+    method: string;
+    client: string | null;
+    lines: { name: string; price: number }[];
+    at: Date;
+  } | null>(null);
 
   useEffect(() => {
     const loadClients = async () => {
@@ -279,7 +404,7 @@ export default function SalesPage() {
     .slice(0, 50);
 
   const getClientDisplayName = (c: ClientWithStats) => {
-    return `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.email || c.phone || "Unknown";
+    return `${c.firstName || ""} ${c.lastName || ""}`.trim() || c.email || c.phone || tr("sales.unknown");
   };
 
   // Load quick sale items from API on mount
@@ -297,13 +422,13 @@ export default function SalesPage() {
             id: item.serviceId.toString(),
             name: item.serviceName || service?.name || 'Unknown',
             duration: item.durationMinutes 
-              ? `${Math.floor(item.durationMinutes / 60)}h ${item.durationMinutes % 60}min`.replace(/^0h /, '').replace(/ 0min$/, 'min')
+              ? formatMinutes(item.durationMinutes)
               : 'N/A',
             price: item.price 
               ? `${item.price.toFixed(2)} ${currencySymbol()}`
               : item.priceType === 'FROM' 
                 ? `From ${item.price?.toFixed(2) || '0.00'} ${currencySymbol()}`
-                : 'Price on request',
+                : tr("sales.priceOnRequest"),
             color: item.color || 'gray',
             type: (item.serviceType === 'COMBO' ? 'combo' : 'service') as 'service' | 'combo',
             serviceId: item.serviceId,
@@ -327,9 +452,6 @@ export default function SalesPage() {
       .catch(() => setSellableMemberships([]));
   }, [businessId, services, servicesLoading]);
 
-  useEffect(() => {
-    if (incomingAppointmentId) setActiveCategory("to-be-settled");
-  }, [incomingAppointmentId]);
 
   // Fresh each time the shelf is opened, so the stock shown follows the last sale.
   useEffect(() => {
@@ -337,9 +459,14 @@ export default function SalesPage() {
     productService.list(businessId).then(setProducts).catch(() => setProducts([]));
   }, [businessId, activeCategory]);
 
-  // Price the selected booking's promo code once it is in the basket.
+  // Every booking on the ticket: a visit puts all its services on one sale.
+  const ticketApptIds = Array.from(new Set(basket.map((b) => b.appointmentId).filter((x): x is string => !!x)));
+  const ticketAppts = todayAppointments.filter((a) => ticketApptIds.includes(a.id));
+  const ticketApptKey = ticketApptIds.join(",");
+
+  // Price the booking's promo code once it is in the basket.
   useEffect(() => {
-    const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
+    const appt = ticketAppts.find((a) => !!a.promoCode);
     const code = appt?.promoCode;
     if (!businessId || !code) {
       setBookedPromo(null);
@@ -347,7 +474,7 @@ export default function SalesPage() {
     }
     let alive = true;
     promoService
-      .validate(businessId, code, Number(appt?.price ?? 0))
+      .validate(businessId, code, ticketAppts.reduce((sum, a) => sum + Number(a.price ?? 0), 0))
       .then((r) => alive && setBookedPromo({ code: r.code, discount: Number(r.discount) }))
       // A code that no longer validates is the server's to refuse at payment; do not
       // pretend it applies here.
@@ -355,17 +482,20 @@ export default function SalesPage() {
     return () => {
       alive = false;
     };
-  }, [businessId, selectedAppointmentId, todayAppointments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, ticketApptKey, todayAppointments]);
 
   // Load today's appointments when "to-be-settled" category is active
   useEffect(() => {
     const loadTodayAppointments = async () => {
-      if (!businessId || activeCategory !== "to-be-settled") return;
+      // Loaded always: the bookings to check out lead the till, whatever section is open.
+      if (!businessId || salonTz === null) return;
       
       try {
         setLoadingAppointments(true);
         setAppointmentsError(false);
-        const today = new Date();
+        const todayStr = todayIn(salonTz);
+        const today = dayDate(todayStr);
         const appointments = await appointmentService.getAppointmentsByBusiness(businessId, today);
         
         // Enrich appointments with service names if missing
@@ -379,54 +509,48 @@ export default function SalesPage() {
           return apt;
         });
         
-        const unsettledAppointments = filterAndSortUnsettledAppointments(enrichedAppointments);
+        const unsettledAppointments = filterAndSortUnsettledAppointments(enrichedAppointments, todayStr);
         setTodayAppointments(unsettledAppointments);
 
         // Came here from the calendar to settle one specific booking: put it in the
         // basket now, so "Take payment" lands on a ready checkout rather than a list.
-        if (incomingAppointmentId) {
-          let target = unsettledAppointments.find((a) => a.id === incomingAppointmentId);
-          // The list above is today's only. A booking from another day (paying ahead, or
-          // settling yesterday's) used to open an empty basket with no word why.
-          if (!target) {
-            const fetched = await appointmentService.getAppointmentById(incomingAppointmentId).catch(() => null);
-            const unsettled = fetched && isUnsettled(fetched) ? fetched : null;
-            if (unsettled) {
-              const service = services.find((s) => s.id === unsettled.serviceId);
-              target = service && !unsettled.serviceName ? { ...unsettled, serviceName: service.name } : unsettled;
-              const extra = target;
-              setTodayAppointments((prev) => (prev.some((a) => a.id === extra.id) ? prev : [extra, ...prev]));
-            } else {
-              toast.error(fetched ? "This booking is already settled or cancelled." : "Could not load that booking.");
+        if (incomingAppointmentIds.length > 0) {
+          const targets: Appointment[] = [];
+          for (const wanted of incomingAppointmentIds) {
+            let target = unsettledAppointments.find((a) => a.id === wanted);
+            // The list above is today's only. A booking from another day (paying ahead, or
+            // settling yesterday's) used to open an empty basket with no word why.
+            if (!target) {
+              const fetched = await appointmentService.getAppointmentById(wanted).catch(() => null);
+              const unsettled = fetched && isUnsettled(fetched) ? fetched : null;
+              if (unsettled) {
+                const service = services.find((s) => s.id === unsettled.serviceId);
+                target = service && !unsettled.serviceName ? { ...unsettled, serviceName: service.name } : unsettled;
+                const extra = target;
+                setTodayAppointments((prev) => (prev.some((a) => a.id === extra.id) ? prev : [extra, ...prev]));
+              } else {
+                toast.error(fetched ? tr("sales.thisBookingIsAlreadySettled") : tr("sales.couldNotLoadThatBooking"));
+              }
             }
+            if (target) targets.push(target);
           }
-          if (target) {
-            setBasket((prev) =>
-              prev.some((b) => b.appointmentId === target.id)
-                ? prev
-                : [
-                    ...prev,
-                    {
-                      id: `appointment-${target.id}`,
-                      appointmentId: target.id,
-                      name: target.serviceName || "Service",
-                      price: String(target.price ?? 0),
-                      type: "service",
-                      serviceId: target.serviceId,
-                      duration: `${target.startTime?.slice(0, 5)} - ${target.endTime?.slice(0, 5)}`,
-                    },
-                  ]
-            );
-            setSelectedAppointmentId(target.id);
-            setSelectedAppointmentStaffId(target.staffId || null);
+          if (targets.length > 0) {
+            const first = targets[0];
+            setBasket((prev) => [
+              ...prev,
+              ...targets.filter((t) => !prev.some((b) => b.appointmentId === t.id)).map((t) => bookingLine(t)),
+            ]);
+            setSelectedAppointmentId(first.id);
+            setSelectedAppointmentStaffId(first.staffId || null);
             // Straight to the till. "Take payment" means take payment — landing on the
             // settle list and making the cashier find the booking again is the step this
             // was meant to remove.
             setShowPaymentMethod(true);
             const match = clients.find(
               (c) =>
-                (target.clientId != null && c.id === target.clientId) ||
-                (target.clientEmail && c.email?.toLowerCase() === target.clientEmail.toLowerCase())
+                // Walk-ins come back as clientId 0 — that is "no record", not client 0.
+                (!!first.clientId && c.id === first.clientId) ||
+                (first.clientEmail && c.email?.toLowerCase() === first.clientEmail.toLowerCase())
             );
             if (match) setSelectedClient(match);
           }
@@ -445,11 +569,13 @@ export default function SalesPage() {
     loadTodayAppointments();
     // clients: a booking opened from the calendar is matched to its client here — if the
     // client list arrived after the bookings, nobody was preselected.
-  }, [businessId, activeCategory, services, clients, incomingAppointmentId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, salonTz, activeCategory, services, clients, incomingKey]);
 
-  // WebSocket subscription for real-time appointment updates
+  // WebSocket subscription for real-time appointment updates (the to-check-out list is
+  // always on screen now, so it listens whenever the till is open).
   useEffect(() => {
-    if (!businessId || activeCategory !== "to-be-settled") return;
+    if (!businessId) return;
 
     // Connect to WebSocket if not already connected
     if (!websocketService.isConnected()) {
@@ -463,7 +589,7 @@ export default function SalesPage() {
       businessId,
       (appointment: Appointment) => {
         // Check if appointment is for today and matches criteria
-        const today = format(new Date(), 'yyyy-MM-dd');
+        const today = todayIn(salonTz);
         const aptDate = format(new Date(appointment.appointmentDate), 'yyyy-MM-dd');
         
         if (aptDate === today) {
@@ -491,10 +617,10 @@ export default function SalesPage() {
                 // Update existing appointment
                 const updated = [...prevAppointments];
                 updated[existingIndex] = enrichedAppointment;
-                return filterAndSortUnsettledAppointments(updated);
+                return filterAndSortUnsettledAppointments(updated, today);
               } else {
                 // Add new appointment
-                return filterAndSortUnsettledAppointments([...prevAppointments, enrichedAppointment]);
+                return filterAndSortUnsettledAppointments([...prevAppointments, enrichedAppointment], today);
               }
             } else {
               // If it no longer matches criteria, remove it
@@ -517,7 +643,7 @@ export default function SalesPage() {
     };
     // services: live bookings are enriched from it; subscribed before it loaded, every
     // update was read against an empty list.
-  }, [businessId, activeCategory, services]);
+  }, [businessId, salonTz, activeCategory, services]);
 
   // Load categories when services tab is active
   useEffect(() => {
@@ -542,30 +668,31 @@ export default function SalesPage() {
   // Load transactions when TRANSACTIONS tab is active
   useEffect(() => {
     const loadTransactions = async () => {
-      if (!businessId || activeTab !== "TRANSACTIONS") return;
+      if (!businessId || activeTab !== "TRANSACTIONS" || salonTz === null) return;
       
       try {
         setLoadingTransactions(true);
         
         // Calculate date range based on period filter
         let startDate: Date;
-        const endDate: Date = new Date();
+        const salonDay = todayIn(salonTz);
+        const endDate: Date = dayDate(salonDay);
         
-        if (periodFilter === "Days") {
+        if (periodFilter === "Today") {
+          startDate = dayDate(salonDay);
+        } else if (periodFilter === "Days") {
           // Last 7 days
-          startDate = new Date();
-          startDate.setDate(startDate.getDate() - 7);
+          startDate = dayDate(salonDay, -7);
         } else if (periodFilter === "Months") {
           // Last 30 days
-          startDate = new Date();
-          startDate.setDate(startDate.getDate() - 30);
+          startDate = dayDate(salonDay, -30);
         } else {
-          // Another period - use selected date range (for now, last 30 days)
-          startDate = new Date();
-          startDate.setDate(startDate.getDate() - 30);
+          // Custom: the dates picked in the header.
+          startDate = new Date(`${rangeFrom}T00:00:00`);
         }
+        const rangeEnd = periodFilter === "Another period" ? new Date(`${rangeTo}T23:59:59`) : endDate;
         
-        const sales = await saleService.getSalesByDateRange(businessId, startDate, endDate);
+        const sales = await saleService.getSalesByDateRange(businessId, startDate, rangeEnd);
         
         // Convert sales to transactions
         const convertedTransactions: Transaction[] = sales.map((sale) => {
@@ -577,24 +704,19 @@ export default function SalesPage() {
           // Format date
           const dateStr = format(saleDate, 'd MMM, yyyy');
           
-          // Calculate tax (assuming 23% VAT for Poland)
-          const taxRate = 23;
-          const netWorth = sale.total / (1 + taxRate / 100);
-          const taxAmount = sale.total - netWorth;
-          
           // Format payment method - for split payments, show cash and card amounts
           let paymentMethodDisplay: string;
           if (sale.paymentMethod === 'SPLIT' && sale.splitCashAmount && sale.splitCardAmount) {
             paymentMethodDisplay = `Cash: ${sale.splitCashAmount.toFixed(2)} ${currencySymbol()}, Card: ${sale.splitCardAmount.toFixed(2)} ${currencySymbol()}`;
           } else {
             const paymentMethodMap: Record<string, string> = {
-              'CASH': 'Cash',
-              'CARD_TERMINAL': 'Card',
-              'CHECK': 'Check',
-              'SPLIT': 'Split payment',
-              'MEMBERSHIP': 'Membership',
-              'GIFT_CARD': 'Gift card',
-              'PACKAGE': 'Package',
+              get 'CASH'() { return tr("common.cash"); },
+              get 'CARD_TERMINAL'() { return tr("common.card"); },
+              get 'CHECK'() { return tr("sales.check"); },
+              get 'SPLIT'() { return tr("paymentMethod.splitPayment"); },
+              get 'MEMBERSHIP'() { return tr("paymentMethod.membership"); },
+              get 'GIFT_CARD'() { return tr("paymentMethod.giftCard"); },
+              get 'PACKAGE'() { return tr("paymentMethod.package"); },
             };
             paymentMethodDisplay = paymentMethodMap[sale.paymentMethod] || sale.paymentMethod;
           }
@@ -611,7 +733,7 @@ export default function SalesPage() {
             splitCardAmount: sale.splitCardAmount,
             billNumber: sale.billNumber,
             billId: sale.billId,
-            clientName: sale.clientName || 'Walk In Client',
+            clientName: sale.clientName || tr("sales.walkInClient"),
             address: sale.clientEmail || '',
             items: sale.items.map(item => ({
               name: item.serviceName,
@@ -620,12 +742,9 @@ export default function SalesPage() {
               price: `${(item.unitPrice * item.quantity).toFixed(2)} ${currencySymbol()}`,
             })),
             staffName: sale.staffName,
-            tax: {
-              rate: `${taxRate}%`,
-              netWorth: `${netWorth.toFixed(2)} ${currencySymbol()}`,
-              taxAmount: `${taxAmount.toFixed(2)} ${currencySymbol()}`,
-              grossValue: `${sale.total.toFixed(2)} ${currencySymbol()}`,
-            },
+            // The tax breakdown is worked out when the receipt is shown (taxFor), from the
+            // salon's rate and each service's own override.
+            tax: { rate: "", netWorth: "", taxAmount: "", grossValue: "" },
             addition: `${sale.subtotal.toFixed(2)} ${currencySymbol()}`,
             discount: sale.discountAmount > 0 
               ? `${sale.discountAmount.toFixed(2)} ${currencySymbol()}` 
@@ -659,7 +778,7 @@ export default function SalesPage() {
     };
 
     loadTransactions();
-  }, [businessId, activeTab, periodFilter]);
+  }, [businessId, salonTz, activeTab, periodFilter, rangeFrom, rangeTo, txReload]);
 
   // Group services by category and filter by search
   const groupedServices = useMemo(() => {
@@ -707,7 +826,7 @@ export default function SalesPage() {
         id: service.id.toString(),
         name: service.name,
         duration: service.durationMinutes 
-          ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`.replace(/^0h /, '').replace(/ 0min$/, 'min')
+          ? formatMinutes(service.durationMinutes)
           : 'N/A',
         price: servicePriceLabel(service, offers),
         color: service.color || 'gray',
@@ -738,13 +857,13 @@ export default function SalesPage() {
           id: item.serviceId.toString(),
           name: item.serviceName || service?.name || 'Unknown',
           duration: item.durationMinutes 
-            ? `${Math.floor(item.durationMinutes / 60)}h ${item.durationMinutes % 60}min`.replace(/^0h /, '').replace(/ 0min$/, 'min')
+            ? formatMinutes(item.durationMinutes)
             : 'N/A',
           price: item.price 
             ? `${item.price.toFixed(2)} ${currencySymbol()}`
             : item.priceType === 'FROM' 
               ? `From ${item.price?.toFixed(2) || '0.00'} ${currencySymbol()}`
-              : 'Price on request',
+              : tr("sales.priceOnRequest"),
           color: item.color || 'gray',
           type: (item.serviceType === 'COMBO' ? 'combo' : 'service') as 'service' | 'combo',
           serviceId: item.serviceId,
@@ -754,9 +873,9 @@ export default function SalesPage() {
       setQuickSaleItems(displayItems);
       setShowEditDialog(false);
       setIsEditMode(false);
-      toast.success('Quick sale items updated successfully');
+      toast.success(tr("sales.quickSaleItemsUpdatedSuccessfully"));
     } catch (error) {
-      toast.error('Failed to save quick sale items. Please try again.');
+      toast.error(tr("sales.failedToSaveQuickSale"));
     }
   };
 
@@ -807,6 +926,260 @@ export default function SalesPage() {
     return colors[color] || "border-l-gray-500";
   };
 
+  /** Void a paid sale: the server marks it cancelled and reconciles a linked booking's payment. */
+  const voidSale = async (t: Transaction) => {
+    if (!confirm(tr("sales.voidSaleItStaysIn", { id: t.id, amount: t.amount }))) return;
+    setVoiding(true);
+    try {
+      await saleService.cancelSale(Number(t.id));
+      toast.success(tr("sales.saleVoided", { id: t.id }));
+      setSelectedTransaction(null);
+      setTxReload((n) => n + 1);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : tr("sales.couldNotVoidTheSale"));
+    } finally {
+      setVoiding(false);
+    }
+  };
+
+  /** A visit from today's list onto the ticket: every service, with its client and staff. */
+  const checkoutVisit = (members: Appointment[]) => {
+    const first = members[0];
+    setBasket((prev) => [
+      ...prev,
+      ...members
+        .filter((m) => !prev.some((b) => b.appointmentId === m.id))
+        .map((m) => bookingLine(m, services.find((sv) => sv.id === m.serviceId)?.name)),
+    ]);
+    // The client record, not their name: everything at the till that matters — points,
+    // memberships, history — is keyed by id. Walk-ins come back as clientId 0, which is
+    // "no record", not client 0.
+    setSelectedClient(
+      clients.find(
+        (c) =>
+          (!!first.clientId && c.id === first.clientId) ||
+          (first.clientEmail && c.email?.toLowerCase() === first.clientEmail.toLowerCase())
+      ) ?? null
+    );
+    setSelectedAppointmentId(first.id);
+    setSelectedAppointmentStaffId(first.staffId || null);
+  };
+
+  /** Same item added twice shows as one line with a quantity; each unit stays its own sale line. */
+  const ticketLines = (() => {
+    const groups: { key: string; items: BasketItem[] }[] = [];
+    for (const item of basket) {
+      const key = item.appointmentId
+        ? `appt-${item.appointmentId}`
+        : [item.type, item.serviceId, item.productId, item.membershipId, item.giftCardAmount, item.name, item.price].join("|");
+      const g = groups.find((x) => x.key === key);
+      if (g) g.items.push(item);
+      else groups.push({ key, items: [item] });
+    }
+    return groups;
+  })();
+  const priceOf = (item: BasketItem) => {
+    const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
+    return isNaN(raw) ? 0 : raw;
+  };
+  const ticketStaffId = selectedAppointmentStaffId ?? (staff && staff.length > 0 ? staff[0].id : null);
+  const depositOnTicket = (() => {
+    return ticketAppts.reduce((sum, a) => sum + (a.depositPaid ? Number(a.depositAmount ?? 0) : 0), 0);
+  })();
+  const initialsOf = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?";
+
+  const ticketBody = () => (
+    <>
+      <div className="flex items-center justify-between px-5 pb-2 pr-14 pt-5 md:pr-5">
+        <p className="text-lg font-extrabold tracking-[-0.02em]">{tr("sales.ticket")}</p>
+        {basket.length > 0 && (
+          <button type="button" onClick={clearBasket} className="text-sm font-semibold text-[rgb(var(--reg-muted))] hover:text-rose-700">
+            {tr("sales.clear")}
+          </button>
+        )}
+      </div>
+
+      {/* Client */}
+      <div className="px-5 pb-3">
+        <button
+          type="button"
+          onClick={() => setShowClientPicker(true)}
+          className="flex w-full items-center gap-3 rounded-2xl bg-[rgb(var(--reg-canvas))] p-3 text-left ring-1 ring-[rgb(var(--reg-line))] transition hover:ring-[rgb(var(--reg-brand)/0.4)]"
+        >
+          {selectedClient ? (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-sm font-bold text-[rgb(var(--reg-brand-strong))]">
+              {initialsOf(getClientDisplayName(selectedClient))}
+            </span>
+          ) : (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line))]"><User size={18} /></span>
+          )}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-bold">{selectedClient ? getClientDisplayName(selectedClient) : tr("common.walkIn")}</span>
+            <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{selectedClient ? selectedClient.phone || selectedClient.email || tr("common.client") : tr("sales.addAClientForPoints")}</span>
+          </span>
+          {selectedClient ? (
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label={tr("sales.removeClient")}
+              onClick={(e) => { e.stopPropagation(); setSelectedClient(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); setSelectedClient(null); } }}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-white"
+            >
+              <X size={15} />
+            </span>
+          ) : (
+            <Plus size={18} className="text-[rgb(var(--reg-muted))]" />
+          )}
+        </button>
+      </div>
+
+      {/* Lines */}
+      <div className="min-h-[120px] flex-1 overflow-y-auto border-t border-[rgb(var(--reg-line)/0.7)] px-5 py-3">
+        {basket.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center py-8 text-center">
+            <p className="font-bold">{tr("sales.nothingOnTheTicketYet")}</p>
+            <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{tr("sales.tapAServiceAnExtra")}</p>
+          </div>
+        ) : (
+          <ul className="space-y-1">
+            {ticketLines.map(({ key, items }) => {
+              const first = items[0];
+              const qty = items.length;
+              const unit = priceOf(first);
+              const canRepeat = !first.appointmentId;
+              return (
+                <li key={key} className="flex items-center gap-3 rounded-xl py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold">{first.name}</p>
+                    <p className="text-xs text-[rgb(var(--reg-muted))]">
+                      {qty > 1 ? `${qty} × ${unit.toFixed(2)}` : first.duration && first.duration !== "N/A" ? first.duration : first.type === "product" ? tr("sales.product") : first.type === "gift-card" ? tr("paymentMethod.giftCard") : tr("common.service")}
+                    </p>
+                  </div>
+                  <div className="flex items-center rounded-full ring-1 ring-[rgb(var(--reg-line))]">
+                    <button
+                      type="button"
+                      aria-label={qty > 1 ? tr("sales.oneFewer", { name: first.name }) : tr("sales.remove", { name: first.name })}
+                      onClick={() => removeFromBasket(lineKey(items[items.length - 1])!)}
+                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[rgb(var(--reg-canvas))]"
+                    >
+                      {qty > 1 ? <Minus size={14} /> : <Trash2 size={14} />}
+                    </button>
+                    <span className="w-6 text-center text-sm font-bold tabular-nums">{qty}</span>
+                    <button
+                      type="button"
+                      aria-label={tr("sales.oneMore", { name: first.name })}
+                      disabled={!canRepeat}
+                      onClick={() => setBasket((b) => [...b, { ...first, id: first.id.startsWith("product-") || first.id.startsWith("membership-") || first.id.startsWith("gift-card-") ? `${first.id}-${Date.now()}` : first.id, basketId: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }])}
+                      className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[rgb(var(--reg-canvas))] disabled:opacity-30"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                  <span className="w-[72px] text-right text-[15px] font-bold tabular-nums">{(unit * qty).toFixed(2)}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {/* Who did it, and a note */}
+      {basket.length > 0 && (
+        <div className="space-y-3 border-t border-[rgb(var(--reg-line)/0.7)] px-5 py-3">
+          {staff.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{tr("sales.doneBy")}</p>
+              <div role="radiogroup" aria-label={tr("sales.doneBy")} className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+                {staff.map((s) => {
+                  const on = ticketStaffId === s.id;
+                  return (
+                    <button key={s.id} type="button" role="radio" aria-checked={on} onClick={() => setSelectedAppointmentStaffId(s.id)} className={cn("inline-flex h-9 shrink-0 items-center gap-2 rounded-full pl-1 pr-3 text-sm font-semibold ring-1 ring-inset", on ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-[rgb(var(--reg-brand))]" : "ring-[rgb(var(--reg-line))]")}>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-[10px] font-bold ring-1 ring-[rgb(var(--reg-line))]">{initialsOf(s.name)}</span>
+                      {s.name.split(" ")[0]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <input
+            aria-label={tr("sales.noteOnThisSale")}
+            className="h-10 w-full rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm"
+            placeholder={tr("common.noteOptional")}
+            value={ticketNote}
+            onChange={(e) => setTicketNote(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Totals + charge */}
+      <div className="border-t border-[rgb(var(--reg-line)/0.8)] bg-white px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
+        <dl className="space-y-1 text-sm">
+          <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.subtotal")}</dt><dd className="tabular-nums">{calculateTotal().toFixed(2)} {currencySymbol()}</dd></div>
+          {depositOnTicket > 0 && <div className="flex justify-between text-emerald-700"><dt>{tr("sales.depositAlreadyPaid")}</dt><dd className="tabular-nums">−{depositOnTicket.toFixed(2)}</dd></div>}
+          {bookedPromo && <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.promo", { code: bookedPromo.code })}</dt><dd>{tr("sales.appliedAtPayment")}</dd></div>}
+          {salonInfo.taxRate > 0 && <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.tax", { taxRate: salonInfo.taxRate })}</dt><dd>{tr("sales.included")}</dd></div>}
+        </dl>
+        <p className="mt-1 text-xs text-[rgb(var(--reg-muted))]">{tr("sales.discountAndTipOnThe")}</p>
+        <button
+          type="button"
+          disabled={basket.length === 0}
+          onClick={() => { setTicketOpen(false); setShowPaymentMethod(true); }}
+          className="mt-3 flex h-[52px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] text-base font-bold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] transition hover:brightness-110 disabled:opacity-50"
+        >
+          {tr("sales.charge", { value: Math.max(0, calculateTotal() - depositOnTicket).toFixed(2), value2: currencySymbol() })}
+        </button>
+      </div>
+    </>
+  );
+
+  // Paid: what to hand back, the receipt, and the way to the next client.
+  if (lastSale) {
+    const methodName: Record<string, string> = { get cash() { return tr("common.cash"); }, get "card-terminal"() { return tr("common.card"); }, get split() { return tr("sales.cashPlusCard"); }, get "gift-card"() { return tr("paymentMethod.giftCard"); }, get package() { return tr("paymentMethod.package"); }, get membership() { return tr("paymentMethod.membership"); } };
+    return (
+      <AppLayout>
+        <div className="flex min-h-full items-start justify-center bg-[rgb(var(--reg-canvas))] px-4 py-8 text-[rgb(var(--reg-ink))] md:items-center" style={{ fontFamily: BRAND_FONT }}>
+          <div className="w-full max-w-md text-center">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))] animate-in zoom-in-75 duration-500 motion-reduce:animate-none">
+              <Check className="h-8 w-8" aria-hidden />
+            </span>
+            <h1 className="mt-5 text-[28px] font-extrabold tracking-[-0.03em]">{tr("sales.paid", { value: lastSale.total.toFixed(2), value2: currencySymbol() })}</h1>
+            <p className="mt-1 text-[rgb(var(--reg-muted))]">{methodName[lastSale.method] ?? lastSale.method}{lastSale.client ? ` · ${lastSale.client}` : tr("sales.walkIn")}</p>
+            {lastSale.change > 0 && (
+              <div className="mx-auto mt-5 inline-flex items-baseline gap-3 rounded-2xl bg-emerald-50 px-5 py-3 text-emerald-900 ring-1 ring-inset ring-emerald-200">
+                <span className="text-sm font-semibold">{tr("sales.changeToGive")}</span>
+                <span className="text-2xl font-extrabold tabular-nums">{lastSale.change.toFixed(2)} {currencySymbol()}</span>
+              </div>
+            )}
+            <div id="till-receipt" className="mx-auto mt-6 max-w-[320px] overflow-hidden rounded-xl bg-white text-left font-mono text-[12px] leading-relaxed shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <div className="h-1.5" style={{ backgroundColor: salonInfo.brandColor || "rgb(var(--reg-brand))" }} aria-hidden />
+              <div className="px-5 py-4">
+                <p className="text-center text-[13px] font-bold">{(() => { try { return JSON.parse(localStorage.getItem("currentBusiness") || "{}").name || ""; } catch { return ""; } })()}</p>
+                <p className="text-center text-[rgb(var(--reg-muted))]">{formatLocaleDate(lastSale.at, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} · #{lastSale.saleId}</p>
+                <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+                {lastSale.lines.map((l, i) => (
+                  <p key={i} className="flex justify-between gap-3"><span className="truncate">{l.name}</span><span className="tabular-nums">{l.price.toFixed(2)}</span></p>
+                ))}
+                <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+                <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span className="tabular-nums">{lastSale.total.toFixed(2)} {currencySymbol()}</span></p>
+                {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+              <button type="button" onClick={() => window.print()} className="h-[52px] flex-1 rounded-full border border-[rgb(var(--reg-line))] bg-white text-base font-semibold hover:bg-[rgb(var(--reg-canvas))]">
+                {tr("sales.printReceipt")}
+              </button>
+              <button type="button" autoFocus onClick={() => setLastSale(null)} className="h-[52px] flex-[1.4] rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] text-base font-bold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110">
+                {tr("sales.newSale")}
+              </button>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   // If payment method page is shown, render it instead
   if (showPaymentMethod) {
     const orderItems = basket.map(item => {
@@ -828,20 +1201,14 @@ export default function SalesPage() {
         // always subtracted it; the screen did not, so the cashier asked for the full
         // price and the customer paid the deposit twice.
         depositPaid={(() => {
-          if (!selectedAppointmentId) return 0;
-          const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
-          return appt?.depositPaid ? Number(appt.depositAmount ?? 0) : 0;
+          return ticketAppts.reduce((sum, a) => sum + (a.depositPaid ? Number(a.depositAmount ?? 0) : 0), 0);
         })()}
         bookedPromo={bookedPromo}
         pointsCredit={(() => {
-          if (!selectedAppointmentId) return 0;
-          const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
-          return Number((appt as { pointsDiscount?: number } | undefined)?.pointsDiscount ?? 0);
+          return ticketAppts.reduce((sum, a) => sum + Number((a as { pointsDiscount?: number }).pointsDiscount ?? 0), 0);
         })()}
         prepaidOnline={(() => {
-          if (!selectedAppointmentId) return 0;
-          const appt = todayAppointments.find((a) => a.id === selectedAppointmentId);
-          return Number((appt as { prepaidAmount?: number } | undefined)?.prepaidAmount ?? 0);
+          return ticketAppts.reduce((sum, a) => sum + Number((a as { prepaidAmount?: number }).prepaidAmount ?? 0), 0);
         })()}
         // The client object, not its name: every benefit at the till — membership,
         // package, points, the stamp card — is keyed by client id, and this was passing
@@ -902,6 +1269,8 @@ export default function SalesPage() {
                 coveredBy: paymentData.coverage?.[lineKey(item)],
                 membershipId: item.membershipId,
                 giftCardAmount: item.giftCardAmount,
+                // Which booking this line is, so the receipt and the commission follow it.
+                appointmentId: item.appointmentId,
               };
             });
 
@@ -933,15 +1302,30 @@ export default function SalesPage() {
               giftCardCode: paymentData.giftCardCode,
               splitCashAmount: paymentData.splitCashAmount,
               splitCardAmount: paymentData.splitCardAmount,
-              appointmentId: selectedAppointmentId || undefined,
+              // One visit, one sale: every booking on the ticket settles with it.
+              appointmentIds: ticketApptIds.length > 0 ? ticketApptIds : undefined,
+              appointmentId: ticketApptIds.length > 0 ? undefined : selectedAppointmentId || undefined,
               promoCode: bookedPromo?.code,
+              notes: ticketNote.trim() || undefined,
             };
 
             // Confirm payment (creates sale, calculates commissions, updates appointment)
             const response = await paymentConfirmationService.confirmPayment(confirmationRequest);
 
             // Success
-            toast.success('Payment processed successfully');
+            toast.success(tr("sales.paymentProcessedSuccessfully"));
+            setLastSale({
+              saleId: response.saleId,
+              total: Number(response.totalAmount ?? paymentData.amount),
+              change: paymentData.paymentMethod === "cash" ? Math.max(0, paymentData.change) : 0,
+              method: paymentData.paymentMethod,
+              client: selectedClient ? getClientDisplayName(selectedClient) : null,
+              lines: basket.map((item) => {
+                const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
+                return { name: item.name, price: isNaN(raw) ? 0 : raw };
+              }),
+              at: new Date(),
+            });
             // The shelf just changed; show what is left, not what was there before the sale.
             if (businessId) productService.list(businessId).then(setProducts).catch(() => {});
             setShowPaymentMethod(false);
@@ -949,41 +1333,56 @@ export default function SalesPage() {
             setSelectedClient(null);
             setSelectedAppointmentId(null);
             setSelectedAppointmentStaffId(null);
+            setTicketNote("");
           } catch (error) {
             console.error('Failed to process payment:', error);
-            toast.error((error instanceof Error && error.message) || 'Failed to process payment. Please try again.');
+            toast.error((error instanceof Error && error.message) || tr("sales.failedToProcessPaymentPlease"));
           }
         }}
         onCancel={() => setShowPaymentMethod(false)}
+        onDiscard={() => {
+          setShowPaymentMethod(false);
+          clearBasket();
+          setSelectedAppointmentId(null);
+          setSelectedAppointmentStaffId(null);
+          setTicketNote("");
+        }}
       />
     );
   }
 
   return (
     <AppLayout>
-      <div className="h-full w-full flex flex-col bg-white" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Top Navigation Tabs */}
-        <div className="flex border-b border-gray-200 bg-white">
+      <div className="flex h-full w-full flex-col bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', fontFamily: BRAND_FONT }}>
+        {/* Header: the page name and its two modes. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 py-4 backdrop-blur-xl md:px-8">
+          <h1 className="text-[28px] font-extrabold leading-none tracking-[-0.03em] md:text-[32px]">{tr("common.till")}</h1>
+          <div role="tablist" aria-label={tr("common.till")} className="flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
           <button
+            role="tab"
+            aria-selected={activeTab === "NEW SALES"}
             onClick={() => setActiveTab("NEW SALES")}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
+            className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
               activeTab === "NEW SALES"
-                ? "text-gray-900 border-b-2 border-gray-900"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
+                : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
             }`}
           >
-            NEW SALES
+            {tr("sales.newSale")}
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === "TRANSACTIONS"}
             onClick={() => setActiveTab("TRANSACTIONS")}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
+            className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
               activeTab === "TRANSACTIONS"
-                ? "text-gray-900 border-b-2 border-gray-900"
-                : "text-gray-500 hover:text-gray-700"
+                ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
+                : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
             }`}
           >
-            TRANSACTIONS
+            {tr("sales.transactions")}
           </button>
+          </div>
           {/* Invoices section disabled */}
           {/* <button
             onClick={() => setActiveTab("INVOICES")}
@@ -999,614 +1398,304 @@ export default function SalesPage() {
 
         {/* Main Content Area */}
         {activeTab === "NEW SALES" ? (
-          // Phone: one column that scrolls (categories as a swipeable row, then items, then
-          // the basket). It used to keep three fixed desktop columns, which squeezed the
-          // items to a sliver and pushed the basket and "Select payment method" off screen.
-          <div className="flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-visible" style={{ minHeight: 0, width: '100%' }}>
-            {/* Left Sidebar */}
-            <div className="flex shrink-0 flex-col border-b border-gray-200 bg-white md:h-full md:w-64 md:overflow-y-auto md:border-b-0 md:border-r-2 md:border-gray-300">
-              <div className="flex gap-1 overflow-x-auto p-2 md:block md:space-y-1 md:p-4">
-                {sidebarCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveCategory(category.id)}
-                    className={`shrink-0 whitespace-nowrap text-left px-4 py-2.5 text-sm font-medium transition-colors relative md:w-full ${
-                      activeCategory === category.id
-                        ? "text-gray-900 bg-gray-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }`}
-                  >
-                    {activeCategory === category.id && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900" />
-                    )}
-                    {category.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Main Content - Category Content */}
-            <div className="flex-1 p-4 md:overflow-y-auto md:p-6">
-              {activeCategory === "quick-sale" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">QUICK SALE</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowEditDialog(true)}
-                  className="flex items-center gap-2"
-                >
-                  <Edit2 size={16} />
-                  Edit
-            </Button>
-              </div>
-              {servicesLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-gray-500">Loading services...</p>
-                </div>
-              ) : displayItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <p className="text-gray-900 font-medium mb-2">No quick sale items configured</p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Click "Edit" to select services and combos for quick sale
-                  </p>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowEditDialog(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit2 size={16} />
-                    Configure Quick Sale
-            </Button>
-          </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-4">
-                  {displayItems.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => addToBasket(item)}
-                      className={`
-                        bg-white border border-gray-200 rounded-lg p-4 cursor-pointer
-                        hover:shadow-md transition-all border-l-4
-                        ${getColorClass(item.color)}
-                      `}
-                      style={item.color && item.color.startsWith('#') ? { borderLeftColor: item.color } : undefined}
-                    >
-                      <div className="flex items-start justify-between mb-1">
-                        <h3 className="font-medium text-gray-900 flex-1">{item.name}</h3>
-                        {item.type === 'combo' && (
-                          <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                            COMBO
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 mb-2">{item.duration}</p>
-                      <p className="text-base font-semibold text-gray-900">{item.price}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-                </>
-              )}
-
-              {activeCategory === "services" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">SERVICES</h2>
+          <div className="flex flex-1 flex-col md:min-h-0 md:flex-row">
+            {/* ── catalogue ── */}
+            <div className="min-w-0 flex-1 space-y-5 px-4 pb-40 pt-4 md:overflow-y-auto md:px-6 md:pb-6 md:pt-5">
+              {/* Today's bookings still to be paid — the most common sale, so it leads. */}
+              {(loadingAppointments || appointmentsError || todayAppointments.length > 0) && (
+                <section aria-label={tr("sales.todaySAppointmentsToCheck")}>
+                  <div className="mb-2 flex items-baseline justify-between gap-2">
+                    <h2 className="text-base font-extrabold">{tr("sales.toCheckOutToday")}</h2>
+                    <span className="text-xs text-[rgb(var(--reg-muted))]">{format(new Date(), "EEEE d MMMM")}</span>
                   </div>
-                  
-                  {/* Search Bar */}
-                  <div className="mb-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="text"
-                        placeholder="Search services and combos..."
-                        value={serviceSearchQuery}
-                        onChange={(e) => setServiceSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      />
-                    </div>
-                  </div>
-
-                  {servicesLoading || loadingCategories ? (
-                    <div className="flex items-center justify-center h-64">
-                      <p className="text-gray-500">Loading services...</p>
-                    </div>
-                  ) : Object.keys(groupedServices).length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <p className="text-gray-900 font-medium mb-2">
-                        {serviceSearchQuery ? 'No services found' : 'No services available'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {serviceSearchQuery 
-                          ? 'Try a different search term'
-                          : 'Create services and combos to see them here'}
-                      </p>
-                    </div>
+                  {loadingAppointments ? (
+                    <div className="h-20 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />
+                  ) : appointmentsError ? (
+                    // A failed load must not read as "everything is settled".
+                    <p className="rounded-[20px] bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-inset ring-rose-200">
+                      {tr("sales.couldNotLoadTodayS")}
+                    </p>
                   ) : (
-                    <div className="space-y-6">
-                      {Object.entries(groupedServices).map(([categoryName, categoryServices]) => (
-                        <div key={categoryName}>
-                          <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">
-                            {categoryName}
-                          </h3>
-                          <div className="grid grid-cols-3 gap-4">
-                            {categoryServices
-                              .filter(s => s.isActive && s.isVisible)
-                              .map((service) => {
+                    <ul className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin] md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
+                      {groupIntoVisits(todayAppointments).map(({ key, members }) => {
+                        const appointment = members[0];
+                        const staffMember = staff.find((s) => s.id === appointment.staffId);
+                        const nameOf = (m: Appointment) => m.serviceName || services.find((sv) => sv.id === m.serviceId)?.name || tr("common.service");
+                        const paid = members.reduce((sum, m) => sum + (m.depositPaid ? Math.min(Number(m.depositAmount ?? 0), m.price ?? 0) : 0), 0);
+                        const total = members.reduce((sum, m) => sum + Number(m.price ?? 0), 0);
+                        const hasPrice = members.some((m) => m.price != null);
+                        const inTicket = members.every((m) => ticketApptIds.includes(m.id));
+                        return (
+                          <li key={key} className="w-[260px] shrink-0 md:w-auto">
+                            <div className={cn("flex h-full flex-col rounded-[18px] bg-white p-3.5 ring-1 ring-[rgb(var(--reg-line)/0.8)]", inTicket && "ring-2 ring-[rgb(var(--reg-brand))]")}>
+                              <div className="flex items-start gap-3">
+                                <span className="rounded-xl bg-[rgb(var(--reg-canvas))] px-2.5 py-1.5 text-sm font-extrabold tabular-nums">{appointment.startTime?.slice(0, 5)}</span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-[15px] font-bold">{appointment.clientName || tr("sales.walkInClient")}</p>
+                                  <p className="truncate text-sm text-[rgb(var(--reg-muted))]">
+                                    {members.map(nameOf).join(" + ")}
+                                    {members.length > 1
+                                      ? ` · ${tr("sales.visitServices", { count: members.length })}`
+                                      : staffMember?.name || appointment.staffName ? ` · ${staffMember?.name || appointment.staffName}` : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="mt-3 flex items-center justify-between gap-2">
+                                <span className="min-w-0 text-sm font-extrabold tabular-nums">
+                                  {hasPrice ? `${(total - paid).toFixed(2)} ${currencySymbol()}` : "—"}
+                                  {/* #117: a deposit already taken, on the row the cashier reads first. */}
+                                  {paid > 0 && <span className="block text-[11px] font-semibold text-emerald-700">{tr("sales.depositPaid", { value: paid.toFixed(2) })}</span>}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={inTicket}
+                                  onClick={() => checkoutVisit(members)}
+                                  className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-full bg-[rgb(var(--reg-ink))] px-3.5 text-sm font-semibold text-white transition hover:bg-[rgb(var(--reg-ink)/0.85)] disabled:bg-[rgb(var(--reg-brand-soft))] disabled:text-[rgb(var(--reg-brand-strong))]"
+                                >
+                                  {inTicket ? tr("sales.onTheTicket") : tr("sales.checkOut")}
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              )}
+
+              <section aria-label={tr("sales.catalogue")} className="space-y-3">
+                <div className="relative">
+                  <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
+                  <input
+                    aria-label={tr("sales.searchTheCatalogue")}
+                    className="h-11 w-full rounded-[14px] border border-[rgb(var(--reg-line))] bg-white pl-10 pr-4 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.45)]"
+                    placeholder={tr("sales.searchServicesExtrasProducts")}
+                    value={serviceSearchQuery}
+                    onChange={(e) => { setServiceSearchQuery(e.target.value); setAddonSearchQuery(e.target.value); }}
+                  />
+                </div>
+                <div role="tablist" aria-label={tr("sales.catalogueSections")} className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+                  {sidebarCategories.filter((c) => c.id !== "to-be-settled").map((category) => {
+                    const on = activeCategory === category.id;
+                    return (
+                      <button
+                        key={category.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={on}
+                        onClick={() => setActiveCategory(category.id)}
+                        className={cn("inline-flex h-9 shrink-0 items-center rounded-full px-3.5 text-sm font-semibold capitalize", on ? "bg-[rgb(var(--reg-ink))] text-white" : "bg-white text-[rgb(var(--reg-ink)/0.75)] ring-1 ring-inset ring-[rgb(var(--reg-line))]")}
+                      >
+                        {category.name.toLocaleLowerCase(getLocale())}
+                      </button>
+                    );
+                  })}
+                  {activeCategory === "quick-sale" && (
+                    <button type="button" onClick={() => setShowEditDialog(true)} className="ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:bg-[rgb(var(--reg-brand-soft))]">
+                      <Edit2 size={14} />{" "}{tr("sales.editQuickSale")}
+                    </button>
+                  )}
+                </div>
+
+                {(() => {
+                  const q = serviceSearchQuery.trim().toLowerCase();
+                  const tile = (key: string, p: { name: string; meta?: string; price: string; color?: string; badge?: string; disabled?: boolean; onAdd: () => void }) => (
+                    <li key={key}>
+                      <button
+                        type="button"
+                        disabled={p.disabled}
+                        onClick={p.onAdd}
+                        className="group relative flex h-full w-full flex-col overflow-hidden rounded-[18px] bg-white p-3.5 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)] transition hover:-translate-y-0.5 hover:ring-[rgb(var(--reg-brand)/0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)] active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0"
+                      >
+                        <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: p.color && p.color.startsWith("#") ? p.color : "rgb(var(--reg-brand) / 0.35)" }} aria-hidden />
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="line-clamp-2 text-[15px] font-semibold leading-snug">{p.name}</span>
+                          {p.badge && <span className="shrink-0 rounded-full bg-[rgb(var(--reg-ink)/0.06)] px-2 py-0.5 text-[10px] font-bold uppercase">{p.badge}</span>}
+                        </span>
+                        {p.meta && <span className="mt-0.5 text-xs text-[rgb(var(--reg-muted))]">{p.meta}</span>}
+                        <span className="mt-auto flex items-center justify-between pt-3">
+                          {(() => {
+                            // Offers come as "32.00 ₼ (was 40.00)": show the old price struck through.
+                            const m = p.price.match(/^(.*?)\s*\(was (.*)\)$/);
+                            return m ? (
+                              <span className="leading-tight">
+                                <span className="block text-[15px] font-extrabold tabular-nums text-[#c4294f]">{m[1]}</span>
+                                <span className="block text-xs tabular-nums text-[rgb(var(--reg-muted))] line-through">{m[2]}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[15px] font-extrabold tabular-nums">{p.price}</span>
+                            );
+                          })()}
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] transition group-hover:bg-[rgb(var(--reg-brand))] group-hover:text-white" aria-hidden>
+                            <Plus size={15} />
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                  const grid = (children: React.ReactNode) => <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">{children}</ul>;
+                  const empty = (title: string, body: string, action?: React.ReactNode) => (
+                    <div className="rounded-[20px] bg-white px-5 py-10 text-center ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <p className="font-bold">{title}</p>
+                      <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{body}</p>
+                      {action && <div className="mt-4">{action}</div>}
+                    </div>
+                  );
+                  const loadingBox = <div className="h-40 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />;
+
+                  if (activeCategory === "quick-sale") {
+                    if (servicesLoading) return loadingBox;
+                    const items = displayItems.filter((i) => !q || i.name.toLowerCase().includes(q));
+                    if (displayItems.length === 0)
+                      return empty(tr("sales.noQuickSaleItemsYet"), tr("sales.pickTheServicesYouSell"), (
+                        <button type="button" onClick={() => setShowEditDialog(true)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[rgb(var(--reg-ink))] px-4 text-sm font-semibold text-white"><Edit2 size={14} />{" "}{tr("sales.setUpQuickSale")}</button>
+                      ));
+                    return grid(items.map((item) => tile(item.id, { name: item.name, meta: item.duration, price: item.price, color: item.color, badge: item.type === "combo" ? tr("common.combo") : undefined, onAdd: () => addToBasket(item) })));
+                  }
+                  if (activeCategory === "services") {
+                    if (servicesLoading || loadingCategories) return loadingBox;
+                    const groups = Object.entries(groupedServices);
+                    if (groups.length === 0) return empty(serviceSearchQuery ? tr("sales.noServicesFound") : tr("common.noServicesYet"), serviceSearchQuery ? tr("sales.tryADifferentSearch") : tr("sales.createServicesInTheCatalogue"));
+                    return (
+                      <div className="space-y-5">
+                        {groups.map(([categoryName, categoryServices]) => {
+                          const list = categoryServices.filter((s) => s.isActive && s.isVisible);
+                          if (!list.length) return null;
+                          return (
+                            <div key={categoryName}>
+                              <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{categoryName}</h3>
+                              {grid(list.map((service) => {
                                 const serviceItem: QuickSaleItem = {
                                   id: service.id.toString(),
                                   name: service.name,
-                                  duration: service.durationMinutes 
-                                    ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`.replace(/^0h /, '').replace(/ 0min$/, 'min')
-                                    : 'N/A',
+                                  duration: service.durationMinutes
+                                    ? formatMinutes(service.durationMinutes)
+                                    : "N/A",
                                   price: servicePriceLabel(service, offers),
-                                  color: service.color || 'gray',
-                                  type: (service.serviceType === 'COMBO' ? 'combo' : 'service') as 'service' | 'combo',
+                                  color: service.color || "gray",
+                                  type: (service.serviceType === "COMBO" ? "combo" : "service") as "service" | "combo",
                                   serviceId: service.id,
                                 };
-                                
-            return (
-                                  <div
-                                    key={service.id}
-                                    onClick={() => addToBasket(serviceItem)}
-                                    className={`
-                                      bg-white border border-gray-200 rounded-lg p-4 cursor-pointer
-                                      hover:shadow-md transition-all border-l-4
-                                      ${getColorClass(service.color || 'gray')}
-                                    `}
-                                    style={service.color && service.color.startsWith('#') ? { borderLeftColor: service.color } : undefined}
-                                  >
-                                    <div className="flex items-start justify-between mb-1">
-                                      <h3 className="font-medium text-gray-900 flex-1">{service.name}</h3>
-                                      {service.serviceType === 'COMBO' && (
-                                        <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                                          COMBO
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-sm text-gray-500 mb-2">{serviceItem.duration}</p>
-                                    <p className="text-base font-semibold text-gray-900">{serviceItem.price}</p>
-                                  </div>
-            );
-          })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activeCategory === "extras" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">EXTRAS</h2>
-                  </div>
-                  
-                  {/* Search Bar */}
-                  <div className="mb-4">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                        type="text"
-                        placeholder="Search addons..."
-                        value={addonSearchQuery}
-                        onChange={(e) => setAddonSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      />
-                    </div>
-                  </div>
-
-                  {addonsLoading ? (
-                    <div className="flex items-center justify-center h-64">
-                      <p className="text-gray-500">Loading addons...</p>
-                    </div>
-                  ) : addons.filter(a => {
-                      if (!a.isActive || !a.isVisible) return false;
-                      if (!addonSearchQuery) return true;
-                      const query = addonSearchQuery.toLowerCase();
-                      return a.name.toLowerCase().includes(query) || 
-                             a.description?.toLowerCase().includes(query);
-                    }).length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <p className="text-gray-900 font-medium mb-2">
-                        {addonSearchQuery ? 'No addons found' : 'No addons available'}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {addonSearchQuery 
-                          ? 'Try a different search term'
-                          : 'Create addons to see them here'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-4">
-                      {addons
-                        .filter(addon => {
-                          if (!addon.isActive || !addon.isVisible) return false;
-                          if (!addonSearchQuery) return true;
-                          const query = addonSearchQuery.toLowerCase();
-                          return addon.name.toLowerCase().includes(query) || 
-                                 addon.description?.toLowerCase().includes(query);
-                        })
-                        .map((addon) => {
-                          const addonItem: QuickSaleItem = {
-                            id: addon.id.toString(),
-                            name: addon.name,
-                            duration: 'N/A',
-                            price: addon.price 
-                              ? `${addon.price.toFixed(2)} ${currencySymbol()}`
-                              : addon.priceType === 'FROM' 
-                                ? `From ${addon.price?.toFixed(2) || '0.00'} ${currencySymbol()}`
-                                : 'Price on request',
-                            color: addon.color || 'gray',
-                            type: 'service',
-                            serviceId: addon.id,
-                          };
-                          
-                          return (
-                            <div
-                              key={addon.id}
-                              onClick={() => addToBasket(addonItem)}
-                              className={`
-                                bg-white border border-gray-200 rounded-lg p-4 cursor-pointer
-                                hover:shadow-md transition-all border-l-4
-                                ${getColorClass(addon.color || 'gray')}
-                              `}
-                              style={addon.color && addon.color.startsWith('#') ? { borderLeftColor: addon.color } : undefined}
-                            >
-                              <div className="flex items-start justify-between mb-1">
-                                <h3 className="font-medium text-gray-900 flex-1">{addon.name}</h3>
-                              </div>
-                              {addon.description && (
-                                <p className="text-sm text-gray-500 mb-2">{addon.description}</p>
-                              )}
-                              <p className="text-base font-semibold text-gray-900">{addonItem.price}</p>
+                                return tile(String(service.id), { name: service.name, meta: serviceItem.duration, price: serviceItem.price, color: service.color, badge: service.serviceType === "COMBO" ? tr("common.combo") : undefined, onAdd: () => addToBasket(serviceItem) });
+                              }))}
                             </div>
                           );
                         })}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activeCategory === "memberships" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">MEMBERSHIPS</h2>
-                  </div>
-                  {sellableMemberships.length === 0 ? (
-                    <p className="text-sm text-gray-500">
-                      No plans yet. Create one under Memberships and it becomes sellable here.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                      {sellableMemberships.map((plan) => (
-                        <button
-                          key={plan.id}
-                          onClick={() =>
-                            setBasket((b) => [
-                              ...b,
-                              {
-                                id: `membership-${plan.id}-${Date.now()}`,
-                                name: plan.name,
-                                price: String(plan.price),
-                                type: "membership",
-                                // The sale enrols the client in this plan once it is paid.
-                                membershipId: plan.id,
-                              },
-                            ])
-                          }
-                          className="rounded-lg border border-gray-200 p-4 text-left hover:border-gray-400"
-                        >
-                          <p className="font-medium text-gray-900">{plan.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {plan.price} {currencySymbol()} every{" "}
-                            {plan.billing_period_months === 1
-                              ? "month"
-                              : `${plan.billing_period_months} months`}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {[
-                              plan.discount_percent > 0 ? `${plan.discount_percent}% off visits` : null,
-                              plan.included_sessions > 0
-                                ? `${plan.included_sessions} sessions included`
-                                : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <p className="mt-4 text-xs text-gray-500">
-                    Pick the client on the checkout screen — a membership is sold to someone, not to
-                    the counter.
-                  </p>
-                </>
-              )}
-
-              {activeCategory === "products" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">PRODUCTS</h2>
-                  </div>
-                  {products.length === 0 ? (
-                    <p className="text-sm text-gray-500">No products yet. Add them under Catalogue › Inventory.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {products.map((p) => {
-                        const out = p.quantityOnHand <= 0;
-                        return (
+                      </div>
+                    );
+                  }
+                  if (activeCategory === "extras") {
+                    if (addonsLoading) return loadingBox;
+                    const list = addons.filter((addon) => !q || addon.name.toLowerCase().includes(q) || addon.description?.toLowerCase().includes(q));
+                    if (list.length === 0) return empty(q ? tr("sales.noExtrasFound") : tr("sales.noExtrasYet"), q ? tr("sales.tryADifferentSearch") : tr("sales.addOnsYouCreateIn"));
+                    return grid(list.map((addon) => {
+                      const addonItem: QuickSaleItem = {
+                        id: addon.id.toString(),
+                        name: addon.name,
+                        duration: "N/A",
+                        price: addon.price
+                          ? `${addon.price.toFixed(2)} ${currencySymbol()}`
+                          : addon.priceType === "FROM"
+                            ? `From ${addon.price?.toFixed(2) || "0.00"} ${currencySymbol()}`
+                            : tr("sales.priceOnRequest"),
+                        color: addon.color || "gray",
+                        type: "service",
+                        serviceId: addon.id,
+                      };
+                      return tile(`addon-${addon.id}`, { name: addon.name, meta: addon.description, price: addonItem.price, color: addon.color, badge: tr("sales.extra"), onAdd: () => addToBasket(addonItem) });
+                    }));
+                  }
+                  if (activeCategory === "memberships") {
+                    if (sellableMemberships.length === 0) return empty(tr("sales.noMembershipsForSale"), tr("sales.membershipPlansAppearHereOnce"));
+                    return grid(sellableMemberships.map((plan) =>
+                      tile(`m-${plan.id}`, {
+                        name: plan.name,
+                        meta: `every ${plan.billing_period_months === 1 ? "month" : `${plan.billing_period_months} months`}`,
+                        price: `${plan.price} ${currencySymbol()}`,
+                        onAdd: () =>
+                          setBasket((b) => [...b, { id: `membership-${plan.id}-${Date.now()}`, name: plan.name, price: String(plan.price), type: "membership", membershipId: plan.id }]),
+                      }),
+                    ));
+                  }
+                  if (activeCategory === "products") {
+                    const list = products.filter((p) => !q || p.name.toLowerCase().includes(q));
+                    if (products.length === 0) return empty(tr("sales.noProductsYet"), tr("sales.addThemUnderCatalogueInventory"));
+                    return grid(list.map((p) => {
+                      const out = p.quantityOnHand <= 0;
+                      return tile(`p-${p.id}`, {
+                        name: p.name,
+                        meta: out ? tr("sales.outOfStock") : tr("sales.inStock", { count: p.quantityOnHand }),
+                        price: `${Number(p.price).toFixed(2)} ${currencySymbol()}`,
+                        badge: p.lowStock && !out ? tr("sales.low") : undefined,
+                        disabled: out,
+                        onAdd: () => setBasket((b) => [...b, { id: `product-${p.id}-${Date.now()}`, name: p.name, price: String(p.price), type: "product", productId: p.id }]),
+                      });
+                    }));
+                  }
+                  if (activeCategory === "gift-cards") {
+                    return (
+                      <div className="max-w-md rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                        <p className="font-bold">{tr("sales.sellAGiftCard")}</p>
+                        <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{tr("sales.issuedToTheClientOn")}</p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {[50, 100, 200, 500].map((preset) => (
+                            <button key={preset} type="button" onClick={() => setGiftCardAmount(String(preset))} className={cn("h-10 rounded-full px-4 text-sm font-semibold ring-1 ring-inset", giftCardAmount === String(preset) ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-[rgb(var(--reg-brand))]" : "ring-[rgb(var(--reg-line))]")}>
+                              {preset} {currencySymbol()}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <input aria-label={tr("sales.giftCardAmount", { value: currencySymbol() })} type="number" min={1} value={giftCardAmount} onChange={(e) => setGiftCardAmount(e.target.value)} className="h-11 w-36 rounded-[14px] border border-[rgb(var(--reg-line))] px-4 text-base" />
                           <button
-                            key={p.id}
-                            disabled={out}
-                            onClick={() =>
-                              setBasket((b) => [
-                                ...b,
-                                {
-                                  id: `product-${p.id}-${Date.now()}`,
-                                  name: p.name,
-                                  price: String(p.price),
-                                  type: "product",
-                                  productId: p.id,
-                                },
-                              ])
-                            }
-                            className="rounded-lg border border-gray-200 p-4 text-left hover:border-gray-400 disabled:opacity-50"
-                          >
-                            <p className="font-medium text-gray-900">{p.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {Number(p.price).toFixed(2)} {currencySymbol()} · {out ? "Out of stock" : `${p.quantityOnHand} in stock`}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activeCategory === "gift-cards" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">GIFT CARDS</h2>
-                  </div>
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div>
-                      <label className="text-xs text-gray-500">Amount ({currencySymbol()})</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={giftCardAmount}
-                        onChange={(e) => setGiftCardAmount(e.target.value)}
-                        className="block w-40 rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                      />
-                    </div>
-                    <button
-                      onClick={() => {
-                        const amount = parseFloat(giftCardAmount) || 0;
-                        if (amount <= 0) return;
-                        setBasket((b) => [
-                          ...b,
-                          {
-                            id: `gift-card-${Date.now()}`,
-                            name: `Gift card ${amount} ${currencySymbol()}`,
-                            price: String(amount),
-                            type: "gift-card",
-                            // The sale issues the card once it is paid, to the client on the bill.
-                            giftCardAmount: amount,
-                          },
-                        ]);
-                      }}
-                      className="rounded-lg bg-gray-900 px-4 py-2 text-white"
-                    >
-                      Add to basket
-                    </button>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {[50, 100, 200, 500].map((preset) => (
-                      <button
-                        key={preset}
-                        onClick={() => setGiftCardAmount(String(preset))}
-                        className="rounded-full border border-gray-300 px-4 py-1 text-sm hover:border-gray-500"
-                      >
-                        {preset} {currencySymbol()}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-4 text-xs text-gray-500">
-                    The card is issued to the client on the bill, so it shows up in their app with no
-                    code to type.
-                  </p>
-                </>
-              )}
-
-              {activeCategory === "to-be-settled" && (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900">TO BE SETTLED</h2>
-                    <p className="text-sm text-gray-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
-                  </div>
-                  {loadingAppointments ? (
-                    <div className="flex items-center justify-center h-64">
-                      <p className="text-gray-500">Loading appointments...</p>
-                    </div>
-                  ) : appointmentsError ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <p className="text-gray-900 font-medium mb-2">Could not load today's appointments</p>
-                      <p className="text-sm text-gray-500">
-                        This is not the same as nothing being owed. Check your connection and reload.
-                      </p>
-                    </div>
-                  ) : todayAppointments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <p className="text-gray-900 font-medium mb-2">Nothing left to settle today</p>
-                      <p className="text-sm text-gray-500">
-                        Every appointment today is either paid or not yet booked. Click a row here to add it
-                        to the basket and take payment.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {todayAppointments.map((appointment) => {
-                        // Find staff details for this appointment
-                        const staffMember = staff.find(s => s.id === appointment.staffId);
-                        const staffInitials = staffMember?.initials || 
-                          (staffMember?.name ? staffMember.name.split(' ').map(n => n[0]).join('').toUpperCase() : 
-                          (appointment.staffName ? appointment.staffName.split(' ').map(n => n[0]).join('').toUpperCase() : ''));
-                        const staffAvatarUrl = staffMember?.avatarUrl;
-                        const staffName = staffMember?.name || appointment.staffName || 'Staff';
-                        const staffPosition = staffMember?.position;
-
-                        // Avatar colors based on staff ID
-                        const avatarColors = [
-                          "from-rose-400 to-pink-500",
-                          "from-amber-400 to-orange-500", 
-                          "from-emerald-400 to-teal-500",
-                          "from-blue-400 to-indigo-500",
-                          "from-violet-400 to-purple-500",
-                          "from-cyan-400 to-sky-500",
-                        ];
-                        const colorIndex = (appointment.staffId || 0) % avatarColors.length;
-                        const gradientClass = avatarColors[colorIndex];
-
-                        return (
-                          <div
-                            key={appointment.id}
-                            className="bg-white border-l-4 rounded-r-lg shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                            style={{ borderLeftColor: appointment.color || '#9ca3af' }}
+                            type="button"
                             onClick={() => {
-                              // Add appointment service to basket
-                              const serviceItem: QuickSaleItem = {
-                                id: appointment.serviceId.toString(),
-                                name: appointment.serviceName || 'Service',
-                                duration: `${appointment.startTime?.slice(0, 5)} - ${appointment.endTime?.slice(0, 5)}`,
-                                price: appointment.price ? `${appointment.price.toFixed(2)} ${currencySymbol()}` : 'Price on request',
-                                color: appointment.color || 'gray',
-                                type: 'service',
-                                serviceId: appointment.serviceId,
-                              };
-                              addToBasket(serviceItem);
-                              // The client record, not their name: everything at the till
-                              // that matters — points, memberships, history — is keyed by id.
-                              setSelectedClient(
-                                clients.find(
-                                  (c) =>
-                                    (appointment.clientId != null && c.id === appointment.clientId) ||
-                                    (appointment.clientEmail &&
-                                      c.email?.toLowerCase() === appointment.clientEmail.toLowerCase())
-                                ) ?? null
-                              );
-                              setSelectedAppointmentId(appointment.id);
-                              setSelectedAppointmentStaffId(appointment.staffId || null);
+                              const amount = parseFloat(giftCardAmount) || 0;
+                              if (amount <= 0) return;
+                              setBasket((b) => [...b, { id: `gift-card-${Date.now()}`, name: `Gift card ${amount} ${currencySymbol()}`, price: String(amount), type: "gift-card", giftCardAmount: amount }]);
                             }}
+                            className="inline-flex h-11 items-center gap-1.5 rounded-full bg-[rgb(var(--reg-ink))] px-5 text-sm font-semibold text-white"
                           >
-                            <div className="p-3.5">
-                              <div className="flex items-start justify-between gap-4">
-                                {/* Left: Time and Main Info */}
-                                <div className="flex items-start gap-3 flex-1 min-w-0">
-                                  {/* Time Badge - More Friendly */}
-                                  <div className="flex-shrink-0">
-                                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-center min-w-[60px]">
-                                      <div className="text-lg font-bold text-gray-900 leading-none">
-                                        {appointment.startTime}
-                                      </div>
-                                      <div className="text-[10px] text-gray-500 font-medium mt-0.5">
-                                        {(() => {
-                                          const [hours, minutes] = appointment.startTime.split(':').map(Number);
-                                          const hour12 = hours % 12 || 12;
-                                          const ampm = hours >= 12 ? 'PM' : 'AM';
-                                          return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
-                                        })()}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Client and Service Info */}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="mb-1">
-                                      <h3 className="text-base font-semibold text-gray-900 truncate">
-                                        {appointment.clientName || 'Walk In Client'}
-                                      </h3>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                      <span className="truncate font-medium">
-                                        {appointment.serviceName || (() => {
-                                          const service = services.find(s => s.id === appointment.serviceId);
-                                          return service?.name || 'Service';
-                                        })()}
-                                      </span>
-                                      {staffName && (
-                                        <>
-                                          <span className="text-gray-300">•</span>
-                                          <span className="text-gray-700 font-medium flex-shrink-0">
-                                            Staff: {staffName}
-                                          </span>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {/* Right: Payment Status and Price */}
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <span className={`px-3 py-1.5 text-xs font-semibold rounded-full ${
-                                    appointment.paymentStatus === 'PAID' 
-                                      ? 'bg-green-50 text-green-700 border border-green-200'
-                                      : appointment.paymentStatus === 'PENDING'
-                                      ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                                      : 'bg-gray-50 text-gray-700 border border-gray-200'
-                                  }`}>
-                                    {appointment.paymentStatus}
-                                  </span>
-                                  {appointment.price && (() => {
-                                    // #117: a deposit already taken, on the row the cashier
-                                    // reads before opening the till. The number here was the
-                                    // full service price, so the settle list and the checkout
-                                    // screen disagreed — and this one is the figure a cashier
-                                    // quotes out loud while the customer is still standing
-                                    // there.
-                                    const paid = appointment.depositPaid
-                                      ? Math.min(Number(appointment.depositAmount ?? 0), appointment.price)
-                                      : 0;
-                                    return (
-                                      <div className="text-right">
-                                        <div className="text-base font-bold text-gray-900">
-                                          {(appointment.price - paid).toFixed(2)} {currencySymbol()}
-                                        </div>
-                                        {paid > 0 && (
-                                          <div className="text-[11px] text-emerald-700 font-medium leading-tight">
-                                            {paid.toFixed(2)} deposit paid
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
+                            <Plus size={15} />{" "}{tr("sales.addToTicket")}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </section>
             </div>
 
-            {/* Right Sidebar - Basket */}
-            <div className="flex w-full flex-col border-t border-gray-200 bg-white md:w-96 md:border-l md:border-t-0">
-              {/* Client Selection */}
-              <div className="p-4 border-b border-gray-200">
+            {/* ── ticket: a column on desktop, a sheet behind a summary bar on a phone ── */}
+            <aside className="hidden w-[400px] shrink-0 p-5 pl-0 md:flex md:flex-col">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_12px_32px_-16px_rgb(var(--reg-ink)/0.2)] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                {ticketBody()}
+              </div>
+            </aside>
+            <div className="fixed inset-x-3 bottom-[calc(88px+env(safe-area-inset-bottom))] z-20 md:hidden">
+              <button
+                type="button"
+                onClick={() => setTicketOpen(true)}
+                className="flex w-full items-center gap-3 rounded-full bg-[rgb(var(--reg-ink))] py-2 pl-4 pr-2 text-left text-white shadow-[0_12px_28px_-10px_rgb(var(--reg-ink)/0.6)]"
+              >
+                <span className="flex h-8 min-w-8 items-center justify-center rounded-full bg-white/15 px-2 text-sm font-bold tabular-nums">{basket.length}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{selectedClient ? getClientDisplayName(selectedClient) : basket.length ? tr("sales.viewTicket") : tr("sales.ticketIsEmpty")}</span>
+                <span className="rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-4 py-2 text-sm font-bold tabular-nums">
+                  {calculateTotal().toFixed(2)} {currencySymbol()}
+                </span>
+              </button>
+            </div>
+            <Sheet open={ticketOpen} onOpenChange={setTicketOpen}>
+              <SheetContent side="bottom" className="flex h-[92dvh] flex-col rounded-t-[24px] border-0 bg-white p-0 md:hidden" style={{ fontFamily: BRAND_FONT }}>
+                <SheetTitle className="sr-only">{tr("sales.ticket")}</SheetTitle>
+                {ticketBody()}
+              </SheetContent>
+            </Sheet>
                 <Dialog open={showClientPicker} onOpenChange={setShowClientPicker}>
                   <DialogContent className="max-w-lg max-h-[70vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Select Client</DialogTitle>
+                      <DialogTitle>{tr("sales.selectClient")}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       {/* Search */}
@@ -1614,7 +1703,7 @@ export default function SalesPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <input
                           type="text"
-                          placeholder="Search by name, phone, or email"
+                          placeholder={tr("sales.searchByNamePhoneOr")}
                           value={searchQueryClient}
                           onChange={(e) => setSearchQueryClient(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
@@ -1624,12 +1713,12 @@ export default function SalesPage() {
                       {/* Client list */}
                       {loadingClients ? (
                         <div className="flex items-center justify-center py-6">
-                          <p className="text-sm text-gray-500">Loading clients...</p>
+                          <p className="text-sm text-gray-500">{tr("sales.loadingClients")}</p>
                         </div>
                       ) : filteredClients.length === 0 ? (
                         <div className="text-center py-6">
                           <p className="text-sm text-gray-500">
-                            {searchQueryClient ? "No clients match your search" : "No clients yet — create one first"}
+                            {searchQueryClient ? tr("sales.noClientsMatchYourSearch") : tr("sales.noClientsYetCreateOne")}
                           </p>
                         </div>
                       ) : (
@@ -1673,489 +1762,232 @@ export default function SalesPage() {
                     </div>
                   </DialogContent>
                 </Dialog>
-
-                {/* Trigger button */}
-                <div
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors"
-                  onClick={() => setShowClientPicker(true)}
-                >
-                  <div className="flex items-center gap-3">
-                    <User size={20} className="text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      {selectedClient ? getClientDisplayName(selectedClient) : "Select a client or leave blank"}
-                    </span>
-                  </div>
-                  <Plus size={20} className="text-gray-400" />
-                </div>
-              </div>
-
-              {/* Basket Content */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {basket.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <p className="text-gray-900 font-medium mb-2">The basket is empty</p>
-                    <p className="text-sm text-gray-500">
-                      Select the items you want to add to your cart.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {basket.map((item) => (
-                      <div
-                        key={lineKey(item)}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium text-sm text-gray-900">{item.name}</p>
-                          <p className="text-xs text-gray-500">{item.price}</p>
-                        </div>
-                        <button
-                          onClick={() => removeFromBasket(lineKey(item))}
-                          aria-label={`Remove ${item.name} from the basket`}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Basket Footer */}
-              <div className="border-t border-gray-200 p-4 bg-white">
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={clearBasket}
-                    aria-label="Empty the basket"
-                    className="text-gray-400 hover:text-gray-600"
-                    disabled={basket.length === 0}
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500 mb-1">TOTAL</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {calculateTotal().toFixed(2)} {currencySymbol()}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  className="w-full bg-gray-200 text-gray-900 hover:bg-gray-300 font-medium"
-                  disabled={basket.length === 0}
-                  onClick={() => setShowPaymentMethod(true)}
-                >
-                  SELECT PAYMENT METHOD
-            </Button>
-              </div>
-            </div>
           </div>
         ) : activeTab === "TRANSACTIONS" ? (
-          <div className="flex flex-1 overflow-hidden bg-gray-50">
-            {/* Left Panel - Filters and Summary */}
-            <div className="w-96 border-r border-gray-200 bg-white">
-              {/* Header */}
-              <div className="p-4 border-b border-gray-200 flex items-center gap-3">
-                <button className="text-gray-600 hover:text-gray-900" onClick={() => setActiveTab("NEW SALES")}>
-                  <ArrowLeft size={20} />
-                </button>
-                <h2 className="text-lg font-semibold text-gray-900">All transactions</h2>
-              </div>
-
-              {/* Period Filter Tabs */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex gap-2">
-                  {["Days", "Months", "Another period"].map((period) => (
-                    <button
-                      key={period}
-                      onClick={() => setPeriodFilter(period)}
-                      className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                        periodFilter === period
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {period}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Search Bar */}
-              <div className="p-4 border-b border-gray-200">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    type="text"
-                    placeholder="Customer, staff or transaction ID"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
-                  />
-                </div>
-        </div>
-
-              {/* #118: two selects rather than more tab rows — a salon with six staff would
-                  otherwise wrap the panel. Both list only values present in the loaded
-                  period, so neither can filter to an empty screen. */}
-              <div className="p-4 border-b border-gray-200 grid grid-cols-2 gap-3">
-                <label className="text-xs font-medium text-gray-600">
-                  Payment
-                  <select
-                    value={methodFilter}
-                    onChange={(e) => setMethodFilter(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                  >
-                    {methodOptions.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-xs font-medium text-gray-600">
-                  Staff
-                  <select
-                    value={staffFilter}
-                    onChange={(e) => setStaffFilter(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                  >
-                    {staffOptions.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              {/* Date Summary */}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-gray-900">
-                    {format(selectedDate, 'yyyy-MM-dd')}
-                  </span>
-                  <button className="text-sm text-gray-600 hover:text-gray-900">
-                    Show list &gt;
+          <div className="flex-1 space-y-5 overflow-y-auto px-4 pb-28 pt-4 md:px-8 md:pb-8 md:pt-5">
+            {/* Range, search, filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div role="tablist" aria-label={tr("common.period")} className="inline-flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
+                {[
+                  ["Today", tr("common.today")],
+                  ["Days", tr("sales.period7")],
+                  ["Months", tr("sales.period30")],
+                  ["Another period", tr("sales.periodCustom")],
+                ].map(([v, label]) => (
+                  <button key={v} type="button" role="tab" aria-selected={periodFilter === v} onClick={() => setPeriodFilter(v)} className={cn("h-9 rounded-full px-3.5 text-sm font-semibold", periodFilter === v ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.08)]" : "text-[rgb(var(--reg-muted))]")}>
+                    {label}
                   </button>
+                ))}
+              </div>
+              {periodFilter === "Another period" && (
+                <div className="flex items-center gap-1.5">
+                  <input aria-label={tr("common.from2")} type="date" value={rangeFrom} max={rangeTo} onChange={(e) => setRangeFrom(e.target.value)} className="h-10 rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm" />
+                  <span className="text-[rgb(var(--reg-muted))]">–</span>
+                  <input aria-label={tr("sales.to")} type="date" value={rangeTo} min={rangeFrom} onChange={(e) => setRangeTo(e.target.value)} className="h-10 rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm" />
                 </div>
-                {loadingTransactions ? (
-                  <div className="py-4 text-center text-sm text-gray-500">Loading...</div>
-                ) : (
-                  <>
-                    <div className="space-y-2 mb-4">
-                      {(() => {
-                        // Calculate payment summary by method
-                        // For split payments, count cash and card separately
-                        const methodTotals: Record<string, number> = {};
-                        visibleTransactions.forEach(t => {
-                          if (t.splitCashAmount && t.splitCardAmount) {
-                            // Split payment - add to both cash and card
-                            methodTotals['Cash'] = (methodTotals['Cash'] || 0) + t.splitCashAmount;
-                            methodTotals['Card'] = (methodTotals['Card'] || 0) + t.splitCardAmount;
-                          } else {
-                            // Regular payment - add to the method
-                            const method = t.paymentMethod.split(':')[0].trim(); // Extract method name if it contains ":"
-                            const amount = parseFloat(t.amount.replace(' ' + currencySymbol(), '').replace(',', '.'));
-                            methodTotals[method] = (methodTotals[method] || 0) + amount;
-                          }
-                        });
-                        
-                        return Object.entries(methodTotals).map(([method, amount]) => (
-                          <div key={method} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">{method}</span>
-                            <span className="font-medium text-gray-900">{amount.toFixed(2)} {currencySymbol()}</span>
-                          </div>
-                        ));
-                      })()}
+              )}
+              <div className="relative min-w-[200px] flex-1">
+                <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
+                <input aria-label={tr("sales.searchTransactions")} placeholder={tr("sales.clientStaffOrSale")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-10 w-full rounded-[12px] border border-[rgb(var(--reg-line))] bg-white pl-10 pr-3 text-sm" />
+              </div>
+              {[
+                { label: tr("sales.method"), value: methodFilter, set: setMethodFilter, options: methodOptions },
+                { label: tr("common.staff"), value: staffFilter, set: setStaffFilter, options: staffOptions },
+                { label: tr("sales.status"), value: statusFilter, set: setStatusFilter, options: ["All", "PAID", "CANCELLED", "REFUNDED"] }, // i18n-ignore: filter values, labels go through tOpt
+              ].map((f) => (
+                <select key={f.label} aria-label={f.label} value={f.value} onChange={(e) => f.set(e.target.value)} className="h-10 rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm font-semibold">
+                  {f.options.map((o) => (
+                    <option key={o} value={o}>{o === "All" ? tr("sales.filterAll", { label: f.label }) : tOpt("payStatus", o.charAt(0) + o.slice(1).toLowerCase())}</option>
+                  ))}
+                </select>
+              ))}
+            </div>
+
+            {(() => {
+              const shown = visibleTransactions.filter((t) => statusFilter === "All" || t.status === statusFilter);
+              const paid = shown.filter((t) => t.status === "PAID");
+              const revenue = paid.reduce((n, t) => n + Number(t.sale.total || 0), 0);
+              const undone = shown.filter((t) => t.status === "CANCELLED" || t.status === "REFUNDED").length;
+              const chip = (status: string) =>
+                status === "PAID" ? <StatusChip status="active" label={tr("common.paid")} /> : status === "CANCELLED" ? <StatusChip status="ended" label={tr("sales.voided")} /> : status === "REFUNDED" ? <StatusChip status="failed" label={tr("sales.refunded")} /> : <StatusChip status="draft" label={status.charAt(0) + status.slice(1).toLowerCase()} />;
+              const methodChip = (m: string) => (
+                <span className="inline-flex max-w-[160px] truncate rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-2.5 py-1 text-xs font-semibold">{m}</span>
+              );
+              const itemsSummary = (t: Transaction) => (t.items.length ? t.items.map((i) => (i.quantity > 1 ? `${i.quantity}× ${i.name}` : i.name)).join(", ") : t.description || "—");
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <StatCard icon={Receipt} label={tr("common.sales")} value={paid.length} hint={tr("sales.inRange", { count: shown.length })} tone="violet" />
+                    <StatCard icon={CreditCard} label={tr("common.revenue")} value={`${revenue.toFixed(2)} ${currencySymbol()}`} hint={tr("sales.paidSales")} tone="emerald" />
+                    <StatCard icon={User} label={tr("sales.averageTicket")} value={paid.length ? `${(revenue / paid.length).toFixed(2)} ${currencySymbol()}` : "—"} tone="sky" />
+                    <StatCard icon={XIcon} label={tr("sales.voidedRefunded")} value={undone} tone={undone ? "rose" : "slate"} />
+                  </div>
+
+                  {loadingTransactions ? (
+                    <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+                  ) : shown.length === 0 ? (
+                    <div className="rounded-[20px] bg-white px-6 py-14 text-center ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <p className="text-lg font-extrabold">{tr("sales.noSalesHere")}</p>
+                      <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{transactions.length ? tr("sales.nothingMatchesTheseFilters") : tr("sales.salesYouTakeAtThe")}</p>
+                      {!transactions.length && <button type="button" onClick={() => setActiveTab("NEW SALES")} className="mt-4 inline-flex h-10 items-center rounded-full bg-[rgb(var(--reg-ink))] px-5 text-sm font-semibold text-white">{tr("sales.newSale")}</button>}
                     </div>
-                    <div className="pt-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">Total</span>
-                        <span className="text-lg font-bold text-gray-900">
-                          {visibleTransactions.reduce((sum, t) => {
-                            const amount = parseFloat(t.amount.replace(' ' + currencySymbol(), '').replace(',', '.'));
-                            return sum + amount;
-                          }, 0).toFixed(2)} {currencySymbol()}
-                        </span>
+                  ) : (
+                    <>
+                      <div className="hidden overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] md:block">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-[rgb(var(--reg-line)/0.8)] text-left text-xs uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">
+                              {/* i18n-ignore: column ids, labels go through tOpt */ ["When", "Client", "Items", "Staff", "Method", "Total", "Status"].map((h) => (
+                                <th key={h} scope="col" className={cn("px-4 py-3 font-bold", h === "Total" && "text-right")}>{tOpt("salesCols", h)}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {shown.map((t) => (
+                              <tr key={t.id} onClick={() => setSelectedTransaction(t)} className="cursor-pointer border-t border-[rgb(var(--reg-line)/0.5)] transition hover:bg-[rgb(var(--reg-canvas)/0.7)]">
+                                <td className="whitespace-nowrap px-4 py-3"><span className="font-semibold tabular-nums">{t.time}</span><span className="block text-xs text-[rgb(var(--reg-muted))]">{t.date}</span></td>
+                                <td className="max-w-[180px] truncate px-4 py-3 font-semibold">
+                                  <button type="button" className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); setSelectedTransaction(t); }}>{t.clientName}</button>
+                                </td>
+                                <td className="max-w-[260px] truncate px-4 py-3 text-[rgb(var(--reg-ink)/0.8)]">{itemsSummary(t)}</td>
+                                <td className="px-4 py-3">{t.staffName || "—"}</td>
+                                <td className="px-4 py-3">{methodChip(t.paymentMethod)}</td>
+                                <td className={cn("px-4 py-3 text-right font-extrabold tabular-nums", t.status !== "PAID" && "text-[rgb(var(--reg-muted))] line-through")}>{t.amount}</td>
+                                <td className="px-4 py-3">{chip(t.status)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <ul className="space-y-2 md:hidden">
+                        {shown.map((t) => (
+                          <li key={t.id}>
+                            <button type="button" onClick={() => setSelectedTransaction(t)} className="flex w-full items-start gap-3 rounded-2xl bg-white p-3.5 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                              <span className="rounded-xl bg-[rgb(var(--reg-canvas))] px-2 py-1 text-sm font-bold tabular-nums">{t.time}</span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[15px] font-semibold">{t.clientName}</span>
+                                <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{itemsSummary(t)}</span>
+                                <span className="mt-1.5 flex flex-wrap items-center gap-1.5">{methodChip(t.paymentMethod)}{chip(t.status)}</span>
+                              </span>
+                              <span className={cn("shrink-0 font-extrabold tabular-nums", t.status !== "PAID" && "text-[rgb(var(--reg-muted))] line-through")}>{t.amount}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </>
+              );
+            })()}
+
+            <FormSheet
+              open={!!selectedTransaction}
+              onOpenChange={(o) => !o && setSelectedTransaction(null)}
+              title={selectedTransaction ? tr("sales.sale", { id: selectedTransaction.id }) : tr("sales.sale2")}
+              description={selectedTransaction ? `${selectedTransaction.paidDate}${selectedTransaction.billNumber ? tr("sales.bill", { billNumber: selectedTransaction.billNumber }) : ""}` : undefined}
+              footer={
+                selectedTransaction ? (
+                  <>
+                    <Button variant="outline" className="h-[52px] flex-1 rounded-full border-[rgb(var(--reg-line))] text-base font-semibold" onClick={() => window.print()}>
+                      {tr("sales.printReceipt")}
+                    </Button>
+                    {selectedTransaction.status === "PAID" && (
+                      <Button
+                        variant="outline"
+                        disabled={voiding}
+                        className="h-[52px] flex-1 rounded-full border-rose-200 text-base font-semibold text-rose-700 hover:bg-rose-50"
+                        onClick={() => void voidSale(selectedTransaction)}
+                      >
+                        {voiding ? tr("sales.voiding") : tr("sales.voidSale")}
+                      </Button>
+                    )}
+                  </>
+                ) : undefined
+              }
+            >
+              {selectedTransaction && (() => {
+                const t = selectedTransaction;
+                const tax = receiptTax(t.sale, salonInfo.taxRate, services);
+                return (
+                  <>
+                    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"><User size={18} /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold">{t.clientName}</p>
+                        <p className="truncate text-sm text-[rgb(var(--reg-muted))]">{[t.staffName ? `Done by ${t.staffName}` : null, t.address || null].filter(Boolean).join(" · ") || "—"}</p>
+                      </div>
+                      {saleStatusChip(t.status)}
+                    </div>
+
+                    <section className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("sales.items")}</h3>
+                      <ul className="space-y-1.5 text-sm">
+                        {t.items.map((it, i) => (
+                          <li key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{it.quantity > 1 ? `${it.quantity}× ` : ""}{it.name}</span><span className="shrink-0 tabular-nums">{it.price}</span></li>
+                        ))}
+                      </ul>
+                      <dl className="mt-3 space-y-1 border-t border-[rgb(var(--reg-line)/0.6)] pt-3 text-sm">
+                        <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.subtotal")}</dt><dd className="tabular-nums">{t.addition}</dd></div>
+                        <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("common.discount")}</dt><dd className="tabular-nums">{t.discount}</dd></div>
+                        <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.tip")}</dt><dd className="tabular-nums">{t.tip}</dd></div>
+                        {tax && <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.taxIncl", { rate: tax.rate })}</dt><dd className="tabular-nums">{tax.tax.toFixed(2)}</dd></div>}
+                        <div className="flex justify-between pt-1 text-base font-extrabold"><dt>{tr("common.total")}</dt><dd className="tabular-nums">{t.total}</dd></div>
+                      </dl>
+                    </section>
+
+                    <section className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("sales.payment")}</h3>
+                      {t.splitCashAmount && t.splitCardAmount ? (
+                        <ul className="space-y-1 text-sm">
+                          <li className="flex justify-between"><span>{tr("common.cash")}</span><span className="tabular-nums">{t.splitCashAmount.toFixed(2)} {currencySymbol()}</span></li>
+                          <li className="flex justify-between"><span>{tr("common.card")}</span><span className="tabular-nums">{t.splitCardAmount.toFixed(2)} {currencySymbol()}</span></li>
+                        </ul>
+                      ) : (
+                        <p className="flex justify-between text-sm"><span>{t.paymentMethod}</span><span className="tabular-nums">{t.amount}</span></p>
+                      )}
+                      {Number(t.sale.changeAmount) > 0 && <p className="mt-1 flex justify-between text-sm text-[rgb(var(--reg-muted))]"><span>{tr("sales.changeGiven")}</span><span className="tabular-nums">{Number(t.sale.changeAmount).toFixed(2)}</span></p>}
+                    </section>
+
+                    <div>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("sales.receipt")}</p>
+                      <div className="mx-auto max-w-[320px] overflow-hidden rounded-xl bg-white font-mono text-[12px] leading-relaxed shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                        <div className="h-1.5" style={{ backgroundColor: salonInfo.brandColor || "rgb(var(--reg-brand))" }} aria-hidden />
+                        <div className="px-5 py-4">
+                          <p className="text-center text-[rgb(var(--reg-muted))]">{t.paidDate} · #{t.id}</p>
+                          <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+                          {t.items.map((it, i) => <p key={i} className="flex justify-between gap-3"><span className="truncate">{it.name}</span><span>{it.price}</span></p>)}
+                          <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+                          <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span>{t.total}</span></p>
+                          {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}
+                        </div>
                       </div>
                     </div>
                   </>
-                )}
-              </div>
-            </div>
-
-            {/* Right Panel - Transaction List */}
-            <div className="flex-1 overflow-y-auto bg-white p-6">
-              {loadingTransactions ? (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-gray-500">Loading transactions...</p>
-                </div>
-              ) : visibleTransactions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <p className="text-gray-900 font-medium mb-2">No transactions found</p>
-                  {/* #118: "nothing was sold" and "your filters hid everything" are
-                      different problems with different fixes, and telling somebody the
-                      first when it is the second sends them looking for a missing sale. */}
-                  <p className="text-sm text-gray-500">
-                    {transactions.length === 0
-                      ? "No sales have been recorded for the selected period."
-                      : "No sales match these filters. Clear them to see the rest of the period."}
-                  </p>
-                  {transactions.length > 0 && (
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setMethodFilter("All");
-                        setStaffFilter("All");
-                      }}
-                      className="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {visibleTransactions
-                    .map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    onClick={() => setSelectedTransaction(transaction)}
-                    className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
-                  >
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Receipt size={20} className="text-gray-600" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">
-                          {transaction.time}
-                        </span>
-                        <span className="text-sm text-gray-500">-</span>
-                        <span className="text-sm text-gray-500">{transaction.date}</span>
-                        {/* The number Money > Invoices asks for — it was shown nowhere. */}
-                        <span className="text-xs text-gray-400">Sale #{transaction.id}</span>
-                        {transaction.description && (
-                          <>
-                            <span className="text-sm text-gray-500">•</span>
-                            <span className="text-sm text-gray-600">{transaction.description}</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">
-                          {transaction.status}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <span className="text-base font-semibold text-gray-900">
-                        {transaction.amount}
-                      </span>
-                    </div>
-                  </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Transaction Detail Modal */}
-            {selectedTransaction && (
-              <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50" onClick={() => setSelectedTransaction(null)}>
-                <div className="w-[500px] h-full bg-white shadow-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                  {/* Modal Header */}
-                  <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-                    <button
-                      onClick={() => setSelectedTransaction(null)}
-                      className="text-gray-600 hover:text-gray-900"
-                    >
-                      <X size={20} />
-                    </button>
-                    <div className="flex items-center gap-3">
-                      <button className="text-gray-600 hover:text-gray-900">
-                        <Send size={20} />
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
-                        <MoreVertical size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Modal Content */}
-                  <div className="px-6 py-6">
-                    {/* Status Badge */}
-                    <div className="mb-4">
-                      <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                        {selectedTransaction.status}
-                      </span>
-                    </div>
-
-                    {/* Bill Information */}
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <span className="text-sm font-medium text-gray-900">
-                            Sale #{selectedTransaction.id} · Bill {selectedTransaction.billNumber}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-600">{selectedTransaction.date}</span>
-                      </div>
-                    </div>
-
-                    {/* Client/Studio Details */}
-                    <div className="mb-6">
-                      <p className="text-base font-medium text-gray-900 mb-1">
-                        {selectedTransaction.clientName}
-                      </p>
-                      <p className="text-sm text-gray-600">{selectedTransaction.address}</p>
-                    </div>
-
-                    {/* Service Details */}
-                    <div className="mb-6">
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                        <span className="text-sm font-medium text-gray-900">Position</span>
-                        <span className="text-sm font-medium text-gray-900">Sum</span>
-                      </div>
-                      <div className="space-y-2">
-                        {selectedTransaction.items.map((item, index) => (
-                          <div key={index} className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">
-                                {item.name} {item.duration && `(${item.duration})`}
-                              </p>
-                              {selectedTransaction.staffName && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Staff: {selectedTransaction.staffName}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right ml-4">
-                              <p className="text-sm text-gray-600">x{item.quantity}</p>
-                              <p className="text-sm font-medium text-gray-900 mt-1">
-                                {item.price}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tax Breakdown Table */}
-                    <div className="mb-6">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 text-gray-600 font-medium">Tax</th>
-                            <th className="text-right py-2 text-gray-600 font-medium">Net worth</th>
-                            <th className="text-right py-2 text-gray-600 font-medium">Tax amount</th>
-                            <th className="text-right py-2 text-gray-600 font-medium">Gross value</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td className="py-2 text-gray-900">{selectedTransaction.tax.rate}</td>
-                            <td className="py-2 text-right text-gray-900">{selectedTransaction.tax.netWorth}</td>
-                            <td className="py-2 text-right text-gray-900">{selectedTransaction.tax.taxAmount}</td>
-                            <td className="py-2 text-right text-gray-900 font-medium">{selectedTransaction.tax.grossValue}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Summary of Charges */}
-                    <div className="mb-6 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Addition</span>
-                        <span className="text-gray-900 font-medium">{selectedTransaction.addition}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Rabat</span>
-                        <span className="text-gray-900 font-medium">{selectedTransaction.discount}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Tip</span>
-                        <span className="text-gray-900 font-medium">{selectedTransaction.tip}</span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                        <span className="text-base font-medium text-gray-900">Total</span>
-                        <span className="text-base font-bold text-gray-900">{selectedTransaction.total}</span>
-                      </div>
-                    </div>
-
-                    {/* Payment Method */}
-                    <div className="mb-6 pb-6 border-b border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          {selectedTransaction.splitCashAmount && selectedTransaction.splitCardAmount ? (
-                            <div className="space-y-1">
-                              <p className="text-sm text-gray-600">
-                                Paid • Split payment • {selectedTransaction.paidDate}
-                              </p>
-                              <div className="text-sm text-gray-700">
-                                <span>Cash: {selectedTransaction.splitCashAmount.toFixed(2)} {currencySymbol()}</span>
-                                <span className="mx-2">•</span>
-                                <span>Card: {selectedTransaction.splitCardAmount.toFixed(2)} {currencySymbol()}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-600">
-                              Paid • {selectedTransaction.paymentMethod} • {selectedTransaction.paidDate}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-sm font-medium text-gray-900">{selectedTransaction.amount}</span>
-                      </div>
-                    </div>
-
-                    {/* Final Paid Amount */}
-                    <div className="mb-6">
-                      <p className="text-lg font-bold text-gray-900">
-                        Paid {selectedTransaction.amount}
-                      </p>
-                    </div>
-
-                    {/* Perforated Bottom Edge */}
-                    <div className="relative mt-8">
-                      <div 
-                        className="h-6 relative"
-                        style={{
-                          backgroundImage: `repeating-linear-gradient(
-                            0deg,
-                            transparent,
-                            transparent 2px,
-                            #d1d5db 2px,
-                            #d1d5db 4px
-                          )`,
-                          clipPath: 'polygon(0 0, 100% 0, 100% 50%, 98% 50%, 98% 100%, 2% 100%, 2% 50%, 0 50%)',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+                );
+              })()}
+            </FormSheet>
           </div>
         ) : null}
-
         {/* Edit Quick Sale Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Quick Sale Items</DialogTitle>
+              <DialogTitle>{tr("sales.editQuickSaleItems")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <p className="text-sm text-gray-600">
-                Select services and combos to display in the quick sale section. These items will be easily accessible for fast checkout.
+                {tr("sales.selectServicesAndCombosTo")}
               </p>
               
               {servicesLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <p className="text-gray-500">Loading services...</p>
+                  <p className="text-gray-500">{tr("sales.loadingServices")}</p>
                 </div>
               ) : availableItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-gray-900 font-medium mb-2">No services available</p>
+                  <p className="text-gray-900 font-medium mb-2">{tr("sales.noServicesAvailable")}</p>
                   <p className="text-sm text-gray-500">
-                    Create services and combos first to add them to quick sale
+                    {tr("sales.createServicesAndCombosFirst")}
                   </p>
                 </div>
               ) : (
@@ -2193,7 +2025,7 @@ export default function SalesPage() {
                           <h4 className="font-medium text-gray-900">{item.name}</h4>
                           {item.type === 'combo' && (
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                              COMBO
+                              {tr("sales.combo")}
                             </span>
                           )}
                         </div>
@@ -2219,7 +2051,7 @@ export default function SalesPage() {
                     setSelectedQuickSaleItems(quickSaleItems.map(item => item.id));
                   }}
                 >
-                  Cancel
+                  {tr("common.cancel")}
                 </Button>
                 <Button
                   onClick={saveQuickSaleConfig}
@@ -2227,7 +2059,7 @@ export default function SalesPage() {
                   className="bg-gray-900 hover:bg-gray-800"
                 >
                   <Save size={16} className="mr-2" />
-                  Save Changes
+                  {tr("sales.saveChanges")}
                 </Button>
               </div>
             </div>

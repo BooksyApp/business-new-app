@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Eye, Megaphone, MousePointerClick, Pause, Play } from "lucide-react";
 
-import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BooqiScope, PageHeader, Card, CardContent, CardHeader, CardTitle } from "@/components/page/booqi";
+import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentBusinessId } from "@/config/api";
 import { formatPrice } from "@/lib/currency";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import {
   type PromotionQuote,
   type PromotionRow,
 } from "@/services/promotionService";
+import { t, fmtDate as formatLocaleDate } from "@/i18n";
 
 /**
  * Paying to be seen, and seeing what it bought.
@@ -45,7 +47,7 @@ export default function PromotionPage() {
       // Seeded from the server once, never overwritten while the salon is mid-edit.
       setLiveBudget((prev) => (prev === "" && running ? String(running.dailyBudget) : prev));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load promotions");
+      setError(e instanceof Error ? e.message : t("promotion.couldNotLoadPromotions"));
     }
   }, [businessId]);
 
@@ -66,7 +68,7 @@ export default function PromotionPage() {
           // forecast has something to describe.
           setDailyBudget((prev) => (prev === "" ? String(q.minDaily) : prev));
         })
-        .catch((e) => setError(e instanceof Error ? e.message : "Could not load promotions"));
+        .catch((e) => setError(e instanceof Error ? e.message : t("promotion.couldNotLoadPromotions")));
     }, 250);
     return () => clearTimeout(timer);
   }, [businessId, dailyBudget, days]);
@@ -85,7 +87,7 @@ export default function PromotionPage() {
       );
       window.location.href = checkoutUrl;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not start the purchase");
+      toast.error(e instanceof Error ? e.message : t("promotion.couldNotStartThePurchase"));
       setBusy(false);
     }
   };
@@ -110,7 +112,7 @@ export default function PromotionPage() {
       await load();
       toast.success(done);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "That did not work");
+      toast.error(e instanceof Error ? e.message : t("promotion.thatDidNotWork"));
     } finally {
       setBusy(false);
     }
@@ -118,17 +120,18 @@ export default function PromotionPage() {
 
   return (
     <AppLayout>
+      <BooqiScope>
       <PageHeader
-        title="Advertise"
-        subtitle="Reach customers browsing booqi. Set a daily budget, watch what it delivers, stop whenever you like."
+        title={t("promotion.advertise")}
+        subtitle={t("promotion.reachCustomersBrowsingBooqiSet")}
       />
-      <div className="space-y-6 p-4 md:p-6">
+      <div className={pageBody}>
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         {quote && !quote.enabled ? (
           <Card>
             <CardContent className="py-6 text-sm text-muted-foreground">
-              Promoted placement is not on sale at the moment.
+              {t("promotion.promotedPlacementIsNotOn")}
             </CardContent>
           </Card>
         ) : null}
@@ -138,13 +141,11 @@ export default function PromotionPage() {
         {pending && !live ? (
           <Card>
             <CardHeader>
-              <CardTitle>Payment not confirmed</CardTitle>
+              <CardTitle>{t("promotion.paymentNotConfirmed")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                A campaign at {formatPrice(pending.dailyBudget)} a day for {pending.days} days is
-                waiting on payment. Nothing has been charged and nothing is being shown. Finish
-                it, or cancel it and start again.
+                {t("promotion.aCampaignAtADay", { value: formatPrice(pending.dailyBudget), days: pending.days })}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
@@ -158,10 +159,10 @@ export default function PromotionPage() {
                         `${window.location.origin}/promotion`
                       );
                       window.location.href = checkoutUrl;
-                    }, "Opening payment…")
+                    }, t("promotion.openingPayment"))
                   }
                 >
-                  Finish payment
+                  {t("promotion.finishPayment")}
                 </Button>
                 <Button
                   variant="outline"
@@ -169,11 +170,11 @@ export default function PromotionPage() {
                   onClick={() =>
                     void act(
                       () => promotionService.discard(businessId, pending.id),
-                      "Reservation cancelled."
+                      t("promotion.reservationCancelled")
                     )
                   }
                 >
-                  Cancel it
+                  {t("promotion.cancelIt")}
                 </Button>
               </div>
             </CardContent>
@@ -187,21 +188,21 @@ export default function PromotionPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Megaphone className="h-4 w-4" />
-                {live.status === "PAUSED" ? "Campaign paused" : "Campaign running"}
+                {live.status === "PAUSED" ? t("promotion.campaignPaused") : t("promotion.campaignRunning")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Seen</p>
+                  <p className="text-xs text-muted-foreground">{t("promotion.seen")}</p>
                   <p className="text-lg font-semibold">{live.impressions.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Tapped</p>
+                  <p className="text-xs text-muted-foreground">{t("promotion.tapped")}</p>
                   <p className="text-lg font-semibold">{live.clicks.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Tap rate</p>
+                  <p className="text-xs text-muted-foreground">{t("promotion.tapRate")}</p>
                   <p className="text-lg font-semibold">
                     {live.impressions > 0
                       ? `${((live.clicks / live.impressions) * 100).toFixed(1)}%`
@@ -209,23 +210,22 @@ export default function PromotionPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Runs until</p>
+                  <p className="text-xs text-muted-foreground">{t("promotion.runsUntil")}</p>
                   <p className="text-lg font-semibold">
-                    {new Date(live.endsAt).toLocaleDateString()}
+                    {formatLocaleDate(new Date(live.endsAt), { year: "numeric", month: "numeric", day: "numeric" })}
                   </p>
                 </div>
               </div>
 
               {live.status === "PAUSED" ? (
                 <p className="text-sm text-muted-foreground">
-                  Nothing is being spent or shown. The days you stay paused are added back to
-                  the end, so you keep the days you paid for.
+                  {t("promotion.nothingIsBeingSpentOr")}
                 </p>
               ) : null}
 
               <div className="flex flex-wrap items-end gap-3">
                 <div className="w-40">
-                  <Label htmlFor="liveBudget">Daily budget</Label>
+                  <Label htmlFor="liveBudget">{t("promotion.dailyBudget")}</Label>
                   <Input
                     id="liveBudget"
                     inputMode="decimal"
@@ -239,21 +239,21 @@ export default function PromotionPage() {
                   onClick={() =>
                     void act(
                       () => promotionService.setBudget(businessId, live.id, Number(liveBudget)),
-                      "Daily budget updated."
+                      t("promotion.dailyBudgetUpdated")
                     )
                   }
                 >
-                  Save budget
+                  {t("promotion.saveBudget")}
                 </Button>
                 {live.status === "ACTIVE" ? (
                   <Button
                     variant="outline"
                     disabled={busy}
                     onClick={() =>
-                      void act(() => promotionService.pause(businessId, live.id), "Campaign paused.")
+                      void act(() => promotionService.pause(businessId, live.id), t("promotion.campaignPaused2"))
                     }
                   >
-                    <Pause className="mr-2 h-4 w-4" /> Pause
+                    <Pause className="mr-2 h-4 w-4" />{" "}{t("promotion.pause")}
                   </Button>
                 ) : (
                   <Button
@@ -261,17 +261,16 @@ export default function PromotionPage() {
                     onClick={() =>
                       void act(
                         () => promotionService.resume(businessId, live.id),
-                        "Campaign running again."
+                        t("promotion.campaignRunningAgain")
                       )
                     }
                   >
-                    <Play className="mr-2 h-4 w-4" /> Resume
+                    <Play className="mr-2 h-4 w-4" />{" "}{t("promotion.resume")}
                   </Button>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                A new budget applies to the days still to come — what has already been
-                delivered was delivered at the old rate.
+                {t("promotion.aNewBudgetAppliesTo")}
               </p>
             </CardContent>
           </Card>
@@ -281,21 +280,19 @@ export default function PromotionPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                New campaign
+                {t("promotion.newCampaign")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Your salon appears at the top of the lists customers browse in{" "}
-                {quote.countryCode ?? "your country"}, marked as promoted. You set a daily
-                budget; how often you are shown is your share of what every promoted salon is
-                spending that day, so spending more really does show you more.
+                {t("promotion.yourSalonAppearsAtThe")}{" "}
+                {t("promotion.markedAsPromotedYouSet", { value: quote.countryCode ?? t("promotion.yourCountry") })}
               </p>
 
               <>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <Label htmlFor="dailyBudget">Daily budget</Label>
+                      <Label htmlFor="dailyBudget">{t("promotion.dailyBudget")}</Label>
                       <Input
                         id="dailyBudget"
                         inputMode="decimal"
@@ -304,11 +301,11 @@ export default function PromotionPage() {
                         placeholder={String(quote.minDaily)}
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Minimum {formatPrice(quote.minDaily)} a day.
+                        {t("promotion.minimumADay", { value: formatPrice(quote.minDaily) })}
                       </p>
                     </div>
                     <div>
-                      <Label htmlFor="days">Days</Label>
+                      <Label htmlFor="days">{t("promotion.days")}</Label>
                       <Input
                         id="days"
                         inputMode="numeric"
@@ -317,7 +314,7 @@ export default function PromotionPage() {
                         placeholder="7"
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Up to {quote.maxDays}. Ends {quote.endsOn}.
+                        {t("promotion.upToEnds", { maxDays: quote.maxDays, endsOn: quote.endsOn })}
                       </p>
                     </div>
                   </div>
@@ -329,27 +326,25 @@ export default function PromotionPage() {
                     {quote.forecastKnown ? (
                       <>
                         <span className="font-medium">
-                          About {quote.forecastPerDay.toLocaleString()} people a day
+                          {t("promotion.aboutPeopleADay", { value: quote.forecastPerDay.toLocaleString() })}
                         </span>{" "}
                         <span className="text-muted-foreground">
-                          see your salon at this budget, based on what promotion delivered here
-                          yesterday. It moves with what other salons are spending.
+                          {t("promotion.seeYourSalonAtThis")}
                         </span>
                       </>
                     ) : (
                       <span className="text-muted-foreground">
-                        No promotion has run here yet, so there is nothing to forecast from. The
-                        numbers below fill in from your first day.
+                        {t("promotion.noPromotionHasRunHere")}
                       </span>
                     )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
                     <Button onClick={() => void buy()} disabled={busy || !dailyBudget}>
-                      {busy ? "Opening payment…" : `Promote for ${formatPrice(quote.total)}`}
+                      {busy ? t("promotion.openingPayment") : t("promotion.promoteFor", { value: formatPrice(quote.total) })}
                     </Button>
                     <span className="text-sm text-muted-foreground">
-                      {formatPrice(quote.dailyBudget)} × {quote.days} days
+                      {t("promotion.days2", { value: formatPrice(quote.dailyBudget), days: quote.days })}
                     </span>
                   </div>
               </>
@@ -359,26 +354,25 @@ export default function PromotionPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Past campaigns</CardTitle>
+            <CardTitle>{t("promotion.pastCampaigns")}</CardTitle>
           </CardHeader>
           <CardContent>
             {past.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nothing finished yet. Once a campaign ends, what it cost and what it brought
-                in appears here.
+                {t("promotion.nothingFinishedYetOnceA")}
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
-                      <th className="py-2 font-medium">Period</th>
-                      <th className="py-2 font-medium">Rate</th>
-                      <th className="py-2 font-medium">Paid</th>
-                      <th className="py-2 font-medium">Seen</th>
-                      <th className="py-2 font-medium">Tapped</th>
-                      <th className="py-2 font-medium">Rate</th>
-                      <th className="py-2 font-medium">Status</th>
+                      <th className="py-2 font-medium">{t("common.period")}</th>
+                      <th className="py-2 font-medium">{t("promotion.rate")}</th>
+                      <th className="py-2 font-medium">{t("common.paid")}</th>
+                      <th className="py-2 font-medium">{t("promotion.seen")}</th>
+                      <th className="py-2 font-medium">{t("promotion.tapped")}</th>
+                      <th className="py-2 font-medium">{t("promotion.rate")}</th>
+                      <th className="py-2 font-medium">{t("promotion.status")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -392,11 +386,11 @@ export default function PromotionPage() {
                       return (
                         <tr key={row.id} className="border-b last:border-0">
                           <td className="py-2">
-                            {new Date(row.startsAt).toLocaleDateString()} –{" "}
-                            {new Date(row.endsAt).toLocaleDateString()}
+                            {formatLocaleDate(new Date(row.startsAt), { year: "numeric", month: "numeric", day: "numeric" })} –{" "}
+                            {formatLocaleDate(new Date(row.endsAt), { year: "numeric", month: "numeric", day: "numeric" })}
                           </td>
                           <td className="py-2 text-muted-foreground">
-                            {formatPrice(row.dailyBudget)}/day
+                            {t("promotion.day", { value: formatPrice(row.dailyBudget) })}
                           </td>
                           <td className="py-2">{formatPrice(row.amount)}</td>
                           <td className="py-2">
@@ -423,6 +417,7 @@ export default function PromotionPage() {
           </CardContent>
         </Card>
       </div>
+    </BooqiScope>
     </AppLayout>
   );
 }

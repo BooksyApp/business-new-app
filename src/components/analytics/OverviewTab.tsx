@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { currencySymbol } from "@/lib/currency";
 import { money, pct } from "@/lib/utils";
 import type { AnalyticsOverview } from "@/services/analysisService";
-import { format } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import {
   Award,
   BarChart3,
@@ -15,6 +15,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import { t } from "@/i18n";
 
 interface OverviewTabProps {
   data: AnalyticsOverview;
@@ -41,28 +42,28 @@ const TONES = {
 export default function OverviewTab({ data }: OverviewTabProps) {
   const metrics = [
     {
-      title: "Revenue",
+      title: t("common.revenue"),
       value: `${money(data.totalRevenue)} ${currencySymbol()}`,
       change: data.revenueChange,
       icon: DollarSign,
       tone: "emerald" as const,
     },
     {
-      title: "Bookings",
+      title: t("analytics.bookings3"),
       value: data.totalBookings.toString(),
       change: data.bookingsChange,
       icon: Calendar,
       tone: "sky" as const,
     },
     {
-      title: "New clients",
+      title: t("analytics.newClients2"),
       value: data.newClients.toString(),
       change: data.newClientsChange,
       icon: Users,
       tone: "violet" as const,
     },
     {
-      title: "Average ticket",
+      title: t("analytics.averageTicket"),
       value: `${money(data.averageTicket)} ${currencySymbol()}`,
       change: data.averageTicketChange,
       icon: TrendingUp,
@@ -90,9 +91,9 @@ export default function OverviewTab({ data }: OverviewTabProps) {
   const insights: { text: string; tone: keyof typeof TONES }[] = [];
   if (bestDay && bestDay.revenue > 0) {
     insights.push({
-      text: `${format(new Date(bestDay.date), "EEEE d MMM")} was your best day — ${money(
+      text: t("analytics.wasYourBestDayAbove", { value: format(new Date(bestDay.date), "EEEE d MMM"), value2: money(
         bestDay.revenue
-      )} ${currencySymbol()}, ${Math.round((bestDay.revenue / Math.max(avgRevenue, 1) - 1) * 100)}% above your daily average.`,
+      ), value3: currencySymbol(), value4: Math.round((bestDay.revenue / Math.max(avgRevenue, 1) - 1) * 100) }),
       tone: "emerald",
     });
   }
@@ -100,15 +101,15 @@ export default function OverviewTab({ data }: OverviewTabProps) {
     const top = data.topServices[0];
     const share = serviceRevenue > 0 ? Math.round((top.revenue / serviceRevenue) * 100) : 0;
     insights.push({
-      text: `${top.serviceName} brings ${share}% of your service revenue across ${top.bookings} bookings.`,
+      text: t("analytics.bringsOfYourServiceRevenue", { serviceName: top.serviceName, share, bookings: top.bookings }),
       tone: "sky",
     });
   }
   if (trends && trends.totalBookings > 0 && lostBookings > 0) {
     insights.push({
-      text: `${lostBookings} of ${trends.totalBookings} bookings were cancelled or no-shows — ${pct(
+      text: t("analytics.ofBookingsWereCancelledOr", { lostBookings, totalBookings: trends.totalBookings, value: pct(
         trends.cancellationRate + trends.noShowRate
-      )}% of the diary, worth roughly ${money(lostBookings * data.averageTicket)} ${currencySymbol()}.`,
+      ), value2: money(lostBookings * data.averageTicket), value3: currencySymbol() }),
       tone: "rose",
     });
   }
@@ -116,8 +117,8 @@ export default function OverviewTab({ data }: OverviewTabProps) {
     insights.push({
       text:
         retention >= 50
-          ? `${retention}% of your clients came back this period. Repeat custom is carrying the business.`
-          : `Only ${retention}% of your clients came back. Most of your revenue is coming from people you have to find again.`,
+          ? t("analytics.ofYourClientsCameBack", { retention })
+          : t("analytics.onlyOfYourClientsCame", { retention }),
       tone: retention >= 50 ? "emerald" : "amber",
     });
   }
@@ -129,7 +130,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
         <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4">
           <div className="mb-2 flex items-center gap-2">
             <Lightbulb size={16} className="text-violet-600" />
-            <p className="text-sm font-semibold text-violet-900">What this period is telling you</p>
+            <p className="text-sm font-semibold text-violet-900">{t("analytics.whatThisPeriodIsTelling")}</p>
           </div>
           <ul className="space-y-1.5">
             {insights.map((insight, i) => (
@@ -167,7 +168,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                     {up ? "+" : ""}
                     {pct(metric.change)}%
                   </span>
-                  <span className="text-xs text-muted-foreground">vs previous period</span>
+                  <span className="text-xs text-muted-foreground">{t("analytics.vsPreviousPeriod")}</span>
                 </div>
               </CardContent>
             </Card>
@@ -183,12 +184,12 @@ export default function OverviewTab({ data }: OverviewTabProps) {
               <XCircle size={18} className="text-rose-600" />
             </span>
             <div>
-              <p className="text-xs text-muted-foreground">Cancelled or no-show</p>
+              <p className="text-xs text-muted-foreground">{t("analytics.cancelledOrNoShow")}</p>
               <p className="text-xl font-semibold text-rose-700">
                 {lostBookings}
                 {trends?.totalBookings ? (
                   <span className="ml-1 text-sm font-normal text-muted-foreground">
-                    of {trends.totalBookings}
+                    {t("analytics.of", { totalBookings: trends.totalBookings })}
                   </span>
                 ) : null}
               </p>
@@ -201,7 +202,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
               <UserCheck size={18} className="text-emerald-600" />
             </span>
             <div>
-              <p className="text-xs text-muted-foreground">Clients who came back</p>
+              <p className="text-xs text-muted-foreground">{t("analytics.clientsWhoCameBack")}</p>
               <p className="text-xl font-semibold text-emerald-700">
                 {growth?.returningClients ?? 0}
                 {retention != null ? (
@@ -217,7 +218,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
               <BarChart3 size={18} className="text-sky-600" />
             </span>
             <div>
-              <p className="text-xs text-muted-foreground">Average day</p>
+              <p className="text-xs text-muted-foreground">{t("analytics.averageDay")}</p>
               <p className="text-xl font-semibold text-sky-700">
                 {money(avgRevenue)} {currencySymbol()}
               </p>
@@ -230,14 +231,14 @@ export default function OverviewTab({ data }: OverviewTabProps) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Revenue by day</CardTitle>
+              <CardTitle className="text-base font-semibold">{t("analytics.revenueByDay")}</CardTitle>
               <CardDescription className="mt-0.5">
-                The dashed line is your daily average. Bars above it are the days worth repeating.
+                {t("analytics.theDashedLineIsYour")}
               </CardDescription>
             </div>
             {bestDay && bestDay.revenue > 0 && (
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">Best day</p>
+                <p className="text-xs text-muted-foreground">{t("analytics.bestDay")}</p>
                 <p className="text-sm font-semibold text-emerald-700">
                   {format(new Date(bestDay.date), "d MMM")} · {money(bestDay.revenue)} {currencySymbol()}
                 </p>
@@ -256,7 +257,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                   style={{ bottom: `${(avgRevenue / maxRevenue) * 82 + 26}px` }}
                 >
                   <span className="absolute -top-4 right-0 rounded bg-violet-100 px-1.5 text-[10px] font-medium text-violet-700">
-                    avg {money(avgRevenue)}
+                    {t("analytics.avg2", { value: money(avgRevenue) })}
                   </span>
                 </div>
               )}
@@ -288,9 +289,9 @@ export default function OverviewTab({ data }: OverviewTabProps) {
           ) : (
             <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed">
               <BarChart3 className="mb-2 h-10 w-10 text-muted-foreground" />
-              <p className="font-medium">No takings in this period</p>
+              <p className="font-medium">{t("analytics.noTakingsInThisPeriod")}</p>
               <p className="text-sm text-muted-foreground">
-                Revenue appears here once sales are rung up at the till.
+                {t("analytics.revenueAppearsHereOnceSales")}
               </p>
             </div>
           )}
@@ -302,8 +303,8 @@ export default function OverviewTab({ data }: OverviewTabProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-semibold">Top services</CardTitle>
-                <CardDescription className="mt-0.5">Share of service revenue</CardDescription>
+                <CardTitle className="text-base font-semibold">{t("analytics.topServices")}</CardTitle>
+                <CardDescription className="mt-0.5">{t("analytics.shareOfServiceRevenue")}</CardDescription>
               </div>
               <Award className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -331,7 +332,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                         <div className="h-full rounded-full bg-violet-500" style={{ width: `${share}%` }} />
                       </div>
                       <span className="w-24 shrink-0 text-right text-xs text-muted-foreground">
-                        {Math.round(share)}% · {service.bookings} booked
+                        {t("analytics.booked", { value: Math.round(share), bookings: service.bookings })}
                       </span>
                     </div>
                   </div>
@@ -339,7 +340,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
               })
             ) : (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No services sold in this period.
+                {t("analytics.noServicesSoldInThis")}
               </p>
             )}
           </CardContent>
@@ -349,8 +350,8 @@ export default function OverviewTab({ data }: OverviewTabProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base font-semibold">Top staff</CardTitle>
-                <CardDescription className="mt-0.5">Share of revenue taken</CardDescription>
+                <CardTitle className="text-base font-semibold">{t("analytics.topStaff")}</CardTitle>
+                <CardDescription className="mt-0.5">{t("analytics.shareOfRevenueTaken")}</CardDescription>
               </div>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </div>
@@ -377,7 +378,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                         <div className="h-full rounded-full bg-sky-500" style={{ width: `${share}%` }} />
                       </div>
                       <span className="w-32 shrink-0 text-right text-xs text-muted-foreground">
-                        {member.bookings} booked · {money(member.averageTicket)} avg
+                        {t("analytics.bookedAvg", { bookings: member.bookings, value: money(member.averageTicket) })}
                       </span>
                     </div>
                   </div>
@@ -385,7 +386,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
               })
             ) : (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No staff revenue in this period.
+                {t("analytics.noStaffRevenueInThis")}
               </p>
             )}
           </CardContent>

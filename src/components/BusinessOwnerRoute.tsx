@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getAccessToken } from "@/utils/authUtils";
 import { businessService } from "@/services/businessService";
 import { toast } from "sonner";
+import { t } from "@/i18n";
 
 interface BusinessOwnerRouteProps {
   children: React.ReactNode;
@@ -65,7 +66,7 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
             businessId: businessIdNum,
             ownedBusinesses: businesses.map(b => b.id)
           });
-          toast.error("Access denied. You do not have permission to access this business.");
+          toast.error(t("businessOwnerRoute.accessDeniedYouDoNot"));
           setIsAuthorized(false);
           setIsLoading(false);
           return;
@@ -86,7 +87,7 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
         setIsLoading(false);
       } catch (error) {
         console.error("BusinessOwnerRoute: Error validating business ownership", error);
-        toast.error("Failed to verify business access. Please try again.");
+        toast.error(t("businessOwnerRoute.failedToVerifyBusinessAccess"));
         setIsAuthorized(false);
         setIsLoading(false);
       }
@@ -99,7 +100,7 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Verifying access...</div>
+        <div className="text-gray-500">{t("businessOwnerRoute.verifyingAccess")}</div>
       </div>
     );
   }

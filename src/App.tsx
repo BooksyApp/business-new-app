@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import LoadingView from "@/components/ui/loading-view";
+import { I18nProvider } from "@/i18n/I18nProvider";
+import { BookingConflictDialog } from "@/components/calendar/BookingConflictDialog";
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -25,7 +27,7 @@ const AddStaffPage = lazy(() => import("./pages/AddStaffPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 // #26/#44: "Inventory" now opens real product stock. The add-on management that used to
 // live behind that label keeps its own route so nothing is lost.
-const ProductsPage = lazy(() => import("./pages/ProductsPage"));
+const AddonsPage = lazy(() => import("./pages/AddonsPage"));
 const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
 const SetupPage = lazy(() => import("./pages/SetupPage"));
@@ -38,6 +40,7 @@ const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const BrandingPage = lazy(() => import("./pages/BrandingPage"));
 const PhotosPage = lazy(() => import("./pages/PhotosPage"));
@@ -100,9 +103,11 @@ const PageLoader = () => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <I18nProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <BookingConflictDialog />
       {/* The manager app is served under /manage; the router has to agree or every link
           points one level up at the public site. */}
       <BrowserRouter basename="/manage">
@@ -179,8 +184,8 @@ const App = () => (
               <Route path="calendar" element={<Suspense fallback={<PageLoader />}><CalendarPage /></Suspense>} />
               <Route path="tasks" element={<Suspense fallback={<PageLoader />}><HomePage /></Suspense>} />
               <Route path="clients" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
-              <Route path="inventory" element={<Suspense fallback={<PageLoader />}><ProductsPage /></Suspense>} />
-              <Route path="addons" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
+              <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
+              <Route path="addons" element={<Suspense fallback={<PageLoader />}><AddonsPage /></Suspense>} />
               <Route path="shopping" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="items-category" element={<Suspense fallback={<PageLoader />}><ItemsCategoryPage /></Suspense>} />
@@ -208,10 +213,18 @@ const App = () => (
               <Route path="setup" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
               <Route path="locations" element={<Suspense fallback={<PageLoader />}><LocationsPage /></Suspense>} />
               <Route path="booking-rules" element={<Suspense fallback={<PageLoader />}><BookingRulesPage /></Suspense>} />
+              {/* One Setup row, one page: each shows only its own section. */}
+              <Route path="setup/online-booking" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="online" section="online" /></Suspense>} />
+              <Route path="setup/cancellation" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="cancellation" section="cancellation" /></Suspense>} />
+              <Route path="setup/payment-methods" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="payment-methods" section="payment-methods" /></Suspense>} />
+              <Route path="setup/currency-tax" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="currency-tax" section="currency-tax" /></Suspense>} />
+              <Route path="setup/email" element={<Suspense fallback={<PageLoader />}><NotificationsPage key="email" section="email" /></Suspense>} />
+              <Route path="setup/sms-push" element={<Suspense fallback={<PageLoader />}><NotificationsPage key="sms-push" section="sms-push" /></Suspense>} />
               <Route path="security" element={<Suspense fallback={<PageLoader />}><SecurityPage /></Suspense>} />
               <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
               <Route path="branding" element={<Suspense fallback={<PageLoader />}><BrandingPage /></Suspense>} />
               <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
+              <Route path="support" element={<Suspense fallback={<PageLoader />}><SupportPage /></Suspense>} />
               <Route path="help" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense>} />
               <Route path="payment-method" element={<Suspense fallback={<PageLoader />}><PaymentMethodPage /></Suspense>} />
@@ -242,6 +255,7 @@ const App = () => (
         </Suspense>
       </BrowserRouter>
     </TooltipProvider>
+    </I18nProvider>
   </QueryClientProvider>
 );
 

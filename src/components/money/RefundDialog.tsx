@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/currency";
 import { refundService } from "@/services/moneyService";
+import { t, tOpt } from "@/i18n";
 
 interface RefundDialogProps {
   open: boolean;
@@ -63,9 +64,9 @@ export function RefundDialog({
     try {
       const result = await refundService.refund(bookingId, partial ? value : undefined, reason || undefined);
       if (result.status === "ALREADY_REFUNDED") {
-        toast.info("That booking was already refunded");
+        toast.info(t("money.thatBookingWasAlreadyRefunded"));
       } else {
-        toast.success(`Refunded ${formatPrice(result.amount)}`);
+        toast.success(t("money.refunded", { value: formatPrice(result.amount) }));
       }
       onRefunded?.(Number(result.amount ?? value));
       onOpenChange(false);
@@ -73,7 +74,7 @@ export function RefundDialog({
     } catch (e) {
       // A provider failure leaves the booking alone on purpose — the books must not say
       // refunded when the money did not move.
-      toast.error(e instanceof Error ? e.message : "The refund did not go through. Nothing was changed.");
+      toast.error(e instanceof Error ? e.message : t("money.theRefundDidNotGo"));
     } finally {
       setBusy(false);
     }
@@ -83,16 +84,15 @@ export function RefundDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Refund {clientName ? clientName : `booking #${bookingId}`}</DialogTitle>
+          <DialogTitle>{t("money.refund", { value: clientName ? clientName : t("money.booking", { bookingId }) })}</DialogTitle>
           <DialogDescription>
-            The money goes back the way it came. The booking is marked refunded, the commission on
-            it is cancelled, and it comes off your next payout.
+            {t("money.theMoneyGoesBackThe")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="rounded-lg border p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Paid</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("common.paid")}</p>
             <p className="text-2xl font-semibold tabular-nums">{formatPrice(paidAmount)}</p>
           </div>
 
@@ -103,7 +103,7 @@ export function RefundDialog({
               variant={partial ? "outline" : "default"}
               onClick={() => setPartial(false)}
             >
-              Refund it all
+              {t("money.refundItAll")}
             </Button>
             <Button
               type="button"
@@ -111,13 +111,13 @@ export function RefundDialog({
               variant={partial ? "default" : "outline"}
               onClick={() => setPartial(true)}
             >
-              Refund part of it
+              {t("money.refundPartOfIt")}
             </Button>
           </div>
 
           {partial ? (
             <div className="space-y-2">
-              <Label htmlFor="refund-amount">How much</Label>
+              <Label htmlFor="refund-amount">{t("money.howMuch")}</Label>
               <Input
                 id="refund-amount"
                 inputMode="decimal"
@@ -128,18 +128,18 @@ export function RefundDialog({
               />
               {amount.trim() && value > paidAmount ? (
                 <p className="text-xs text-rose-600">
-                  That is more than was paid. The most you can refund is {formatPrice(paidAmount)}.
+                  {t("money.thatIsMoreThanWas", { value: formatPrice(paidAmount) })}
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Use this to keep a deposit and give back the rest.
+                  {t("money.useThisToKeepA")}
                 </p>
               )}
             </div>
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="refund-reason">Why</Label>
+            <Label htmlFor="refund-reason">{t("money.why")}</Label>
             <div className="flex flex-wrap gap-2">
               {REASONS.map(preset => (
                 <Button
@@ -149,7 +149,7 @@ export function RefundDialog({
                   variant={reason === preset ? "default" : "outline"}
                   onClick={() => setReason(reason === preset ? "" : preset)}
                 >
-                  {preset}
+                  {tOpt("refundReason", preset)}
                 </Button>
               ))}
             </div>
@@ -158,17 +158,17 @@ export function RefundDialog({
               rows={2}
               value={reason}
               onChange={e => setReason(e.target.value)}
-              placeholder="Or write your own"
+              placeholder={t("money.orWriteYourOwn")}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={submit} disabled={busy || invalid}>
-            {busy ? "Refunding…" : `Refund ${formatPrice(partial ? (Number.isNaN(value) ? 0 : value) : paidAmount)}`}
+            {busy ? t("money.refunding") : t("money.refund", { value: formatPrice(partial ? (Number.isNaN(value) ? 0 : value) : paidAmount) })}
           </Button>
         </DialogFooter>
       </DialogContent>

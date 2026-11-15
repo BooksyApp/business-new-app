@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { RouteSheet, SheetTabs } from "@/components/page/RouteSheet";
+import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import ItemsCategoryPage from "./ItemsCategoryPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,11 +36,12 @@ import { useCategories } from "@/hooks/useCategories";
 import { toast } from "sonner";
 import { serviceService } from "@/services/serviceService";
 import { useNavigation } from "@/utils/navigationUtils";
+import { t, formatMinutes } from "@/i18n";
 
 const sidebarItems = [
-  { id: "general", label: "GENERAL" },
-  { id: "services", label: "SERVICES" },
-  { id: "pricing", label: "PRICING" },
+  { id: "general", get label() { return t("addComboService.tabGeneral"); } },
+  { id: "services", get label() { return t("addComboService.tabServices"); } },
+  { id: "pricing", get label() { return t("addComboService.tabPricing"); } },
 ];
 
 interface ComboService {
@@ -154,7 +157,7 @@ export default function AddComboServicePage() {
             }
           } catch (error) {
             console.error("Failed to load combo service items:", error);
-            toast.error("Failed to load combo service items");
+            toast.error(t("addComboService.failedToLoadComboService"));
             // Default to custom on error
             setPricingType("custom");
           }
@@ -248,7 +251,7 @@ export default function AddComboServicePage() {
   };
 
   const calculateComboDuration = () => {
-    if (comboServices.length === 0) return "0min";
+    if (comboServices.length === 0) return formatMinutes(0);
     
     if (bookingType === "parallel") {
       // For parallel: duration is the maximum (longest) service duration
@@ -258,17 +261,7 @@ export default function AddComboServicePage() {
         return Math.max(max, serviceDuration);
       }, 0);
 
-      const hours = Math.floor(maxDuration / 60);
-      const minutes = maxDuration % 60;
-      
-      if (hours > 0 && minutes > 0) {
-        return `${hours}h ${minutes}min`;
-      } else if (hours > 0) {
-        return `${hours}h`;
-      } else if (minutes > 0) {
-        return `${minutes}min`;
-      }
-      return "0min";
+      return formatMinutes(maxDuration);
     } else {
       // For sequence: sum all service durations + time between services
       const totalMinutes = comboServices.reduce((sum, cs, index) => {
@@ -289,17 +282,7 @@ export default function AddComboServicePage() {
         return duration;
       }, 0);
 
-      const hours = Math.floor(totalMinutes / 60);
-      const minutes = totalMinutes % 60;
-      
-      if (hours > 0 && minutes > 0) {
-        return `${hours}h ${minutes}min`;
-      } else if (hours > 0) {
-        return `${hours}h`;
-      } else if (minutes > 0) {
-        return `${minutes}min`;
-      }
-      return "0min";
+      return formatMinutes(totalMinutes);
     }
   };
 
@@ -307,12 +290,12 @@ export default function AddComboServicePage() {
     try {
       // Validate required fields
       if (!formData.comboName.trim()) {
-        toast.error("Please enter a combo service name");
+        toast.error(t("addComboService.pleaseEnterAComboService"));
         return;
       }
       
       if (comboServices.length === 0) {
-        toast.error("Please add at least one service to the combo");
+        toast.error(t("addComboService.pleaseAddAtLeastOne"));
         return;
       }
       
@@ -404,7 +387,7 @@ export default function AddComboServicePage() {
     } catch (error) {
       console.error("Failed to create combo service:", error);
       const e = error as { message?: string; response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || e?.message || "Failed to create combo service");
+      toast.error(e?.response?.data?.message || e?.message || t("addComboService.failedToCreateComboService"));
     }
   };
 
@@ -412,12 +395,12 @@ export default function AddComboServicePage() {
     try {
       // Validate required fields
       if (!formData.comboName.trim()) {
-        toast.error("Please enter a combo service name");
+        toast.error(t("addComboService.pleaseEnterAComboService"));
         return;
       }
       
       if (comboServices.length === 0) {
-        toast.error("Please add at least one service to the combo");
+        toast.error(t("addComboService.pleaseAddAtLeastOne"));
         return;
       }
       
@@ -524,93 +507,55 @@ export default function AddComboServicePage() {
     } catch (error) {
       console.error("Failed to create combo service:", error);
       const e = error as { message?: string; response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message || e?.message || "Failed to create combo service");
+      toast.error(e?.response?.data?.message || e?.message || t("addComboService.failedToCreateComboService"));
     }
   };
 
+  const close = () => navigate(getPath("items-category"));
+
   return (
-    <AppLayout>
-      <div className="h-full flex flex-col bg-gray-50">
-        {/* Header */}
-        <div className="border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <h1 className="text-xl font-bold text-gray-900">
-                {isEditMode ? "Edit Combo Service" : "Add Combo Service"}
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="gap-2">
-                <HelpCircle size={16} />
-                How it works
-              </Button>
-              {!isEditMode && (
-                <Button
-                  onClick={handleSaveAndAddNext}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  SAVE & ADD NEXT COMBO
-                </Button>
-              )}
-              <Button
-                onClick={handleSave}
-                size="sm"
-                variant="outline"
-                className={isEditMode ? "bg-gray-900 text-white hover:bg-gray-800" : "bg-gray-100 text-gray-400"}
-                disabled={!isEditMode}
-              >
-                {isEditMode ? "UPDATE COMBO SERVICE" : "SAVE"}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Sidebar Navigation */}
-          <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
-            <div className="p-4 space-y-1">
-              {sidebarItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveSidebarItem(item.id)}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium rounded-lg transition-colors relative ${
-                    activeSidebarItem === item.id
-                      ? "bg-gray-50 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {activeSidebarItem === item.id && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-900 rounded-r" />
-                  )}
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
-            <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-6">
-                  Combo Service Details
+    <RouteSheet
+      backdrop={<ItemsCategoryPage />}
+      onClose={close}
+      size="lg"
+      title={isEditMode ? formData.comboName || t("addComboService.editCombo") : t("addComboService.newCombo")}
+      description={t("addComboService.severalServicesBookedTogetherAs")}
+      header={
+        <SheetTabs
+          label={t("addComboService.comboSections")}
+          value={activeSidebarItem}
+          onChange={setActiveSidebarItem}
+          items={sidebarItems.map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
+        />
+      }
+      footer={
+        <>
+          {!isEditMode ? (
+            <Button variant="outline" className={sheetSecondary} onClick={handleSaveAndAddNext}>{t("common.saveAddNext")}</Button>
+          ) : (
+            <Button variant="outline" className={sheetSecondary} onClick={close}>{t("common.cancel")}</Button>
+          )}
+          {/* It was disabled when creating, so a new combo could only be saved through
+              "save & add next"; handleSave creates as well as updates. */}
+          <Button className={sheetPrimary} onClick={handleSave}>
+            {isEditMode ? t("common.saveChanges") : t("addComboService.saveCombo")}
+          </Button>
+        </>
+      }
+    >
+              <div className="bg-white rounded-2xl shadow-sm border border-[rgb(var(--reg-line)/0.8)] p-6">
+                <h2 className="text-lg font-bold text-[rgb(var(--reg-ink))] mb-6">
+                  {t("addComboService.comboServiceDetails")}
                 </h2>
 
                 {/* GENERAL Tab */}
                 {activeSidebarItem === "general" && (
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="combo-name">Combo name</Label>
+                      <Label htmlFor="combo-name">{t("addComboService.comboName")}</Label>
                       <Input
                         id="combo-name"
-                        placeholder="Combo name"
+                        placeholder={t("addComboService.comboName")}
                         value={formData.comboName}
                         onChange={(e) =>
                           handleInputChange("comboName", e.target.value)
@@ -619,7 +564,7 @@ export default function AddComboServicePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="service-category">Service Category</Label>
+                      <Label htmlFor="service-category">{t("addComboService.serviceCategory")}</Label>
                       <Select
                         value={formData.categoryId}
                         onValueChange={(value) =>
@@ -630,7 +575,7 @@ export default function AddComboServicePage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Not categorized</SelectItem>
+                          <SelectItem value="none">{t("common.notCategorized")}</SelectItem>
                           {categories.map((category) => (
                             <SelectItem key={category.id} value={category.id.toString()}>
                               {category.name}
@@ -642,15 +587,15 @@ export default function AddComboServicePage() {
 
                     {/* Combo Service Color */}
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">Combo Service Color</Label>
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">{t("addComboService.comboServiceColor")}</Label>
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <input
                             type="color"
                             value={formData.color}
                             onChange={(e) => handleInputChange("color", e.target.value)}
-                            className="w-16 h-10 rounded border border-gray-300 cursor-pointer"
-                            title="Select color"
+                            className="w-16 h-10 rounded border border-[rgb(var(--reg-line))] cursor-pointer"
+                            title={t("addComboService.selectColor")}
                           />
                         </div>
                         <Input
@@ -668,43 +613,43 @@ export default function AddComboServicePage() {
                           maxLength={7}
                         />
                         <div
-                          className="w-10 h-10 rounded border border-gray-300 flex-shrink-0"
+                          className="w-10 h-10 rounded border border-[rgb(var(--reg-line))] flex-shrink-0"
                           style={{ backgroundColor: formData.color }}
-                          title="Color preview"
+                          title={t("addComboService.colorPreview")}
                         />
                       </div>
-                      <p className="text-xs text-gray-500">
-                        This color will be used to display appointments for this combo service in the calendar
+                      <p className="text-xs text-[rgb(var(--reg-muted))]">
+                        {t("addComboService.thisColorWillBeUsed")}
                       </p>
                     </div>
 
                     {/* Text Editor Toolbar */}
-                    <div className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg">
-                      <button className="p-2 hover:bg-gray-100 rounded">
-                        <Bold size={16} className="text-gray-600" />
+                    <div className="flex items-center gap-2 p-2 border border-[rgb(var(--reg-line)/0.8)] rounded-2xl">
+                      <button className="p-2 hover:bg-[rgb(var(--reg-ink)/0.05)] rounded">
+                        <Bold size={16} className="text-[rgb(var(--reg-muted))]" />
                       </button>
-                      <button className="p-2 hover:bg-gray-100 rounded">
-                        <Italic size={16} className="text-gray-600" />
+                      <button className="p-2 hover:bg-[rgb(var(--reg-ink)/0.05)] rounded">
+                        <Italic size={16} className="text-[rgb(var(--reg-muted))]" />
                       </button>
-                      <button className="p-2 hover:bg-gray-100 rounded">
-                        <Strikethrough size={16} className="text-gray-600" />
+                      <button className="p-2 hover:bg-[rgb(var(--reg-ink)/0.05)] rounded">
+                        <Strikethrough size={16} className="text-[rgb(var(--reg-muted))]" />
                       </button>
                       <div className="w-px h-6 bg-gray-200" />
-                      <button className="p-2 hover:bg-gray-100 rounded">
-                        <List size={16} className="text-gray-600" />
+                      <button className="p-2 hover:bg-[rgb(var(--reg-ink)/0.05)] rounded">
+                        <List size={16} className="text-[rgb(var(--reg-muted))]" />
                       </button>
-                      <button className="p-2 hover:bg-gray-100 rounded">
-                        <ListOrdered size={16} className="text-gray-600" />
+                      <button className="p-2 hover:bg-[rgb(var(--reg-ink)/0.05)] rounded">
+                        <ListOrdered size={16} className="text-[rgb(var(--reg-muted))]" />
                       </button>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="service-description">
-                        Service Description
+                        {t("addComboService.serviceDescription")}
                       </Label>
                       <Textarea
                         id="service-description"
-                        placeholder="Enter service description..."
+                        placeholder={t("addComboService.enterServiceDescription")}
                         value={formData.description}
                         onChange={(e) =>
                           handleInputChange("description", e.target.value)
@@ -715,10 +660,10 @@ export default function AddComboServicePage() {
 
                     {/* Add Photos */}
                     <div className="space-y-2">
-                      <Label>Add Photos</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center hover:border-gray-400 transition-colors cursor-pointer">
-                        <ImageIcon size={32} className="text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-600">Add photos</span>
+                      <Label>{t("addComboService.addPhotos")}</Label>
+                      <div className="border-2 border-dashed border-[rgb(var(--reg-line))] rounded-2xl p-8 flex flex-col items-center justify-center hover:border-gray-400 transition-colors cursor-pointer">
+                        <ImageIcon size={32} className="text-[rgb(var(--reg-muted)/0.8)] mb-2" />
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{t("addComboService.addPhotos2")}</span>
                       </div>
                     </div>
 
@@ -726,9 +671,9 @@ export default function AddComboServicePage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="allow-online-booking">
-                          Allow clients to book online
+                          {t("addComboService.allowClientsToBookOnline")}
                         </Label>
-                        <HelpCircle size={16} className="text-gray-400" />
+                        <HelpCircle size={16} className="text-[rgb(var(--reg-muted)/0.8)]" />
                       </div>
                       <Switch
                         id="allow-online-booking"
@@ -746,8 +691,8 @@ export default function AddComboServicePage() {
                   <div className="space-y-6">
                     {/* Booking Type */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-gray-900">
-                        Booking Type
+                      <h3 className="text-base font-bold text-[rgb(var(--reg-ink))]">
+                        {t("addComboService.bookingType")}
                       </h3>
                       <RadioGroup
                         value={bookingType}
@@ -755,10 +700,10 @@ export default function AddComboServicePage() {
                       >
                         <div className="space-y-3">
                           <div
-                            className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer ${
+                            className={`flex items-start gap-4 p-4 border-2 rounded-2xl cursor-pointer ${
                               bookingType === "sequence"
                                 ? "border-gray-900"
-                                : "border-gray-200"
+                                : "border-[rgb(var(--reg-line)/0.8)]"
                             }`}
                             onClick={() => setBookingType("sequence")}
                           >
@@ -772,20 +717,18 @@ export default function AddComboServicePage() {
                                 htmlFor="sequence"
                                 className="font-medium cursor-pointer"
                               >
-                                Sequence
+                                {t("addComboService.sequence")}
                               </Label>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Services are performed one after another. You
-                                have the option to add breaks/time between each
-                                service.
+                              <p className="text-sm text-[rgb(var(--reg-muted))] mt-1">
+                                {t("addComboService.servicesArePerformedOneAfter")}
                               </p>
                             </div>
                           </div>
                           <div
-                            className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer ${
+                            className={`flex items-start gap-4 p-4 border-2 rounded-2xl cursor-pointer ${
                               bookingType === "parallel"
                                 ? "border-gray-900"
-                                : "border-gray-200"
+                                : "border-[rgb(var(--reg-line)/0.8)]"
                             }`}
                             onClick={() => setBookingType("parallel")}
                           >
@@ -799,11 +742,10 @@ export default function AddComboServicePage() {
                                 htmlFor="parallel"
                                 className="font-medium cursor-pointer"
                               >
-                                Parallel
+                                {t("addComboService.parallel")}
                               </Label>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Services are performed at the same time. Each
-                                service is assigned to a different Staff Member.
+                              <p className="text-sm text-[rgb(var(--reg-muted))] mt-1">
+                                {t("addComboService.servicesArePerformedAtThe")}
                               </p>
                             </div>
                           </div>
@@ -813,40 +755,40 @@ export default function AddComboServicePage() {
 
                     {/* Combo Section */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-gray-900">
-                        Combo
+                      <h3 className="text-base font-bold text-[rgb(var(--reg-ink))]">
+                        {t("common.combo")}
                       </h3>
                       {comboServices.length === 0 && isEditMode && (
-                        <div className="text-sm text-gray-500 italic">
-                          No services added to this combo yet.
+                        <div className="text-sm text-[rgb(var(--reg-muted))] italic">
+                          {t("addComboService.noServicesAddedToThis")}
                         </div>
                       )}
                       <div className="space-y-3">
                         {comboServices.map((service, index) => (
                           <div key={service.id} className="space-y-3">
-                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-4 p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl">
                               <div 
                                 className={`w-1 h-12 rounded-full ${service.color?.startsWith("bg-") ? service.color : "bg-gray-400"}`}
                                 style={service.color?.startsWith("#") ? { backgroundColor: service.color } : {}}
                               />
                               <div className="flex-1">
-                                <h4 className="font-medium text-gray-900">
+                                <h4 className="font-medium text-[rgb(var(--reg-ink))]">
                                   {service.name}
                                 </h4>
-                                <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                                <div className="flex items-center gap-4 text-sm text-[rgb(var(--reg-muted))] mt-1">
                                   <span>
                                     {service.durationMinutes
-                                      ? `${Math.floor(service.durationMinutes / 60)}h ${service.durationMinutes % 60}min`
-                                      : "N/A"}
+                                      ? formatMinutes(service.durationMinutes)
+                                      : t("common.nA")}
                                   </span>
-                                  <span className="font-semibold text-gray-900">
-                                    {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "N/A"}
+                                  <span className="font-semibold text-[rgb(var(--reg-ink))]">
+                                    {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : t("common.nA")}
                                   </span>
                                 </div>
                               </div>
                               <button
                                 onClick={() => handleRemoveService(service.id)}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-[rgb(var(--reg-muted)/0.8)] hover:text-[rgb(var(--reg-muted))]"
                               >
                                 <X size={18} />
                               </button>
@@ -855,9 +797,9 @@ export default function AddComboServicePage() {
                             {/* Time between services (only for sequence, and not for last service) */}
                             {bookingType === "sequence" &&
                               index < comboServices.length - 1 && (
-                                <div className="ml-5 pl-4 border-l-2 border-gray-200">
+                                <div className="ml-5 pl-4 border-l-2 border-[rgb(var(--reg-line)/0.8)]">
                                   {service.timeBetweenHours !== undefined ? (
-                                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-3 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
                                       <div className="flex items-center gap-2">
                                         <Select
                                           value={service.timeBetweenHours}
@@ -876,7 +818,7 @@ export default function AddComboServicePage() {
                                             {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(
                                               (h) => (
                                                 <SelectItem key={h} value={h.toString()}>
-                                                  {h}h
+                                                  {t("addComboService.h", { h })}
                                                 </SelectItem>
                                               )
                                             )}
@@ -898,20 +840,20 @@ export default function AddComboServicePage() {
                                           <SelectContent>
                                             {[0, 15, 30, 45].map((m) => (
                                               <SelectItem key={m} value={m.toString()}>
-                                                {m}min
+                                                {t("addComboService.min", { m })}
                                               </SelectItem>
                                             ))}
                                           </SelectContent>
                                         </Select>
                                       </div>
-                                      <span className="text-sm text-gray-600">
-                                        Time between services
+                                      <span className="text-sm text-[rgb(var(--reg-muted))]">
+                                        {t("addComboService.timeBetweenServices")}
                                       </span>
                                       <button
                                         onClick={() =>
                                           handleRemoveTimeBetween(service.id)
                                         }
-                                        className="ml-auto text-gray-400 hover:text-gray-600"
+                                        className="ml-auto text-[rgb(var(--reg-muted)/0.8)] hover:text-[rgb(var(--reg-muted))]"
                                       >
                                         <Trash2 size={16} />
                                       </button>
@@ -921,10 +863,10 @@ export default function AddComboServicePage() {
                                       onClick={() =>
                                         handleAddTimeBetween(service.id)
                                       }
-                                      className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+                                      className="text-sm text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))] flex items-center gap-2"
                                     >
                                       <Plus size={16} />
-                                      Add time between services
+                                      {t("addComboService.addTimeBetweenServices")}
                                     </button>
                                   )}
                                 </div>
@@ -935,12 +877,12 @@ export default function AddComboServicePage() {
 
                       {servicesLoading ? (
                         <div className="flex items-center justify-center py-4">
-                          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                          <Loader2 className="h-5 w-5 animate-spin text-[rgb(var(--reg-muted)/0.8)]" />
                         </div>
                       ) : (
                         <Select onValueChange={(value) => handleAddService(parseInt(value))}>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a service to add" />
+                            <SelectValue placeholder={t("addComboService.selectAServiceToAdd")} />
                           </SelectTrigger>
                           <SelectContent>
                             {services
@@ -968,10 +910,10 @@ export default function AddComboServicePage() {
                       >
                         <div className="space-y-3">
                           <div
-                            className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer ${
+                            className={`flex items-start gap-4 p-4 border-2 rounded-2xl cursor-pointer ${
                               pricingType === "sum"
                                 ? "border-gray-900"
-                                : "border-gray-200"
+                                : "border-[rgb(var(--reg-line)/0.8)]"
                             }`}
                             onClick={() => setPricingType("sum")}
                           >
@@ -985,21 +927,18 @@ export default function AddComboServicePage() {
                                 htmlFor="service-pricing"
                                 className="font-medium cursor-pointer"
                               >
-                                Service Pricing
+                                {t("addComboService.servicePricing")}
                               </Label>
-                              <p className="text-sm text-gray-600 mt-1">
-                                The price for the Combo Service is based on the
-                                price for the individual services. If you adjust
-                                the price for one of the services, the Combo
-                                price will also change.
+                              <p className="text-sm text-[rgb(var(--reg-muted))] mt-1">
+                                {t("addComboService.thePriceForTheCombo")}
                               </p>
                             </div>
                           </div>
                           <div
-                            className={`flex items-start gap-4 p-4 border-2 rounded-lg cursor-pointer ${
+                            className={`flex items-start gap-4 p-4 border-2 rounded-2xl cursor-pointer ${
                               pricingType === "custom"
                                 ? "border-gray-900"
-                                : "border-gray-200"
+                                : "border-[rgb(var(--reg-line)/0.8)]"
                             }`}
                             onClick={() => setPricingType("custom")}
                           >
@@ -1013,13 +952,10 @@ export default function AddComboServicePage() {
                                 htmlFor="custom-pricing"
                                 className="font-medium cursor-pointer"
                               >
-                                Custom Pricing
+                                {t("addComboService.customPricing")}
                               </Label>
-                              <p className="text-sm text-gray-600 mt-1">
-                                Set a custom price for this Combo Service. It
-                                can be higher or lower than the Service Pricing
-                                would be, but it won't change if you adjust the
-                                price for the individual services.
+                              <p className="text-sm text-[rgb(var(--reg-muted))] mt-1">
+                                {t("addComboService.setACustomPriceFor")}
                               </p>
                             </div>
                           </div>
@@ -1029,9 +965,9 @@ export default function AddComboServicePage() {
 
                     {/* Combo Price (for Custom Pricing) */}
                     {pricingType === "custom" && (
-                      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="space-y-4 p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl">
                         <div className="space-y-2">
-                          <Label>Price type</Label>
+                          <Label>{t("common.priceType")}</Label>
                           <Select
                             value={formData.comboPriceType}
                             onValueChange={(value) =>
@@ -1042,16 +978,16 @@ export default function AddComboServicePage() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="FIXED">Fixed</SelectItem>
-                              <SelectItem value="FROM">From</SelectItem>
-                              <SelectItem value="RANGE">Range</SelectItem>
+                              <SelectItem value="FIXED">{t("common.fixed")}</SelectItem>
+                              <SelectItem value="FROM">{t("common.from2")}</SelectItem>
+                              <SelectItem value="RANGE">{t("addComboService.range")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Price</Label>
+                          <Label>{t("common.price")}</Label>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">{currencySymbol()}</span>
+                            <span className="text-sm text-[rgb(var(--reg-muted))]">{currencySymbol()}</span>
                             <Input
                               type="number"
                               placeholder="0.00"
@@ -1063,7 +999,7 @@ export default function AddComboServicePage() {
                           </div>
                           {!formData.comboPrice && (
                             <p className="text-sm text-red-500">
-                              This field is required
+                              {t("addComboService.thisFieldIsRequired")}
                             </p>
                           )}
                         </div>
@@ -1072,23 +1008,23 @@ export default function AddComboServicePage() {
 
                     {/* Individual Services Pricing */}
                     <div className="space-y-4">
-                      <h3 className="text-base font-bold text-gray-900">
-                        Services in Combo
+                      <h3 className="text-base font-bold text-[rgb(var(--reg-ink))]">
+                        {t("addComboService.servicesInCombo")}
                       </h3>
                       {comboServices.map((service) => (
                         <div
                           key={service.id}
-                          className="p-4 bg-gray-50 rounded-lg space-y-3"
+                          className="p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl space-y-3"
                         >
                           <div className="flex items-center gap-3">
                             <div className={`w-1 h-8 ${service.color} rounded-full`} />
-                            <h4 className="font-medium text-gray-900">
+                            <h4 className="font-medium text-[rgb(var(--reg-ink))]">
                               {service.name}
                             </h4>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>Price type</Label>
+                              <Label>{t("common.priceType")}</Label>
                               <Select
                                 value={service.priceType}
                                 onValueChange={(value) =>
@@ -1103,16 +1039,16 @@ export default function AddComboServicePage() {
                                   <SelectValue />
                                 </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="FIXED">Fixed</SelectItem>
-                              <SelectItem value="FROM">From</SelectItem>
-                              <SelectItem value="RANGE">Range</SelectItem>
+                              <SelectItem value="FIXED">{t("common.fixed")}</SelectItem>
+                              <SelectItem value="FROM">{t("common.from2")}</SelectItem>
+                              <SelectItem value="RANGE">{t("addComboService.range")}</SelectItem>
                             </SelectContent>
                               </Select>
                             </div>
                             <div className="space-y-2">
-                              <Label>Price</Label>
+                              <Label>{t("common.price")}</Label>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-600">{currencySymbol()}</span>
+                                <span className="text-sm text-[rgb(var(--reg-muted))]">{currencySymbol()}</span>
                                 <Input
                                   type="number"
                                   placeholder="0.00"
@@ -1128,7 +1064,7 @@ export default function AddComboServicePage() {
                               </div>
                               {!service.priceValue && (
                                 <p className="text-sm text-red-500">
-                                  This field is required
+                                  {t("addComboService.thisFieldIsRequired")}
                                 </p>
                               )}
                             </div>
@@ -1138,22 +1074,22 @@ export default function AddComboServicePage() {
                     </div>
 
                     {/* Summary */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
+                    <div className="flex items-center justify-between pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
+                      <p className="text-sm text-[rgb(var(--reg-muted))]">
                         {pricingType === "custom"
-                          ? "Any changes to the price for the individual services will only apply to the Combo Service."
-                          : "The combo price is calculated from individual service prices."}
+                          ? t("addComboService.anyChangesToThePrice")
+                          : t("addComboService.theComboPriceIsCalculated")}
                       </p>
                       <div className="text-right">
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">COMBO PRICE</p>
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-sm text-[rgb(var(--reg-muted))] mb-1">{t("addComboService.comboPrice")}</p>
+                          <p className="text-2xl font-bold text-[rgb(var(--reg-ink))]">
                             {calculateComboPrice()} {currencySymbol()}
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600 mb-1">COMBO DURATION</p>
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-sm text-[rgb(var(--reg-muted))] mb-1">{t("addComboService.comboDuration")}</p>
+                          <p className="text-2xl font-bold text-[rgb(var(--reg-ink))]">
                             {calculateComboDuration()}
                           </p>
                         </div>
@@ -1162,11 +1098,7 @@ export default function AddComboServicePage() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </AppLayout>
+    </RouteSheet>
   );
 }
 

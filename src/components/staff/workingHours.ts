@@ -1,14 +1,15 @@
+import { t } from "@/i18n";
 /** Week schedule shapes and conversions for the staff working-hours editor. */
 
 // Ordered week; keys are DayOfWeek names the staff-service expects in `schedule`.
 export const WEEK_DAYS = [
-  { key: "MONDAY", label: "Monday" },
-  { key: "TUESDAY", label: "Tuesday" },
-  { key: "WEDNESDAY", label: "Wednesday" },
-  { key: "THURSDAY", label: "Thursday" },
-  { key: "FRIDAY", label: "Friday" },
-  { key: "SATURDAY", label: "Saturday" },
-  { key: "SUNDAY", label: "Sunday" },
+  { key: "MONDAY", get label() { return t("common.monday"); } },
+  { key: "TUESDAY", get label() { return t("common.tuesday"); } },
+  { key: "WEDNESDAY", get label() { return t("common.wednesday"); } },
+  { key: "THURSDAY", get label() { return t("common.thursday"); } },
+  { key: "FRIDAY", get label() { return t("common.friday"); } },
+  { key: "SATURDAY", get label() { return t("common.saturday"); } },
+  { key: "SUNDAY", get label() { return t("common.sunday"); } },
 ] as const;
 
 export type DayKey = (typeof WEEK_DAYS)[number]["key"];

@@ -1,4 +1,5 @@
 import { apiClient } from '@/config/api';
+import { t } from "@/i18n";
 
 export interface Service {
   id: number;
@@ -22,6 +23,15 @@ export interface Service {
   paddingAfter?: number;    // buffer minutes reserved after the appointment
   processingDuring?: number; // client-visit minutes after active work where staff is free
   processingAfter?: number;  // additional client-visit minutes where staff is free
+  /** Questions asked at booking. */
+  questions?: { text: string; required?: boolean }[];
+  /** Shown to the client after booking and in the confirmation email. */
+  messageToClient?: string | null;
+  /** Clients one staff member can take at once: 1 = one at a time, 0 = no limit. */
+  parallelClients?: number;
+  /** Percent VAT; null/absent = the business's own rate. */
+  taxRate?: number | null;
+  resourceTypeId?: number | null; // #282: a shared room/equipment this service needs
 }
 
 export interface CreateServiceRequest {
@@ -44,9 +54,14 @@ export interface CreateServiceRequest {
   paddingAfter?: number;
   processingDuring?: number;
   processingAfter?: number;
+  questions?: { text: string; required?: boolean }[];
+  messageToClient?: string;
+  parallelClients?: number;
+  taxRate?: number | null;
 }
 
 export interface UpdateServiceRequest {
+  resourceTypeId?: number;
   categoryId?: number;
   name?: string;
   description?: string;
@@ -67,6 +82,10 @@ export interface UpdateServiceRequest {
   paddingAfter?: number;
   processingDuring?: number;
   processingAfter?: number;
+  questions?: { text: string; required?: boolean }[];
+  messageToClient?: string;
+  parallelClients?: number;
+  taxRate?: number | null;
 }
 
 export interface ComboServiceItem {
@@ -89,20 +108,20 @@ export const serviceService = {
 
   async createService(businessId: number, request: CreateServiceRequest): Promise<Service> {
     if (request.price !== undefined && request.price !== null && request.price < 0) {
-      throw new Error("Service price cannot be negative");
+      throw new Error(t("services.servicePriceCannotBeNegative"));
     }
     if (request.durationMinutes !== undefined && request.durationMinutes <= 0) {
-      throw new Error("Service duration must be greater than 0");
+      throw new Error(t("services.serviceDurationMustBeGreater"));
     }
     return apiClient.post<Service>(`/services/business/${businessId}`, request);
   },
 
   async updateService(id: number, businessId: number, request: UpdateServiceRequest): Promise<Service> {
     if (request.price !== undefined && request.price !== null && request.price < 0) {
-      throw new Error("Service price cannot be negative");
+      throw new Error(t("services.servicePriceCannotBeNegative"));
     }
     if (request.durationMinutes !== undefined && request.durationMinutes <= 0) {
-      throw new Error("Service duration must be greater than 0");
+      throw new Error(t("services.serviceDurationMustBeGreater"));
     }
     return apiClient.put<Service>(`/services/${id}/business/${businessId}`, request);
   },

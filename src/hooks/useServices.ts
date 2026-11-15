@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { serviceService, type Service, type CreateServiceRequest, type UpdateServiceRequest } from '@/services/serviceService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
+import { t } from "@/i18n";
 
 export function useServices(businessIdParam?: number, categoryId?: number) {
   const routeBusinessId = useBusinessId();
@@ -12,7 +13,7 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
 
   const loadServices = useCallback(async () => {
     if (!businessId || businessId <= 0) {
-      setError('Business ID is required');
+      setError(t("common.businessIdIsRequired"));
       setLoading(false);
       return;
     }
@@ -25,8 +26,8 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
       setServices(data);
     } catch (err) {
       console.error('Failed to load services:', err);
-      setError((err instanceof Error && err.message) || 'Failed to load services');
-      toast.error('Failed to load services');
+      setError((err instanceof Error && err.message) || t("hooks.failedToLoadServices"));
+      toast.error(t("hooks.failedToLoadServices"));
     } finally {
       setLoading(false);
     }
@@ -38,17 +39,17 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
 
   const createService = useCallback(async (request: CreateServiceRequest) => {
     if (!businessId || businessId <= 0) {
-      const error = new Error('Business ID is required');
+      const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;
     }
     try {
       const created = await serviceService.createService(businessId, request);
       setServices(prev => [...prev, created]);
-      toast.success('Service created successfully');
+      toast.success(t("hooks.serviceCreatedSuccessfully"));
       return created;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to create service');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateService"));
       throw err;
     }
   }, [businessId]);
@@ -57,10 +58,10 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
     try {
       const updated = await serviceService.updateService(id, businessId, request);
       setServices(prev => prev.map(svc => svc.id === id ? updated : svc));
-      toast.success('Service updated successfully');
+      toast.success(t("hooks.serviceUpdatedSuccessfully"));
       return updated;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to update service');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateService"));
       throw err;
     }
   }, [businessId]);
@@ -69,9 +70,9 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
     try {
       await serviceService.deleteService(id, businessId);
       setServices(prev => prev.filter(svc => svc.id !== id));
-      toast.success('Service deleted successfully');
+      toast.success(t("hooks.serviceDeletedSuccessfully"));
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to delete service');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToDeleteService"));
       throw err;
     }
   }, [businessId]);

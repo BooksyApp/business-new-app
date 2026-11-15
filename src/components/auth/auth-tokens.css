@@ -1,0 +1,20 @@
+/* booqi-web's auth palette, as the hub's sign-in and sign-up pages read it. Same numbers as
+   booqi-web/src/app/globals.css (--brand-rgb, --ink-rgb, --canvas-rgb, --mesh-*-rgb …).
+   On :root, not on the page wrapper, so dialogs portalled to <body> resolve them too. */
+:root {
+  --reg-brand: 111 82 237;
+  --reg-brand-strong: 91 63 214;
+  --reg-brand-soft: 244 241 255;
+  --reg-ink: 29 23 48;
+  --reg-muted: 107 97 88;
+  --reg-line: 227 218 206;
+  --reg-canvas: 251 247 242;
+  --reg-mesh-1: 216 204 255;
+  --reg-mesh-2: 255 194 207;
+  --reg-mesh-3: 255 217 161;
+}
+
+@keyframes auth-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}

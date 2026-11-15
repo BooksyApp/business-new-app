@@ -1,6 +1,11 @@
 import { API_BASE_URL } from '@/config/api';
-import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useMarket } from "@/services/platformService";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { SalonPreview } from "@/components/auth/SalonPreview";
+import { authGhost, authInput, authLink, authSubtitle, authTitle, brandCta, choiceCard, webUrl } from "@/components/auth/authStyles";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +27,8 @@ import { businessService } from "@/services/businessService";
 import { serviceService } from "@/services/serviceService";
 import { staffService } from "@/services/staffService";
 import { getPlatformSettings } from "@/services/platformService";
+import { TERMS_VERSION } from "@/config/legal";
+import { t as tr, tOpt } from "@/i18n";
 
 interface RegistrationData {
   firstName: string;
@@ -74,6 +81,10 @@ interface RegistrationData {
   profileLiveDate: string;
 }
 
+const PHONE_PREFIXES: [string, string][] = [
+  ["+1", "US/CA"], ["+7", "RU/KZ"], ["+31", "NL"], ["+32", "BE"], ["+33", "FR"], ["+34", "ES"], ["+36", "HU"], ["+39", "IT"], ["+41", "CH"], ["+43", "AT"], ["+44", "UK"], ["+45", "DK"], ["+46", "SE"], ["+47", "NO"], ["+48", "PL"], ["+49", "DE"], ["+90", "TR"], ["+353", "IE"], ["+358", "FI"], ["+370", "LT"], ["+371", "LV"], ["+372", "EE"], ["+380", "UA"], ["+420", "CZ"], ["+966", "SA"], ["+971", "AE"], ["+992", "TJ"], ["+994", "AZ"], ["+995", "GE"], ["+998", "UZ"],
+];
+
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -84,7 +95,17 @@ const RegistrationPage = () => {
   useEffect(() => {
     getPlatformSettings().then((settings) => setSignupsOpen(settings.businessSignupsOpen));
   }, []);
-  const totalSteps = 6;
+
+  // Handoff from booqi-web's "For business" sign-up: ?email= and ?business= prefill the form,
+  // ?plan= is shown back to the owner. All optional; anything odd is simply ignored.
+  const [searchParams] = useSearchParams();
+  const emailParam = (searchParams.get("email") ?? "").trim().slice(0, 254);
+  const prefillEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam) ? emailParam : "";
+  const prefillBusiness = (searchParams.get("business") ?? "").trim().slice(0, 120);
+  const planParam = (searchParams.get("plan") ?? "").trim();
+  const selectedPlan = /^[a-z0-9-]{1,24}$/i.test(planParam)
+    ? planParam.charAt(0).toUpperCase() + planParam.slice(1).toLowerCase()
+    : null;
 
   const [formData, setFormData] = useState<RegistrationData>({
     // null, not missing: step 3 checks `latitude !== null`, and undefined passed that check,
@@ -93,9 +114,9 @@ const RegistrationPage = () => {
     longitude: null,
     firstName: "",
     lastName: "",
-    email: "",
+    email: prefillEmail,
     phone: "",
-    phonePrefix: "+48",
+    phonePrefix: "",
     password: "",
     passwordConfirmation: "",
     language: "English",
@@ -106,7 +127,7 @@ const RegistrationPage = () => {
     termsAccepted: false,
     marketing1: false,
     category: "",
-    businessName: "",
+    businessName: prefillBusiness,
     yourName: "",
     phoneVerified: false,
     weeklySchedule: "",
@@ -160,7 +181,21 @@ const RegistrationPage = () => {
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [newService, setNewService] = useState({ name: "", type: "", durationHours: "0", durationMinutes: "30", price: "", priceType: "Fixed" });
-  const [newStaff, setNewStaff] = useState({ name: "", email: "", phone: "", phonePrefix: "+48", position: "" });
+  const [newStaff, setNewStaff] = useState({ name: "", email: "", phone: "", phonePrefix: "", position: "" });
+
+  // The dial code follows the market (the pinned country, else the visitor's), until the
+  // owner picks one by hand. Never a hardcoded country.
+  const market = useMarket(formData.countryCode || null);
+  const prefixTouched = useRef(false);
+  useEffect(() => {
+    if (!market?.dialCode || prefixTouched.current) return;
+    setFormData((f) => ({ ...f, phonePrefix: market.dialCode }));
+    setNewStaff((n) => ({ ...n, phonePrefix: market.dialCode }));
+  }, [market]);
+  const phonePrefixes = useMemo<[string, string][]>(() => {
+    const first = market?.dialCode ? PHONE_PREFIXES.filter(([c]) => c === market.dialCode) : [];
+    return [...first, ...PHONE_PREFIXES.filter(([c]) => c !== market?.dialCode)];
+  }, [market]);
 
   const addressSuggestions = [
     { id: "1", street: "Karola Bunscha", city: "Kraków", country: "Poland" },
@@ -188,6 +223,7 @@ const RegistrationPage = () => {
   const featuredCategories = otherCategories.slice(0, 6).map((c) => ({
     id: c.slug,
     name: c.name,
+    label: c.label ?? c.name,
     icon: CATEGORY_ICONS[c.slug] ?? Sparkles,
   }));
 
@@ -207,22 +243,28 @@ const RegistrationPage = () => {
   ];
 
   const daysOfWeek = [
-    { key: "monday", label: "Monday" },
-    { key: "tuesday", label: "Tuesday" },
-    { key: "wednesday", label: "Wednesday" },
-    { key: "thursday", label: "Thursday" },
-    { key: "friday", label: "Friday" },
-    { key: "saturday", label: "Saturday" },
-    { key: "sunday", label: "Sunday" },
+    { key: "monday", label: tr("common.monday") },
+    { key: "tuesday", label: tr("common.tuesday") },
+    { key: "wednesday", label: tr("common.wednesday") },
+    { key: "thursday", label: tr("common.thursday") },
+    { key: "friday", label: tr("common.friday") },
+    { key: "saturday", label: tr("common.saturday") },
+    { key: "sunday", label: tr("common.sunday") },
   ];
 
-  const steps = [
-    { number: 1, title: "Account", icon: User, description: "Create your account" },
-    { number: 2, title: "Business", icon: Building2, description: "Business information" },
-    { number: 3, title: "Location", icon: MapPin, description: "Location & hours" },
-    { number: 4, title: "Team", icon: Users, description: "Team & services" },
-    { number: 5, title: "Preferences", icon: Settings, description: "Your preferences" },
-    { number: 6, title: "Complete", icon: CheckCircle2, description: "You're all set" },
+  // One focused question per screen. `group` is the plain word shown over the progress bar.
+  const screens: { key: string; group: string; title: string; subtitle?: string }[] = [
+    { key: "account", group: tr("registration.groupAccount"), title: tr("registration.createYourBusinessAccount"), subtitle: tr("registration.freeToStartYouCan") },
+    { key: "name", group: tr("registration.groupBusiness"), title: tr("registration.whatSYourBusinessCalled"), subtitle: tr("registration.thisIsTheNameClients") },
+    { key: "category", group: tr("registration.groupBusiness"), title: tr("registration.whatDoYouDo"), subtitle: tr("registration.pickTheOneThatFits") },
+    { key: "workplace", group: tr("registration.groupBusiness"), title: tr("registration.whereDoYouWork") },
+    { key: "volume", group: tr("registration.groupBusiness"), title: tr("registration.howBusyIsATypical"), subtitle: tr("registration.itHelpsUsSetUp") },
+    { key: "address", group: tr("registration.groupLocation"), title: tr("registration.whereCanClientsFindYou"), subtitle: tr("registration.searchForYourAddressThen") },
+    { key: "hours", group: tr("registration.groupLocation"), title: tr("registration.whenAreYouOpen"), subtitle: tr("registration.tapATimeToChange") },
+    { key: "team", group: tr("registration.groupTeam"), title: tr("registration.whoWorksWithYou"), subtitle: tr("registration.optionalAddPeopleAndServices") },
+    { key: "goals", group: tr("registration.groupPreferences"), title: tr("registration.whatShouldBooqiHelpWith"), subtitle: tr("registration.pickUpTo") },
+    { key: "launch", group: tr("registration.groupPreferences"), title: tr("registration.whenDoYouWantTo") },
+    { key: "review", group: tr("registration.groupAlmostDone"), title: tr("registration.readyToOpenYourDoors"), subtitle: tr("registration.checkTheDetailsThenCreate") },
   ];
 
   const hasLetter = /[a-zA-Z]/.test(formData.password);
@@ -288,7 +330,7 @@ const RegistrationPage = () => {
     setResendTimer(60);
     setCanResend(false);
     setVerificationCode(["", "", "", ""]);
-    toast.info("Verification code sent!");
+    toast.info(tr("registration.verificationCodeSent"));
   };
 
   const isCodeComplete = verificationCode.every(digit => digit !== "");
@@ -309,7 +351,7 @@ const RegistrationPage = () => {
       ]);
       setNewService({ name: "", type: "", durationHours: "0", durationMinutes: "30", price: "", priceType: "Fixed" });
       setIsAddServiceOpen(false);
-      toast.success("Service added!");
+      toast.success(tr("registration.serviceAdded"));
     }
   };
 
@@ -325,9 +367,9 @@ const RegistrationPage = () => {
           position: newStaff.position,
         }
       ]);
-      setNewStaff({ name: "", email: "", phone: "", phonePrefix: "+48", position: "" });
+      setNewStaff({ name: "", email: "", phone: "", phonePrefix: market?.dialCode || formData.phonePrefix, position: "" });
       setIsAddStaffOpen(false);
-      toast.success("Staff member added!");
+      toast.success(tr("registration.staffMemberAdded"));
     }
   };
 
@@ -354,6 +396,8 @@ const RegistrationPage = () => {
   const canProceedStep5 = formData.profileLiveDate !== "";
 
   const [isRegistering, setIsRegistering] = useState(false);
+  // Set after a successful sign-up: a calm "welcome" screen, then the calendar (still "/").
+  const [registered, setRegistered] = useState(false);
 
   const handleCompleteRegistration = async () => {
     setIsRegistering(true);
@@ -364,6 +408,14 @@ const RegistrationPage = () => {
 
       // Register user and create business in one request (monolith)
       const authResponse = await authService.registerBusiness({
+        // The terms box and the owner-tips box were checked and then thrown away; now they
+        // reach the server, which keeps them (with the wording version) as proof of consent.
+        consent: {
+          acceptTerms: formData.termsAccepted,
+          termsVersion: TERMS_VERSION,
+          marketingOptIn: formData.marketing1,
+          source: "hub_register",
+        },
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -408,7 +460,7 @@ const RegistrationPage = () => {
       // THAT business with an update — a second businessService.createBusiness() call
       // here used to create a duplicate, unrelated business on every single signup.
       if (!businessId) {
-        throw new Error('Registration succeeded but no business was provisioned for this account.');
+        throw new Error(tr("registration.registrationSucceededButNoBusiness"));
       }
       const business = await businessService.updateBusiness(businessId, {
         name: formData.businessName,
@@ -481,10 +533,10 @@ const RegistrationPage = () => {
         }
       }
 
-      toast.success("Registration completed! Welcome to booqi!");
 
-      // Redirect to portal (home page)
-      navigate('/');
+      // The welcome screen's button goes on to the portal (home page).
+      setRegistered(true);
+      window.scrollTo({ top: 0 });
     } catch (error) {
       console.error('Registration error:', error);
       const e = error as { message?: string; response?: { message?: string; error?: string }; status?: number } | null;
@@ -496,7 +548,7 @@ const RegistrationPage = () => {
       });
       
       // Try to extract error message from various sources
-      let errorMessage = "Registration failed. Please try again.";
+      let errorMessage = tr("registration.registrationFailedPleaseTryAgain");
       
       if (e?.message) {
         errorMessage = e.message;
@@ -516,1068 +568,732 @@ const RegistrationPage = () => {
 
   if (!signupsOpen) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 px-6 text-center">
-        <div className="max-w-md">
-          <h1 className="text-2xl font-semibold text-gray-900">Signups are closed</h1>
-          <p className="mt-3 text-gray-600">
-            booqi is not taking new businesses at the moment. If you already have an account,
-            sign in instead.
+      <AuthShell headerLink={{ label: tr("registration.logIn"), to: "/login" }}>
+        <h1 className={authTitle}>{tr("registration.signupsAreClosed")}</h1>
+        <p className="mb-7 mt-2 text-base leading-relaxed text-[rgb(var(--reg-muted))]">
+          {tr("registration.booqiIsNotTakingNew")}
+        </p>
+        <button onClick={() => navigate("/login")} className={cn(brandCta, "w-full")}>
+          {tr("registration.signIn")}
+        </button>
+      </AuthShell>
+    );
+  }
+
+  const screen = screens[currentStep - 1];
+  const isFirst = currentStep === 1;
+  const isReview = screen.key === "review";
+  const canContinue: Record<string, boolean> = {
+    account: canProceedStep1,
+    name: formData.businessName.trim() !== "",
+    category: formData.category !== "",
+    workplace: formData.workLocation !== "",
+    volume: formData.weeklySchedule !== "",
+    address: canProceedStep3,
+    hours: canProceedStep4,
+    team: true,
+    goals: true,
+    launch: canProceedStep5,
+    review: !isRegistering,
+  };
+  const goTo = (n: number) => {
+    setCurrentStep(n);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const goNext = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!canContinue[screen.key]) return;
+    if (isReview) handleCompleteRegistration();
+    else goTo(currentStep + 1);
+  };
+  const screenIndex = (key: string) => screens.findIndex((s) => s.key === key) + 1;
+  const ownerName = `${formData.firstName} ${formData.lastName}`.trim();
+  const openDays = Object.values(formData.businessHours).filter((d) => d.enabled).length;
+  const fieldLabel = "mb-1.5 block text-sm font-semibold text-[rgb(var(--reg-ink))]";
+  const optional = <span className="font-normal text-[rgb(var(--reg-muted))]">{tr("registration.optional")}</span>;
+
+  const preview = (
+    <SalonPreview
+      done={registered}
+      data={{
+        businessName: formData.businessName,
+        category: formData.category,
+        address: formData.address,
+        ownerName,
+        businessHours: formData.businessHours,
+        services: formData.services,
+        staff: formData.staffMembers,
+      }}
+    />
+  );
+
+  if (registered) {
+    return (
+      <AuthShell headerLink={{ label: tr("registration.logIn"), to: "/login" }} aside={preview} footer={false}>
+        <div className="py-4 text-center md:py-6">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))] text-[rgb(var(--reg-ink))] animate-in zoom-in-75 duration-500 motion-reduce:animate-none">
+            <Check className="h-8 w-8" aria-hidden />
+          </span>
+          <h1 className={cn(authTitle, "mt-6")}>{tr("registration.welcomeToBooqi", { value: formData.firstName ? `, ${formData.firstName}` : "" })}</h1>
+          <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-[rgb(var(--reg-muted))]">
+            {tr("registration.isSetUpOpenYour", { value: formData.businessName || tr("common.yourSalon") })}
           </p>
-          <button
-            onClick={() => navigate("/login")}
-            className="mt-6 rounded-full bg-gray-900 px-6 py-3 text-sm font-semibold text-white"
-          >
-            Sign in
+          <button type="button" onClick={() => navigate("/")} className={cn(brandCta, "mt-8 w-full")}>
+            {tr("registration.openMyCalendar")}
+            <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
-      {/* Sidebar - Desktop Only */}
-      <div className="hidden lg:flex lg:w-80 xl:w-96 bg-white border-r border-gray-200 flex-col overflow-hidden">
-        <div className="p-8 border-b border-gray-200 shrink-0">
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">Get Started</h2>
-          <p className="text-sm text-gray-500">Complete your registration in 6 simple steps</p>
+    <>
+      <AuthShell
+        headerLink={{ label: tr("registration.logIn"), to: "/login" }}
+        aside={preview}
+        cardClassName="md:max-w-[520px]"
+        mobileBarSpace
+      >
+        {/* Progress: one thin bar and a plain count, so six-plus screens never feel long. */}
+        <div className="mb-7">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-semibold text-[rgb(var(--reg-brand-strong))]">{screen.group}</span>
+            <span className="text-[rgb(var(--reg-muted))]">
+              {tr("registration.of", { currentStep, count: screens.length })}
+            </span>
+          </div>
+          <div
+            className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--reg-ink)/0.06)]"
+            role="progressbar"
+            aria-label={tr("registration.signUpProgress")}
+            aria-valuemin={1}
+            aria-valuemax={screens.length}
+            aria-valuenow={currentStep}
+          >
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,rgb(var(--reg-brand)),rgb(var(--reg-mesh-2)))] transition-[width] duration-500 ease-out"
+              style={{ width: `${(currentStep / screens.length) * 100}%` }}
+            />
+          </div>
+          {selectedPlan && isFirst && (
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--reg-brand)/0.1)] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[rgb(var(--reg-brand))]" aria-hidden />
+              {tr("registration.planSelected", { selectedPlan })}
+            </p>
+          )}
         </div>
-        <div className="flex-1 p-6 space-y-2 overflow-y-auto">
-          {steps.map((step, index) => {
-            const isActive = currentStep === step.number;
-            const isCompleted = currentStep > step.number;
-            const Icon = step.icon;
-            return (
-              <div key={step.number} className="relative">
-                <div
-                  className={`flex items-start gap-4 p-4 rounded-lg transition-all ${
-                    isActive
-                      ? "bg-gray-900 text-white"
-                      : isCompleted
-                      ? "bg-gray-50 text-gray-700"
-                      : "text-gray-500"
-                  }`}
-                >
-                  <div
-                    className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isActive
-                        ? "bg-white text-gray-900"
-                        : isCompleted
-                        ? "bg-gray-200 text-gray-700"
-                        : "bg-gray-100 text-gray-400"
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <Icon className="h-5 w-5" />
-                    )}
+
+        <form onSubmit={goNext} noValidate>
+          <div key={screen.key} className="animate-in fade-in-0 slide-in-from-right-3 duration-300 motion-reduce:animate-none">
+            <h1 className={authTitle}>{screen.title}</h1>
+            {screen.subtitle && <p className={authSubtitle}>{screen.subtitle}</p>}
+            {!screen.subtitle && <div className="mb-7" />}
+
+            {screen.key === "account" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="firstName" className={fieldLabel}>{tr("registration.firstName")}</label>
+                    <Input id="firstName" autoComplete="given-name" value={formData.firstName} onChange={(e) => updateFormData("firstName", e.target.value)} className={authInput} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-medium">
-                        Step {step.number}
-                      </span>
-                      {isActive && (
-                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Current</span>
-                      )}
-                    </div>
-                    <p className={`text-sm font-medium ${isActive ? "text-white" : "text-gray-900"}`}>
-                      {step.title}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${isActive ? "text-white/80" : "text-gray-500"}`}>
-                      {step.description}
-                    </p>
+                  <div>
+                    <label htmlFor="lastName" className={fieldLabel}>{tr("registration.lastName")}</label>
+                    <Input id="lastName" autoComplete="family-name" value={formData.lastName} onChange={(e) => updateFormData("lastName", e.target.value)} className={authInput} />
                   </div>
                 </div>
-                {index < steps.length - 1 && (
-                  <div className={`ml-5 mt-2 mb-2 h-6 w-0.5 ${
-                    isCompleted ? "bg-gray-900" : "bg-gray-200"
-                  }`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div className="p-6 border-t border-gray-200 shrink-0">
-          <div className="text-xs text-gray-500 mb-2">Progress</div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gray-900 transition-all duration-500"
-              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-            />
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            {Math.round((currentStep / totalSteps) * 100)}% Complete
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile Header */}
-        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-500 uppercase">
-              Step {currentStep} of {totalSteps}
-            </span>
-            <span className="text-xs font-medium text-gray-500">
-              {Math.round((currentStep / totalSteps) * 100)}%
-            </span>
-          </div>
-          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gray-900 transition-all duration-500"
-              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 h-full">
-        {/* Step 1: Account Creation */}
-        {currentStep === 1 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <form
-              className="w-full"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (canProceedStep1) setCurrentStep(2);
-              }}
-            >
-              <div className="mb-8">
-                <h1 className="text-3xl font-semibold text-gray-900 mb-2">Create your account</h1>
-                <p className="text-gray-600">Enter your information to get started</p>
-                <p className="text-sm text-gray-500 mt-3">
-                  Already have an account?{" "}
-                  <Link
-                    to="/login"
-                    className="text-gray-900 font-medium hover:underline"
-                  >
-                    Sign in
-                  </Link>
+                <div>
+                  <label htmlFor="email" className={fieldLabel}>{tr("registration.emailAddress")}</label>
+                  <Input id="email" type="email" inputMode="email" autoComplete="email" value={formData.email} onChange={(e) => updateFormData("email", e.target.value)} className={authInput} />
+                </div>
+                <div>
+                  <label htmlFor="phone" className={fieldLabel}>{tr("registration.mobileNumber")}</label>
+                  <div className="flex gap-2">
+                    <Select value={formData.phonePrefix} onValueChange={(v) => { prefixTouched.current = true; updateFormData("phonePrefix", v); }}>
+                      <SelectTrigger aria-label={tr("registration.countryCode")} className={cn(authInput, "w-[104px] shrink-0 px-3")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {phonePrefixes.map(([code, label]) => (
+                          <SelectItem key={code} value={code}>{code} ({label})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input id="phone" type="tel" inputMode="tel" autoComplete="tel-national" value={formData.phone} onChange={(e) => updateFormData("phone", e.target.value)} className={cn(authInput, "min-w-0 flex-1")} />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="password" className={fieldLabel}>{tr("registration.password")}</label>
+                  <div className="relative">
+                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={formData.password} onChange={(e) => updateFormData("password", e.target.value)} className={cn(authInput, "pr-12")} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? tr("registration.hidePassword") : tr("registration.showPassword")} aria-pressed={showPassword} className="absolute inset-y-0 right-1 my-auto flex h-10 w-10 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1" aria-live="polite">
+                    {[[hasMinLength, tr("registration.minChars")], [hasLetter, tr("registration.aLetter")], [hasDigit, tr("registration.aNumber")]].map(([ok, label]) => (
+                      <li key={label as string} className={cn("flex items-center gap-1.5 text-sm", ok ? "text-[rgb(22_128_61)]" : "text-[rgb(var(--reg-muted))]")}>
+                        <span className={cn("flex h-4 w-4 items-center justify-center rounded-full border", ok ? "border-[rgb(22_128_61)] bg-[rgb(22_128_61)] text-white" : "border-[rgb(var(--reg-line))]")}>
+                          {ok && <Check className="h-3 w-3" aria-hidden />}
+                        </span>
+                        {label as string}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <label htmlFor="passwordConfirmation" className={fieldLabel}>{tr("registration.repeatPassword")}</label>
+                  <div className="relative">
+                    <Input
+                      id="passwordConfirmation"
+                      type={showPasswordConfirmation ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={formData.passwordConfirmation}
+                      onChange={(e) => updateFormData("passwordConfirmation", e.target.value)}
+                      aria-invalid={(formData.passwordConfirmation && !passwordsMatch) || undefined}
+                      aria-describedby="pw-match"
+                      className={cn(authInput, "pr-12", formData.passwordConfirmation && !passwordsMatch && "border-red-600 focus:border-red-600 focus:ring-red-600/10 focus-visible:border-red-600 focus-visible:ring-red-600/10")}
+                    />
+                    <button type="button" onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)} aria-label={showPasswordConfirmation ? tr("registration.hidePassword") : tr("registration.showPassword")} aria-pressed={showPasswordConfirmation} className="absolute inset-y-0 right-1 my-auto flex h-10 w-10 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
+                      {showPasswordConfirmation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p id="pw-match" className="mt-1.5 text-sm" aria-live="polite">
+                    {formData.passwordConfirmation && !passwordsMatch && <span className="text-red-700">{tr("registration.passwordsDoNotMatch")}</span>}
+                  </p>
+                </div>
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-start gap-3">
+                    <Checkbox id="terms" checked={formData.termsAccepted} onCheckedChange={(checked) => updateFormData("termsAccepted", checked)} className="mt-0.5 h-5 w-5 rounded-md border-[rgb(var(--reg-line))] data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
+                    <Label htmlFor="terms" className="cursor-pointer text-sm font-normal leading-relaxed text-[rgb(var(--reg-muted))]">
+                      {tr("registration.iAgreeToThe")}{" "}
+                      <a href={`${webUrl}/legal/terms`} target="_blank" rel="noreferrer" className={authLink}>{tr("registration.terms")}</a>,{" "}
+                      <a href={`${webUrl}/legal/salon-terms`} target="_blank" rel="noreferrer" className={authLink}>{tr("registration.termsForSalons")}</a>{" "}{tr("registration.and")}{" "}
+                      <a href={`${webUrl}/legal/privacy`} target="_blank" rel="noreferrer" className={authLink}>{tr("registration.privacyPolicy")}</a>
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Checkbox id="marketing1" checked={formData.marketing1} onCheckedChange={(checked) => updateFormData("marketing1", checked)} className="mt-0.5 h-5 w-5 rounded-md border-[rgb(var(--reg-line))] data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
+                    <Label htmlFor="marketing1" className="cursor-pointer text-sm font-normal leading-relaxed text-[rgb(var(--reg-muted))]">
+                      {tr("registration.sendMeTipsAndNews")}{" "}{optional}
+                    </Label>
+                  </div>
+                </div>
+                <p className="pt-1 text-sm text-[rgb(var(--reg-muted))]">
+                  {tr("registration.alreadyOnBooqi")}{" "}
+                  <Link to="/login" className={authLink}>{tr("registration.logIn")}</Link>
                 </p>
               </div>
+            )}
 
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                        Name
-                      </Label>
-                      <Input
-                        id="firstName"
-                        type="text"
-                        placeholder="John"
-                        value={formData.firstName}
-                        onChange={(e) => updateFormData("firstName", e.target.value)}
-                        className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                        Surname
-                      </Label>
-                      <Input
-                        id="lastName"
-                        type="text"
-                        placeholder="Doe"
-                        value={formData.lastName}
-                        onChange={(e) => updateFormData("lastName", e.target.value)}
-                        className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                      />
-                    </div>
+            {screen.key === "name" && (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="businessName" className="sr-only">{tr("common.businessName")}</label>
+                  <Input
+                    id="businessName"
+                    autoFocus
+                    autoComplete="organization"
+                    placeholder={tr("registration.eGLaleBeautyStudio")}
+                    value={formData.businessName}
+                    onChange={(e) => updateFormData("businessName", e.target.value)}
+                    className={cn(authInput, "h-14 text-lg font-semibold")}
+                  />
+                </div>
+                <details className="group" open={formData.referralCode !== "" || undefined}>
+                  <summary className={cn(authLink, "inline-block cursor-pointer list-none text-sm")}>{tr("registration.haveAReferralCode")}</summary>
+                  <div className="mt-3">
+                    <label htmlFor="referralCode" className={fieldLabel}>{tr("registration.referralCode")}{" "}{optional}</label>
+                    <Input id="referralCode" value={formData.referralCode} onChange={(e) => updateFormData("referralCode", e.target.value)} className={authInput} />
                   </div>
+                </details>
+              </div>
+            )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                      Email address
-                    </Label>
+            {screen.key === "category" && (
+              <div className="space-y-4">
+                {/* Stores the name, matching the backend list. The tiles used to store their
+                    own id, so a salon picking one was filed under a slug the dropdown and the
+                    customer app never used. */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {featuredCategories.map((cat) => {
+                    const Icon = cat.icon;
+                    const on = formData.category === cat.name;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => updateFormData("category", cat.name)}
+                        className={cn(choiceCard(on), "min-h-[96px] flex-col items-start justify-between gap-3 p-4")}
+                      >
+                        <Icon className={cn("h-6 w-6", on ? "text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-muted))]")} aria-hidden />
+                        <span className="text-sm leading-tight">{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Select value={formData.category} onValueChange={(v) => updateFormData("category", v)}>
+                  <SelectTrigger aria-label={tr("registration.otherCategory")} className={authInput}>
+                    <SelectValue placeholder={tr("registration.somethingElsePickFromThe")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* The name, not a slug: the wizard used to store "hair-salons" while the
+                        profile stored "Hair Salon", and the customer app showed both. */}
+                    {otherCategories.map((cat) => (
+                      <SelectItem key={cat.slug} value={cat.name}>{cat.label ?? cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {screen.key === "workplace" && (
+              <div className="space-y-3" role="radiogroup" aria-label={tr("registration.whereYouWork")}>
+                {[
+                  { v: "at-my-place", t: tr("registration.atMyPlace"), d: tr("registration.atMyPlaceDesc") },
+                  { v: "at-clients-location", t: tr("registration.atClientPlace"), d: tr("registration.atClientPlaceDesc") },
+                ].map((o) => {
+                  const on = formData.workLocation === o.v;
+                  return (
+                    <button key={o.v} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("workLocation", o.v)} className={cn(choiceCard(on), "py-4")}>
+                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2", on ? "border-[rgb(var(--reg-brand))]" : "border-[rgb(var(--reg-line))]")}>
+                        {on && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
+                      </span>
+                      <span>
+                        <span className="block">{o.t}</span>
+                        <span className="mt-0.5 block text-sm font-normal text-[rgb(var(--reg-muted))]">{o.d}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {screen.key === "volume" && (
+              <div className="space-y-2.5" role="radiogroup" aria-label={tr("registration.appointmentsAWeek")}>
+                {["Just starting out", "1-4 appointments a week", "5-9 appointments a week", "10-19 appointments a week", "20+ appointments a week"].map((option) => {
+                  const v = option.toLowerCase().replace(/\s+/g, "-");
+                  const on = formData.weeklySchedule === v;
+                  return (
+                    <button key={tOpt("regVolume", option)} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("weeklySchedule", v)} className={choiceCard(on)}>
+                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2", on ? "border-[rgb(var(--reg-brand))]" : "border-[rgb(var(--reg-line))]")}>
+                        {on && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
+                      </span>
+                      {tOpt("regVolume", option)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {screen.key === "address" && (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="address" className={fieldLabel}>{tr("common.address")}</label>
+                  <div className="relative">
+                    <MapPin className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={formData.email}
-                      onChange={(e) => updateFormData("email", e.target.value)}
-                      className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
+                      id="address"
+                      autoComplete="off"
+                      value={addressSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setAddressSearch(value);
+                        if (searchAddressRef.current) clearTimeout(searchAddressRef.current);
+                        if (value.length >= 2) {
+                          searchAddressRef.current = setTimeout(() => searchAddress(value), 300);
+                        } else {
+                          setAddressResults([]);
+                          setIsSearching(false);
+                        }
+                      }}
+                      placeholder={tr("registration.startTypingYourStreet")}
+                      className={cn(authInput, "pl-11")}
                     />
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                      Phone Number
-                    </Label>
-                    <div className="flex gap-2">
-                      <Select value={formData.phonePrefix} onValueChange={(v) => updateFormData("phonePrefix", v)}>
-                        <SelectTrigger className="w-28 h-12 border-gray-300">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="+1">+1 (US/CA)</SelectItem>
-                          <SelectItem value="+7">+7 (RU/KZ)</SelectItem>
-                          <SelectItem value="+31">+31 (NL)</SelectItem>
-                          <SelectItem value="+32">+32 (BE)</SelectItem>
-                          <SelectItem value="+33">+33 (FR)</SelectItem>
-                          <SelectItem value="+34">+34 (ES)</SelectItem>
-                          <SelectItem value="+36">+36 (HU)</SelectItem>
-                          <SelectItem value="+39">+39 (IT)</SelectItem>
-                          <SelectItem value="+41">+41 (CH)</SelectItem>
-                          <SelectItem value="+43">+43 (AT)</SelectItem>
-                          <SelectItem value="+44">+44 (UK)</SelectItem>
-                          <SelectItem value="+45">+45 (DK)</SelectItem>
-                          <SelectItem value="+46">+46 (SE)</SelectItem>
-                          <SelectItem value="+47">+47 (NO)</SelectItem>
-                          <SelectItem value="+48">+48 (PL)</SelectItem>
-                          <SelectItem value="+49">+49 (DE)</SelectItem>
-                          <SelectItem value="+90">+90 (TR)</SelectItem>
-                          <SelectItem value="+353">+353 (IE)</SelectItem>
-                          <SelectItem value="+358">+358 (FI)</SelectItem>
-                          <SelectItem value="+370">+370 (LT)</SelectItem>
-                          <SelectItem value="+371">+371 (LV)</SelectItem>
-                          <SelectItem value="+372">+372 (EE)</SelectItem>
-                          <SelectItem value="+380">+380 (UA)</SelectItem>
-                          <SelectItem value="+420">+420 (CZ)</SelectItem>
-                          <SelectItem value="+966">+966 (SA)</SelectItem>
-                          <SelectItem value="+971">+971 (AE)</SelectItem>
-                          <SelectItem value="+992">+992 (TJ)</SelectItem>
-                          <SelectItem value="+994">+994 (AZ)</SelectItem>
-                          <SelectItem value="+995">+995 (GE)</SelectItem>
-                          <SelectItem value="+998">+998 (UZ)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => updateFormData("phone", e.target.value)}
-                        placeholder="123 456 789"
-                        className="flex-1 h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Create a strong password"
-                        value={formData.password}
-                        onChange={(e) => updateFormData("password", e.target.value)}
-                        className="h-12 pr-10 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <div className="space-y-1.5 pt-1">
-                      <div className={`flex items-center gap-2 text-xs ${hasLetter ? "text-gray-600" : "text-gray-400"}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${hasLetter ? "bg-gray-900" : "bg-gray-300"}`} />
-                        At least one letter
-                      </div>
-                      <div className={`flex items-center gap-2 text-xs ${hasDigit ? "text-gray-600" : "text-gray-400"}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${hasDigit ? "bg-gray-900" : "bg-gray-300"}`} />
-                        At least one digit
-                      </div>
-                      <div className={`flex items-center gap-2 text-xs ${hasMinLength ? "text-gray-600" : "text-gray-400"}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${hasMinLength ? "bg-gray-900" : "bg-gray-300"}`} />
-                        At least 8 characters
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="passwordConfirmation" className="text-sm font-medium text-gray-700">
-                      Confirm Password
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="passwordConfirmation"
-                        type={showPasswordConfirmation ? "text" : "password"}
-                        placeholder="Confirm your password"
-                        value={formData.passwordConfirmation}
-                        onChange={(e) => updateFormData("passwordConfirmation", e.target.value)}
-                        className={`h-12 pr-10 border-gray-300 focus:border-gray-900 focus:ring-gray-900 ${
-                          formData.passwordConfirmation && !passwordsMatch ? "border-red-300 focus:border-red-500 focus:ring-red-500" : ""
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPasswordConfirmation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    {formData.passwordConfirmation && !passwordsMatch && (
-                      <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
-                    )}
-                    {formData.passwordConfirmation && passwordsMatch && (
-                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <Check className="h-3 w-3" />
-                        Passwords match
-                      </p>
-                    )}
-                  </div>
-
-                <div className="space-y-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id="terms"
-                        checked={formData.termsAccepted}
-                        onCheckedChange={(checked) => updateFormData("termsAccepted", checked)}
-                        className="mt-0.5"
-                      />
-                      <Label htmlFor="terms" className="text-sm text-gray-600 cursor-pointer leading-relaxed">
-                        I agree to the <a href="#" className="text-gray-900 font-medium hover:underline">Terms of Service</a> and{" "}
-                        <a href="#" className="text-gray-900 font-medium hover:underline">Privacy Policy</a>
-                      </Label>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        id="marketing1"
-                        checked={formData.marketing1}
-                        onCheckedChange={(checked) => updateFormData("marketing1", checked)}
-                        className="mt-0.5"
-                      />
-                      <Label htmlFor="marketing1" className="text-sm text-gray-600 cursor-pointer leading-relaxed">
-                        Send me marketing communications (optional)
-                      </Label>
-                    </div>
-                  </div>
-
-              </div>
-
-              <div className="pt-6 border-t border-gray-200 flex justify-end">
-                <Button
-                  type="submit"
-                  disabled={!canProceedStep1}
-                  className="w-full md:w-auto min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Step 2: Business Basics */}
-        {currentStep === 2 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <div className="w-full">
-              <div className="mb-8">
-                <h1 className="text-3xl font-semibold text-gray-900 mb-2">Business Information</h1>
-                <p className="text-gray-600">Tell us about your business</p>
-              </div>
-
-              <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">Business Category</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {/* Stores the name, matching the backend list. The tiles used to
-                          store their own id, so a salon picking one was filed under a
-                          slug the dropdown and the customer app never used. */}
-                      {featuredCategories.map((cat) => {
-                        const Icon = cat.icon;
+                  {isSearching && <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{tr("registration.searching")}</p>}
+                  {addressResults.length > 0 && !isSearching && (
+                    <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl bg-white shadow-[0_2px_6px_rgb(var(--reg-ink)/0.05),0_18px_40px_-12px_rgb(var(--reg-ink)/0.16)] ring-1 ring-[rgb(var(--reg-ink)/0.06)]">
+                      {addressResults.map((addr, index) => {
+                        const displayName = addr.display_name || addr.name || "";
+                        const addressParts = displayName.split(",").slice(0, 3).join(",");
                         return (
                           <button
-                            key={cat.id}
-                            onClick={() => updateFormData("category", cat.name)}
-                            className={`p-4 rounded-xl border-2 transition-all ${
-                              formData.category === cat.name
-                                ? "border-gray-900 bg-gray-50"
-                                : "border-gray-200 hover:border-gray-300 bg-white"
-                            }`}
+                            key={index}
+                            type="button"
+                            onClick={() => {
+                              const lat = parseFloat(addr.lat);
+                              const lon = parseFloat(addr.lon);
+                              updateFormData("address", displayName);
+                              updateFormData("latitude", lat);
+                              updateFormData("longitude", lon);
+                              updateFormData("country", addr.address?.country || displayName.split(",").pop()?.trim() || "");
+                              updateFormData("countryCode", (addr.address?.country_code || "").toUpperCase());
+                              // Extract building number from address details if available
+                              const buildingNumber = addr.address?.house_number || addr.address?.building || "";
+                              if (buildingNumber) updateFormData("buildingNumber", buildingNumber);
+                              setAddressSearch(addressParts);
+                              setAddressResults([]);
+                            }}
+                            className="flex w-full items-start gap-3 border-b border-[rgb(var(--reg-line)/0.6)] px-4 py-3 text-left text-sm last:border-0 hover:bg-[rgb(var(--reg-brand-soft))]"
                           >
-                            <Icon className={`h-6 w-6 mx-auto mb-2 ${
-                              formData.category === cat.name ? "text-gray-900" : "text-gray-400"
-                            }`} />
-                            <p className="text-xs font-medium text-gray-700 leading-tight">{cat.name}</p>
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[rgb(var(--reg-muted))]" aria-hidden />
+                            <span className="font-medium">{displayName}</span>
                           </button>
                         );
                       })}
                     </div>
-                    <Select value={formData.category} onValueChange={(v) => updateFormData("category", v)}>
-                      <SelectTrigger className="h-12 border-gray-300 mt-2">
-                        <SelectValue placeholder="Or select another category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* The name, not a slug: the wizard used to store "hair-salons"
-                            while the profile stored "Hair Salon", and the customer app
-                            showed both. */}
-                        {otherCategories.map((cat) => (
-                          <SelectItem key={cat.slug} value={cat.name}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="businessName" className="text-sm font-medium text-gray-700">
-                      Business Name
-                    </Label>
-                    <Input
-                      id="businessName"
-                      value={formData.businessName}
-                      onChange={(e) => updateFormData("businessName", e.target.value)}
-                      placeholder="Enter your business name"
-                      className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">
-                      What does your weekly schedule look like?
-                    </Label>
-                    <RadioGroup value={formData.weeklySchedule} onValueChange={(v) => updateFormData("weeklySchedule", v)}>
-                      <div className="space-y-2">
-                        {["Just starting out", "1-4 appointments a week", "5-9 appointments a week", "10-19 appointments a week", "20+ appointments a week"].map((option) => (
-                          <div key={option} className="flex items-center space-x-3">
-                            <RadioGroupItem value={option.toLowerCase().replace(/\s+/g, "-")} id={option} />
-                            <Label htmlFor={option} className="cursor-pointer text-sm text-gray-700 font-normal">
-                              {option}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">Where do you work?</Label>
-                    <RadioGroup value={formData.workLocation} onValueChange={(v) => updateFormData("workLocation", v)}>
-                      <div className="space-y-3">
-                        <div className="flex items-start space-x-3 p-4 border-2 rounded-xl border-gray-200 hover:border-gray-300 transition-colors">
-                          <RadioGroupItem value="at-my-place" id="at-my-place" className="mt-0.5" />
-                          <div className="flex-1">
-                            <Label htmlFor="at-my-place" className="cursor-pointer font-medium text-gray-900 text-sm">
-                              At my place
-                            </Label>
-                            <p className="text-xs text-gray-600 mt-1">Clients come to your location</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start space-x-3 p-4 border-2 rounded-xl border-gray-200 hover:border-gray-300 transition-colors">
-                          <RadioGroupItem value="at-clients-location" id="at-clients-location" className="mt-0.5" />
-                          <div className="flex-1">
-                            <Label htmlFor="at-clients-location" className="cursor-pointer font-medium text-gray-900 text-sm">
-                              At the client's location
-                            </Label>
-                            <p className="text-xs text-gray-600 mt-1">You travel to your clients</p>
-                          </div>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="referralCode" className="text-sm font-medium text-gray-700">
-                      Referral Code <span className="text-gray-500 font-normal">(Optional)</span>
-                    </Label>
-                    <Input
-                      id="referralCode"
-                      value={formData.referralCode}
-                      onChange={(e) => updateFormData("referralCode", e.target.value)}
-                      placeholder="Enter referral code"
-                      className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                    />
-                  </div>
-
-              </div>
-
-              <div className="pt-6 border-t border-gray-200 flex gap-3 justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(1)}
-                  className="md:min-w-[200px] h-12 border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(3)}
-                  disabled={!canProceedStep2}
-                  className="md:min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Location & Hours */}
-        {currentStep === 3 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <div className="w-full">
-              <div className="mb-8">
-                <h1 className="text-3xl font-semibold text-gray-900 mb-2">Location & Business Hours</h1>
-                <p className="text-gray-600">Set up where and when you operate</p>
-              </div>
-
-              <div className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-sm font-medium text-gray-700">
-                      Business Address
-                    </Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="address"
-                        value={addressSearch}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setAddressSearch(value);
-                          
-                          // Clear previous timeout
-                          if (searchAddressRef.current) {
-                            clearTimeout(searchAddressRef.current);
-                          }
-                          
-                          // Set new timeout for search
-                          if (value.length >= 2) {
-                            searchAddressRef.current = setTimeout(() => {
-                              searchAddress(value);
-                            }, 300);
-                          } else {
-                            setAddressResults([]);
-                            setIsSearching(false);
-                          }
-                        }}
-                        placeholder="Search for an address"
-                        className="pl-11 h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                      />
-                    </div>
-                    {isSearching && (
-                      <div className="text-sm text-gray-500 mt-2">Searching...</div>
-                    )}
-                    {addressResults.length > 0 && !isSearching && (
-                      <div className="border border-gray-200 rounded-lg mt-2 max-h-48 overflow-y-auto bg-white shadow-sm z-10">
-                        {addressResults.map((addr, index) => {
-                          const displayName = addr.display_name || addr.name || '';
-                          const addressParts = displayName.split(',').slice(0, 3).join(',');
-                          return (
-                            <button
-                              key={index}
-                              onClick={() => {
-                                const lat = parseFloat(addr.lat);
-                                const lon = parseFloat(addr.lon);
-                                updateFormData("address", displayName);
-                                updateFormData("latitude", lat);
-                                updateFormData("longitude", lon);
-                                updateFormData("country", addr.address?.country || displayName.split(',').pop()?.trim() || "");
-                                updateFormData("countryCode", (addr.address?.country_code || "").toUpperCase());
-                                // Extract building number from address details if available
-                                const buildingNumber = addr.address?.house_number || addr.address?.building || '';
-                                if (buildingNumber) {
-                                  updateFormData("buildingNumber", buildingNumber);
-                                }
-                                setAddressSearch(addressParts);
-                                setAddressResults([]);
-                              }}
-                              className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 transition-colors"
-                            >
-                              <p className="font-medium text-gray-900 text-sm">{displayName}</p>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {formData.address && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="buildingNumber" className="text-sm font-medium text-gray-700">
-                          Building Number *
-                        </Label>
-                        <Input
-                          id="buildingNumber"
-                          value={formData.buildingNumber}
-                          onChange={(e) => updateFormData("buildingNumber", e.target.value)}
-                          placeholder="e.g., 12"
-                          className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="apartmentNumber" className="text-sm font-medium text-gray-700">
-                          Apartment Number <span className="text-gray-500 font-normal">(Optional)</span>
-                        </Label>
-                        <Input
-                          id="apartmentNumber"
-                          value={formData.apartmentNumber}
-                          onChange={(e) => updateFormData("apartmentNumber", e.target.value)}
-                          placeholder="e.g., 3A"
-                          className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
-                        />
-                      </div>
-                    </div>
                   )}
+                </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">Pin Your Exact Location on Map</Label>
+                {formData.address && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="buildingNumber" className={fieldLabel}>{tr("registration.buildingNo")}</label>
+                      <Input id="buildingNumber" value={formData.buildingNumber} onChange={(e) => updateFormData("buildingNumber", e.target.value)} className={authInput} />
+                    </div>
+                    <div>
+                      <label htmlFor="apartmentNumber" className={fieldLabel}>{tr("registration.flatUnit")}{" "}{optional}</label>
+                      <Input id="apartmentNumber" value={formData.apartmentNumber} onChange={(e) => updateFormData("apartmentNumber", e.target.value)} className={authInput} />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className={fieldLabel}>{tr("registration.checkThePin")}</p>
+                  <div className="overflow-hidden rounded-2xl ring-1 ring-[rgb(var(--reg-line))]">
                     <AddressMapPicker
+                      country={formData.countryCode || null}
                       onLocationSelect={(lat, lng, address, buildingNumber) => {
                         updateFormData("latitude", lat);
                         updateFormData("longitude", lng);
                         // A moved pin may be in another country; the server reads it from the
                         // pin, so drop the code taken from an earlier pick rather than trust it.
                         updateFormData("countryCode", "");
-                        updateFormData("country", address ? address.split(',').pop()?.trim() || "" : "");
+                        updateFormData("country", address ? address.split(",").pop()?.trim() || "" : "");
                         if (address) {
                           updateFormData("address", address);
-                          // Update the address search input field with shortened address
-                          const addressParts = address.split(',').slice(0, 3).join(',');
-                          setAddressSearch(addressParts);
+                          setAddressSearch(address.split(",").slice(0, 3).join(","));
                         } else {
-                          // #56: reverse geocoding failed or is unavailable. The pin still
-                          // gave us real coordinates, so fall back to whatever the user
-                          // typed rather than leaving formData.address empty — otherwise
-                          // canProceedStep3 blocks registration entirely with no way out,
-                          // because typing only sets addressSearch, never formData.address.
+                          // #56: reverse geocoding failed or is unavailable. The pin still gave
+                          // real coordinates, so fall back to whatever the user typed rather than
+                          // leaving formData.address empty — otherwise canProceedStep3 blocks
+                          // registration with no way out, because typing only sets addressSearch.
                           const typed = addressSearch.trim();
                           if (typed) updateFormData("address", typed);
                           setGeocodeUnavailable(true);
                         }
-                        // Update building number if available
-                        if (buildingNumber) {
-                          updateFormData("buildingNumber", buildingNumber);
-                        }
+                        if (buildingNumber) updateFormData("buildingNumber", buildingNumber);
                       }}
                       selectedPosition={formData.latitude && formData.longitude ? [formData.latitude, formData.longitude] : null}
                       disabled={editingDay !== null}
                     />
-                    {unsupportedCountry && (
-                      <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                        booqi is not open in {formData.country || "this country"} yet, so a salon
-                        there cannot be set up. Prices, tax and payments are set per country.
-                      </p>
-                    )}
-                    {geocodeUnavailable && (
-                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                        Address lookup is unavailable right now. Click your location on the
-                        map and type the address and building number by hand — that is
-                        enough to continue.
-                      </p>
-                    )}
-                    {formData.latitude && formData.longitude && (
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>Coordinates: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}</span>
-                      </div>
-                    )}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        if (formData.latitude && formData.longitude) {
-                          // Open Google Maps with coordinates
-                          window.open(`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}`, '_blank');
-                        } else {
-                          // Open Google Maps with address search
-                          const fullAddress = `${formData.address} ${formData.buildingNumber || ''} ${formData.apartmentNumber || ''}`.trim();
-                          window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, '_blank');
-                        }
-                      }}
-                      className="w-full h-12 border-gray-300"
-                    >
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Open in Maps
-                    </Button>
                   </div>
-
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium text-gray-700">Business Hours</Label>
-                    <div className="space-y-2">
-                      {daysOfWeek.map((day) => {
-                        const dayHours = formData.businessHours[day.key];
-                        return (
-                          <div key={day.key} className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <Switch
-                                checked={dayHours.enabled}
-                                onCheckedChange={(checked) => {
-                                  const newHours = { ...formData.businessHours };
-                                  newHours[day.key] = {
-                                    enabled: checked,
-                                    hours: checked ? "10:00 - 19:00" : "Closed"
-                                  };
-                                  updateFormData("businessHours", newHours);
-                                }}
-                              />
-                              <Label className="font-medium text-gray-900 text-sm">{day.label}</Label>
-                            </div>
-                            {dayHours.enabled ? (
-                              <button
-                                onClick={() => {
-                                  const [start, end] = dayHours.hours.split(" - ");
-                                  setTempStartTime(start || "10:00");
-                                  setTempEndTime(end || "19:00");
-                                  setEditingDay(day.key);
-                                }}
-                                className="text-sm text-gray-600 hover:text-gray-900 font-medium cursor-pointer"
-                              >
-                                {dayHours.hours}
-                              </button>
-                            ) : (
-                              <span className="text-sm text-gray-400">Closed</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
+                  {unsupportedCountry && (
+                    <p role="alert" className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200">
+                      {tr("registration.booqiIsNotOpenIn", { value: formData.country || tr("registration.thisCountry") })}
+                    </p>
+                  )}
+                  {geocodeUnavailable && (
+                    <p role="status" className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+                      {tr("registration.addressLookupIsUnavailableRight")}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formData.latitude && formData.longitude) {
+                        window.open(`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}`, "_blank");
+                      } else {
+                        const fullAddress = `${formData.address} ${formData.buildingNumber || ""} ${formData.apartmentNumber || ""}`.trim();
+                        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`, "_blank");
+                      }
+                    }}
+                    className={cn(authLink, "mt-2 inline-flex items-center gap-1.5 py-1 text-sm")}
+                  >
+                    <MapPin className="h-4 w-4" aria-hidden />
+                    {tr("registration.openInMaps")}
+                  </button>
+                </div>
               </div>
+            )}
 
-              <div className="pt-6 border-t border-gray-200 flex gap-3 justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(2)}
-                  className="md:min-w-[200px] h-12 border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(4)}
-                  disabled={!canProceedStep3}
-                  className="md:min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+            {screen.key === "hours" && (
+              <ul className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+                {daysOfWeek.map((day) => {
+                  const dayHours = formData.businessHours[day.key];
+                  return (
+                    <li key={day.key} className="flex min-h-[56px] items-center justify-between gap-3 px-4">
+                      <label className="flex cursor-pointer items-center gap-3 text-[15px] font-semibold">
+                        <Switch
+                          checked={dayHours.enabled}
+                          aria-label={tr("registration.openOn", { label: day.label })}
+                          className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
+                          onCheckedChange={(checked) => {
+                            const newHours = { ...formData.businessHours };
+                            newHours[day.key] = { enabled: checked, hours: checked ? "10:00 - 19:00" : "Closed" };
+                            updateFormData("businessHours", newHours);
+                          }}
+                        />
+                        {day.label}
+                      </label>
+                      {dayHours.enabled ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const [start, end] = dayHours.hours.split(" - ");
+                            setTempStartTime(start || "10:00");
+                            setTempEndTime(end || "19:00");
+                            setEditingDay(day.key);
+                          }}
+                          className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:bg-[rgb(var(--reg-brand)/0.15)]"
+                          aria-label={tr("registration.hoursChange", { label: day.label, hours: dayHours.hours })}
+                        >
+                          {dayHours.hours}
+                        </button>
+                      ) : (
+                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("common.closed")}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
 
-        {/* Step 4: Team */}
-        {currentStep === 4 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <div className="w-full">
-              <div className="mb-8">
-                <h1 className="text-3xl font-semibold text-gray-900 mb-2">Team</h1>
-                <p className="text-gray-600">Add your team members (optional - you can skip this step)</p>
-              </div>
-
+            {screen.key === "team" && (
               <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">What's your team size? <span className="text-gray-500 font-normal">(Optional)</span></Label>
-                    <RadioGroup value={formData.teamSize} onValueChange={(v) => updateFormData("teamSize", v)}>
-                      <div className="space-y-2">
-                        {["Just me", "2-4 staff members", "5-9 staff members", "More than 10 staff members"].map((option) => (
-                          <div key={option} className="flex items-center space-x-3">
-                            <RadioGroupItem value={option.toLowerCase().replace(/\s+/g, "-")} id={option} />
-                            <Label htmlFor={option} className="cursor-pointer text-sm text-gray-700 font-normal">
-                              {option}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    </RadioGroup>
+                <div>
+                  <p className={fieldLabel}>{tr("registration.teamSize")}{" "}{optional}</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {["Just me", "2-4 staff members", "5-9 staff members", "More than 10 staff members"].map((option) => {
+                      const v = option.toLowerCase().replace(/\s+/g, "-");
+                      const on = formData.teamSize === v;
+                      return (
+                        <button key={option} type="button" aria-pressed={on} onClick={() => updateFormData("teamSize", on ? "" : v)} className={cn(choiceCard(on), "justify-center text-center text-sm")}>
+                          {tOpt("teamSize", option)}
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-gray-700">Staff Members <span className="text-gray-500 font-normal">(Optional)</span></Label>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsAddStaffOpen(true)}
-                        className="h-9 text-xs border-gray-300"
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1.5" />
-                        Add Staff
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">{formData.yourName || "You"}</p>
-                            <p className="text-xs text-gray-600 mt-0.5">Owner</p>
-                          </div>
-                        </div>
-                      </div>
-                      {formData.staffMembers.map((staff) => (
-                        <div key={staff.id} className="p-4 border border-gray-200 rounded-xl flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">{staff.name}</p>
-                            <p className="text-xs text-gray-600 mt-0.5">{staff.position || "Staff Member"}</p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Remove staff"
-                            onClick={() => {
-                              updateFormData("staffMembers", formData.staffMembers.filter(s => s.id !== staff.id));
-                            }}
-                            className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{tr("registration.people")}</p>
+                    <button type="button" onClick={() => setIsAddStaffOpen(true)} className={cn(authLink, "inline-flex items-center gap-1 text-sm")}>
+                      <Plus className="h-4 w-4" aria-hidden />{" "}{tr("registration.addPerson")}
+                    </button>
+                  </div>
+                  <ul className="mt-2 space-y-2">
+                    <li className="flex items-center gap-3 rounded-2xl bg-[rgb(var(--reg-ink)/0.03)] px-4 py-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-xs font-bold text-[rgb(var(--reg-brand-strong))]">
+                        <User className="h-4 w-4" aria-hidden />
+                      </span>
+                      <span className="text-sm">
+                        <span className="block font-semibold">{ownerName || tr("registration.you")}</span>
+                        <span className="block text-[rgb(var(--reg-muted))]">{tr("registration.owner")}</span>
+                      </span>
+                    </li>
+                    {formData.staffMembers.map((staff) => (
+                      <li key={staff.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
+                        <span className="min-w-0 text-sm">
+                          <span className="block truncate font-semibold">{staff.name}</span>
+                          <span className="block text-[rgb(var(--reg-muted))]">{staff.position || tr("common.teamMember")}</span>
+                        </span>
+                        <button type="button" aria-label={tr("registration.remove", { name: staff.name })} onClick={() => updateFormData("staffMembers", formData.staffMembers.filter((s) => s.id !== staff.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{tr("common.services")}{" "}{optional}</p>
+                    <button type="button" onClick={() => setIsAddServiceOpen(true)} className={cn(authLink, "inline-flex items-center gap-1 text-sm")}>
+                      <Plus className="h-4 w-4" aria-hidden />{" "}{tr("registration.addService")}
+                    </button>
+                  </div>
+                  {formData.services.length ? (
+                    <ul className="mt-2 space-y-2">
+                      {formData.services.map((svc) => (
+                        <li key={svc.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
+                          <span className="min-w-0 text-sm">
+                            <span className="block truncate font-semibold">{svc.name}</span>
+                            <span className="block text-[rgb(var(--reg-muted))]">{svc.priceType === "From" ? tr("common.from") : ""}{svc.price}</span>
+                          </span>
+                          <button type="button" aria-label={tr("registration.remove", { name: svc.name })} onClick={() => updateFormData("services", formData.services.filter((s) => s.id !== svc.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
+                            <X className="h-4 w-4" aria-hidden />
+                          </button>
+                        </li>
                       ))}
-                    </div>
-                  </div>
-
+                    </ul>
+                  ) : (
+                    <p className="mt-2 rounded-2xl border border-dashed border-[rgb(var(--reg-line))] px-4 py-3 text-sm text-[rgb(var(--reg-muted))]">
+                      {tr("registration.youCanAddYourMenu")}
+                    </p>
+                  )}
+                </div>
               </div>
+            )}
 
-              <div className="pt-6 border-t border-gray-200 flex gap-3 justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(3)}
-                  className="md:min-w-[200px] h-12 border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(5)}
-                  className="md:min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium"
-                >
-                  Continue
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Preferences */}
-        {currentStep === 5 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <div className="w-full">
-              <div className="mb-8">
-                <h1 className="text-3xl font-semibold text-gray-900 mb-2">Preferences</h1>
-                <p className="text-gray-600">Help us customize your experience</p>
-              </div>
-
+            {screen.key === "goals" && (
               <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">
-                      How do you hope booqi can help you? <span className="text-gray-500 font-normal">(Select up to 5)</span>
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {helpOptions.map((option) => {
-                        const isSelected = formData.helpOptions.includes(option);
-                        const canSelect = isSelected || formData.helpOptions.length < 5;
+                <div className="flex flex-wrap gap-2">
+                  {helpOptions.map((option) => {
+                    const isSelected = formData.helpOptions.includes(option);
+                    const canSelect = isSelected || formData.helpOptions.length < 5;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        aria-pressed={isSelected}
+                        disabled={!canSelect}
+                        onClick={() =>
+                          updateFormData("helpOptions", isSelected ? formData.helpOptions.filter((o) => o !== option) : [...formData.helpOptions, option])
+                        }
+                        className={cn(
+                          "rounded-full border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
+                          isSelected
+                            ? "border-[rgb(var(--reg-brand))] bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"
+                            : "border-[rgb(var(--reg-line))] bg-white hover:border-[rgb(var(--reg-brand)/0.5)]",
+                        )}
+                      >
+                        {isSelected && <Check className="-ml-1 mr-1 inline h-4 w-4" aria-hidden />}
+                        {tOpt("regHelp", option)}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div>
+                  <p className={fieldLabel}>{tr("registration.haveYouUsedAnotherBooking")}</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[["no", tr("common.no")], ["yes", tr("common.yes")]].map(([v, t]) => (
+                      <button key={v} type="button" aria-pressed={formData.hasUsedTools === v} onClick={() => updateFormData("hasUsedTools", v)} className={cn(choiceCard(formData.hasUsedTools === v), "justify-center")}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  {formData.hasUsedTools === "yes" && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {businessTools.map((tool) => {
+                        const on = formData.previousTools.includes(tool);
                         return (
                           <button
-                            key={option}
-                            onClick={() => {
-                              if (isSelected) {
-                                updateFormData("helpOptions", formData.helpOptions.filter(o => o !== option));
-                              } else if (canSelect) {
-                                updateFormData("helpOptions", [...formData.helpOptions, option]);
-                              }
-                            }}
-                            disabled={!canSelect && !isSelected}
-                            className={`p-3 rounded-xl border text-left transition-all text-sm ${
-                              isSelected
-                                ? "border-gray-900 bg-gray-50 text-gray-900"
-                                : canSelect
-                                ? "border-gray-200 hover:border-gray-300 text-gray-700"
-                                : "border-gray-200 opacity-50 cursor-not-allowed text-gray-500"
-                            }`}
+                            key={tool}
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => updateFormData("previousTools", on ? formData.previousTools.filter((t) => t !== tool) : [...formData.previousTools, tool])}
+                            className={cn(
+                              "rounded-full border px-3 py-1.5 text-sm transition",
+                              on ? "border-[rgb(var(--reg-brand))] bg-[rgb(var(--reg-brand-soft))] font-semibold text-[rgb(var(--reg-brand-strong))]" : "border-[rgb(var(--reg-line))] bg-white",
+                            )}
                           >
-                            {option}
+                            {tool}
                           </button>
                         );
                       })}
                     </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">
-                      Have you previously used other tools to support your business?
-                    </Label>
-                    <RadioGroup value={formData.hasUsedTools} onValueChange={(v) => updateFormData("hasUsedTools", v)}>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-3">
-                          <RadioGroupItem value="no" id="no-tools" />
-                          <Label htmlFor="no-tools" className="cursor-pointer text-sm text-gray-700 font-normal">
-                            No, I haven't
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <RadioGroupItem value="yes" id="yes-tools" />
-                          <Label htmlFor="yes-tools" className="cursor-pointer text-sm text-gray-700 font-normal">
-                            Yes, I have
-                          </Label>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                    {formData.hasUsedTools === "yes" && (
-                      <div className="mt-3 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-4 space-y-2 bg-gray-50">
-                        {businessTools.map((tool) => {
-                          const isSelected = formData.previousTools.includes(tool);
-                          return (
-                            <div key={tool} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={tool}
-                                checked={isSelected}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    updateFormData("previousTools", [...formData.previousTools, tool]);
-                                  } else {
-                                    updateFormData("previousTools", formData.previousTools.filter(t => t !== tool));
-                                  }
-                                }}
-                              />
-                              <Label htmlFor={tool} className="cursor-pointer text-sm text-gray-700 font-normal">
-                                {tool}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="profileLiveDate" className="text-sm font-medium text-gray-700">
-                      When do you want your profile to go live?
-                    </Label>
-                    <Select value={formData.profileLiveDate} onValueChange={(v) => updateFormData("profileLiveDate", v)}>
-                      <SelectTrigger className="h-12 border-gray-300">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                        <SelectItem value="3-days">In 3 days</SelectItem>
-                        <SelectItem value="1-week">In 1 week</SelectItem>
-                        <SelectItem value="2-weeks">In 2 weeks</SelectItem>
-                        <SelectItem value="1-month">In 1 month</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-              </div>
-
-              <div className="pt-6 border-t border-gray-200 flex gap-3 justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(4)}
-                  className="md:min-w-[200px] h-12 border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(6)}
-                  disabled={!canProceedStep5}
-                  className="md:min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 6: Complete */}
-        {currentStep === 6 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:p-8">
-            <div className="w-full">
-              <div className="mb-8 text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-900 text-white mb-4">
-                    <CheckCircle2 className="h-8 w-8" />
-                  </div>
-                  <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-                    You're all set, {formData.firstName || "there"}!
-                  </h1>
-                  <p className="text-gray-600">To help your business thrive, here are a few ways booqi will do that:</p>
+                  )}
                 </div>
+              </div>
+            )}
 
-              <div className="space-y-3">
-                {[
-                  { icon: User, text: "Clients book themselves with your booqi profile" },
-                  { icon: Bell, text: "No-shows are history with automated reminders and custom fees" },
-                  { icon: Sparkles, text: "Easy social bookings with social tools to turn followers into clients" },
-                  { icon: DollarSign, text: "Flexible modern payments with multiple payment methods, including your phone" },
-                  { icon: Mail, text: "Fresh connections with clients using marketing tools for outreach" },
-                ].map((feature, idx) => {
-                  const Icon = feature.icon;
+            {screen.key === "launch" && (
+              <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label={tr("registration.goLiveDate")}>
+                {[["today", tr("common.today")], ["tomorrow", tr("common.tomorrow")], ["3-days", tr("registration.inDays")], ["1-week", tr("registration.inWeek")], ["2-weeks", tr("registration.inWeeks")], ["1-month", tr("registration.inMonth")]].map(([v, t]) => {
+                  const on = formData.profileLiveDate === v;
                   return (
-                    <div key={idx} className="bg-white rounded-xl p-4 flex items-start gap-3 border border-gray-200">
-                      <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 border border-gray-200">
-                        <Icon className="h-5 w-5 text-gray-700" />
-                      </div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm text-gray-700 leading-relaxed">{feature.text}</p>
-                      </div>
-                    </div>
+                    <button key={v} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("profileLiveDate", v)} className={cn(choiceCard(on), "justify-center py-4")}>
+                      {t}
+                    </button>
                   );
                 })}
               </div>
+            )}
 
-              <div className="pt-6 border-t border-gray-200 flex gap-3 justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep(5)}
-                  className="md:min-w-[200px] h-12 border-gray-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={handleCompleteRegistration}
-                  disabled={isRegistering}
-                  className="md:min-w-[200px] h-12 bg-gray-900 hover:bg-gray-800 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isRegistering ? "Registering..." : "Complete Registration"}
-                  {!isRegistering && <Check className="ml-2 h-4 w-4" />}
-                </Button>
-              </div>
+            {screen.key === "review" && (
+              <dl className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+                {[
+                  { k: "account", label: tr("registration.you"), value: `${ownerName} · ${formData.email}` },
+                  { k: "name", label: tr("common.business"), value: [formData.businessName, otherCategories.find((c) => c.name === formData.category)?.label ?? formData.category].filter(Boolean).join(" · ") },
+                  { k: "address", label: tr("common.address"), value: formData.address.split(",").slice(0, 3).join(",") },
+                  { k: "hours", label: tr("registration.hours"), value: tr("registration.openDaysAWeek", { count: openDays }) },
+                  {
+                    k: "team",
+                    label: tr("registration.teamServices"),
+                    value: tr("registration.teamServicesSummary", { people: formData.staffMembers.length + 1, services: formData.services.length }),
+                  },
+                ].map((row) => (
+                  <div key={row.k} className="flex items-start justify-between gap-3 px-4 py-3.5">
+                    <div className="min-w-0">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{row.label}</dt>
+                      <dd className="mt-0.5 break-words text-[15px] font-semibold">{row.value}</dd>
+                    </div>
+                    <button type="button" onClick={() => goTo(screenIndex(row.k))} className={cn(authLink, "shrink-0 py-1 text-sm")} aria-label={tr("registration.edit", { label: row.label })}>
+                      {tr("common.edit")}
+                    </button>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+
+          {/* Back + Continue. Sticky at the bottom of a phone, inline in the card from md up. */}
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[rgb(var(--reg-line)/0.7)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl md:static md:mt-8 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+            <div className="mx-auto flex max-w-[520px] gap-3">
+              {!isFirst && (
+                <button type="button" onClick={() => goTo(currentStep - 1)} className={cn(authGhost, "w-[52px] px-0 md:w-auto md:px-6")} aria-label={tr("registration.back")}>
+                  <ArrowLeft className="h-5 w-5" aria-hidden />
+                  <span className="hidden md:inline">{tr("registration.back")}</span>
+                </button>
+              )}
+              <button type="submit" disabled={!canContinue[screen.key]} aria-busy={isRegistering} className={cn(brandCta, "flex-1")}>
+                {isRegistering && <span aria-hidden className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
+                {isReview
+                  ? isRegistering ? tr("registration.creatingYourSalon") : tr("registration.createMySalon")
+                  : screen.key === "team" && !formData.teamSize && !formData.staffMembers.length && !formData.services.length
+                    ? tr("registration.skipForNow")
+                    : tr("registration.continue")}
+                {!isRegistering && <ChevronRight className="h-4 w-4" aria-hidden />}
+              </button>
             </div>
           </div>
-        )}
-          </div>
-        </div>
-      </div>
+        </form>
+      </AuthShell>
+
 
       {/* Add Service Dialog */}
       <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Service</DialogTitle>
+            <DialogTitle>{tr("registration.addNewService")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Service Name</Label>
+              <Label>{tr("registration.serviceName")}</Label>
               <Input
                 value={newService.name}
                 onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                placeholder="e.g., Haircut"
+                placeholder={tr("registration.eGHaircut")}
                 className="border-gray-300"
               />
             </div>
             <div className="space-y-2">
-              <Label>Service Type</Label>
+              <Label>{tr("registration.serviceType")}</Label>
               <Input
                 value={newService.type}
                 onChange={(e) => setNewService({ ...newService, type: e.target.value })}
-                placeholder="e.g., Hair Service"
+                placeholder={tr("registration.eGHairService")}
                 className="border-gray-300"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Duration (Hours)</Label>
+                <Label>{tr("registration.durationHours")}</Label>
                 <Select value={newService.durationHours} onValueChange={(v) => setNewService({ ...newService, durationHours: v })}>
                   <SelectTrigger className="border-gray-300">
                     <SelectValue />
@@ -1590,7 +1306,7 @@ const RegistrationPage = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Duration (Minutes)</Label>
+                <Label>{tr("registration.durationMinutes")}</Label>
                 <Select value={newService.durationMinutes} onValueChange={(v) => setNewService({ ...newService, durationMinutes: v })}>
                   <SelectTrigger className="border-gray-300">
                     <SelectValue />
@@ -1604,7 +1320,7 @@ const RegistrationPage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Price</Label>
+              <Label>{tr("common.price")}</Label>
               <Input
                 type="number"
                 value={newService.price}
@@ -1614,22 +1330,22 @@ const RegistrationPage = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Price Type</Label>
+              <Label>{tr("registration.priceType")}</Label>
               <Select value={newService.priceType} onValueChange={(v) => setNewService({ ...newService, priceType: v })}>
                 <SelectTrigger className="border-gray-300">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Fixed">Fixed</SelectItem>
-                  <SelectItem value="From">From</SelectItem>
+                  <SelectItem value="Fixed">{tr("common.fixed")}</SelectItem>
+                  <SelectItem value="From">{tr("common.from2")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setIsAddServiceOpen(false)} className="flex-1 border-gray-300">
-                Cancel
+                {tr("common.cancel")}
               </Button>
-              <Button onClick={handleAddService} className="flex-1 bg-gray-900 hover:bg-gray-800">Add Service</Button>
+              <Button onClick={handleAddService} className={cn(brandCta, "flex-1 h-10")}>{tr("registration.addService2")}</Button>
             </div>
           </div>
         </DialogContent>
@@ -1639,39 +1355,39 @@ const RegistrationPage = () => {
       <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Staff Member</DialogTitle>
+            <DialogTitle>{tr("registration.addStaffMember")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>{tr("common.name")}</Label>
               <Input
                 value={newStaff.name}
                 onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                placeholder="Full name"
+                placeholder={tr("registration.fullName")}
                 className="border-gray-300"
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>{tr("common.email")}</Label>
               <Input
                 type="email"
                 value={newStaff.email}
                 onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
-                placeholder="email@example.com"
+                placeholder={tr("registration.emailExampleCom")}
                 className="border-gray-300"
               />
             </div>
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{tr("common.phone")}</Label>
               <div className="flex gap-2">
                 <Select value={newStaff.phonePrefix} onValueChange={(v) => setNewStaff({ ...newStaff, phonePrefix: v })}>
                   <SelectTrigger className="w-28 border-gray-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="+48">+48</SelectItem>
-                    <SelectItem value="+1">+1</SelectItem>
-                    <SelectItem value="+44">+44</SelectItem>
+                    {phonePrefixes.map(([code, label]) => (
+                      <SelectItem key={code} value={code}>{code} ({label})</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Input
@@ -1683,19 +1399,19 @@ const RegistrationPage = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Position</Label>
+              <Label>{tr("common.position")}</Label>
               <Input
                 value={newStaff.position}
                 onChange={(e) => setNewStaff({ ...newStaff, position: e.target.value })}
-                placeholder="e.g., Stylist, Therapist"
+                placeholder={tr("registration.eGStylistTherapist")}
                 className="border-gray-300"
               />
             </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={() => setIsAddStaffOpen(false)} className="flex-1 border-gray-300">
-                Cancel
+                {tr("common.cancel")}
               </Button>
-              <Button onClick={handleAddStaff} className="flex-1 bg-gray-900 hover:bg-gray-800">Add Staff</Button>
+              <Button onClick={handleAddStaff} className={cn(brandCta, "flex-1 h-10")}>{tr("registration.addStaff")}</Button>
             </div>
           </div>
         </DialogContent>
@@ -1706,27 +1422,27 @@ const RegistrationPage = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              Edit {editingDay && daysOfWeek.find(d => d.key === editingDay)?.label} Hours
+              {tr("common.edit")}{" "}{editingDay && daysOfWeek.find(d => d.key === editingDay)?.label}{" "}{tr("registration.hours")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Opening Time</Label>
+                <Label className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{tr("registration.openingTime")}</Label>
                 <Input
                   type="time"
                   value={tempStartTime}
                   onChange={(e) => setTempStartTime(e.target.value)}
-                  className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
+                  className={authInput}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Closing Time</Label>
+                <Label className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{tr("registration.closingTime")}</Label>
                 <Input
                   type="time"
                   value={tempEndTime}
                   onChange={(e) => setTempEndTime(e.target.value)}
-                  className="h-12 border-gray-300 focus:border-gray-900 focus:ring-gray-900"
+                  className={authInput}
                 />
               </div>
             </div>
@@ -1736,7 +1452,7 @@ const RegistrationPage = () => {
                 onClick={() => setEditingDay(null)} 
                 className="flex-1 border-gray-300"
               >
-                Cancel
+                {tr("common.cancel")}
               </Button>
               <Button 
                 onClick={() => {
@@ -1750,15 +1466,15 @@ const RegistrationPage = () => {
                     setEditingDay(null);
                   }
                 }} 
-                className="flex-1 bg-gray-900 hover:bg-gray-800"
+                className={cn(brandCta, "flex-1 h-10")}
               >
-                Save
+                {tr("common.save")}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 

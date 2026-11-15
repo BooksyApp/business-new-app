@@ -1,18 +1,43 @@
-import { ReactNode } from "react";
-import { Sidebar } from "./Sidebar";
+import { ReactNode, useState } from "react";
+import { MobileTabBar, MobileTopBar, Sidebar } from "./Sidebar";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
+const COLLAPSE_KEY = "booqi.nav.collapsed";
+
 export function AppLayout({ children }: AppLayoutProps) {
+  // Remembered per browser; storage can be blocked (private mode), so never trust it.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggle = () =>
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1");
+      } catch {
+        /* per-browser convenience only */
+      }
+      return !c;
+    });
+
   return (
-    <div className="h-screen bg-background relative">
-      <Sidebar />
-      <main className="absolute left-[72px] right-0 top-0 bottom-0 bg-[#fafafa] overflow-auto">
-        {children}
-      </main>
+    <div className="flex h-[100dvh] bg-[rgb(var(--reg-canvas))]">
+      <Sidebar collapsed={collapsed} onToggle={toggle} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileTopBar />
+        {/* On a phone the floating tab bar sits over the bottom; keep content clear of it. */}
+        <main className="min-h-0 flex-1 overflow-auto bg-[#fafafa] pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-0">
+          {children}
+        </main>
+      </div>
+      <MobileTabBar />
     </div>
   );
 }

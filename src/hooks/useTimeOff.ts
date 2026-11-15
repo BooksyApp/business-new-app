@@ -3,6 +3,7 @@ import { timeOffService, type TimeOff, type CreateTimeOffRequest, type UpdateTim
 import { websocketService } from "@/services/websocketService";
 import { toast } from "sonner";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { t } from "@/i18n";
 
 export const useTimeOff = (businessIdParam?: number) => {
   const routeBusinessId = useBusinessId();
@@ -20,7 +21,7 @@ export const useTimeOff = (businessIdParam?: number) => {
       const data = await timeOffService.getTimeOffsByBusiness(businessId);
       setTimeOffs(data);
     } catch (err) {
-      setError((err instanceof Error && err.message) || "Failed to fetch time offs");
+      setError((err instanceof Error && err.message) || t("hooks.failedToFetchTimeOffs"));
       console.error("Error fetching time offs:", err);
     } finally {
       setLoading(false);
@@ -87,10 +88,10 @@ export const useTimeOff = (businessIdParam?: number) => {
         }
         return prev;
       });
-      toast.success("Time off created successfully");
+      toast.success(t("hooks.timeOffCreatedSuccessfully"));
       return newTimeOff;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || "Failed to create time off");
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateTimeOff"));
       return null;
     }
   }, []);
@@ -99,10 +100,10 @@ export const useTimeOff = (businessIdParam?: number) => {
     try {
       const updated = await timeOffService.updateTimeOff(id, data);
       setTimeOffs(prev => prev.map(to => to.id === id ? updated : to));
-      toast.success("Time off updated successfully");
+      toast.success(t("hooks.timeOffUpdatedSuccessfully"));
       return updated;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || "Failed to update time off");
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateTimeOff"));
       return null;
     }
   }, []);
@@ -112,10 +113,10 @@ export const useTimeOff = (businessIdParam?: number) => {
       await timeOffService.deleteTimeOff(id);
       // WebSocket will handle the update, but we can remove it optimistically
       setTimeOffs(prev => prev.filter(to => to.id !== id));
-      toast.success("Time off deleted successfully");
+      toast.success(t("hooks.timeOffDeletedSuccessfully"));
       return true;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || "Failed to delete time off");
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToDeleteTimeOff"));
       return false;
     }
   }, []);
@@ -124,10 +125,10 @@ export const useTimeOff = (businessIdParam?: number) => {
     try {
       const approved = await timeOffService.approveTimeOff(id, approvedBy);
       setTimeOffs(prev => prev.map(to => to.id === id ? approved : to));
-      toast.success("Time off approved successfully");
+      toast.success(t("hooks.timeOffApprovedSuccessfully"));
       return approved;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || "Failed to approve time off");
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToApproveTimeOff"));
       return null;
     }
   }, []);

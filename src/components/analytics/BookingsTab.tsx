@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { pct } from "@/lib/utils";
 import { Calendar, CheckCircle, XCircle, Clock, Activity } from "lucide-react";
 import type { BookingAnalytics } from "@/services/analysisService";
+import { t } from "@/i18n";
 
 interface BookingsTabProps {
   data: BookingAnalytics;
@@ -15,7 +16,7 @@ export default function BookingsTab({ data }: BookingsTabProps) {
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Total Bookings</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.totalBookings")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.totalBookings}</div>
@@ -23,29 +24,29 @@ export default function BookingsTab({ data }: BookingsTabProps) {
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Confirmed</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.confirmed")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-status-completed">{data.confirmedBookings}</div>
-            <div className="text-xs text-muted-foreground mt-1">{pct(data.confirmationRate)}% rate</div>
+            <div className="text-xs text-muted-foreground mt-1">{t("analytics.rate", { value: pct(data.confirmationRate) })}</div>
           </CardContent>
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">Cancelled</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("common.cancelled")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{data.cancelledBookings}</div>
-            <div className="text-xs text-muted-foreground mt-1">{pct(data.cancellationRate)}% rate</div>
+            <div className="text-xs text-muted-foreground mt-1">{t("analytics.rate", { value: pct(data.cancellationRate) })}</div>
           </CardContent>
         </Card>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">No Shows</CardTitle>
+            <CardTitle className="text-xs font-semibold text-muted-foreground uppercase">{t("analytics.noShows")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-500">{data.noShowBookings}</div>
-            <div className="text-xs text-muted-foreground mt-1">{pct(data.noShowRate)}% rate</div>
+            <div className="text-xs text-muted-foreground mt-1">{t("analytics.rate", { value: pct(data.noShowRate) })}</div>
           </CardContent>
         </Card>
       </div>
@@ -54,8 +55,8 @@ export default function BookingsTab({ data }: BookingsTabProps) {
       {data.bookingsByDayOfWeek && data.bookingsByDayOfWeek.length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Bookings by Day of Week</CardTitle>
-            <CardDescription>Weekly booking patterns</CardDescription>
+            <CardTitle>{t("analytics.bookingsByDayOfWeek")}</CardTitle>
+            <CardDescription>{t("analytics.weeklyBookingPatterns")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64 flex items-end justify-between gap-2 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border border-border/60">
@@ -67,7 +68,7 @@ export default function BookingsTab({ data }: BookingsTabProps) {
                     <div 
                       className="w-full bg-gradient-to-t from-appointment-blue to-appointment-blue/60 rounded-t transition-all cursor-pointer"
                       style={{ height: `${height}%`, minHeight: height > 0 ? '4px' : '0' }}
-                      title={`${day.dayOfWeek}: ${day.bookings} bookings (${pct(day.percentage)}%)`}
+                      title={t("analytics.bookings", { dayOfWeek: day.dayOfWeek, bookings: day.bookings, value: pct(day.percentage) })}
                     />
                     <span className="text-[10px] text-muted-foreground text-center">
                       {day.dayOfWeek.substring(0, 3)}
@@ -84,8 +85,8 @@ export default function BookingsTab({ data }: BookingsTabProps) {
       {data.bookingsByHour && data.bookingsByHour.length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Bookings by Hour</CardTitle>
-            <CardDescription>Hourly booking distribution</CardDescription>
+            <CardTitle>{t("analytics.bookingsByHour")}</CardTitle>
+            <CardDescription>{t("analytics.hourlyBookingDistribution")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-64 flex items-end justify-between gap-1 p-4 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border border-border/60">
@@ -97,7 +98,7 @@ export default function BookingsTab({ data }: BookingsTabProps) {
                     <div 
                       className="w-full bg-gradient-to-t from-appointment-purple to-appointment-purple/60 rounded-t transition-all cursor-pointer"
                       style={{ height: `${height}%`, minHeight: height > 0 ? '2px' : '0' }}
-                      title={`${hour.hour}:00 - ${hour.bookings} bookings (${pct(hour.percentage)}%)`}
+                      title={t("analytics.bookings2", { hour: hour.hour, bookings: hour.bookings, value: pct(hour.percentage) })}
                     />
                     <span className="text-[9px] text-muted-foreground">{hour.hour}</span>
                   </div>
@@ -112,8 +113,8 @@ export default function BookingsTab({ data }: BookingsTabProps) {
       {data.bookingsByStatus && Object.keys(data.bookingsByStatus).length > 0 && (
         <Card className="border-border/60 shadow-sm">
           <CardHeader>
-            <CardTitle>Booking Status Breakdown</CardTitle>
-            <CardDescription>Distribution of booking statuses</CardDescription>
+            <CardTitle>{t("analytics.bookingStatusBreakdown")}</CardTitle>
+            <CardDescription>{t("analytics.distributionOfBookingStatuses")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
