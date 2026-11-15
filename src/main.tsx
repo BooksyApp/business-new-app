@@ -7,6 +7,9 @@ import "@fontsource/inter/700.css";
 import App from "./App.tsx";
 import "./index.css";
 import { t } from "@/i18n";
+import { initSentry, reportError } from "@/lib/sentry";
+
+initSentry();
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -25,6 +28,7 @@ class ErrorBoundary extends React.Component<
     // Always to the console, in every build: a crash a developer cannot see the cause of
     // takes an afternoon to find, and the console is not shown to a customer anyway.
     console.error("[booqi] render crash:", error, info?.componentStack);
+    reportError(error, info?.componentStack);
   }
 
   render() {
