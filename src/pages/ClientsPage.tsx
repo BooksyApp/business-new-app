@@ -20,6 +20,7 @@ import { primaryBtn } from "@/components/page/booqiStyles";
 import { appointmentStatusStyle } from "@/lib/appointmentStatus";
 import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
 import "@/components/auth/auth-tokens.css";
+import { appointmentService } from "@/services/appointmentService";
 import { clientService, ClientWithStats, invitationService, Invitation } from "@/services/clientService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { format } from "@/i18n/dateFns";
@@ -34,7 +35,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { appointmentService, type Appointment as AppointmentApi } from "@/services/appointmentService";
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
 import { salonDayService, type ClientRecord, type NoteKind } from "@/services/salonDayService";
 import { useServices } from "@/hooks/useServices";
@@ -47,11 +47,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { t as tr } from "@/i18n";
 
-/** What the list shows about a client, worked out from the salon's bookings. */
+/** A client's next booking, as the list row carries it. */
+type NextVisit = { appointmentDate: string; startTime: string; serviceName?: string | null; staffName?: string | null };
+
+/** What the list shows about a client — read from the server's aggregates over ALL bookings. */
 type ClientInsight = {
-  appts: AppointmentApi[];
-  next: AppointmentApi | null;
-  lastPast: AppointmentApi | null;
+  bookingCount: number;
+  liveBookingCount: number;
+  next: NextVisit | null;
+  lastPastDate: string | null;
   since: string | null;
   favouriteService: string | null;
   favouriteMaster: string | null;
@@ -76,7 +80,6 @@ export default function ClientsPage() {
   const [rowLimit, setRowLimit] = useState(PAGE_ROWS);
   useEffect(() => setRowLimit(PAGE_ROWS), [searchQuery, segment, sort]);
   const navigate = useNavigate();
-  const [allAppts, setAllAppts] = useState<AppointmentApi[]>([]);
   const [density, setDensity] = useState<"compact" | "detailed">(() => {
     try {
       return localStorage.getItem("booqi.clients.density") === "compact" ? "compact" : "detailed";
@@ -122,18 +125,21 @@ export default function ClientsPage() {
     return (client.totalVisits ?? 0) > 0 || client.status === "ACTIVE";
   };
 
-  const loadVisits = (clientId: number) => {
+  const loadVisits = (client: ClientWithStats) => {
     setClientVisits(null);
-    // Walk-in clients have no record (id 0), so there is no history to fetch — say so
-    // instead of "Loading…" forever.
-    if (!businessId || !clientId) {
+    // Walk-in clients have no record (id 0): their history comes by the list's client key.
+    const request = !businessId
+      ? null
+      : client.id > 0
+        ? clientService.getAppointmentsAtBusiness(businessId, client.id)
+        : client.clientKey
+          ? clientService.getVisitsByKey(businessId, client.clientKey)
+          : null;
+    if (!request) {
       setClientVisits([]);
       return;
     }
-    clientService
-      .getAppointmentsAtBusiness(businessId, clientId)
-      .then(setClientVisits)
-      .catch(() => setClientVisits([]));
+    request.then(setClientVisits).catch(() => setClientVisits([]));
   };
 
   const loadLoyalty = (clientId: number) => {
@@ -189,17 +195,17 @@ export default function ClientsPage() {
   const loadClients = async () => {
     try {
       setLoading(true);
-      // The salon's bookings from a year back to half a year ahead feed the list's
-      // insights (next booking, favourite service, master). Failing that is not fatal.
-      const now = new Date();
-      const [data, appts] = await Promise.all([
-        clientService.getClientsWithAppointments(businessId),
-        appointmentService
-          .getAppointmentsInRange(businessId, new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()), new Date(now.getFullYear(), now.getMonth() + 6, now.getDate()))
-          .catch(() => [] as AppointmentApi[]),
-      ]);
-      setClients(data);
-      setAllAppts(appts || []);
+      // Insights (next booking, favourite service and master, visits, spend) come with each
+      // row, aggregated on the server over all of the client's bookings at this salon.
+      const data = await clientService.getClientsWithAppointments(businessId);
+      // A walk-in booked without a name: show the phone / e-mail, else "Unnamed client".
+      setClients(
+        data.map((c) =>
+          c.firstName?.trim() || c.lastName?.trim()
+            ? c
+            : { ...c, firstName: c.phone || c.email || tr("clients.unnamedClient"), lastName: null },
+        ),
+      );
     } catch (error) {
       console.error("Failed to load clients:", error);
       toast.error((error instanceof Error && error.message) || tr("clients.failedToLoadClients"));
@@ -362,7 +368,7 @@ export default function ClientsPage() {
     setDetailClient(client);
     setClientDetailOpen(true);
     loadLoyalty(client.id);
-    loadVisits(client.id);
+    loadVisits(client);
     setProfileTab("overview");
     loadProfileExtras(client.id);
   };
@@ -371,71 +377,33 @@ export default function ClientsPage() {
   const rowKey = (client: ClientWithStats, index: number) =>
     client.id ? `c${client.id}` : `walk-in-${client.email ?? client.phone ?? ""}-${index}`;
 
-  /* ── Insights from the salon's own bookings (one range request, no new fields) ── */
-  // The bookings indexed once per load. Every client used to scan the whole 18-month
-  // booking list on every render (clients x bookings, and again on each keystroke in the
-  // search box) — the page froze for over a second on a phone (SRE 2026-11-15).
-  const apptIndex = useMemo(() => {
-    const byId = new Map<number, number[]>();
-    const byName = new Map<string, number[]>();
-    const byNameNoId = new Map<string, number[]>();
-    const push = <K,>(m: Map<K, number[]>, k: K, i: number) => {
-      const l = m.get(k);
-      if (l) l.push(i);
-      else m.set(k, [i]);
-    };
-    allAppts.forEach((a, i) => {
-      const n = (a.clientName || "").trim().toLowerCase();
-      push(byName, n, i);
-      if (a.clientId) push(byId, a.clientId, i);
-      else push(byNameNoId, n, i);
-    });
-    // Insights per client object, dropped with the index when the bookings reload.
-    const cache = new WeakMap<ClientWithStats, ClientInsight>();
-    return { byId, byName, byNameNoId, cache };
-  }, [allAppts]);
+  /* ── Insights: aggregated on the server over ALL of the client's bookings here ── */
+  const insightCache = useMemo(() => new WeakMap<ClientWithStats, ClientInsight>(), []);
   const insightsFor = (client: ClientWithStats): ClientInsight => {
-    const name = getFullName(client.firstName, client.lastName).trim().toLowerCase();
-    // Same rule as before: a client with an id owns the bookings carrying that id plus
-    // the id-less ones under their name; any other row matches by name. Original order.
-    const idx = client.id > 0
-      ? [...(apptIndex.byId.get(client.id) ?? []), ...(apptIndex.byNameNoId.get(name) ?? [])].sort((x, y) => x - y)
-      : apptIndex.byName.get(name) ?? [];
-    const mine = idx.map((i) => allAppts[i]);
-    const now = new Date();
-    const at = (a: AppointmentApi) => new Date(`${a.appointmentDate}T${String(a.startTime).slice(0, 5)}`);
-    const live = mine.filter((a) => a.status !== "CANCELLED");
-    const upcoming = live.filter((a) => at(a) >= now).sort((x, y) => +at(x) - +at(y));
-    const past = mine.filter((a) => at(a) < now).sort((x, y) => +at(y) - +at(x));
-    const mode = (vals: (string | undefined)[]) => {
-      const n = new Map<string, number>();
-      vals.filter(Boolean).forEach((v) => n.set(v!, (n.get(v!) ?? 0) + 1));
-      return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    };
-    const firstAppt = [...mine].sort((x, y) => +at(x) - +at(y))[0];
-    const priced = live.filter((a) => typeof a.price === "number" && a.price > 0);
-    const visitsDone = Math.max(client.totalVisits ?? 0, past.filter((a) => a.status !== "CANCELLED" && a.status !== "NO_SHOW").length);
+    const visitsDone = Math.max(client.totalVisits ?? 0, client.pastVisits ?? 0);
     const spent = Number(client.totalSpent ?? 0);
+    const avgPrice = client.avgPrice == null ? null : Number(client.avgPrice);
     return {
-      appts: mine,
-      next: upcoming[0] ?? null,
-      lastPast: past[0] ?? null,
-      since: client.createdAt || firstAppt?.appointmentDate || null,
-      favouriteService: mode(live.map((a) => a.serviceName)),
-      favouriteMaster: mode(live.map((a) => a.staffName)),
-      noShows: client.noShowAppointments ?? mine.filter((a) => a.status === "NO_SHOW").length,
-      cancels: client.cancelledAppointments ?? mine.filter((a) => a.status === "CANCELLED").length,
-      avgTicket: spent > 0 && visitsDone > 0 ? spent / visitsDone : priced.length ? priced.reduce((s, a) => s + (a.price ?? 0), 0) / priced.length : null,
+      bookingCount: client.bookingCount ?? 0,
+      liveBookingCount: client.liveBookingCount ?? 0,
+      next: client.nextVisitDate && client.nextVisitTime
+        ? { appointmentDate: client.nextVisitDate, startTime: client.nextVisitTime, serviceName: client.nextServiceName, staffName: client.nextStaffName }
+        : null,
+      lastPastDate: client.lastBookingDate ?? null,
+      since: client.createdAt || client.firstBookingDate || null,
+      favouriteService: client.favouriteService ?? null,
+      favouriteMaster: client.favouriteMaster ?? null,
+      noShows: client.noShowAppointments ?? 0,
+      cancels: client.cancelledAppointments ?? 0,
+      avgTicket: spent > 0 && visitsDone > 0 ? spent / visitsDone : avgPrice,
       visitsDone,
     };
   };
-  // Computed on first use per client object and kept until the bookings reload (was: a
-  // Map over every client on every render, plus an indexOf per lookup).
   const insightOf = (c: ClientWithStats): ClientInsight => {
-    let v = apptIndex.cache.get(c);
+    let v = insightCache.get(c);
     if (!v) {
       v = insightsFor(c);
-      apptIndex.cache.set(c, v);
+      insightCache.set(c, v);
     }
     return v;
   };
@@ -447,7 +415,7 @@ export default function ClientsPage() {
       return d;
     }
   };
-  const nextLabel = (a: AppointmentApi | null) =>
+  const nextLabel = (a: NextVisit | null) =>
     a ? `${format(new Date(`${a.appointmentDate}T00:00`), "EEE d MMM")} · ${String(a.startTime).slice(0, 5)}` : null;
   /** Where they come from, from what the data can tell (no booking-source field exists). */
   const tagsOf = (c: ClientWithStats) => {
@@ -462,15 +430,15 @@ export default function ClientsPage() {
         accepted = false;
       }
       if (accepted) t.push({ label: "booqi account", cls: "bg-sky-100 text-sky-900" });
-      else if (insightOf(c).appts.length === 0 && (c.totalVisits ?? 0) === 0) t.push({ label: tr("clients.addedByYou"), cls: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]" });
+      else if (insightOf(c).bookingCount === 0 && (c.totalVisits ?? 0) === 0) t.push({ label: tr("clients.addedByYou"), cls: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]" });
     }
     return t;
   };
 
   // Summary, from the loaded data only.
   const booked = allClientsWithPending.filter((c) => !isPending(c));
-  const withVisit = booked.filter((c) => insightOf(c).visitsDone >= 1 || insightOf(c).appts.length > 0);
-  const returning = booked.filter((c) => insightOf(c).visitsDone >= 2 || insightOf(c).appts.filter((a) => a.status !== "CANCELLED").length >= 2);
+  const withVisit = booked.filter((c) => insightOf(c).visitsDone >= 1 || insightOf(c).bookingCount > 0);
+  const returning = booked.filter((c) => insightOf(c).visitsDone >= 2 || insightOf(c).liveBookingCount >= 2);
   const spenders = booked.filter((c) => Number(c.totalSpent ?? 0) > 0);
   const avgSpend = spenders.length ? spenders.reduce((s, c) => s + Number(c.totalSpent ?? 0), 0) / spenders.length : null;
   const newThisMonth = booked.filter((c) => {
@@ -726,7 +694,7 @@ export default function ClientsPage() {
                             </div>
                           </td>
                           {density === "detailed" && <td className="whitespace-nowrap px-4 py-3 text-sm text-[rgb(var(--reg-ink)/0.8)]">{shortDate(ins.since) ?? "—"}</td>}
-                          <td className="whitespace-nowrap px-4 py-3 text-sm text-[rgb(var(--reg-ink)/0.8)]">{pending ? "—" : shortDate(client.lastVisitDate) ?? (ins.lastPast ? shortDate(ins.lastPast.appointmentDate) : tr("clients.notYet"))}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-[rgb(var(--reg-ink)/0.8)]">{pending ? "—" : shortDate(client.lastVisitDate) ?? (ins.lastPastDate ? shortDate(ins.lastPastDate) : tr("clients.notYet"))}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm">
                             {ins.next ? <span className="font-semibold text-[rgb(var(--reg-brand-strong))]">{nextLabel(ins.next)}</span> : <span className="text-[rgb(var(--reg-muted))]">—</span>}
                           </td>
@@ -1173,23 +1141,8 @@ export default function ClientsPage() {
               }
             })();
             const now = new Date();
-            // Visits from the per-client endpoint when there is a record; walk-ins (no record)
-            // fall back to the bookings found by name.
-            const rows: ClientAppointmentRow[] =
-              clientVisits && clientVisits.length
-                ? clientVisits
-                : ins.appts.map((a, i) => ({
-                    id: i,
-                    appointment_date: a.appointmentDate,
-                    start_time: a.startTime,
-                    end_time: a.endTime,
-                    status: a.status,
-                    payment_status: a.paymentStatus ?? null,
-                    price: a.price ?? null,
-                    notes: null,
-                    service_name: a.serviceName ?? null,
-                    staff_name: a.staffName ?? null,
-                  }));
+            // Visits from the server: by record id, or by the list's client key for walk-ins.
+            const rows: ClientAppointmentRow[] = clientVisits ?? [];
             const isUpcoming = (v: ClientAppointmentRow) =>
               new Date(`${v.appointment_date}T${String(v.start_time).slice(0, 5)}`) >= now && v.status !== "CANCELLED";
             const upcoming = rows.filter(isUpcoming).sort((a, b) => (a.appointment_date + a.start_time).localeCompare(b.appointment_date + b.start_time));

@@ -32,6 +32,24 @@ export interface ClientWithStats {
   cancelledAppointments: number;
   /** #36: the backend added this counter; the type never declared it. */
   noShowAppointments?: number;
+  // Insights worked out on the server over ALL of the client's bookings at this salon
+  // (list rows only). The list used to compute them from the last 500 bookings it had.
+  /** Who the row is: "c:<id>", "e:<email>", "p:<phone>" or "n:<name>" — for walk-in history. */
+  clientKey?: string;
+  bookingCount?: number;
+  liveBookingCount?: number;
+  /** Bookings that have already started and were not cancelled / no-shows. */
+  pastVisits?: number;
+  lastBookingDate?: string | null;
+  firstBookingDate?: string | null;
+  avgPrice?: number | null;
+  favouriteService?: string | null;
+  favouriteMaster?: string | null;
+  nextVisitDate?: string | null;
+  /** HH:mm */
+  nextVisitTime?: string | null;
+  nextServiceName?: string | null;
+  nextStaffName?: string | null;
 }
 
 export interface Client {
@@ -90,7 +108,25 @@ class ClientService {
    * Get clients who have booked appointments for a business
    */
   async getClientsWithAppointments(businessId: number): Promise<ClientWithStats[]> {
-    return apiClient.get<ClientWithStats[]>(`/bookings/business/${businessId}/clients`);
+    // The endpoint pages (default 500, max 1000 rows); a big salon has more clients than one
+    // page, and the rest silently went missing. Fetch page after page.
+    const PAGE = 1000;
+    const all: ClientWithStats[] = [];
+    for (let offset = 0; offset < 50 * PAGE; offset += PAGE) {
+      const page = await apiClient.get<ClientWithStats[]>(
+        `/bookings/business/${businessId}/clients?limit=${PAGE}&offset=${offset}`
+      );
+      all.push(...page);
+      if (page.length < PAGE) break;
+    }
+    return all;
+  }
+
+  /** History of a client known only by the list's key (walk-ins without a record). */
+  async getVisitsByKey(businessId: number, clientKey: string): Promise<ClientAppointmentRow[]> {
+    return apiClient.get<ClientAppointmentRow[]>(
+      `/businesses/${businessId}/client-visits?key=${encodeURIComponent(clientKey)}`
+    );
   }
 
   /**

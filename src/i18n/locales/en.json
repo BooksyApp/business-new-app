@@ -997,6 +997,7 @@
     "stillToPay": "Still to pay"
   },
   "clients": {
+    "unnamedClient": "Unnamed client",
     "showMore": "Show {count} more",
     "visitCount": "{count, plural, one {# visit} other {# visits}}",
     "freeServicesToUse": "{count, plural, one {# free service} other {# free services}} to use",

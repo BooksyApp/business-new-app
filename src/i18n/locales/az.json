@@ -997,6 +997,7 @@
     "stillToPay": "Qalıq"
   },
   "clients": {
+    "unnamedClient": "Adsız müştəri",
     "showMore": "Daha {count} müştəri göstər",
     "visitCount": "{count, plural, one {# gəliş} other {# gəliş}}",
     "freeServicesToUse": "{count, plural, one {# pulsuz xidmət} other {# pulsuz xidmət}} istifadə üçün",
