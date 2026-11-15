@@ -432,6 +432,13 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               </DropdownMenuTrigger>
             </MaybeTip>
             <DropdownMenuContent side="top" align="start" className="w-56 rounded-2xl p-1.5">
+              <DropdownMenuItem asChild className="h-11 gap-2 rounded-xl">
+                <NavLink to={m.getPath("/support")}>
+                  <MessagesSquare size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
+                  {t("layout.support")}
+                </NavLink>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={m.handleLogout} className="gap-2 rounded-xl text-red-700 focus:text-red-700">
                 <LogOut size={16} strokeWidth={1.75} />{" "}{t("layout.signOut")}
               </DropdownMenuItem>
