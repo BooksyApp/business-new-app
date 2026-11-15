@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, Filter, MoreHorizontal, Phone, Mail, TrendingUp, User, Loader2, Send, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -47,6 +47,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { t as tr } from "@/i18n";
 
+/** What the list shows about a client, worked out from the salon's bookings. */
+type ClientInsight = {
+  appts: AppointmentApi[];
+  next: AppointmentApi | null;
+  lastPast: AppointmentApi | null;
+  since: string | null;
+  favouriteService: string | null;
+  favouriteMaster: string | null;
+  noShows: number;
+  cancels: number;
+  avgTicket: number | null;
+  visitsDone: number;
+};
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientWithStats[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -56,6 +70,11 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [segment, setSegment] = useState<"all" | "new" | "regulars" | "cancelled" | "invited">("all");
   const [sort, setSort] = useState<{ key: "name" | "last" | "visits" | "spent"; dir: "asc" | "desc" }>({ key: "last", dir: "desc" });
+  // Rows drawn at once. A salon with thousands of clients drew every one of them twice
+  // (table + phone cards) on each render; the rest come in pages of the same size.
+  const PAGE_ROWS = 100;
+  const [rowLimit, setRowLimit] = useState(PAGE_ROWS);
+  useEffect(() => setRowLimit(PAGE_ROWS), [searchQuery, segment, sort]);
   const navigate = useNavigate();
   const [allAppts, setAllAppts] = useState<AppointmentApi[]>([]);
   const [density, setDensity] = useState<"compact" | "detailed">(() => {
@@ -353,11 +372,36 @@ export default function ClientsPage() {
     client.id ? `c${client.id}` : `walk-in-${client.email ?? client.phone ?? ""}-${index}`;
 
   /* ── Insights from the salon's own bookings (one range request, no new fields) ── */
-  const insightsFor = (client: ClientWithStats) => {
+  // The bookings indexed once per load. Every client used to scan the whole 18-month
+  // booking list on every render (clients x bookings, and again on each keystroke in the
+  // search box) — the page froze for over a second on a phone (SRE 2026-11-15).
+  const apptIndex = useMemo(() => {
+    const byId = new Map<number, number[]>();
+    const byName = new Map<string, number[]>();
+    const byNameNoId = new Map<string, number[]>();
+    const push = <K,>(m: Map<K, number[]>, k: K, i: number) => {
+      const l = m.get(k);
+      if (l) l.push(i);
+      else m.set(k, [i]);
+    };
+    allAppts.forEach((a, i) => {
+      const n = (a.clientName || "").trim().toLowerCase();
+      push(byName, n, i);
+      if (a.clientId) push(byId, a.clientId, i);
+      else push(byNameNoId, n, i);
+    });
+    // Insights per client object, dropped with the index when the bookings reload.
+    const cache = new WeakMap<ClientWithStats, ClientInsight>();
+    return { byId, byName, byNameNoId, cache };
+  }, [allAppts]);
+  const insightsFor = (client: ClientWithStats): ClientInsight => {
     const name = getFullName(client.firstName, client.lastName).trim().toLowerCase();
-    const mine = allAppts.filter((a) =>
-      client.id > 0 && a.clientId ? a.clientId === client.id : (a.clientName || "").trim().toLowerCase() === name,
-    );
+    // Same rule as before: a client with an id owns the bookings carrying that id plus
+    // the id-less ones under their name; any other row matches by name. Original order.
+    const idx = client.id > 0
+      ? [...(apptIndex.byId.get(client.id) ?? []), ...(apptIndex.byNameNoId.get(name) ?? [])].sort((x, y) => x - y)
+      : apptIndex.byName.get(name) ?? [];
+    const mine = idx.map((i) => allAppts[i]);
     const now = new Date();
     const at = (a: AppointmentApi) => new Date(`${a.appointmentDate}T${String(a.startTime).slice(0, 5)}`);
     const live = mine.filter((a) => a.status !== "CANCELLED");
@@ -385,10 +429,15 @@ export default function ClientsPage() {
       visitsDone,
     };
   };
-  const insights = new Map(allClientsWithPending.map((c, i) => [rowKey(c, i), insightsFor(c)]));
-  const insightOf = (c: ClientWithStats) => {
-    const i = allClientsWithPending.indexOf(c);
-    return insights.get(rowKey(c, i)) ?? insightsFor(c);
+  // Computed on first use per client object and kept until the bookings reload (was: a
+  // Map over every client on every render, plus an indexOf per lookup).
+  const insightOf = (c: ClientWithStats): ClientInsight => {
+    let v = apptIndex.cache.get(c);
+    if (!v) {
+      v = insightsFor(c);
+      apptIndex.cache.set(c, v);
+    }
+    return v;
   };
   const shortDate = (d: string | null | undefined) => {
     if (!d) return null;
@@ -649,7 +698,7 @@ export default function ClientsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleClients.map((client, index) => {
+                    {visibleClients.slice(0, rowLimit).map((client, index) => {
                       const chip = statusChip(client);
                       const pending = isPending(client);
                       const ins = insightOf(client);
@@ -716,7 +765,7 @@ export default function ClientsPage() {
 
               {/* Phone: cards with the three facts that matter at a glance. */}
               <ul className="space-y-2 md:hidden">
-                {visibleClients.map((client, index) => {
+                {visibleClients.slice(0, rowLimit).map((client, index) => {
                   const chip = statusChip(client);
                   const pending = isPending(client);
                   const ins = insightOf(client);
@@ -751,6 +800,13 @@ export default function ClientsPage() {
                   );
                 })}
               </ul>
+              {visibleClients.length > rowLimit && (
+                <div className="flex justify-center pt-3">
+                  <Button variant="outline" onClick={() => setRowLimit((n) => n + PAGE_ROWS)}>
+                    {tr("clients.showMore", { count: Math.min(PAGE_ROWS, visibleClients.length - rowLimit) })}
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </div>

@@ -15,18 +15,21 @@ const AZ_DAYS_SHORT = ["B.", "B.e.", "Ç.a.", "Ç.", "C.a.", "C.", "Ş."];
 type Fmt = { format: (d: Date) => string };
 
 function azFormatter(opts: Intl.DateTimeFormatOptions): Fmt {
+  // Built once per formatter, not per call: constructing an Intl.DateTimeFormat costs far
+  // more than formatting with one, and the calendar formats hundreds of dates per render.
+  const numeric = new Intl.DateTimeFormat("en-US", {
+    timeZone: opts.timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
   return {
     format(d: Date) {
       // Numeric parts in the requested zone (or local), via en-US which every browser has.
-      const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: opts.timeZone,
-        year: "numeric",
-        month: "numeric",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      }).formatToParts(d);
+      const parts = numeric.formatToParts(d);
       const p: Record<string, string> = {};
       for (const x of parts) p[x.type] = x.value;
       const m = Number(p.month) - 1;

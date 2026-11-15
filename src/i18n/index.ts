@@ -11,7 +11,6 @@
  */
 import en from "./locales/en.json";
 import az from "./locales/az.json";
-import ru from "./locales/ru.json";
 import { getHubLocale, type HubLocale } from "@/lib/hubLocale";
 import { formatDate, formatNumber } from "./format";
 
@@ -25,13 +24,38 @@ type Paths<T> = {
 export type TKey = Paths<typeof en>;
 export type TParams = Record<string, string | number | boolean | null | undefined>;
 
-const DICTS: Record<HubLocale, Tree> = { en: en as Tree, az: az as Tree, ru: ru as Tree };
+// en (fallback) and az (default panel language) ship in the main bundle; ru (~200 kB of
+// JSON) is its own chunk, loaded before first render only for a panel set to Russian
+// (main.tsx) or when someone switches to it (I18nProvider). Until it lands, t() falls back
+// to en like any missing key.
+const DICTS: Partial<Record<HubLocale, Tree>> = { en: en as Tree, az: az as Tree };
+const LAZY: Partial<Record<HubLocale, () => Promise<{ default: unknown }>>> = {
+  ru: () => import("./locales/ru.json"),
+};
 const flatCache = new Map<HubLocale, Map<string, string>>();
+
+export function isHubLocaleLoaded(locale: HubLocale): boolean {
+  return DICTS[locale] !== undefined;
+}
+
+/** Loads a lazily bundled locale; resolves at once for one already loaded (or on failure). */
+export async function loadHubLocale(locale: HubLocale): Promise<void> {
+  const load = LAZY[locale];
+  if (DICTS[locale] || !load) return;
+  try {
+    DICTS[locale] = (await load()).default as Tree;
+    flatCache.delete(locale);
+  } catch {
+    /* offline / chunk missing: keep falling back to en */
+  }
+}
 
 function flat(locale: HubLocale): Map<string, string> {
   let m = flatCache.get(locale);
   if (m) return m;
   m = new Map();
+  const dict = DICTS[locale];
+  if (!dict) return m; // not loaded yet: not cached, so it is built once the chunk arrives
   const walk = (node: Tree, prefix: string) => {
     for (const [k, v] of Object.entries(node)) {
       const p = prefix ? `${prefix}.${k}` : k;
@@ -39,7 +63,7 @@ function flat(locale: HubLocale): Map<string, string> {
       else walk(v, p);
     }
   };
-  walk(DICTS[locale], "");
+  walk(dict, "");
   flatCache.set(locale, m);
   return m;
 }

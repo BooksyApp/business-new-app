@@ -6,7 +6,8 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import App from "./App.tsx";
 import "./index.css";
-import { t } from "@/i18n";
+import { t, loadHubLocale } from "@/i18n";
+import { getHubLocale } from "@/lib/hubLocale";
 import { initSentry, reportError } from "@/lib/sentry";
 
 initSentry();
@@ -72,8 +73,12 @@ if (!rootElement) {
   throw new Error("Root element #root not found in document");
 }
 
-createRoot(rootElement).render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>
-);
+// A panel set to a lazily bundled language (ru) loads it first, so the first paint is not
+// English; az / en are in the main bundle and this resolves at once.
+loadHubLocale(getHubLocale()).finally(() => {
+  createRoot(rootElement).render(
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+});

@@ -151,6 +151,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
     });
   }, []);
 
+  const hasLoadedRef = useRef(false);
   const loadAppointments = useCallback(async (targetDate: Date) => {
     if (!businessId) {
       setError(t("common.businessIdIsRequired"));
@@ -159,7 +160,11 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
     }
 
     try {
-      setLoading(true);
+      // Spinner on the first load only. Every day switch used to flip `loading`, which
+      // unmounts the whole calendar grid and mounts it again (~250-300 ms frozen on a
+      // mid-range phone, SRE 2026-11-15). The grid filters by the date shown, so the
+      // previous day's bookings never appear under the new date while this one loads.
+      if (!hasLoadedRef.current) setLoading(true);
       setError(null);
       
       const [appointmentsData, staffData] = await Promise.all([
@@ -182,6 +187,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
 
       setAppointments(convertedAppointments);
       setStaff(convertedStaff);
+      hasLoadedRef.current = true;
       
       console.log(`✅ Loaded ${convertedAppointments.length} appointments for ${format(targetDate, 'yyyy-MM-dd')}`);
     } catch (err) {

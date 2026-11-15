@@ -997,6 +997,7 @@
     "stillToPay": "Осталось оплатить"
   },
   "clients": {
+    "showMore": "Показать ещё {count}",
     "visitCount": "{count, plural, one {# визит} few {# визита} many {# визитов} other {# визита}}",
     "freeServicesToUse": "Доступно: {count, plural, one {# бесплатная услуга} few {# бесплатные услуги} many {# бесплатных услуг} other {# бесплатной услуги}}",
     "failedToLoadClients": "Не удалось загрузить клиентов",

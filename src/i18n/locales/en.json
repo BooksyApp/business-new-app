@@ -997,6 +997,7 @@
     "stillToPay": "Still to pay"
   },
   "clients": {
+    "showMore": "Show {count} more",
     "visitCount": "{count, plural, one {# visit} other {# visits}}",
     "freeServicesToUse": "{count, plural, one {# free service} other {# free services}} to use",
     "failedToLoadClients": "Failed to load clients",
