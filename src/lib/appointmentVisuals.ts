@@ -1,4 +1,5 @@
 import { Crown, Percent, Sparkles, Star, type LucideIcon } from "lucide-react";
+import { t } from "@/i18n";
 
 /**
  * How an appointment looks on the calendar.
@@ -62,7 +63,7 @@ export function appointmentTags(input: {
   if (input.discountPercent != null && input.discountPercent > 0) {
     tags.push({
       Icon: Percent,
-      label: `${Math.round(input.discountPercent)}% off — booked on an offer`,
+      label: t("utils.offBookedOnAnOffer", { value: Math.round(input.discountPercent) }),
       className: "bg-rose-500 text-white",
     });
   }
@@ -72,16 +73,16 @@ export function appointmentTags(input: {
   if (input.notes && input.notes.includes("Requested by client")) {
     tags.push({
       Icon: Star,
-      label: "Asked for this staff member",
+      label: t("utils.askedForThisStaffMember"),
       className: "bg-amber-500 text-white",
     });
   }
 
   if (input.visits != null) {
     if (input.visits <= 1) {
-      tags.push({ Icon: Sparkles, label: "New client", className: "bg-emerald-600 text-white" });
+      tags.push({ Icon: Sparkles, label: t("utils.newClient"), className: "bg-emerald-600 text-white" });
     } else if (input.visits >= 5) {
-      tags.push({ Icon: Crown, label: "Regular client", className: "bg-rose-600 text-white" });
+      tags.push({ Icon: Crown, label: t("utils.regularClient"), className: "bg-rose-600 text-white" });
     }
   }
 

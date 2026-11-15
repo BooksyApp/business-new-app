@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { format, addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, isToday, getDay, parse } from "date-fns";
+import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, isToday, getDay, parse } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,15 +42,21 @@ import type { TimeOff } from "@/services/timeOffService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { categoryTint, type CategoryTint } from "@/lib/serviceCategoryColor";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { useFeatureFlags } from "@/services/platformService";
+import { appointmentService } from "@/services/appointmentService";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
+import "@/components/auth/auth-tokens.css";
+import { t as tr } from "@/i18n";
 
 // Extended appointment type with date
 interface AppointmentWithDate extends Appointment {
@@ -77,6 +84,15 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     date: apt.date,
     apiId: apt.apiId,
     status: apt.status,   // #30
+    price: apt.price,
+    serviceId: apt.serviceId,
+    visitId: apt.visitId,
+    answers: apt.answers,
+    cancelledBy: apt.cancelledBy,
+    cancellationNote: apt.cancellationNote,
+    overrideApplied: apt.overrideApplied,
+    overrideReason: apt.overrideReason,
+    overrideByName: apt.overrideByName,
   };
 };
 
@@ -124,6 +140,23 @@ function parseTime(time: string): number {
 
 // Slot height for better readability (20px per 15-minute slot)
 const SLOT_HEIGHT = 20;
+
+/* The calendar's sheets (new booking, time off, block time): right sheet on a desktop,
+   full screen on a phone, sticky header and footer, 48px fields as on the auth pages. */
+const SHEET_FRAME =
+  "!max-w-full w-full sm:w-[480px] p-0 flex flex-col h-[100dvh] max-h-[100dvh] gap-0 border-0 bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))] sm:border-l sm:border-[rgb(var(--reg-line))]";
+const SHEET_HEAD = "shrink-0 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas))] px-5 pb-4 pr-14 pt-5 md:px-6";
+const SHEET_TITLE = "text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-[rgb(var(--reg-ink))]";
+const SHEET_FOOT =
+  "flex shrink-0 gap-3 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/90 px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:px-6";
+const SECTION_LABEL = "text-[12px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]";
+const FIELD_LABEL = "text-sm font-semibold text-[rgb(var(--reg-ink))]";
+const FIELD =
+  "h-12 w-full rounded-[14px] border border-[rgb(var(--reg-line))] bg-white px-4 text-base text-[rgb(var(--reg-ink))] focus-visible:ring-4 focus-visible:ring-[rgb(var(--reg-brand)/0.12)] focus-visible:ring-offset-0 focus-visible:border-[rgb(var(--reg-brand))]";
+const SECONDARY_BTN =
+  "h-[52px] flex-1 rounded-full border-[rgb(var(--reg-line))] bg-white text-base font-semibold text-[rgb(var(--reg-ink))] hover:bg-[rgb(var(--reg-canvas))]";
+const PRIMARY_BTN =
+  "h-[52px] flex-[1.6] rounded-full text-base font-semibold text-white bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110 disabled:opacity-60";
 
 function getTimePosition(startTime: string, endTime: string, slotHeight: number = SLOT_HEIGHT): { top: number; height: number } {
   const startMinutes = parseTime(startTime);
@@ -437,7 +470,7 @@ export default function CalendarPage() {
   const businessId = useBusinessId();
   
   const { getPath } = useNavigation();
-  const { appointments: apiAppointments, staff: apiStaff, loading, createAppointment: createAppointmentAPI, updateAppointment: updateAppointmentAPI, deleteAppointment: deleteAppointmentAPI, websocketStatus } = useAppointments(businessId, currentDate);
+  const { appointments: apiAppointments, staff: apiStaff, loading, createAppointment: createAppointmentAPI, updateAppointment: updateAppointmentAPI, deleteAppointment: deleteAppointmentAPI, websocketStatus, refresh: refreshAppointments } = useAppointments(businessId, currentDate);
   const { services } = useServices(businessId);
   const { timeOffs, createTimeOff } = useTimeOff(businessId);
   const { businessHours, getHoursForDay, getDefaultHours } = useBusinessHours(businessId);
@@ -495,7 +528,77 @@ export default function CalendarPage() {
   };
   
   // Convert API appointments to component format (with error handling)
-  const appointments: AppointmentWithDate[] = (apiAppointments || []).map(convertToComponentAppointment);
+  // Each service of a multi-service visit is its own appointment (same visitId). Show the
+  // visit as ONE block per team member: earliest start to latest end, "A + B" inside. When
+  // the visit spans several team members each gets a block, marked as linked. Every block
+  // carries the whole visit so the details sheet can list it and act on all of it.
+  const appointments: AppointmentWithDate[] = (() => {
+    const base = (apiAppointments || []).map(convertToComponentAppointment).map((a) => {
+      const svc = services.find((x) => x.id === a.serviceId);
+      return { ...a, categoryId: svc?.categoryId, categoryName: svc?.categoryName };
+    });
+    const byVisit = new Map<string, AppointmentWithDate[]>();
+    for (const a of base) {
+      if (!a.visitId) continue;
+      byVisit.set(a.visitId, [...(byVisit.get(a.visitId) ?? []), a]);
+    }
+    // "Most active" first: a visit with one pending service still needs attention.
+    const ORDER = ["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "NO_SHOW", "CANCELLED"];
+    const combined = (rows: AppointmentWithDate[]) => {
+      const set = [...new Set(rows.map((r) => (r.status || "CONFIRMED").toUpperCase()))];
+      return set.length === 1 ? set[0] : [...set].sort((x, y) => ORDER.indexOf(x) - ORDER.indexOf(y))[0];
+    };
+    const out: AppointmentWithDate[] = [];
+    const done = new Set<string>();
+    const isCancelled = (m: AppointmentWithDate) => (m.status || "").toUpperCase() === "CANCELLED";
+    for (const a of base) {
+      const group = a.visitId ? byVisit.get(a.visitId) : undefined;
+      if (!group || group.length < 2) {
+        if (!isCancelled(a) || !a.visitId) out.push(a);
+        continue;
+      }
+      // A visit stays one visit when a service is cancelled: the block shows what is still
+      // booked, the sheet lists the cancelled one(s) struck through.
+      const active = group.filter((m) => !isCancelled(m));
+      if (active.length === 0) continue;   // the whole visit is cancelled
+      if (isCancelled(a) && !active.some((m) => m.staffId === a.staffId)) continue;
+      const key = `${a.visitId}|${a.staffId}`;
+      if (done.has(key)) continue;
+      done.add(key);
+      const sorted = [...group].sort((x, y) => x.startTime.localeCompare(y.startTime));
+      const sortedActive = sorted.filter((m) => !isCancelled(m));
+      const mine = sortedActive.filter((m) => m.staffId === a.staffId);
+      const first = mine[0];
+      out.push({
+        ...first,
+        startTime: mine.reduce((m, x) => (x.startTime < m ? x.startTime : m), first.startTime),
+        endTime: mine.reduce((m, x) => (x.endTime > m ? x.endTime : m), first.endTime),
+        status: combined(sortedActive),
+        price: sortedActive.reduce((n, x) => n + Number(x.price ?? 0), 0),
+        groupServices: mine.length > 1 ? mine.map((m) => m.service) : undefined,
+        answers: sorted.flatMap((m) => m.answers ?? []),
+        linked: new Set(sortedActive.map((m) => m.staffId)).size > 1,
+        visitMates: sorted.map((m) => ({
+          id: m.id, service: m.service, startTime: m.startTime, endTime: m.endTime, price: m.price,
+          status: m.status, staffId: m.staffId, serviceId: String(m.serviceId ?? ""), staffName: apiStaff?.find((st) => String(st.id) === m.staffId)?.name,
+          cancelledBy: m.cancelledBy, cancellationNote: m.cancellationNote,
+        })),
+      });
+    }
+    return out;
+  })();
+
+  // Legend: the categories that actually have a booking on screen, in their calendar colours.
+  const legendEntries = (() => {
+    const seen = new Map<string, { key: string; name: string; tint: CategoryTint }>();
+    for (const a of appointments) {
+      const key = a.categoryId != null ? `c${a.categoryId}` : `s${a.serviceId ?? a.service}`;
+      if (!seen.has(key)) {
+        seen.set(key, { key, name: a.categoryName || a.service, tint: categoryTint(a.categoryId, a.serviceId) });
+      }
+    }
+    return [...seen.values()];
+  })();
   
   // Convert staff with fallback to default staff if empty
   const staff: Staff[] = (apiStaff && apiStaff.length > 0) 
@@ -521,6 +624,44 @@ export default function CalendarPage() {
   const [weekViewDate, setWeekViewDate] = useState(new Date());
   const [datePickerMonth, setDatePickerMonth] = useState(new Date());
   const [isEmployeesOpen, setIsEmployeesOpen] = useState(false);
+  // Day view staff filter (desktop) and the one column shown on a phone.
+  const [hiddenStaffIds, setHiddenStaffIds] = useState<string[]>([]);
+  const [mobileStaffId, setMobileStaffId] = useState<string | null>(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const isMobile = useIsMobile();
+  // The phone tab bar's "+" lands here with ?new=1: open the booking form, then drop the
+  // flag so a refresh or Back does not open it again.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    // From a client's profile: the booking starts with that client filled in.
+    const prefillName = searchParams.get("clientName");
+    if (prefillName) {
+      setAppointmentForm((prev) => ({
+        ...prev,
+        clientId: searchParams.get("clientId") || "",
+        clientName: prefillName,
+        clientPhone: searchParams.get("clientPhone") || "",
+        clientEmail: searchParams.get("clientEmail") || "",
+      }));
+    }
+    setIsNewAppointmentOpen(true);
+    const next = new URLSearchParams(searchParams);
+    ["new", "clientId", "clientName", "clientPhone", "clientEmail"].forEach((k) => next.delete(k));
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+  useBrandFont();
+
+  // Names come without initials from the API; the column headers need them.
+  const initialsOf = (name: string) =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?";
+  // Day view: a phone shows one person at a time (switcher above the grid); a desktop
+  // shows everyone not filtered out — never nobody.
+  const visibleStaff: Staff[] = isMobile
+    ? [staff.find((x) => x.id === mobileStaffId) ?? staff[0]]
+    : staff.filter((x) => !hiddenStaffIds.includes(x.id)).length
+      ? staff.filter((x) => !hiddenStaffIds.includes(x.id))
+      : staff;
   const [isHighlightOpen, setIsHighlightOpen] = useState(true);
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(true);
   const [viewType, setViewType] = useState<"Day" | "Month" | "Weekly">("Day");
@@ -652,6 +793,16 @@ export default function CalendarPage() {
   
   // Appointment form state
   const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
+  /**
+   * Editing a multi-service visit: its appointments in order, as they were booked. The form's
+   * primary line is the first one and the "extra" lines are the rest, one to one; saving
+   * writes each back (with rollback). Adding or removing a service is not offered here.
+   */
+  const [editingVisit, setEditingVisit] = useState<{
+    ids: string[];
+    date: string;
+    original: { staffId: number; serviceId: number; startTime: string; endTime: string; price?: number }[];
+  } | null>(null);
   const [appointmentForm, setAppointmentForm] = useState({
     clientId: "",
     clientName: "",
@@ -669,6 +820,7 @@ export default function CalendarPage() {
     idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   });
   const [serviceSearchOpen, setServiceSearchOpen] = useState(false);
+  const [serviceQuery, setServiceQuery] = useState("");
 
   // --- Advanced booking modes (composed on top of the single-booking API) ---
   // 'single' = one client/one service; 'group' = several clients (each with
@@ -686,6 +838,7 @@ export default function CalendarPage() {
     if (!isNewAppointmentOpen) {
       setBookingMode("single");
       setExtraServices([]);
+      setEditingVisit(null);
       setGroupMembers([]);
       setRecurrence({ frequency: "WEEKLY", interval: 1, count: 4 });
     }
@@ -804,7 +957,7 @@ export default function CalendarPage() {
   const submitAdvancedBooking = async () => {
     const base = appointmentForm;
     if (!base.serviceId) {
-      toast.error("Please select a service");
+      toast.error(tr("calendar.pleaseSelectAService"));
       return;
     }
     type CreateReq = Parameters<typeof createAppointmentAPI>[0];
@@ -861,7 +1014,7 @@ export default function CalendarPage() {
     }
 
     if (reqs.length === 0) {
-      toast.error("Nothing to book — please complete the fields");
+      toast.error(tr("calendar.nothingToBookPleaseComplete"));
       return;
     }
 
@@ -879,11 +1032,11 @@ export default function CalendarPage() {
     setIsBatchSubmitting(false);
 
     if (created > 0 && skipped === 0) {
-      toast.success(`${created} appointment${created > 1 ? "s" : ""} created`);
+      toast.success(tr("calendar.appointmentsCreated", { count: created }));
     } else if (created > 0) {
-      toast.info(`${created} created, ${skipped} skipped (slot already taken)`);
+      toast.info(tr("calendar.createdSkippedSlotAlreadyTaken", { created, skipped }));
     } else {
-      toast.error(`No appointments created — ${skipped} slot${skipped > 1 ? "s were" : " was"} already taken`);
+      toast.error(tr("calendar.noAppointmentsCreatedSlotTaken", { count: skipped }));
     }
 
     if (created > 0) {
@@ -992,7 +1145,7 @@ export default function CalendarPage() {
 
     for (const apt of todays.filter(a => a.status === "PENDING")) {
       items.push({
-        label: `Confirm ${apt.clientName || "booking"}`,
+        label: tr("calendar.confirm2", { value: apt.clientName || tr("calendar.confirmBookingGeneric") }),
         detail: `${apt.startTime} · ${apt.service}`,
         tone: "bg-amber-500",
         onClick: () => handleAppointmentClick(apt),
@@ -1000,7 +1153,7 @@ export default function CalendarPage() {
     }
     for (const apt of todays.filter(a => a.status === "COMPLETED")) {
       items.push({
-        label: `Take payment · ${apt.clientName || "client"}`,
+        label: tr("calendar.takePayment3", { value: apt.clientName || tr("common.client") }),
         detail: `${apt.startTime} · ${apt.service}`,
         tone: "bg-emerald-500",
         onClick: () => handleAppointmentClick(apt),
@@ -1008,7 +1161,7 @@ export default function CalendarPage() {
     }
     for (const w of waitlist) {
       items.push({
-        label: `${w.clientName || w.clientEmail || "Client"} is waiting`,
+        label: tr("calendar.isWaiting", { value: w.clientName || w.clientEmail || tr("common.client") }),
         detail: [w.serviceName, w.preferredDate || "any date"].filter(Boolean).join(" · "),
         tone: "bg-violet-500",
         onClick: () => placeFromWaitlist(w),
@@ -1074,7 +1227,29 @@ export default function CalendarPage() {
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
-    setEditingAppointmentId(appointment.apiId ?? null);
+    const liveMates = (appointment.visitMates ?? []).filter((m) => (m.status || "").toUpperCase() !== "CANCELLED");
+    const mates = liveMates.length > 1 ? liveMates : null;
+    // Several services booked together: load every one of them, exactly as booked.
+    if (mates) {
+      const sorted = [...mates].sort((a, b) => a.startTime.localeCompare(b.startTime));
+      const toHm = (t: string) => t.slice(0, 5);
+      setEditingVisit({
+        ids: sorted.map((m) => m.id),
+        date: appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
+        original: sorted.map((m) => ({
+          staffId: Number(m.staffId), serviceId: Number(m.serviceId),
+          startTime: m.startTime, endTime: m.endTime, price: m.price,
+        })),
+      });
+      setExtraServices(sorted.slice(1).map((m) => ({
+        serviceId: String(m.serviceId ?? ""), staffId: String(m.staffId ?? ""),
+        startTime: toHm(m.startTime), endTime: toHm(m.endTime),
+      })));
+    } else {
+      setEditingVisit(null);
+    }
+    const first = mates ? [...mates].sort((a, b) => a.startTime.localeCompare(b.startTime))[0] : null;
+    setEditingAppointmentId(first?.id ?? appointment.apiId ?? null);
     setAppointmentForm({
       // Opening a booking to edit used to drop these two: cancelling the edit and then
       // creating a new booking sent no idempotency key.
@@ -1084,12 +1259,13 @@ export default function CalendarPage() {
       clientName: appointment.clientName || "",
       clientPhone: appointment.clientPhone || "",
       clientEmail: appointment.clientEmail || "",
-      serviceId: appointment.service || "",
-      staffId: appointment.staffId || "",
-      startTime: appointment.startTime || "",
-      endTime: appointment.endTime || "",
+      // The service id, not its name: the form's service select is keyed by id.
+      serviceId: first ? String(first.serviceId ?? "") : appointment.serviceId != null ? String(appointment.serviceId) : "",
+      staffId: (first?.staffId ?? appointment.staffId) || "",
+      startTime: (first ? first.startTime : appointment.startTime || "").slice(0, 5),
+      endTime: (first ? first.endTime : appointment.endTime || "").slice(0, 5),
       notes: appointment.notes || "",
-      price: appointment.price ? String(appointment.price) : "",
+      price: first ? String(first.price ?? "") : appointment.price ? String(appointment.price) : "",
       date: appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
     });
     handleCloseModal();
@@ -1106,7 +1282,7 @@ export default function CalendarPage() {
         // Error already handled in hook
       }
     } else {
-      toast.error("Appointment not found");
+      toast.error(tr("calendar.appointmentNotFound"));
     }
   };
 
@@ -1124,14 +1300,14 @@ export default function CalendarPage() {
 
   return (
     <AppLayout>
-      <div className="flex h-full w-full overflow-hidden bg-white">
+      <div className="flex h-full w-full overflow-hidden bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ fontFamily: BRAND_FONT }}>
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Live-update status. A permanent "WebSocket: Connected" badge meant nothing to a
               salon; only a broken connection is worth their attention, in their words. */}
           {websocketStatus === 'error' && (
             <div role="status" className="px-4 py-2 border-b border-amber-200 bg-amber-50 text-sm text-amber-800">
-              Live updates are paused. New bookings will appear when the connection is back — or refresh the page.
+              {tr("calendar.liveUpdatesArePausedNew")}
             </div>
           )}
           
@@ -1143,34 +1319,31 @@ export default function CalendarPage() {
           {loading && (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Loading calendar...</p>
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-[rgb(var(--reg-brand))] border-t-transparent"></div>
+                <p className="text-sm text-muted-foreground">{tr("calendar.loadingCalendar")}</p>
               </div>
             </div>
           )}
 
           {/* No Staff State */}
           {!loading && (!apiStaff || apiStaff.length === 0) && (
-            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-              <div className="text-center max-w-md mx-auto px-6">
-                <div className="mb-6 flex justify-center">
-                  <div className="p-4 rounded-full bg-blue-100">
-                    <Users className="h-12 w-12 text-blue-600" />
-                  </div>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                  No Staff Members Found
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  You need to add staff to your business before you can manage appointments and bookings.
+            <div className="flex flex-1 items-center justify-center px-6">
+              <div className="mx-auto max-w-sm text-center">
+                <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))]">
+                  <Users className="h-7 w-7 text-[rgb(var(--reg-ink))]" strokeWidth={1.75} aria-hidden />
+                </span>
+                <h2 className="mt-6 text-2xl font-extrabold tracking-[-0.02em]">{tr("calendar.addYourTeamToStart")}</h2>
+                <p className="mt-2 text-base leading-relaxed text-[rgb(var(--reg-muted))]">
+                  {tr("calendar.eachPersonGetsTheirOwn")}
                 </p>
-                <Button
+                <button
+                  type="button"
                   onClick={() => navigate(getPath("staff"))}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-base font-semibold"
-                  size="lg"
+                  className="mt-7 inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-7 text-base font-semibold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] transition hover:brightness-110"
                 >
-                  Add Staff to Your Business
-                </Button>
+                  <Plus size={18} aria-hidden />
+                  {tr("common.addTeamMember")}
+                </button>
               </div>
             </div>
           )}
@@ -1178,73 +1351,82 @@ export default function CalendarPage() {
           {/* Top Navigation Bar - Only show when staff exists */}
           {!loading && apiStaff && apiStaff.length > 0 && (
           <>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-white px-3 py-3 sm:px-6">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1">
-                    {viewType}
-                    <ChevronDown size={14} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => setViewType("Day")}>
-                    Day
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setViewType("Month")}>
-                    Month
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setViewType("Weekly")}>
-                    Weekly
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToToday}
-                className="font-semibold"
-          >
-                TODAY
-          </Button>
-              {viewType === "Day" && (
-                <div className="flex items-center gap-2">
-            <Button aria-label="Previous day" variant="ghost" size="icon" className="h-8 w-8" onClick={goToPrevDay}>
-                    <ChevronLeft size={16} />
-            </Button>
-                  <Popover onOpenChange={(open) => {
-                    if (open) {
-                      // When opening, set the picker month to the current date's month
-                      setDatePickerMonth(currentDate);
-                    }
-                  }}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" className="h-auto p-0 font-medium hover:bg-transparent">
-                        <span className="text-sm font-medium">
-                          {format(currentDate, "EEE, d MMM")}
-            </span>
-                        {/* Display business hours for current date */}
-                        {(() => {
-                          const { startHour, endHour, isEnabled } = getBusinessHoursForDate(currentDate);
-                          if (!isEnabled) {
-                            return (
-                              <Badge variant="outline" className="ml-2 text-xs bg-gray-100 text-gray-600 border-gray-300">
-                                Closed
-                              </Badge>
-                            );
-                          }
-                          const startTime = `${startHour.toString().padStart(2, "0")}:00`;
-                          const endTime = `${endHour.toString().padStart(2, "0")}:00`;
-                          return (
-                            <Badge variant="outline" className="ml-2 hidden text-xs bg-blue-50 text-blue-700 border-blue-200 sm:inline-flex">
-                              <Clock size={12} className="mr-1" />
-                              {startTime} - {endTime}
-                            </Badge>
-                          );
-                        })()}
-                        <ChevronDown size={14} className="ml-2" />
-                      </Button>
-                    </PopoverTrigger>
+          <div className="z-30 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-3 pb-3 pt-3 backdrop-blur-xl md:px-6">
+            {/* Row 1 — where am I: ‹ Today ›, the date (with the picker), the day's hours; actions on the right. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 md:flex-nowrap md:gap-3">
+              <div className="flex shrink-0 items-center rounded-full bg-white p-1 shadow-[0_1px_2px_rgb(var(--reg-ink)/0.05)] ring-1 ring-[rgb(var(--reg-line))]">
+                <button
+                  type="button"
+                  aria-label={viewType === "Day" ? tr("calendar.previousDay") : viewType === "Weekly" ? tr("calendar.previousWeek") : tr("calendar.previousMonth")}
+                  onClick={viewType === "Day" ? goToPrevDay : viewType === "Weekly" ? goToPrevWeek : goToPrevMonth}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
+                >
+                  <ChevronLeft size={18} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  onClick={goToToday}
+                  className={cn(
+                    "h-8 rounded-full px-3 text-sm font-semibold transition-colors",
+                    isCurrentDate && viewType === "Day" ? "text-[rgb(var(--reg-muted))]" : "text-[rgb(var(--reg-ink))] hover:bg-[rgb(var(--reg-canvas))]",
+                  )}
+                >
+                  {tr("common.today")}
+                </button>
+                <button
+                  type="button"
+                  aria-label={viewType === "Day" ? tr("calendar.nextDay") : viewType === "Weekly" ? tr("calendar.nextWeek") : tr("calendar.nextMonth")}
+                  onClick={viewType === "Day" ? goToNextDay : viewType === "Weekly" ? goToNextWeek : goToNextMonth}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
+                >
+                  <ChevronRight size={18} strokeWidth={1.75} />
+                </button>
+              </div>
+
+              {legendEntries.length > 0 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={tr("calendar.colourLegend")}
+                      className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-canvas))]"
+                    >
+                      <span className="flex -space-x-1">
+                        {legendEntries.slice(0, 4).map((e) => (
+                          <span key={e.key} className="h-3 w-3 rounded-full ring-2 ring-white" style={{ backgroundColor: e.tint.accent }} />
+                        ))}
+                      </span>
+                      {tr("calendar.colours")}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 p-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{tr("calendar.serviceCategory")}</p>
+                    <ul className="space-y-1.5">
+                      {legendEntries.map((e) => (
+                        <li key={e.key} className="flex items-center gap-2 text-sm">
+                          <span className="h-4 w-4 shrink-0 rounded border-l-[3px]" style={{ backgroundColor: e.tint.fill, borderColor: e.tint.accent }} />
+                          <span className="truncate">{e.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 border-t border-[rgb(var(--reg-line))] pt-2 text-xs text-[rgb(var(--reg-muted))]">
+                      {tr("calendar.statusDotInTheCorner")}
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              {viewType === "Day" ? (
+                <Popover onOpenChange={(open) => { if (open) setDatePickerMonth(currentDate); }}>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="order-last flex min-w-0 basis-full items-center gap-1.5 rounded-full py-1 text-left hover:bg-white/70 md:order-none md:basis-auto md:px-2">
+                      <span className="truncate text-lg font-extrabold tracking-[-0.02em] md:text-xl">
+                        <span className="md:hidden">{format(currentDate, "EEE, d MMM")}</span>
+                        <span className="hidden md:inline">{format(currentDate, "EEEE, d MMMM")}</span>
+                      </span>
+                      <ChevronDown size={16} className="shrink-0 text-[rgb(var(--reg-muted))]" />
+                    </button>
+                  </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <div className="p-3">
                         <div className="flex items-center justify-between mb-3">
@@ -1252,16 +1434,16 @@ export default function CalendarPage() {
                             {format(datePickerMonth, "LLLL yyyy")}
                           </h3>
                           <div className="flex gap-1">
-                            <Button aria-label="Previous month" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDatePickerMonth(subMonths(datePickerMonth, 1))}>
+                            <Button aria-label={tr("calendar.previousMonth")} variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDatePickerMonth(subMonths(datePickerMonth, 1))}>
                               <ChevronLeft size={14} />
                             </Button>
-                            <Button aria-label="Next month" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDatePickerMonth(addMonths(datePickerMonth, 1))}>
+                            <Button aria-label={tr("calendar.nextMonth")} variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDatePickerMonth(addMonths(datePickerMonth, 1))}>
                               <ChevronRight size={14} />
             </Button>
           </div>
                         </div>
                         <div className="grid grid-cols-7 gap-1 mb-2">
-                          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                          {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
                             <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1 w-8">
                               {day}
                             </div>
@@ -1288,17 +1470,16 @@ export default function CalendarPage() {
                                     setCurrentDate(day);
                                   }}
                                   className={cn(
-                                    "h-8 w-8 text-xs rounded flex items-center justify-center relative",
+                                    "h-8 w-8 text-xs rounded-full flex items-center justify-center relative",
                                     isCurrentMonth ? "text-foreground" : "text-muted-foreground/50",
-                                    isSelected ? "bg-black text-white" : "",
-                                    isTodayDate && !isSelected ? "bg-blue-100 text-blue-700 font-semibold" : "",
-                                    isWeekend && !isSelected && !isTodayDate ? "text-red-500" : "",
-                                    !isSelected ? "hover:bg-muted" : ""
+                                    isSelected ? "bg-[rgb(var(--reg-brand))] text-white" : "",
+                                    isTodayDate && !isSelected ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] font-semibold" : "",
+                                                                        !isSelected ? "hover:bg-muted" : ""
                                   )}
                                 >
                                   {format(day, "d")}
                                   {isTodayDate && !isSelected && (
-                                    <span className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full" />
+                                    <span className="absolute bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-[rgb(var(--reg-brand))] rounded-full" />
                                   )}
                                 </button>
                               );
@@ -1307,56 +1488,50 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     </PopoverContent>
-                  </Popover>
-            <Button aria-label="Next day" variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextDay}>
-                    <ChevronRight size={16} />
-            </Button>
-          </div>
-              )}
-              {viewType === "Month" && (
-                <div className="flex items-center gap-2">
-                  <Button aria-label="Previous month" variant="ghost" size="icon" className="h-8 w-8" onClick={goToPrevMonth}>
-                    <ChevronLeft size={16} />
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {format(monthViewDate, "MMMM yyyy")}
-                    </span>
-              <ChevronDown size={14} />
-                  </div>
-                  <Button aria-label="Next month" variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
-                    <ChevronRight size={16} />
-            </Button>
-                </div>
-              )}
-              {viewType === "Weekly" && (
-                <div className="flex items-center gap-2">
-                  <Button aria-label="Previous week" variant="ghost" size="icon" className="h-8 w-8" onClick={goToPrevWeek}>
-                    <ChevronLeft size={16} />
-            </Button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {(() => {
+                </Popover>
+              ) : (
+                <p className="order-last min-w-0 basis-full truncate text-lg font-extrabold tracking-[-0.02em] md:order-none md:basis-auto md:px-2 md:text-xl">
+                  {viewType === "Weekly"
+                    ? (() => {
                         const weekStart = startOfWeek(weekViewDate, { weekStartsOn: 1 });
                         const weekEnd = endOfWeek(weekViewDate, { weekStartsOn: 1 });
-                        return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d")}`;
-                      })()}
-                    </span>
-              <ChevronDown size={14} />
-                  </div>
-                  <Button aria-label="Next week" variant="ghost" size="icon" className="h-8 w-8" onClick={goToNextWeek}>
-                    <ChevronRight size={16} />
-            </Button>
-          </div>
+                        return `${format(weekStart, "d MMM")} – ${format(weekEnd, "d MMM")}`;
+                      })()
+                    : format(monthViewDate, "MMMM yyyy")}
+                </p>
               )}
-        </div>
 
-        <div className="flex items-center gap-2">
-          {/* All three were dead: no onClick, no state, no handler. */}
+              <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
+                <div className="hidden h-10 items-center gap-2 rounded-full bg-white px-3.5 ring-1 ring-[rgb(var(--reg-line))] focus-within:ring-2 focus-within:ring-[rgb(var(--reg-brand)/0.5)] lg:flex">
+                  <Search size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
+                  <input
+                    type="text"
+                    value={calendarSearch}
+                    onChange={(e) => setCalendarSearch(e.target.value)}
+                    placeholder={tr("calendar.findAClient")}
+                    aria-label={tr("calendar.findAClient2")}
+                    className="w-40 border-0 bg-transparent text-sm outline-none placeholder:text-[rgb(var(--reg-muted))]"
+                  />
+                  {calendarSearch && (
+                    <button onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} className="text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <Button
+                  aria-label={tr("calendar.findAClient2")}
+                  aria-expanded={mobileSearchOpen}
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white lg:hidden"
+                  onClick={() => setMobileSearchOpen((v) => !v)}
+                >
+                  <Search size={18} strokeWidth={1.75} />
+                </Button>
           <Popover>
             <PopoverTrigger asChild>
-              <Button aria-label="Needs attention" variant="ghost" size="icon" className="relative h-8 w-8">
-                <Bell size={18} />
+              <Button aria-label={tr("calendar.needsAttention")} variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white hover:text-[rgb(var(--reg-ink))]">
+                <Bell size={18} strokeWidth={1.75} />
                 {attention.length > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
                     {attention.length}
@@ -1366,12 +1541,12 @@ export default function CalendarPage() {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-[320px] p-0">
               <div className="border-b px-3 py-2">
-                <p className="text-sm font-medium">Needs attention</p>
-                <p className="text-xs text-muted-foreground">Today, from this calendar</p>
+                <p className="text-sm font-medium">{tr("calendar.needsAttention")}</p>
+                <p className="text-xs text-muted-foreground">{tr("calendar.todayFromThisCalendar")}</p>
               </div>
               {attention.length === 0 ? (
                 <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nothing waiting on you.
+                  {tr("calendar.nothingWaitingOnYou")}
                 </p>
               ) : (
                 <div className="max-h-[320px] overflow-y-auto">
@@ -1392,42 +1567,158 @@ export default function CalendarPage() {
               )}
             </PopoverContent>
           </Popover>
+                <Button
+                  aria-label={tr("calendar.calendarSettings")}
+                  variant="ghost"
+                  size="icon"
+                  className="hidden h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white hover:text-[rgb(var(--reg-ink))] sm:inline-flex"
+                  onClick={() => navigate(getPath("/booking-rules"))}
+                >
+                  <Settings size={18} strokeWidth={1.75} />
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setIsNewAppointmentOpen(true)}
+                  className="ml-1 hidden h-10 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_24px_-10px_rgb(var(--reg-brand-strong)/0.7)] transition hover:brightness-110 active:scale-[0.98] md:inline-flex"
+                >
+                  <Plus size={16} strokeWidth={2.25} />
+                  {tr("common.newBooking")}
+                </button>
+              </div>
+            </div>
 
-          <Button
-            aria-label="Calendar settings"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => navigate(getPath("/booking-rules"))}
-          >
-            <Settings size={18} />
-          </Button>
+            {mobileSearchOpen && (
+              <div className="mt-3 flex h-11 items-center gap-2 rounded-full bg-white px-4 ring-1 ring-[rgb(var(--reg-line))] lg:hidden">
+                <Search size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={calendarSearch}
+                  onChange={(e) => setCalendarSearch(e.target.value)}
+                  placeholder={tr("calendar.findAClient")}
+                  aria-label={tr("calendar.findAClient2")}
+                  className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none placeholder:text-[rgb(var(--reg-muted))]"
+                />
+                {calendarSearch && (
+                  <button onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} className="text-[rgb(var(--reg-muted))]">
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            )}
 
-          <div className="flex h-8 items-center gap-2 rounded-md border border-border px-2">
-            <Search size={16} className="text-muted-foreground" />
-            <input
-              type="text"
-              value={calendarSearch}
-              onChange={(e) => setCalendarSearch(e.target.value)}
-              placeholder="Find a client…"
-              className="w-36 border-0 bg-transparent text-sm outline-none"
-            />
-            {calendarSearch && (
-              <button
-                onClick={() => setCalendarSearch("")}
-                aria-label="Clear search"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X size={14} />
-              </button>
+            {/* Row 2 — how am I looking: view switch, who, and the day's hours. */}
+            <div className="mt-3 flex items-center gap-2">
+              <div role="tablist" aria-label={tr("calendar.calendarView")} className="flex shrink-0 rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
+                {([["Day", tr("calendar.viewDay")], ["Weekly", tr("calendar.viewWeek")], ["Month", tr("calendar.viewMonth")]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    role="tab"
+                    aria-selected={viewType === v}
+                    onClick={() => setViewType(v)}
+                    className={cn(
+                      "h-8 rounded-full px-3 text-sm font-semibold transition-colors md:px-3.5",
+                      viewType === v
+                        ? "bg-white text-[rgb(var(--reg-ink))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
+                        : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {viewType === "Day" && !isMobile && staff.length > 1 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]">
+                      <Users size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
+                      {visibleStaff.length === staff.length ? tr("calendar.allTeam") : tr("calendar.of", { count: visibleStaff.length, count2: staff.length })}
+                      <ChevronDown size={14} className="text-[rgb(var(--reg-muted))]" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 rounded-2xl p-2">
+                    <button type="button" onClick={() => setHiddenStaffIds([])} className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-[rgb(var(--reg-canvas))]">
+                      {tr("calendar.showEveryone")}
+                    </button>
+                    {staff.map((member) => {
+                      const shown = !hiddenStaffIds.includes(member.id);
+                      return (
+                        <label key={member.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-[rgb(var(--reg-canvas))]">
+                          <Checkbox
+                            checked={shown}
+                            onCheckedChange={(on) =>
+                              setHiddenStaffIds((ids) => (on ? ids.filter((x) => x !== member.id) : [...ids, member.id]))
+                            }
+                            className="data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]"
+                          />
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
+                            {initialsOf(member.name)}
+                          </span>
+                          <span className="truncate">{member.name}</span>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              {viewType === "Day" && getAppointmentsForDate(currentDate).length === 0 && (
+                <p className="ml-auto hidden text-sm text-[rgb(var(--reg-muted))] lg:block">
+                  {tr("calendar.noBookingsYetClickA")}
+                </p>
+              )}
+              {viewType === "Day" && (() => {
+                const { startHour, endHour, isEnabled } = getBusinessHoursForDate(currentDate);
+                return (
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                      getAppointmentsForDate(currentDate).length === 0 ? "ml-auto lg:ml-3" : "ml-auto",
+                      isEnabled ? "bg-white text-[rgb(var(--reg-ink)/0.8)] ring-1 ring-[rgb(var(--reg-line))]" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-muted))]",
+                    )}
+                  >
+                    <Clock size={13} strokeWidth={1.75} aria-hidden />
+                    {isEnabled
+                      ? `${startHour.toString().padStart(2, "0")}:00–${endHour.toString().padStart(2, "0")}:00`
+                      : <><span className="md:hidden">{tr("common.closed")}</span><span className="hidden md:inline">{tr("calendar.closedToday")}</span></>}
+                  </span>
+                );
+              })()}
+            </div>
+
+            {/* A phone shows one column; this is how you move between people. */}
+            {viewType === "Day" && isMobile && staff.length > 1 && (
+              <div className="-mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]" role="tablist" aria-label={tr("common.teamMember")}>
+                {staff.map((member) => {
+                  const on = visibleStaff[0]?.id === member.id;
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => setMobileStaffId(member.id)}
+                      className={cn(
+                        "flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3.5 text-sm font-semibold ring-1 transition",
+                        on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white text-[rgb(var(--reg-ink))] ring-[rgb(var(--reg-line))]",
+                      )}
+                    >
+                      <span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold", on ? "bg-white/15 text-white" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}>
+                        {initialsOf(member.name)}
+                      </span>
+                      {member.name.split(" ")[0]}
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
-        </div>
-      </div>
 
       {/* Calendar Grid - Conditional based on view type */}
           {viewType === "Day" && (
-          <div ref={dayGridRef} className="flex flex-1 overflow-auto bg-white relative">
+          <div ref={dayGridRef} className="relative flex flex-1 overflow-auto bg-white md:mx-4 md:mb-4 md:mt-3 md:rounded-[20px] md:shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_12px_32px_-16px_rgb(var(--reg-ink)/0.12)] md:ring-1 md:ring-[rgb(var(--reg-line)/0.8)]">
             {/* Current Time Indicator - Full horizontal line across all columns */}
             {isCurrentDate && (() => {
               const timePosition = getCurrentTimePosition();
@@ -1435,20 +1726,21 @@ export default function CalendarPage() {
               
               return (
                 <div
-                  className="absolute left-24 right-0 z-30 pointer-events-none"
+                  className="pointer-events-none absolute left-14 right-0 z-30 md:left-16"
                   style={{
                     top: `${timePosition + 64}px`, // 64px for header height
                     height: '2px',
                   }}
                 >
-                  <div className="h-full bg-red-500 w-full" />
+                  <div className="h-full w-full bg-[rgb(var(--reg-brand))]" />
+                  <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[rgb(var(--reg-brand))] ring-2 ring-white" />
             </div>
               );
             })()}
             
             {/* Time Column */}
-            <div className="w-24 shrink-0 self-start border-r border-gray-200 bg-white sticky left-0 z-20">
-              <div className="sticky top-0 z-20 h-16 border-b border-gray-200 bg-white"></div>
+            <div className="sticky left-0 z-20 w-14 shrink-0 self-start border-r border-[rgb(var(--reg-line)/0.7)] bg-white md:w-16">
+              <div className="sticky top-0 z-20 h-16 border-b border-[rgb(var(--reg-line)/0.7)] bg-white"></div>
               
               {/* Current Time Indicator in Time Column - Time badge */}
               {isCurrentDate && (() => {
@@ -1462,7 +1754,7 @@ export default function CalendarPage() {
                       top: `${timePosition + 64}px`, // 64px for header height
                     }}
                   >
-                    <div className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-r shadow-md">
+                    <div className="rounded-full bg-[rgb(var(--reg-brand))] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-white shadow-sm">
                       {format(currentTime, "HH:mm")}
         </div>
                   </div>
@@ -1481,30 +1773,19 @@ export default function CalendarPage() {
             return (
             <div
               key={timeString}
-              className={`px-2 flex items-center bg-white border-b ${isBusiness ? "border-gray-200" : "border-gray-300 border-dashed"}`}
+              className="relative bg-white"
               style={{ height: `${hourHeight}px` }}
             >
-              <span className={`text-xs font-semibold ${isBusiness ? "text-gray-900" : "text-gray-400 line-through"}`}>
-                {timeString}
-              </span>
+              {hour > 0 && (
+                <span className={`absolute -top-2 right-2 text-[11px] font-medium tabular-nums ${isBusiness ? "text-[rgb(var(--reg-ink)/0.7)]" : "text-[rgb(var(--reg-muted)/0.6)]"}`}>
+                  {timeString}
+                </span>
+              )}
             </div>
           );
           })}
           
-          {/* Business Closed Indicator */}
-          {(() => {
-            const { isEnabled } = getBusinessHoursForDate(currentDate);
-            if (!isEnabled) {
-              return (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-20 pointer-events-none">
-                  <div className="bg-white border-2 border-gray-300 rounded-lg px-4 py-2 shadow-lg">
-                    <span className="text-sm font-semibold text-gray-700">Business Closed</span>
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })()}
+          {/* "Closed today" is said once, in the bar above, not over the hour labels. */}
         </div>
 
             {/* Staff Columns */}
@@ -1519,10 +1800,10 @@ export default function CalendarPage() {
                 <div className="w-[210px] shrink-0 border-r border-amber-200 bg-amber-50/60">
                   <div className="sticky top-0 z-10 border-b border-amber-200 bg-amber-50 px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
-                      Waiting · {waitlist.length}
+                      {tr("calendar.waiting", { count: waitlist.length })}
                     </p>
                     <p className="mt-0.5 text-[11px] leading-snug text-amber-800/70">
-                      Drag onto a gap to book them in
+                      {tr("calendar.dragOntoAGapTo")}
                     </p>
                   </div>
                   <div className="space-y-2 p-2">
@@ -1533,7 +1814,7 @@ export default function CalendarPage() {
                         onDragStart={() => setDraggingEntry(w)}
                         onDragEnd={() => setDraggingEntry(null)}
                         onClick={() => placeFromWaitlist(w)}
-                        title="Drag onto a slot, or click to pick one"
+                        title={tr("calendar.dragOntoASlotOr")}
                         className={`cursor-grab rounded-xl border bg-white p-2.5 shadow-sm transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md ${
                           draggingEntry?.id === w.id ? "opacity-50" : "border-amber-200"
                         }`}
@@ -1547,19 +1828,19 @@ export default function CalendarPage() {
                             {(w.clientName || w.clientEmail || "C").charAt(0).toUpperCase()}
                           </span>
                           <p className="min-w-0 flex-1 truncate text-xs font-medium">
-                            {w.clientName || w.clientEmail || "Client"}
+                            {w.clientName || w.clientEmail || tr("common.client")}
                           </p>
                           {w.status === "NOTIFIED" && (
                             <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800">
-                              told
+                              {tr("calendar.told")}
                             </span>
                           )}
                         </div>
                         <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
-                          {w.serviceName || "Any service"}
+                          {w.serviceName || tr("calendar.anyService")}
                         </p>
                         <p className="truncate text-[11px] text-muted-foreground">
-                          {[w.staffName ? `with ${w.staffName}` : null, w.preferredDate || "any date"]
+                          {[w.staffName ? tr("calendar.withStaff", { name: w.staffName }) : null, w.preferredDate || tr("calendar.anyDate")]
                             .filter(Boolean)
                             .join(" · ")}
                         </p>
@@ -1569,7 +1850,7 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {staff.map((staff) => {
+              {visibleStaff.map((staff) => {
                 const dayAppointments = getAppointmentsForDate(currentDate);
                 const staffAppointments = getAppointmentsForStaff(dayAppointments, staff.id);
                 const staffTimeOffs = getTimeOffsForStaffAndDate(timeOffs, staff.id, currentDate);
@@ -1581,21 +1862,27 @@ export default function CalendarPage() {
                 return (
             <div
               key={staff.id}
-                    className="min-w-[250px] flex-1 border-r border-gray-200 last:border-r-0 bg-white"
+                    className="min-w-0 flex-1 border-r border-[rgb(var(--reg-line)/0.7)] bg-white last:border-r-0 md:min-w-[220px]"
                   >
                     {/* Staff Header */}
-                    <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4 bg-white sticky top-0 z-10">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {staff.initials}
+                    <div className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[rgb(var(--reg-line)/0.7)] bg-white/95 px-4 backdrop-blur">
+                      {staff.avatar ? (
+                        <img src={staff.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white" />
+                      ) : (
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-xs font-bold text-[rgb(var(--reg-brand-strong))]">
+                          {staff.initials || initialsOf(staff.name)}
                         </span>
-                        <span className="text-sm font-medium">{staff.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {staff.workingHours}
-                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold">{staff.name}</p>
+                        <p className="truncate text-xs text-[rgb(var(--reg-muted))]">
+                          {(() => {
+                            const n = new Set(staffAppointments.map((a) => a.apiId ?? a.id)).size;
+                            return n ? tr("common.bookingCount", { count: n }) : staff.workingHours || tr("calendar.noBookings");
+                          })()}
+                        </p>
                       </div>
-                      <ChevronDown size={16} className="text-muted-foreground" />
-              </div>
+                    </div>
 
                     {/* Appointments Area */}
                     <div 
@@ -1741,11 +2028,11 @@ export default function CalendarPage() {
                         if (!dayIsEnabled) {
                   return (
                     <div
-                              className="absolute left-0 right-0 bg-gray-50"
+                              className="absolute left-0 right-0 bg-[rgb(var(--reg-ink)/0.025)]"
                       style={{
                                 top: 0, 
                                 height: `${24 * 4 * SLOT_HEIGHT}px`, // Entire day
-                                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.08) 8px, rgba(0,0,0,0.08) 16px)"
+                                backgroundImage: "repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--reg-ink) / 0.045) 7px 8px)"
                               }}
                             />
                           );
@@ -1755,11 +2042,11 @@ export default function CalendarPage() {
                         const beforeStart = dayBusinessStartHour > 0 ? (
                           <div 
                             key="before"
-                            className="absolute left-0 right-0 bg-gray-50"
+                            className="absolute left-0 right-0 bg-[rgb(var(--reg-ink)/0.025)]"
                             style={{ 
                               top: 0, 
                               height: `${dayBusinessStartHour * 4 * SLOT_HEIGHT}px`,
-                              backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.08) 8px, rgba(0,0,0,0.08) 16px)"
+                              backgroundImage: "repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--reg-ink) / 0.045) 7px 8px)"
                             }}
                           />
                         ) : null;
@@ -1768,11 +2055,11 @@ export default function CalendarPage() {
                         const afterEnd = dayBusinessEndHour < 24 ? (
                           <div 
                             key="after"
-                            className="absolute left-0 right-0 bg-gray-50"
+                            className="absolute left-0 right-0 bg-[rgb(var(--reg-ink)/0.025)]"
                             style={{ 
                               top: `${dayBusinessEndHour * 4 * SLOT_HEIGHT}px`,
                               height: `${(24 - dayBusinessEndHour) * 4 * SLOT_HEIGHT}px`,
-                              backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.08) 8px, rgba(0,0,0,0.08) 16px)"
+                              backgroundImage: "repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--reg-ink) / 0.045) 7px 8px)"
                             }}
                           />
                         ) : null;
@@ -1809,10 +2096,10 @@ export default function CalendarPage() {
 
                   return (
                     <div
-                              className={`absolute left-0 right-0 border-2 z-15 pointer-events-none flex items-center ${
+                              className={`absolute left-1 right-1 rounded-[10px] border-2 z-15 pointer-events-none flex items-center ${
                                 hasConflict 
-                                  ? "bg-red-200/50 border-red-500" 
-                                  : "bg-blue-200/50 border-blue-500"
+                                  ? "bg-red-100/70 border-red-500" 
+                                  : "bg-[rgb(var(--reg-brand)/0.12)] border-[rgb(var(--reg-brand))]"
                               }`}
                       style={{
                                 top: `${top}px`,
@@ -1820,10 +2107,10 @@ export default function CalendarPage() {
                               }}
                             >
                               <div className={`text-xs font-medium px-2 whitespace-nowrap ${
-                                hasConflict ? "text-red-700" : "text-blue-700"
+                                hasConflict ? "text-red-700" : "text-[rgb(var(--reg-brand-strong))]"
                               }`}>
                                 {showStartTime} - {showEndTime}
-                                {hasConflict && " (Conflict)"}
+                                {hasConflict && tr("calendar.conflict")}
                               </div>
                             </div>
                           );
@@ -1837,13 +2124,13 @@ export default function CalendarPage() {
                           
                           return (
                             <div
-                              className="absolute left-0 right-0 bg-blue-200/50 border-2 border-blue-500 z-15 pointer-events-none flex items-center"
+                              className="absolute left-1 right-1 rounded-[10px] bg-[rgb(var(--reg-brand)/0.12)] border-2 border-[rgb(var(--reg-brand))] z-15 pointer-events-none flex items-center"
                               style={{
                                 top: `${top}px`,
                                 height: `${Math.max(height, SLOT_HEIGHT)}px`,
                               }}
                             >
-                              <div className="text-xs font-medium text-blue-700 px-2 whitespace-nowrap">
+                              <div className="text-xs font-semibold text-[rgb(var(--reg-brand-strong))] px-2 whitespace-nowrap">
                                 {finalSelection.startTime} - {finalSelection.endTime}
                               </div>
                             </div>
@@ -1900,10 +2187,10 @@ export default function CalendarPage() {
                                     top: `${top}px`,
                                     height: `${height}px`,
                                     left: groupSize === 1 
-                                      ? '0.5rem' 
-                                      : `calc(0.5rem + ${leftPercent}%)`,
+                                      ? '0.25rem' 
+                                      : `calc(0.25rem + ${leftPercent}%)`,
                                     width: groupSize === 1 
-                                      ? 'calc(100% - 1rem)' 
+                                      ? 'calc(100% - 0.5rem)' 
                                       : `calc(${widthPercent}% - ${gapPercent * 0.5}%)`,
                                     marginRight: itemIndex < groupSize - 1 ? `${gapPercent}%` : '0.5rem',
                                     pointerEvents: isDragging ? "none" : "auto",
@@ -1931,6 +2218,7 @@ export default function CalendarPage() {
                     >
                       <AppointmentBlock
                                     visits={visitsFor(item.item)}
+                                    height={height}
                                     appointment={item.item} 
                                     onClick={(e) => {
                                       // Only handle click if not dragging
@@ -1954,8 +2242,8 @@ export default function CalendarPage() {
                                 : normalizeTime(timeOff.endTime || "23:59");
                               const timeOffDate = parse(timeOff.startDate, "yyyy-MM-dd", new Date());
                               const dateStr = format(timeOffDate, "MMM d, yyyy");
-                              const timeStr = timeOff.isFullDay ? "Full Day" : `${displayStartTime} - ${displayEndTime}`;
-                              const typeStr = timeOff.isFullDay ? "Full Day" : "Specific Hours";
+                              const timeStr = timeOff.isFullDay ? tr("calendar.fullDay") : `${displayStartTime} - ${displayEndTime}`;
+                              const typeStr = timeOff.isFullDay ? tr("calendar.fullDay") : tr("calendar.specificHours");
                               
                               // For non-full day time offs, ensure they're positioned within business hours if possible
                               // But still show them at their actual time
@@ -1964,48 +2252,28 @@ export default function CalendarPage() {
                               return (
                                 <div
                                   key={`timeoff-${timeOff.id}`}
-                                  className="absolute bg-gray-100 border-2 border-gray-300 rounded z-15 pointer-events-auto cursor-pointer hover:bg-gray-200 transition-colors"
+                                  className="absolute z-15 pointer-events-auto cursor-pointer overflow-hidden rounded-[10px] bg-[rgb(var(--reg-ink)/0.04)] ring-1 ring-inset ring-[rgb(var(--reg-ink)/0.1)] transition-colors hover:bg-[rgb(var(--reg-ink)/0.07)]"
                                   style={{
                                     top: `${top}px`,
                                     height: `${minHeight}px`,
                                     left: groupSize === 1 
-                                      ? '0.5rem' 
-                                      : `calc(0.5rem + ${leftPercent}%)`,
+                                      ? '0.25rem' 
+                                      : `calc(0.25rem + ${leftPercent}%)`,
                                     width: groupSize === 1 
-                                      ? 'calc(100% - 1rem)' 
+                                      ? 'calc(100% - 0.5rem)' 
                                       : `calc(${widthPercent}% - ${gapPercent * 0.5}%)`,
                                     marginRight: itemIndex < groupSize - 1 ? `${gapPercent}%` : '0.5rem',
-                                    backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.1) 8px, rgba(0,0,0,0.1) 16px)"
+                                    backgroundImage: "repeating-linear-gradient(135deg, transparent 0 6px, rgb(var(--reg-ink) / 0.06) 6px 7px)"
                                   }}
-                                  title={`Time Off: ${dateStr} ${timeStr} - ${timeOff.reason || 'No reason'}`}
+                                  title={tr("calendar.timeOff", { dateStr, timeStr, value: timeOff.reason || tr("calendar.noReason") })}
                                 >
-                                  <div className="p-1.5 h-full flex flex-col text-xs">
-                                    {/* All details at the top */}
-                                    <div className="flex items-start justify-between gap-1 mb-1">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="font-semibold text-gray-900 truncate text-[11px]">
-                                          Time Off
-                                        </div>
-                                        <div className="text-gray-700 text-[10px] mt-0.5 font-medium">
-                                          {dateStr}
-                                        </div>
-                                        <div className="text-gray-600 text-[10px] mt-0.5">
-                                          {timeStr}
-                                        </div>
-                                      </div>
-                                      <Badge 
-                                        variant="outline" 
-                                        className="text-[9px] px-1.5 py-0 h-4 bg-gray-200 border-gray-400 text-gray-700 flex-shrink-0"
-                                      >
-                                        {typeStr}
-                                      </Badge>
-                                    </div>
-                                    {/* Reason at the top as well */}
-                                    {timeOff.reason && (
-                                      <div className="text-gray-700 text-[10px] mt-0.5 line-clamp-2 font-medium">
-                                        {timeOff.reason}
-                                      </div>
-                                    )}
+                                  <div className="flex h-full flex-col px-2.5 py-1.5 text-[12px] leading-tight">
+                                    <p className="truncate font-bold text-[rgb(var(--reg-ink)/0.8)]">
+                                      {timeOff.reason || tr("calendar.timeOff2")}
+                                    </p>
+                                    <p className="mt-0.5 truncate text-[rgb(var(--reg-muted))]">
+                                      {timeOff.reason ? tr("calendar.timeOff3") : ""}{timeStr}
+                                    </p>
                                   </div>
                                 </div>
                               );
@@ -2018,11 +2286,16 @@ export default function CalendarPage() {
                 {Array.from({ length: 24 }, (_, i) => {
                   const isBusiness = dayIsEnabled && isBusinessHour(i, dayBusinessStartHour, dayBusinessEndHour);
                   return (
-                  <div
-                    key={i}
-                      className={`absolute left-0 right-0 border-b ${isBusiness ? "border-gray-200" : "border-gray-300 border-dashed"}`}
+                  <div key={i}>
+                    <div
+                      className={`pointer-events-none absolute left-0 right-0 border-b border-dashed ${isBusiness ? "border-[rgb(var(--reg-line)/0.55)]" : "border-[rgb(var(--reg-line)/0.35)]"}`}
+                      style={{ top: `${(i * 4 + 2) * SLOT_HEIGHT}px` }}
+                    />
+                    <div
+                      className={`pointer-events-none absolute left-0 right-0 border-b ${isBusiness ? "border-[rgb(var(--reg-line))]" : "border-[rgb(var(--reg-line)/0.6)]"}`}
                       style={{ top: `${(i + 1) * 4 * SLOT_HEIGHT}px` }}
                     />
+                  </div>
                   );
                 })}
               </div>
@@ -2040,7 +2313,7 @@ export default function CalendarPage() {
                 <div className="bg-white rounded-lg border border-gray-200">
                   {/* Day Headers */}
                   <div className="grid grid-cols-7 border-b border-gray-200">
-                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
                       <div
                         key={day}
                         className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-gray-200 last:border-r-0"
@@ -2132,7 +2405,7 @@ export default function CalendarPage() {
                                     setIsDayPopupOpen(true);
                                   }}
                                 >
-                                  +{dayAppointments.length - 3} more
+                                  {tr("calendar.more", { value: dayAppointments.length - 3 })}
         </div>
                               )}
                             </div>
@@ -2196,7 +2469,7 @@ export default function CalendarPage() {
                         </div>
                         {dayAppointments.length > 0 && (
                           <div className="text-xs text-muted-foreground mt-0.5">
-                            {dayAppointments.length} {dayAppointments.length === 1 ? "reservation" : "reservations"}
+                            {dayAppointments.length} {dayAppointments.length === 1 ? tr("calendar.reservation") : tr("calendar.reservations")}
                           </div>
                         )}
                       </div>
@@ -2258,13 +2531,13 @@ export default function CalendarPage() {
                                         setIsWeeklyPopupOpen(true);
                                       }}
                                     >
-                                      +{staffAppointments.length - 3} more
+                                      {tr("calendar.more", { value: staffAppointments.length - 3 })}
                                     </div>
                                   )}
                                 </div>
                               ) : (
                                 <div className="h-full flex items-center justify-center">
-                                  <span className="text-xs text-muted-foreground/50">No appointments</span>
+                                  <span className="text-xs text-muted-foreground/50">{tr("calendar.noAppointments")}</span>
                                 </div>
                               )}
                             </div>
@@ -2278,15 +2551,7 @@ export default function CalendarPage() {
             </div>
           )}
 
-          {/* Floating Action Button */}
-          <button
-            className="fixed bottom-8 right-8 w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-900 transition-colors z-20"
-            aria-label="New appointment"
-            title="New appointment"
-            onClick={() => setIsNewAppointmentOpen(true)}
-          >
-            <Plus size={24} />
-          </button>
+          {/* New booking: the top bar button (desktop) and the tab bar's "+" (phone). */}
 
       {/* Appointment Modal */}
       <AppointmentModal
@@ -2307,7 +2572,7 @@ export default function CalendarPage() {
               {selectedDayForPopup && format(selectedDayForPopup, "EEEE, MMMM d, yyyy")}
             </SheetTitle>
             <SheetDescription>
-              {selectedDayForPopup && getAppointmentsForDate(selectedDayForPopup).length} {selectedDayForPopup && getAppointmentsForDate(selectedDayForPopup).length === 1 ? "appointment" : "appointments"}
+              {selectedDayForPopup && tr("common.appointmentCount", { count: getAppointmentsForDate(selectedDayForPopup).length })}
             </SheetDescription>
           </SheetHeader>
           
@@ -2333,7 +2598,7 @@ export default function CalendarPage() {
                   />
                   {staffMember && (
                     <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
-                      <span>Staff:</span>
+                      <span>{tr("calendar.staff")}</span>
                       <span className="font-medium">{staffMember.name}</span>
                     </div>
                   )}
@@ -2351,11 +2616,11 @@ export default function CalendarPage() {
             <SheetTitle>
               {selectedWeeklyPopup && (() => {
                 const staffMember = staff.find(s => s.id === selectedWeeklyPopup.staffId);
-                return `${staffMember?.name || "Staff"} - ${format(selectedWeeklyPopup.day, "EEEE, MMMM d, yyyy")}`;
+                return `${staffMember?.name || tr("common.staff")} - ${format(selectedWeeklyPopup.day, "EEEE, MMMM d, yyyy")}`;
               })()}
             </SheetTitle>
             <SheetDescription>
-              {selectedWeeklyPopup && getAppointmentsForDateAndStaff(selectedWeeklyPopup.day, selectedWeeklyPopup.staffId).length} {selectedWeeklyPopup && getAppointmentsForDateAndStaff(selectedWeeklyPopup.day, selectedWeeklyPopup.staffId).length === 1 ? "appointment" : "appointments"}
+              {selectedWeeklyPopup && tr("common.appointmentCount", { count: getAppointmentsForDateAndStaff(selectedWeeklyPopup.day, selectedWeeklyPopup.staffId).length })}
             </SheetDescription>
           </SheetHeader>
           
@@ -2381,7 +2646,7 @@ export default function CalendarPage() {
                   />
                   {staff && (
                     <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
-                      <span>Time:</span>
+                      <span>{tr("calendar.time")}</span>
                       <span className="font-medium">{apt.startTime} - {apt.endTime}</span>
                     </div>
                   )}
@@ -2401,20 +2666,20 @@ export default function CalendarPage() {
           setDragSelection(null);
         }
       }}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="rounded-[24px] border-0 bg-[rgb(var(--reg-canvas))] p-6 sm:max-w-[420px]" style={{ fontFamily: BRAND_FONT }}>
           <DialogHeader>
-            <DialogTitle>Select Action</DialogTitle>
+            <DialogTitle className="text-xl font-extrabold tracking-[-0.02em]">{tr("calendar.whatWouldYouLikeTo")}</DialogTitle>
             <DialogDescription>
               {finalSelection && (
                 <>
-                  Selected time: {finalSelection.startTime} - {finalSelection.endTime}
+                  {tr("calendar.selectedTime", { startTime: finalSelection.startTime, endTime: finalSelection.endTime })}
                   <br />
-                  Staff: {finalSelection.staffName}
+                  {tr("calendar.staff2", { staffName: finalSelection.staffName })}
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 py-4">
+          <div className="flex flex-col gap-2 pt-2">
             <Button
               onClick={() => {
                 if (finalSelection) {
@@ -2422,11 +2687,11 @@ export default function CalendarPage() {
                   setIsNewAppointmentOpen(true);
                 }
               }}
-              className="w-full justify-start"
+              className="h-14 w-full justify-start gap-1 rounded-2xl border-[rgb(var(--reg-line))] bg-white px-4 text-[15px] font-semibold text-[rgb(var(--reg-ink))] hover:border-[rgb(var(--reg-brand)/0.4)] hover:bg-white"
               variant="outline"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              New Appointment
+              <Plus className="mr-2 h-5 w-5 text-[rgb(var(--reg-brand))]" />
+              {tr("common.newBooking")}
             </Button>
             <Button
               onClick={() => {
@@ -2449,11 +2714,11 @@ export default function CalendarPage() {
                   setIsAddTimeOffOpen(true);
                 }
               }}
-              className="w-full justify-start"
+              className="h-14 w-full justify-start gap-1 rounded-2xl border-[rgb(var(--reg-line))] bg-white px-4 text-[15px] font-semibold text-[rgb(var(--reg-ink))] hover:border-[rgb(var(--reg-brand)/0.4)] hover:bg-white"
               variant="outline"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Add Time Off
+              <CalendarIcon className="mr-2 h-5 w-5 text-[rgb(var(--reg-brand))]" />
+              {tr("calendar.timeOff2")}
             </Button>
             <Button
               onClick={() => {
@@ -2462,11 +2727,11 @@ export default function CalendarPage() {
                   setIsAddReservationOpen(true);
                 }
               }}
-              className="w-full justify-start"
+              className="h-14 w-full justify-start gap-1 rounded-2xl border-[rgb(var(--reg-line))] bg-white px-4 text-[15px] font-semibold text-[rgb(var(--reg-ink))] hover:border-[rgb(var(--reg-brand)/0.4)] hover:bg-white"
               variant="outline"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Add Reservation
+              <CalendarIcon className="mr-2 h-5 w-5 text-[rgb(var(--reg-brand))]" />
+              {tr("calendar.blockTime")}
             </Button>
           </div>
         </DialogContent>
@@ -2481,21 +2746,21 @@ export default function CalendarPage() {
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Time Conflict Detected</DialogTitle>
+            <DialogTitle>{tr("calendar.timeConflictDetected")}</DialogTitle>
             <DialogDescription>
-              This time slot conflicts with an existing appointment for this staff member.
+              {tr("calendar.thisTimeSlotConflictsWith")}
               <br />
               <br />
               {pendingAppointmentData && (
                 <>
-                  <strong>Selected time:</strong> {pendingAppointmentData.startTime} - {pendingAppointmentData.endTime}
+                  <strong>{tr("calendar.selectedTime2")}</strong> {pendingAppointmentData.startTime} - {pendingAppointmentData.endTime}
                   <br />
-                  <strong>Date:</strong> {format(parse(pendingAppointmentData.appointmentDate, 'yyyy-MM-dd', new Date()), 'MMM dd, yyyy')}
+                  <strong>{tr("calendar.date")}</strong> {format(parse(pendingAppointmentData.appointmentDate, 'yyyy-MM-dd', new Date()), 'MMM dd, yyyy')}
                 </>
               )}
               <br />
               <br />
-              Do you want to proceed and create this appointment anyway?
+              {tr("calendar.doYouWantToProceed")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-4">
@@ -2507,7 +2772,7 @@ export default function CalendarPage() {
                 setPendingAppointmentData(null);
               }}
             >
-              Cancel
+              {tr("common.cancel")}
             </Button>
             <Button
               className="flex-1 bg-gray-600 hover:bg-gray-700"
@@ -2521,14 +2786,14 @@ export default function CalendarPage() {
                     setEditingAppointmentId(null);
                     setFinalSelection(null);
                     setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
-                    toast.success("Appointment created successfully (with conflict)");
+                    toast.success(tr("calendar.appointmentCreatedSuccessfullyWithConflict"));
                   } catch (error) {
-                    toast.error("Failed to create appointment");
+                    toast.error(tr("calendar.failedToCreateAppointment"));
                   }
                 }
               }}
             >
-              Yes, Create Anyway
+              {tr("calendar.yesCreateAnyway")}
             </Button>
           </div>
         </DialogContent>
@@ -2543,24 +2808,24 @@ export default function CalendarPage() {
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Time Off Conflict Detected</DialogTitle>
+            <DialogTitle>{tr("calendar.timeOffConflictDetected")}</DialogTitle>
             <DialogDescription>
-              This appointment conflicts with an existing time off for this staff member.
+              {tr("calendar.thisAppointmentConflictsWithAn")}
               <br />
               <br />
               {pendingAppointmentWithTimeOffData && (
                 <>
-                  <strong>Appointment time:</strong> {pendingAppointmentWithTimeOffData.startTime} - {pendingAppointmentWithTimeOffData.endTime}
+                  <strong>{tr("calendar.appointmentTime")}</strong> {pendingAppointmentWithTimeOffData.startTime} - {pendingAppointmentWithTimeOffData.endTime}
                   <br />
-                  <strong>Date:</strong> {format(parse(pendingAppointmentWithTimeOffData.appointmentDate, 'yyyy-MM-dd', new Date()), 'MMM dd, yyyy')}
+                  <strong>{tr("calendar.date")}</strong> {format(parse(pendingAppointmentWithTimeOffData.appointmentDate, 'yyyy-MM-dd', new Date()), 'MMM dd, yyyy')}
                 </>
               )}
               <br />
               <br />
-              <strong>Note:</strong> Appointments and time offs can overlap. They will be displayed side-by-side in the calendar.
+              <strong>{tr("calendar.note")}</strong>{" "}{tr("calendar.appointmentsAndTimeOffsCan")}
               <br />
               <br />
-              Do you want to proceed and create this appointment?
+              {tr("calendar.doYouWantToProceed2")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-4">
@@ -2572,7 +2837,7 @@ export default function CalendarPage() {
                 setPendingAppointmentWithTimeOffData(null);
               }}
             >
-              Cancel
+              {tr("common.cancel")}
             </Button>
             <Button
               className="flex-1 bg-gray-600 hover:bg-gray-700"
@@ -2586,14 +2851,14 @@ export default function CalendarPage() {
                     setEditingAppointmentId(null);
                     setFinalSelection(null);
                     setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
-                    toast.success("Appointment created successfully");
+                    toast.success(tr("calendar.appointmentCreatedSuccessfully"));
                   } catch (error) {
-                    toast.error("Failed to create appointment");
+                    toast.error(tr("calendar.failedToCreateAppointment"));
                   }
                 }
               }}
             >
-              Yes, Create Anyway
+              {tr("calendar.yesCreateAnyway")}
             </Button>
           </div>
         </DialogContent>
@@ -2623,38 +2888,47 @@ export default function CalendarPage() {
           });
         }
       }}>
-        <SheetContent side="right" className="!max-w-none w-[500px] p-0 flex flex-col h-screen max-h-screen">
+        <SheetContent side="right" style={{ fontFamily: BRAND_FONT }} className={SHEET_FRAME}>
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
-            <SheetTitle className="text-base font-semibold">{editingAppointmentId ? 'Edit Appointment' : 'New Appointment'}</SheetTitle>
+          <div className={SHEET_HEAD}>
+            <SheetTitle className={SHEET_TITLE}>{editingAppointmentId ? tr("calendar.editBooking") : tr("common.newBooking")}</SheetTitle>
+            <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{format(parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date()), 'EEEE, d MMMM')}</p>
           </div>
 
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 md:px-6">
           {/* Client Selection */}
-          <div className="px-4 py-3 border-b border-gray-200 shrink-0">
+          <section className="space-y-2">
             <div className="space-y-2">
-              <Label className="text-xs">Client (optional - leave empty for walk-in)</Label>
+              <p className={SECTION_LABEL}>{tr("common.client")}{" "}<span className="font-normal normal-case tracking-normal text-[rgb(var(--reg-muted))]">{tr("calendar.optionalEmptyWalkIn")}</span></p>
               <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={clientSearchOpen}
-                    className="h-8 text-xs justify-between w-full"
+                    className={cn(FIELD, "justify-between gap-3 font-semibold")}
                   >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
+                        {appointmentForm.clientName ? initialsOf(appointmentForm.clientName) : <User className="h-4 w-4" />}
+                      </span>
+                      <span className="truncate">
                     {appointmentForm.clientId
                       ? (() => {
                           const selected = clients.find(c => c.id.toString() === appointmentForm.clientId);
-                          return selected ? `${selected.firstName} ${selected.lastName || ""}`.trim() : "Select client...";
+                          return selected ? `${selected.firstName} ${selected.lastName || ""}`.trim() : tr("calendar.selectClient");
                         })()
-                      : appointmentForm.clientName || "Select client or enter name..."}
-                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                      : appointmentForm.clientName || tr("calendar.searchClientsOrAddNew")}
+                      </span>
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl p-0" align="start">
                   <Command shouldFilter={true}>
-                    <CommandInput placeholder="Search clients..." />
+                    <CommandInput placeholder={tr("calendar.searchClients")} />
                     <CommandList>
-                      <CommandEmpty>No client found.</CommandEmpty>
+                      <CommandEmpty>{tr("calendar.noClientFound")}</CommandEmpty>
                       <CommandGroup>
                         <CommandItem
                           value="new-client"
@@ -2664,13 +2938,14 @@ export default function CalendarPage() {
                           }}
                         >
                           <User className="mr-2 h-4 w-4" />
-                          New client (enter manually)
+                          {tr("calendar.newClientEnterManually")}
                         </CommandItem>
-                        {clients.map((client) => {
+                        {clients.map((client, idx) => {
                           const isSelected = appointmentForm.clientId === client.id.toString();
                           return (
                             <CommandItem
-                              key={client.id}
+                              // Clients built from walk-in bookings come back with id 0, so the id alone repeats.
+                              key={`${client.id}-${idx}`}
                               value={`${client.firstName} ${client.lastName || ""} ${client.email || ""} ${client.phone || ""}`}
                               onSelect={() => {
                                 setAppointmentForm(prev => ({
@@ -2684,13 +2959,18 @@ export default function CalendarPage() {
                               }}
                               className={cn("flex items-center justify-between", isSelected && "bg-accent")}
                             >
-                              <div className="flex flex-col">
-                                <span>{`${client.firstName} ${client.lastName || ""}`.trim()}</span>
+                              <div className="flex min-w-0 items-center gap-3">
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
+                                  {initialsOf(`${client.firstName} ${client.lastName || ""}`)}
+                                </span>
+                                <div className="flex min-w-0 flex-col">
+                                <span className="truncate font-semibold">{`${client.firstName} ${client.lastName || ""}`.trim()}</span>
                                 {(client.email || client.phone) && (
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="truncate text-xs text-muted-foreground">
                                     {client.email || client.phone}
                                   </span>
                                 )}
+                                </div>
                               </div>
                               {isSelected && <Check className="h-4 w-4" />}
                             </CommandItem>
@@ -2704,68 +2984,94 @@ export default function CalendarPage() {
               {!appointmentForm.clientId && (
                 <>
                   <Input
-                    placeholder="Client name"
+                    placeholder={tr("calendar.clientName")}
                     value={appointmentForm.clientName}
                     onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientName: e.target.value }))}
-                    className="h-8 text-xs"
+                    className={FIELD}
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <Input
-                      placeholder="Phone"
+                      placeholder={tr("common.phone")}
                       value={appointmentForm.clientPhone}
                       onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientPhone: e.target.value }))}
-                      className="h-8 text-xs"
+                      className={FIELD}
                     />
                     <Input
-                      placeholder="Email"
+                      placeholder={tr("common.email")}
                       type="email"
                       value={appointmentForm.clientEmail}
                       onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientEmail: e.target.value }))}
-                      className="h-8 text-xs"
+                      className={FIELD}
                     />
                   </div>
                 </>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 shrink-0">
-            <button className="px-3 py-2 text-xs font-medium border-b-2 border-gray-900 text-gray-900">
-              APPOINTMENT
-            </button>
-            <button className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-900">
-              NOTES & INFO
-            </button>
-          </div>
-
-          {/* Form Content - Scrollable if needed */}
-          <div className="flex-1 p-4 space-y-3 overflow-y-auto min-h-0">
+          {/* The two "tabs" that sat here had no handlers; notes are further down. */}
+          <div className="space-y-6">
             {/* Date picker — drives the appointment's date (and syncs the
                 viewed day so conflict detection matches the chosen date). */}
-            <div className="space-y-1">
-              <Label className="text-xs">Date *</Label>
-              <Input
-                type="date"
-                value={appointmentForm.date}
-                min={format(new Date(), 'yyyy-MM-dd')}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!v) return;
+            <section className="space-y-2">
+              <p className={SECTION_LABEL}>{tr("calendar.date2")}</p>
+              {(() => {
+                const pick = (v: string) => {
                   setAppointmentForm(prev => ({ ...prev, date: v }));
                   const parsed = parse(v, 'yyyy-MM-dd', new Date());
                   if (!isNaN(parsed.getTime())) setCurrentDate(parsed);
-                }}
-                className="h-8 text-xs"
-              />
-            </div>
+                };
+                const days = Array.from({ length: 21 }, (_, i) => addDays(new Date(), i));
+                return (
+                  <>
+                    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="radiogroup" aria-label={tr("calendar.date2")}>
+                      {days.map((d) => {
+                        const v = format(d, 'yyyy-MM-dd');
+                        const on = appointmentForm.date === v;
+                        const open = getBusinessHoursForDate(d).isEnabled;
+                        return (
+                          <button
+                            key={v}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => pick(v)}
+                            className={cn(
+                              "flex w-14 shrink-0 flex-col items-center rounded-2xl py-2 ring-1 transition",
+                              on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
+                              !open && !on && "opacity-50",
+                            )}
+                          >
+                            <span className={cn("text-[11px] font-semibold uppercase", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{isToday(d) ? tr("common.today") : format(d, 'EEE')}</span>
+                            <span className="text-lg font-extrabold leading-tight">{format(d, 'd')}</span>
+                            <span className={cn("text-[10px]", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{format(d, 'MMM')}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-[rgb(var(--reg-muted))]">
+                      {tr("calendar.otherDate")}
+                      <Input
+                        type="date"
+                        value={appointmentForm.date}
+                        min={format(new Date(), 'yyyy-MM-dd')}
+                        onChange={(e) => { if (e.target.value) pick(e.target.value); }}
+                        aria-label={tr("calendar.date2")}
+                        className="h-10 w-auto rounded-xl border-[rgb(var(--reg-line))] text-sm"
+                      />
+                    </label>
+                  </>
+                );
+              })()}
+            </section>
 
             {/* Booking mode: single / group / recurring */}
             {/* Group and recurring are off for now. The machinery below stays — turning
-                either back on is putting its tab back, not rebuilding the flow. */}
-            <div className="grid grid-cols-1 gap-1.5">
+                either back on is putting its tab back, not rebuilding the flow. With one mode
+                there is nothing to choose, so the switch stays hidden until a second returns. */}
+            <div className="hidden">
               {([
-                { key: "single", label: "SINGLE", Icon: User },
+                { key: "single", get label() { return tr("calendar.single"); }, Icon: User },
               ] as const).map((m) => (
                 <Button
                   key={m.key}
@@ -2787,36 +3093,36 @@ export default function CalendarPage() {
             {/* Recurrence config */}
             {bookingMode === "recurring" && (
               <div className="space-y-2 rounded-md border border-gray-200 p-2">
-                <Label className="text-xs font-medium">Repeat</Label>
+                <Label className={FIELD_LABEL}>{tr("calendar.repeat")}</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">Frequency</Label>
+                    <Label className="text-[10px] text-gray-500">{tr("calendar.frequency")}</Label>
                     <Select
                       value={recurrence.frequency}
                       onValueChange={(v) => setRecurrence(prev => ({ ...prev, frequency: v as "DAILY" | "WEEKLY" | "MONTHLY" }))}
                     >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="DAILY">Daily</SelectItem>
-                        <SelectItem value="WEEKLY">Weekly</SelectItem>
-                        <SelectItem value="MONTHLY">Monthly</SelectItem>
+                        <SelectItem value="DAILY">{tr("common.daily")}</SelectItem>
+                        <SelectItem value="WEEKLY">{tr("calendar.weekly")}</SelectItem>
+                        <SelectItem value="MONTHLY">{tr("calendar.monthly")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">Every</Label>
+                    <Label className="text-[10px] text-gray-500">{tr("calendar.every")}</Label>
                     <Input
                       type="number" min={1} max={12} value={recurrence.interval}
                       onChange={(e) => setRecurrence(prev => ({ ...prev, interval: Math.max(1, parseInt(e.target.value) || 1) }))}
-                      className="h-8 text-xs"
+                      className={FIELD}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">Occurrences</Label>
+                    <Label className="text-[10px] text-gray-500">{tr("calendar.occurrences")}</Label>
                     <Input
                       type="number" min={1} max={52} value={recurrence.count}
                       onChange={(e) => setRecurrence(prev => ({ ...prev, count: Math.max(1, Math.min(52, parseInt(e.target.value) || 1)) }))}
-                      className="h-8 text-xs"
+                      className={FIELD}
                     />
                   </div>
                 </div>
@@ -2829,178 +3135,178 @@ export default function CalendarPage() {
               </div>
             )}
 
-            {/* Service Selection */}
-            <div className="space-y-1">
-              <Label className="text-xs">
-                {bookingMode === "group" ? "Service (all members) *" : "Select service *"}
-              </Label>
-              <Popover open={serviceSearchOpen} onOpenChange={setServiceSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={serviceSearchOpen}
-                    className="h-8 text-xs justify-between w-full"
-                  >
-                    {appointmentForm.serviceId
-                      ? (() => {
-                          const selected = services.find(s => s.id.toString() === appointmentForm.serviceId);
-                          return selected ? selected.name : "Select service...";
-                        })()
-                      : "Select service..."}
-                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  <Command shouldFilter={true}>
-                    <CommandInput 
-                      placeholder="Search services..." 
-                    />
-                    <CommandList>
-                      <CommandEmpty>No service found.</CommandEmpty>
-                      <CommandGroup>
-                        {services.map((service) => {
-                            const isSelected = appointmentForm.serviceId === service.id.toString();
-                            const isCombo = service.serviceType === 'COMBO';
-                            
-                            return (
-                              <CommandItem
-                                key={service.id}
-                                value={`${service.name} ${service.serviceType || 'SERVICE'}`}
-                                onSelect={() => {
-                                  setAppointmentForm(prev => ({ ...prev, serviceId: service.id.toString() }));
-                                  setServiceSearchOpen(false);
-                                }}
-                                className="flex items-center justify-between"
-                              >
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <Check
-                                    className={cn(
-                                      "h-4 w-4 shrink-0",
-                                      isSelected ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  <span className="truncate">{service.name}</span>
-                                  <Badge 
-                                    variant="secondary" 
-                                    className={cn(
-                                      "text-xs shrink-0",
-                                      isCombo 
-                                        ? "bg-purple-100 text-purple-700 border-purple-200" 
-                                        : "bg-blue-100 text-blue-700 border-blue-200"
-                                    )}
-                                  >
-                                    {isCombo ? (
-                                      <>
-                                        <Package size={10} className="mr-1" />
-                                        COMBO
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Layers size={10} className="mr-1" />
-                                        SERVICE
-                                      </>
-                                    )}
-                                  </Badge>
-                                </div>
-                                <span className="text-xs text-gray-500 ml-2 shrink-0">
-                                  {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : "Free"}
-                                </span>
-                              </CommandItem>
-                            );
-                          })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Time Selection */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <Label className="text-xs">Start *</Label>
-                <Select
-                  value={appointmentForm.startTime}
-                  onValueChange={(value) => setAppointmentForm(prev => ({ ...prev, startTime: value }))}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Start time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeOptionsWith(appointmentForm.startTime).map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">End *</Label>
-                <Select
-                  value={appointmentForm.endTime}
-                  onValueChange={(value) => setAppointmentForm(prev => ({ ...prev, endTime: value }))}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="End time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeOptionsWith(appointmentForm.endTime).map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {appointmentForm.serviceId && appointmentForm.startTime && (
-                  <p className="text-[10px] text-gray-500 mt-0.5">
-                    Auto-calculated from service duration
-                  </p>
+            {/* Service Selection — tidy rows: name, duration, price. */}
+            <section className="space-y-2">
+              <p className={SECTION_LABEL}>{bookingMode === "group" ? tr("calendar.serviceAllMembers") : tr("common.service")}</p>
+              {services.length > 6 && (
+                <div className="flex h-11 items-center gap-2 rounded-xl bg-white px-3 ring-1 ring-[rgb(var(--reg-line))] focus-within:ring-2 focus-within:ring-[rgb(var(--reg-brand)/0.5)]">
+                  <Search size={16} className="text-[rgb(var(--reg-muted))]" />
+                  <input
+                    value={serviceQuery}
+                    onChange={(e) => setServiceQuery(e.target.value)}
+                    placeholder={tr("common.searchServices")}
+                    aria-label={tr("calendar.searchServices")}
+                    className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[rgb(var(--reg-muted))]"
+                  />
+                </div>
+              )}
+              <div className="max-h-[264px] overflow-y-auto rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]" role="radiogroup" aria-label={tr("common.service")}>
+                {services
+                  .filter((sv) => !serviceQuery || sv.name.toLowerCase().includes(serviceQuery.toLowerCase()))
+                  .map((service) => {
+                    const isSelected = appointmentForm.serviceId === service.id.toString();
+                    const isCombo = service.serviceType === 'COMBO';
+                    return (
+                      <button
+                        key={service.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setAppointmentForm(prev => ({ ...prev, serviceId: service.id.toString() }))}
+                        className={cn(
+                          "flex w-full items-center gap-3 border-b border-[rgb(var(--reg-line)/0.6)] px-4 py-3 text-left transition-colors last:border-0",
+                          isSelected ? "bg-[rgb(var(--reg-brand-soft))]" : "hover:bg-[rgb(var(--reg-canvas))]",
+                        )}
+                      >
+                        <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2", isSelected ? "border-[rgb(var(--reg-brand))]" : "border-[rgb(var(--reg-line))]")}>
+                          {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-[15px] font-semibold">{service.name}</span>
+                            {isCombo && (
+                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[rgb(var(--reg-brand)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase text-[rgb(var(--reg-brand-strong))]">
+                                <Package size={10} />{" "}{tr("common.combo")}
+                              </span>
+                            )}
+                          </span>
+                          {service.durationMinutes ? (
+                            <span className="block text-sm text-[rgb(var(--reg-muted))]">{tr("calendar.min3", { durationMinutes: service.durationMinutes })}</span>
+                          ) : null}
+                        </span>
+                        <span className="shrink-0 text-sm font-semibold">
+                          {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : tr("calendar.free")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                {services.length === 0 && (
+                  <p className="px-4 py-4 text-sm text-[rgb(var(--reg-muted))]">{tr("calendar.noServicesYetAddThem")}</p>
                 )}
               </div>
-            </div>
+            </section>
+
+            {/* Time — start as a grid of slots within the day's opening hours; end follows the service. */}
+            <section className="space-y-2">
+              <p className={SECTION_LABEL}>{tr("calendar.time2")}</p>
+              {(() => {
+                const day = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
+                const { startHour, endHour, isEnabled } = getBusinessHoursForDate(isNaN(day.getTime()) ? currentDate : day);
+                const lo = isEnabled ? startHour : 8;
+                const hi = isEnabled ? endHour : 20;
+                const slots = timeOptionsWith(appointmentForm.startTime).filter((t) => {
+                  const h = parseInt(t.slice(0, 2), 10);
+                  return (h >= lo && h < hi) || t === appointmentForm.startTime;
+                });
+                return (
+                  <>
+                    {!isEnabled && (
+                      <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">{tr("calendar.closedThisDayYouCan")}</p>
+                    )}
+                    <div className="grid max-h-[208px] grid-cols-4 gap-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label={tr("calendar.startTime")}>
+                      {slots.map((t) => {
+                        const on = appointmentForm.startTime === t;
+                        return (
+                          <button
+                            key={t}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => setAppointmentForm(prev => ({ ...prev, startTime: t }))}
+                            className={cn(
+                              "h-11 rounded-xl text-sm font-semibold tabular-nums ring-1 transition",
+                              on
+                                ? "bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] text-white ring-transparent shadow-[0_8px_18px_-8px_rgb(var(--reg-brand-strong)/0.7)]"
+                                : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.5)]",
+                            )}
+                          >
+                            {t}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center gap-3 pt-1">
+                      <span className="text-sm font-semibold">{tr("common.ends")}</span>
+                      <Select
+                        value={appointmentForm.endTime}
+                        onValueChange={(value) => setAppointmentForm(prev => ({ ...prev, endTime: value }))}
+                      >
+                        <SelectTrigger aria-label={tr("calendar.endTime")} className="h-11 w-32 rounded-xl border-[rgb(var(--reg-line))] text-sm font-semibold">
+                          <SelectValue placeholder={tr("calendar.endTime")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeOptionsWith(appointmentForm.endTime).map((t) => (
+                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {appointmentForm.serviceId && appointmentForm.startTime && (
+                        <span className="text-xs text-[rgb(var(--reg-muted))]">{tr("calendar.fromTheServiceLength")}</span>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </section>
 
             {/* Staff Selection (in group mode this is member 1's staff) */}
-            <div className="space-y-1">
-              <Label className="text-xs">{bookingMode === "group" ? "Staff (member 1) *" : "Staff *"}</Label>
-              <Select
-                value={appointmentForm.staffId}
-                onValueChange={(value) => setAppointmentForm(prev => ({ ...prev, staffId: value }))}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Select staff" />
-                </SelectTrigger>
-                <SelectContent>
-                  {staff.map((staffMember) => (
-                    <SelectItem key={staffMember.id} value={staffMember.id}>
+            <section className="space-y-2">
+              <p className={SECTION_LABEL}>{bookingMode === "group" ? tr("calendar.withMember") : tr("calendar.with2")}</p>
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={tr("common.staff")}>
+                {staff.map((staffMember) => {
+                  const on = appointmentForm.staffId === staffMember.id;
+                  return (
+                    <button
+                      key={staffMember.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setAppointmentForm(prev => ({ ...prev, staffId: staffMember.id }))}
+                      className={cn(
+                        "flex items-center gap-2 rounded-full py-1 pl-1 pr-4 text-sm font-semibold ring-1 transition",
+                        on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
+                      )}
+                    >
+                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold", on ? "bg-white/15" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}>
+                        {initialsOf(staffMember.name)}
+                      </span>
                       {staffMember.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
             
             {/* Group members — each gets their own staff + time. The primary
                 client above is member 1; add the rest here. */}
             {bookingMode === "group" && (
               <div className="space-y-2 rounded-md border border-gray-200 p-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium">Group members</Label>
-                  <span className="text-[10px] text-gray-500">Primary client = member 1</span>
+                  <Label className={FIELD_LABEL}>{tr("calendar.groupMembers")}</Label>
+                  <span className="text-[10px] text-gray-500">{tr("calendar.primaryClientMember")}</span>
                 </div>
                 {groupMembers.map((m, i) => (
                   <div key={i} className="space-y-1 border-t border-gray-100 pt-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-gray-500 w-16 shrink-0">Member {i + 2}</span>
+                      <span className="text-[10px] text-gray-500 w-16 shrink-0">{tr("calendar.member", { value: i + 2 })}</span>
                       <Input
-                        placeholder="Name"
+                        placeholder={tr("common.name")}
                         value={m.clientName}
                         onChange={(e) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, clientName: e.target.value } : x))}
-                        className="h-8 text-xs flex-1"
+                        className={cn(FIELD, "flex-1")}
                       />
                       <Button
-                        type="button" variant="ghost" size="icon" aria-label="Remove member" className="h-7 w-7 shrink-0"
+                        type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeMember")} className="h-7 w-7 shrink-0"
                         onClick={() => setGroupMembers(prev => prev.filter((_, j) => j !== i))}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-gray-400" />
@@ -3008,13 +3314,13 @@ export default function CalendarPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 pl-16">
                       <Select value={m.staffId} onValueChange={(v) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, staffId: v } : x))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Staff" /></SelectTrigger>
+                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("common.staff")} /></SelectTrigger>
                         <SelectContent>
                           {staff.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
                         </SelectContent>
                       </Select>
                       <Select value={m.startTime} onValueChange={(v) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, startTime: v } : x))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Start" /></SelectTrigger>
+                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("calendar.start")} /></SelectTrigger>
                         <SelectContent>
                           {timeOptionsWith(m.startTime).map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                         </SelectContent>
@@ -3022,10 +3328,10 @@ export default function CalendarPage() {
                     </div>
                     <div className="pl-16">
                       <Input
-                        placeholder="Phone (optional)"
+                        placeholder={tr("calendar.phoneOptional")}
                         value={m.clientPhone}
                         onChange={(e) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, clientPhone: e.target.value } : x))}
-                        className="h-8 text-xs"
+                        className={FIELD}
                       />
                     </div>
                   </div>
@@ -3042,7 +3348,7 @@ export default function CalendarPage() {
                     return [...prev, { clientName: "", clientPhone: "", clientEmail: "", staffId: appointmentForm.staffId, startTime: nextStart }];
                   })}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> ADD MEMBER
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />{" "}{tr("calendar.addMember")}
                 </Button>
               </div>
             )}
@@ -3054,9 +3360,9 @@ export default function CalendarPage() {
                 {extraServices.map((es, i) => (
                   <div key={i} className="space-y-1 rounded-md border border-gray-200 p-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[10px] text-gray-500">Extra service {i + 1}</Label>
+                      <Label className="text-[10px] text-gray-500">{editingVisit ? tr("calendar.service", { value: i + 2 }) : tr("calendar.extraService", { value: i + 1 })}</Label>
                       <Button
-                        type="button" variant="ghost" size="icon" aria-label="Remove service" className="h-7 w-7"
+                        type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeService")} className={`h-7 w-7 ${editingAppointmentId ? "hidden" : ""}`}
                         onClick={() => setExtraServices(prev => prev.filter((_, j) => j !== i))}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-gray-400" />
@@ -3070,26 +3376,26 @@ export default function CalendarPage() {
                         return { ...x, serviceId: v, endTime: start ? addMinutesToTime(start, serviceDuration(v)) : x.endTime };
                       }))}
                     >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Service" /></SelectTrigger>
+                      <SelectTrigger className={FIELD}><SelectValue placeholder={tr("common.service")} /></SelectTrigger>
                       <SelectContent>
                         {services.map((s) => (<SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>))}
                       </SelectContent>
                     </Select>
                     <div className="grid grid-cols-3 gap-2">
                       <Select value={es.staffId} onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => j === i ? { ...x, staffId: v } : x))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Staff" /></SelectTrigger>
+                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("common.staff")} /></SelectTrigger>
                         <SelectContent>
                           {staff.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
                         </SelectContent>
                       </Select>
                       <Select value={es.startTime} onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => j === i ? { ...x, startTime: v, endTime: addMinutesToTime(v, serviceDuration(x.serviceId)) } : x))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Start" /></SelectTrigger>
+                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("calendar.start")} /></SelectTrigger>
                         <SelectContent>
                           {timeOptionsWith(es.startTime).map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                         </SelectContent>
                       </Select>
                       <Select value={es.endTime} onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => j === i ? { ...x, endTime: v } : x))}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="End" /></SelectTrigger>
+                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("calendar.end")} /></SelectTrigger>
                         <SelectContent>
                           {timeOptionsWith(es.endTime).map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
                         </SelectContent>
@@ -3097,23 +3403,28 @@ export default function CalendarPage() {
                     </div>
                   </div>
                 ))}
+                {editingVisit && (
+                  <p className="text-xs text-gray-500">
+                    {tr("calendar.thisBookingHasServicesYou", { count: editingVisit.ids.length })}
+                  </p>
+                )}
                 <Button
-                  type="button" variant="outline" className="w-full h-8 text-xs"
+                  type="button" variant="outline" className={`w-full h-8 text-xs ${editingAppointmentId ? "hidden" : ""}`}
                   onClick={() => {
                     const start = appointmentForm.endTime || appointmentForm.startTime;
                     setExtraServices(prev => [...prev, { serviceId: "", staffId: appointmentForm.staffId, startTime: start, endTime: start ? addMinutesToTime(start, 30) : "" }]);
                   }}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> ADD ANOTHER SERVICE
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />{" "}{tr("calendar.addAnotherService")}
                 </Button>
               </div>
             )}
 
             {/* Notes */}
             <div className="space-y-1">
-              <Label className="text-xs">Notes (optional)</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.notesOptional")}</Label>
               <Textarea
-                placeholder="Add notes..."
+                placeholder={tr("calendar.addNotes")}
                 value={appointmentForm.notes}
                 onChange={(e) => setAppointmentForm(prev => ({ ...prev, notes: e.target.value }))}
                 className="h-16 text-xs resize-none"
@@ -3124,17 +3435,17 @@ export default function CalendarPage() {
             <div className="flex items-center gap-1.5 py-0.5">
               <Button
                 type="button" variant="ghost" size="icon" className="h-6 w-6"
-                aria-label="Requested by client"
+                aria-label={tr("calendar.requestedByClient")}
                 aria-pressed={appointmentForm.requestedByClient}
                 onClick={() => setAppointmentForm(prev => ({ ...prev, requestedByClient: !prev.requestedByClient }))}
               >
                 <Heart className={cn("h-3.5 w-3.5", appointmentForm.requestedByClient ? "fill-red-500 text-red-500" : "text-gray-400")} />
               </Button>
-              <span className="text-xs text-gray-700">Requested by client</span>
+              <span className="text-xs text-gray-700">{tr("calendar.requestedByClient")}</span>
             </div>
 
             {/* Financial Summary — reflects group members / extra services / occurrences */}
-            <div className="pt-2 border-t border-gray-200 space-y-1.5">
+            <div className="space-y-1.5 rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line))]">
               {(() => {
                 const primary = servicePrice(appointmentForm.serviceId) || 0;
                 let total = 0;
@@ -3149,11 +3460,11 @@ export default function CalendarPage() {
                 return (
                   <>
                     <div className="flex justify-between items-center">
-                      <Label className="text-xs font-medium">Total</Label>
+                      <Label className={FIELD_LABEL}>{tr("common.total")}</Label>
                       <span className="text-xs font-semibold">{label}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <Label className="text-xs font-medium">To be paid</Label>
+                      <Label className={FIELD_LABEL}>{tr("calendar.toBePaid")}</Label>
                       <span className="text-xs font-semibold">{label}</span>
                     </div>
                   </>
@@ -3161,55 +3472,56 @@ export default function CalendarPage() {
               })()}
             </div>
           </div>
+          </div>
 
           {/* Footer Actions */}
-          <div className="px-4 py-3 border-t border-gray-200 flex gap-2 shrink-0">
+          <div className={SHEET_FOOT}>
             <Button
               variant="outline"
-              className="flex-1 h-8 text-xs"
+              className={SECONDARY_BTN}
               onClick={() => setIsNewAppointmentOpen(false)}
             >
-              DISCARD
+              {tr("common.cancel")}
             </Button>
             <Button
-              className="flex-1 h-8 text-xs bg-gray-600 hover:bg-gray-700"
+              className={PRIMARY_BTN}
               disabled={isBatchSubmitting || !appointmentForm.serviceId || !appointmentForm.staffId || !appointmentForm.startTime || !appointmentForm.endTime}
               onClick={async () => {
                 try {
                   if (!appointmentForm.serviceId) {
-                    toast.error("Please select a service");
+                    toast.error(tr("calendar.pleaseSelectAService"));
                     return;
                   }
                   if (!appointmentForm.staffId) {
-                    toast.error("Please select a staff member");
+                    toast.error(tr("calendar.pleaseSelectAStaffMember"));
                     return;
                   }
                   if (!appointmentForm.startTime || !appointmentForm.endTime) {
-                    toast.error("Please select start and end time");
+                    toast.error(tr("calendar.pleaseSelectStartAndEnd"));
                     return;
                   }
 
                   // End time must be after start time
                   if (appointmentForm.startTime && appointmentForm.endTime &&
                       appointmentForm.startTime >= appointmentForm.endTime) {
-                    toast.error("End time must be after start time");
+                    toast.error(tr("calendar.endTimeMustBeAfter"));
                     return;
                   }
 
                   // Email format validation
                   const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
                   if (appointmentForm.clientEmail && !emailRegex.test(appointmentForm.clientEmail)) {
-                    toast.error("Invalid email address format");
+                    toast.error(tr("calendar.invalidEmailAddressFormat"));
                     return;
                   }
 
                   // Field length limits
                   if (appointmentForm.clientName && appointmentForm.clientName.length > 255) {
-                    toast.error("Client name is too long (max 255 characters)");
+                    toast.error(tr("calendar.clientNameIsTooLong"));
                     return;
                   }
                   if (appointmentForm.notes && appointmentForm.notes.length > 2000) {
-                    toast.error("Notes are too long (max 2000 characters)");
+                    toast.error(tr("calendar.notesAreTooLongMax"));
                     return;
                   }
 
@@ -3218,7 +3530,7 @@ export default function CalendarPage() {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   if (!editingAppointmentId && appointmentDate < today) {
-                    toast.error("Cannot create appointments in the past");
+                    toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
                     return;
                   }
 
@@ -3229,31 +3541,67 @@ export default function CalendarPage() {
                     return;
                   }
 
+                  // A multi-service visit is saved as a whole: every appointment of it, one after
+                  // the other. If one is refused, the ones already written are put back.
+                  if (editingAppointmentId && editingVisit) {
+                    const lines = [
+                      { serviceId: appointmentForm.serviceId, staffId: appointmentForm.staffId, startTime: appointmentForm.startTime, endTime: appointmentForm.endTime },
+                      ...extraServices,
+                    ];
+                    if (lines.length !== editingVisit.ids.length || lines.some((l) => !l.serviceId || !l.staffId || !l.startTime || !l.endTime)) {
+                      toast.error(tr("calendar.fillInTheServiceTeam"));
+                      return;
+                    }
+                    const date = appointmentForm.date || format(currentDate, 'yyyy-MM-dd');
+                    const notes = withRequestedFlag(appointmentForm.notes, appointmentForm.requestedByClient);
+                    const who = {
+                      clientId: appointmentForm.clientId ? parseInt(appointmentForm.clientId) : undefined,
+                      clientName: appointmentForm.clientName || undefined,
+                      clientPhone: appointmentForm.clientPhone || undefined,
+                      clientEmail: appointmentForm.clientEmail || undefined,
+                    };
+                    const done: number[] = [];
+                    try {
+                      for (let i = 0; i < lines.length; i++) {
+                        const l = lines[i];
+                        const o = editingVisit.original[i];
+                        await appointmentService.updateAppointment(editingVisit.ids[i], {
+                          businessId: businessId!,
+                          staffId: parseInt(l.staffId),
+                          serviceId: parseInt(l.serviceId),
+                          appointmentDate: date,
+                          startTime: l.startTime,
+                          endTime: l.endTime,
+                          ...who,
+                          // The price the booking was made at, unless the service itself changed.
+                          price: String(o.serviceId) === l.serviceId ? o.price : servicePrice(l.serviceId),
+                          notes,
+                        } as never);
+                        done.push(i);
+                      }
+                    } catch (err) {
+                      for (const i of done) {
+                        const o = editingVisit.original[i];
+                        await appointmentService.updateAppointment(editingVisit.ids[i], {
+                          businessId: businessId!, staffId: o.staffId, serviceId: o.serviceId,
+                          appointmentDate: editingVisit.date,
+                          startTime: o.startTime, endTime: o.endTime, price: o.price, ...who,
+                        } as never).catch(() => undefined);
+                      }
+                      toast.error(tr("calendar.nothingWasChanged", { value: (err instanceof Error && err.message) || tr("calendar.couldNotSave") }));
+                      await refreshAppointments();
+                      return;
+                    }
+                    toast.success(tr("calendar.bookingUpdated"));
+                    await refreshAppointments();
+                    setIsNewAppointmentOpen(false);
+                    setEditingAppointmentId(null);
+                    setEditingVisit(null);
+                    setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+                    return;
+                  }
+
                   const selectedService = services.find(s => s.id.toString() === appointmentForm.serviceId);
-                  
-                  // Check for conflicts before saving
-                  const dayAppointments = appointments.filter((apt) =>
-                    isSameDay(apt.date, currentDate)
-                  );
-                  const hasAppointmentConflict = hasTimeConflict(
-                    dayAppointments,
-                    appointmentForm.staffId,
-                    appointmentForm.startTime,
-                    appointmentForm.endTime
-                  );
-                  
-                  // Check for conflicts with time offs
-                  const dayTimeOffs = getTimeOffsForStaffAndDate(timeOffs || [], appointmentForm.staffId, currentDate);
-                  const normalizedStartTime = normalizeTime(appointmentForm.startTime);
-                  const normalizedEndTime = normalizeTime(appointmentForm.endTime);
-                  const hasTimeOffConflictResult = dayTimeOffs.some((timeOff) => {
-                    return timeOffOverlapsAppointment(timeOff, {
-                      id: "temp",
-                      staffId: appointmentForm.staffId,
-                      startTime: normalizedStartTime,
-                      endTime: normalizedEndTime,
-                    } as Appointment, businessStartHour, businessEndHour);
-                  });
                   
                   const appointmentData = {
                     staffId: parseInt(appointmentForm.staffId),
@@ -3273,13 +3621,9 @@ export default function CalendarPage() {
 
                   const EMPTY_FORM = { clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` };
 
-                  if (hasTimeOffConflictResult) {
-                    setPendingAppointmentWithTimeOffData(appointmentData);
-                    setShowAppointmentTimeOffConflictDialog(true);
-                  } else if (hasAppointmentConflict && !editingAppointmentId) {
-                    setPendingAppointmentData(appointmentData);
-                    setShowConflictDialog(true);
-                  } else {
+                  // Conflicts (closed day, time off, double booking...) come back from the server as a
+                  // list; the booking-conflict dialog asks the person and re-sends with an override.
+                  {
                     if (editingAppointmentId) {
                       await updateAppointmentAPI(editingAppointmentId, appointmentData);
                     } else {
@@ -3304,16 +3648,16 @@ export default function CalendarPage() {
               }}
             >
               {isBatchSubmitting
-                ? 'CREATING…'
+                ? tr("common.saving")
                 : editingAppointmentId
-                  ? 'UPDATE APPOINTMENT'
+                  ? tr("common.saveChanges")
                   : bookingMode === 'group'
-                    ? `CREATE GROUP (${groupMembers.length + 1})`
+                    ? tr("calendar.bookGroup", { value: groupMembers.length + 1 })
                     : bookingMode === 'recurring'
-                      ? `CREATE ${computeRecurrenceDates(appointmentForm.date, recurrence).length}×`
+                      ? tr("calendar.book", { count: computeRecurrenceDates(appointmentForm.date, recurrence).length })
                       : extraServices.length > 0
-                        ? `CREATE ${extraServices.length + 1} SERVICES`
-                        : 'CREATE APPOINTMENT'}
+                        ? tr("calendar.bookServices", { value: extraServices.length + 1 })
+                        : tr("calendar.bookAppointment")}
             </Button>
           </div>
         </SheetContent>
@@ -3335,33 +3679,34 @@ export default function CalendarPage() {
         }
         setIsAddReservationOpen(open);
       }}>
-        <SheetContent side="right" className="w-full sm:w-[500px] !max-w-none p-0 flex flex-col h-screen max-h-screen">
+        <SheetContent side="right" style={{ fontFamily: BRAND_FONT }} className={SHEET_FRAME}>
           {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-            <SheetTitle className="text-base font-semibold text-gray-900">Add Time Reservation</SheetTitle>
+          <div className={SHEET_HEAD}>
+            <SheetTitle className={SHEET_TITLE}>{tr("calendar.blockTime")}</SheetTitle>
+            <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{tr("calendar.keepASlotFreeNo")}</p>
           </div>
 
           {/* Form Content */}
-          <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 md:px-6">
             {/* Date */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Date</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.date2")}</Label>
               <input
                 type="date"
                 value={reservationForm.date}
                 onChange={(e) => setReservationForm(prev => ({ ...prev, date: e.target.value }))}
-                className="h-9 w-full text-sm border border-gray-200 rounded-md px-3"
+                className={FIELD}
               />
             </div>
 
             {/* Start Time */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Start</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.start")}</Label>
               <Select
                 value={reservationForm.startTime}
                 onValueChange={(v) => setReservationForm(prev => ({ ...prev, startTime: v }))}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className={FIELD}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -3376,12 +3721,12 @@ export default function CalendarPage() {
 
             {/* End Time */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">End</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.end")}</Label>
               <Select
                 value={reservationForm.endTime}
                 onValueChange={(v) => setReservationForm(prev => ({ ...prev, endTime: v }))}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className={FIELD}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -3396,12 +3741,12 @@ export default function CalendarPage() {
 
             {/* Staffer */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Staffer</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.staffer")}</Label>
               <Select
                 value={reservationForm.staffId || (staff[0]?.id ?? "")}
                 onValueChange={(v) => setReservationForm(prev => ({ ...prev, staffId: v }))}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className={FIELD}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -3416,9 +3761,9 @@ export default function CalendarPage() {
 
             {/* Reason */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-gray-700">Reason</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.reason")}</Label>
               <Textarea
-                placeholder="Reason"
+                placeholder={tr("calendar.reason")}
                 value={reservationForm.reason}
                 onChange={(e) => setReservationForm(prev => ({ ...prev, reason: e.target.value }))}
                 className="min-h-[100px] text-sm resize-y"
@@ -3427,21 +3772,21 @@ export default function CalendarPage() {
           </div>
 
           {/* Footer Actions */}
-          <div className="px-4 py-3 border-t border-gray-200 flex gap-2 shrink-0">
+          <div className={SHEET_FOOT}>
             <Button
               variant="outline"
-              className="flex-1 h-9 text-sm"
+              className={SECONDARY_BTN}
               onClick={() => setIsAddReservationOpen(false)}
             >
-              CANCEL
+              {tr("common.cancel")}
             </Button>
             <Button
-              className="flex-1 h-9 text-sm bg-gray-900 hover:bg-gray-800 text-white"
+              className={PRIMARY_BTN}
               disabled={!reservationForm.staffId && !staff[0]?.id}
               onClick={async () => {
                 try {
                   const staffIdToUse = reservationForm.staffId || staff[0]?.id;
-                  if (!staffIdToUse) { toast.error("Please select a staff member"); return; }
+                  if (!staffIdToUse) { toast.error(tr("calendar.pleaseSelectAStaffMember")); return; }
                   await createTimeOff({
                     businessId,
                     staffId: Number(staffIdToUse),
@@ -3455,15 +3800,15 @@ export default function CalendarPage() {
                     isApproved: true,
                     reason: reservationForm.reason || "Reservation",
                   });
-                  toast.success("Time reservation saved successfully");
+                  toast.success(tr("calendar.timeReservationSavedSuccessfully"));
                   setIsAddReservationOpen(false);
                   setFinalSelection(null);
                 } catch {
-                  toast.error("Failed to save reservation");
+                  toast.error(tr("calendar.failedToSaveReservation"));
                 }
               }}
             >
-              SAVE
+              {tr("common.save")}
             </Button>
           </div>
         </SheetContent>
@@ -3491,23 +3836,24 @@ export default function CalendarPage() {
           setFinalSelection(null);
         }
       }}>
-        <SheetContent side="right" className="w-full sm:w-[500px] !max-w-none p-0 flex flex-col h-screen max-h-screen">
+        <SheetContent side="right" style={{ fontFamily: BRAND_FONT }} className={SHEET_FRAME}>
           {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-            <SheetTitle className="text-base font-semibold text-gray-900">Add Time Off</SheetTitle>
+          <div className={SHEET_HEAD}>
+            <SheetTitle className={SHEET_TITLE}>{tr("calendar.timeOff2")}</SheetTitle>
+            <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{tr("calendar.holidaySickDayOrA")}</p>
           </div>
 
           {/* Form Content */}
-          <div className="flex-1 p-4 space-y-4 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 md:px-6">
             {/* Staff Selection */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-700">Select Staff *</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.selectStaff")}</Label>
               <Select
                 value={timeOffForm.staffId}
                 onValueChange={(value) => setTimeOffForm(prev => ({ ...prev, staffId: value }))}
               >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Select staff member" />
+                <SelectTrigger className={FIELD}>
+                  <SelectValue placeholder={tr("common.selectStaffMember")} />
                 </SelectTrigger>
                 <SelectContent>
                   {staff.map((s) => (
@@ -3521,7 +3867,7 @@ export default function CalendarPage() {
 
             {/* Full Day / Hours Selection */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-700">Duration</Label>
+              <Label className={FIELD_LABEL}>{tr("common.duration")}</Label>
               <div className="flex items-center gap-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -3543,14 +3889,14 @@ export default function CalendarPage() {
                     }}
                   />
                   <Label htmlFor="full-day" className="text-sm font-normal cursor-pointer">
-                    Full Day
+                    {tr("calendar.fullDay")}
                   </Label>
                 </div>
               </div>
               {/* Show selected time info when opened from calendar selection */}
               {!timeOffForm.isFullDay && timeOffForm.startTime && timeOffForm.endTime && (
-                <div className="text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded px-3 py-2">
-                  <span className="font-medium">Selected time:</span> {timeOffForm.startTime} - {timeOffForm.endTime}
+                <div className="rounded-xl bg-[rgb(var(--reg-brand)/0.08)] px-3 py-2 text-sm text-[rgb(var(--reg-ink)/0.8)]">
+                  <span className="font-medium">{tr("calendar.selectedTime2")}</span> {timeOffForm.startTime} - {timeOffForm.endTime}
                 </div>
               )}
             </div>
@@ -3558,21 +3904,21 @@ export default function CalendarPage() {
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-700">Start Date *</Label>
+                <Label className={FIELD_LABEL}>{tr("calendar.startDate")}</Label>
                 <Input
                   type="date"
                   value={timeOffForm.startDate}
                   onChange={(e) => setTimeOffForm(prev => ({ ...prev, startDate: e.target.value }))}
-                  className="h-9 text-sm"
+                  className={FIELD}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-700">End Date *</Label>
+                <Label className={FIELD_LABEL}>{tr("calendar.endDate")}</Label>
                 <Input
                   type="date"
                   value={timeOffForm.endDate}
                   onChange={(e) => setTimeOffForm(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="h-9 text-sm"
+                  className={FIELD}
                   min={timeOffForm.startDate}
                 />
               </div>
@@ -3591,18 +3937,18 @@ export default function CalendarPage() {
               return (
                 <div className="space-y-3">
                   {!dayIsEnabled && (
-                    <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-                      Business is closed on this day. Please select a different date.
+                    <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200">
+                      {tr("calendar.businessIsClosedOnThis")}
                     </div>
                   )}
                   {dayIsEnabled && (
-                    <div className="text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded px-3 py-2">
-                      Business hours: {minTime} - {maxTime}
+                    <div className="rounded-xl bg-[rgb(var(--reg-brand)/0.08)] px-3 py-2 text-sm text-[rgb(var(--reg-ink)/0.8)]">
+                      {tr("calendar.businessHours", { minTime, maxTime })}
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-gray-700">Start Time *</Label>
+                      <Label className={FIELD_LABEL}>{tr("calendar.startTime2")}</Label>
                       <Input
                         type="time"
                         value={timeOffForm.startTime}
@@ -3614,18 +3960,18 @@ export default function CalendarPage() {
                           if (dayIsEnabled && newStartTime) {
                             const startHour = parseInt(newStartTime.split(':')[0]);
                             if (startHour < dayStartHour || startHour >= dayEndHour) {
-                              toast.error(`Start time must be within business hours (${minTime} - ${maxTime})`);
+                              toast.error(tr("calendar.startTimeMustBeWithin", { minTime, maxTime }));
                             }
                           }
                         }}
                         min={minTime}
                         max={maxTime}
-                        className="h-9 text-sm"
+                        className={FIELD}
                         disabled={!dayIsEnabled}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-gray-700">End Time *</Label>
+                      <Label className={FIELD_LABEL}>{tr("calendar.endTime2")}</Label>
                       <Input
                         type="time"
                         value={timeOffForm.endTime}
@@ -3637,13 +3983,13 @@ export default function CalendarPage() {
                           if (dayIsEnabled && newEndTime) {
                             const endHour = parseInt(newEndTime.split(':')[0]);
                             if (endHour <= dayStartHour || endHour > dayEndHour) {
-                              toast.error(`End time must be within business hours (${minTime} - ${maxTime})`);
+                              toast.error(tr("calendar.endTimeMustBeWithin", { minTime, maxTime }));
                             }
                           }
                         }}
                         min={minTime}
                         max={maxTime}
-                        className="h-9 text-sm"
+                        className={FIELD}
                         disabled={!dayIsEnabled}
                       />
                     </div>
@@ -3661,7 +4007,7 @@ export default function CalendarPage() {
                   onCheckedChange={(checked) => setTimeOffForm(prev => ({ ...prev, isRecurring: checked === true }))}
                 />
                 <Label htmlFor="recurring" className="text-sm font-normal cursor-pointer">
-                  Repeat
+                  {tr("calendar.repeat")}
                 </Label>
               </div>
               {timeOffForm.isRecurring && (
@@ -3670,23 +4016,23 @@ export default function CalendarPage() {
                     value={timeOffForm.recurrencePattern}
                     onValueChange={(value) => setTimeOffForm(prev => ({ ...prev, recurrencePattern: value }))}
                   >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Select pattern" />
+                    <SelectTrigger className={FIELD}>
+                      <SelectValue placeholder={tr("calendar.selectPattern")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="DAILY">Daily</SelectItem>
-                      <SelectItem value="WEEKLY">Weekly</SelectItem>
-                      <SelectItem value="MONTHLY">Monthly</SelectItem>
-                      <SelectItem value="YEARLY">Yearly</SelectItem>
+                      <SelectItem value="DAILY">{tr("common.daily")}</SelectItem>
+                      <SelectItem value="WEEKLY">{tr("calendar.weekly")}</SelectItem>
+                      <SelectItem value="MONTHLY">{tr("calendar.monthly")}</SelectItem>
+                      <SelectItem value="YEARLY">{tr("calendar.yearly")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <div className="space-y-2">
-                    <Label className="text-xs font-medium text-gray-700">Repeat Until</Label>
+                    <Label className={FIELD_LABEL}>{tr("calendar.repeatUntil")}</Label>
                     <Input
                       type="date"
                       value={timeOffForm.recurrenceEndDate}
                       onChange={(e) => setTimeOffForm(prev => ({ ...prev, recurrenceEndDate: e.target.value }))}
-                      className="h-9 text-sm"
+                      className={FIELD}
                       min={timeOffForm.endDate}
                     />
                   </div>
@@ -3696,11 +4042,11 @@ export default function CalendarPage() {
 
             {/* Reason */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-700">Reason *</Label>
+              <Label className={FIELD_LABEL}>{tr("calendar.reason2")}</Label>
               <Textarea
                 value={timeOffForm.reason}
                 onChange={(e) => setTimeOffForm(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Enter reason for time off..."
+                placeholder={tr("calendar.enterReasonForTimeOff")}
                 className="text-sm min-h-[80px]"
               />
             </div>
@@ -3714,33 +4060,33 @@ export default function CalendarPage() {
                   onCheckedChange={(checked) => setTimeOffForm(prev => ({ ...prev, isApproved: checked === true }))}
                 />
                 <Label htmlFor="approved" className="text-sm font-normal cursor-pointer">
-                  Approved
+                  {tr("calendar.approved")}
                 </Label>
                 <HelpCircle className="h-4 w-4 text-gray-400" />
                 <span className="text-xs text-gray-500">
                   {timeOffForm.isApproved 
-                    ? "(No manager approval needed)" 
-                    : "(Requires manager approval)"}
+                    ? tr("calendar.noManagerApprovalNeeded") 
+                    : tr("calendar.requiresManagerApproval")}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="px-4 py-3 border-t border-gray-200 flex gap-2 shrink-0">
+          <div className={SHEET_FOOT}>
             <Button
               variant="outline"
-              className="flex-1 h-9 text-sm"
+              className={SECONDARY_BTN}
               onClick={() => setIsAddTimeOffOpen(false)}
             >
-              CANCEL
+              {tr("common.cancel")}
             </Button>
             <Button
-              className="flex-1 h-9 text-sm bg-gray-900 hover:bg-gray-800 text-white"
+              className={PRIMARY_BTN}
               disabled={!timeOffForm.staffId || !timeOffForm.startDate || !timeOffForm.endDate || !timeOffForm.reason}
               onClick={async () => {
                 if (!timeOffForm.staffId || !timeOffForm.startDate || !timeOffForm.endDate || !timeOffForm.reason) {
-                  toast.error("Please fill in all required fields");
+                  toast.error(tr("common.pleaseFillInAllRequired"));
                   return;
                 }
 
@@ -3750,7 +4096,7 @@ export default function CalendarPage() {
                 
                 // If day is disabled, reject time off
                 if (!timeOffDayEnabled) {
-                  toast.error("Cannot create time off on a day when the business is closed");
+                  toast.error(tr("calendar.cannotCreateTimeOffOn"));
                   return;
                 }
                 
@@ -3763,19 +4109,19 @@ export default function CalendarPage() {
                   
                   // Check if start time is before business hours
                   if (startHour < timeOffDayStartHour || (startHour === timeOffDayStartHour && startMinute < 0)) {
-                    toast.error(`Start time must be within business hours (${timeOffDayStartHour.toString().padStart(2, "0")}:00 - ${timeOffDayEndHour.toString().padStart(2, "0")}:00)`);
+                    toast.error(tr("calendar.startTimeMustBeWithin2", { value: timeOffDayStartHour.toString().padStart(2, "0"), value2: timeOffDayEndHour.toString().padStart(2, "0") }));
                     return;
                   }
                   
                   // Check if end time is after business hours
                   if (endHour > timeOffDayEndHour || (endHour === timeOffDayEndHour && endMinute > 0)) {
-                    toast.error(`End time must be within business hours (${timeOffDayStartHour.toString().padStart(2, "0")}:00 - ${timeOffDayEndHour.toString().padStart(2, "0")}:00)`);
+                    toast.error(tr("calendar.endTimeMustBeWithin2", { value: timeOffDayStartHour.toString().padStart(2, "0"), value2: timeOffDayEndHour.toString().padStart(2, "0") }));
                     return;
                   }
                   
                   // Check if start time is after end time
                   if (startHour > endHour || (startHour === endHour && startMinute >= endMinute)) {
-                    toast.error("Start time must be before end time");
+                    toast.error(tr("calendar.startTimeMustBeBefore"));
                     return;
                   }
                 }
@@ -3805,7 +4151,7 @@ export default function CalendarPage() {
                 );
                 
                 if (hasTimeOffConflictResult) {
-                  toast.error("This time off conflicts with an existing time off for this staff member. Please choose a different time.");
+                  toast.error(tr("calendar.thisTimeOffConflictsWith"));
                   return;
                 }
                 
@@ -3868,7 +4214,7 @@ export default function CalendarPage() {
                 }
               }}
             >
-              SAVE
+              {tr("common.save")}
             </Button>
           </div>
         </SheetContent>
@@ -3883,27 +4229,27 @@ export default function CalendarPage() {
       }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Appointment Conflict Detected</DialogTitle>
+            <DialogTitle>{tr("calendar.appointmentConflictDetected")}</DialogTitle>
             <DialogDescription>
-              This time off conflicts with an existing appointment for this staff member.
+              {tr("calendar.thisTimeOffConflictsWith2")}
               <br />
               <br />
               {pendingTimeOffData && (
                 <>
-                  <strong>Time off:</strong> {pendingTimeOffData.startTime} - {pendingTimeOffData.endTime}
+                  <strong>{tr("calendar.timeOff4")}</strong> {pendingTimeOffData.startTime} - {pendingTimeOffData.endTime}
                   <br />
-                  <strong>Date:</strong> {format(parse(pendingTimeOffData.startDate, 'yyyy-MM-dd', new Date()), 'MMM dd, yyyy')}
-                  {pendingTimeOffData.isFullDay && <span> (Full Day)</span>}
+                  <strong>{tr("calendar.date")}</strong> {format(parse(pendingTimeOffData.startDate, 'yyyy-MM-dd', new Date()), 'MMM dd, yyyy')}
+                  {pendingTimeOffData.isFullDay && <span>{" "}{tr("calendar.fullDay2")}</span>}
                   <br />
-                  <strong>Reason:</strong> {pendingTimeOffData.reason}
+                  <strong>{tr("calendar.reason3")}</strong> {pendingTimeOffData.reason}
                 </>
               )}
               <br />
               <br />
-              <strong>Note:</strong> Time offs and appointments can overlap. They will be displayed side-by-side in the calendar.
+              <strong>{tr("calendar.note")}</strong>{" "}{tr("calendar.timeOffsAndAppointmentsCan")}
               <br />
               <br />
-              Do you want to proceed and create this time off?
+              {tr("calendar.doYouWantToProceed3")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 pt-4">
@@ -3915,7 +4261,7 @@ export default function CalendarPage() {
                 setPendingTimeOffData(null);
               }}
             >
-              Cancel
+              {tr("common.cancel")}
             </Button>
             <Button
               className="flex-1 bg-gray-600 hover:bg-gray-700"
@@ -3957,7 +4303,7 @@ export default function CalendarPage() {
                 }
               }}
             >
-              Create Anyway
+              {tr("calendar.createAnyway")}
             </Button>
           </div>
         </DialogContent>

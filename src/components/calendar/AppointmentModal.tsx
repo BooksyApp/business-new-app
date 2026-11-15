@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { currencySymbol, formatPrice } from "@/lib/currency";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { categoryTint } from "@/lib/serviceCategoryColor";
+import { appointmentStatusStyle } from "@/lib/appointmentStatus";
+import "@/components/auth/auth-tokens.css";
 import { Button } from "@/components/ui/button";
 import { RefundDialog } from "@/components/money/RefundDialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, CreditCard, Edit, Undo2, UserX, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, CreditCard, Edit, TriangleAlert, Undo2, UserX, XCircle } from "lucide-react";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -15,7 +18,8 @@ import { appointmentService, type Appointment as ApiAppointment } from "@/servic
 import { clientService, type Client } from "@/services/clientService";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parse } from "date-fns";
+import { parse } from "date-fns";
+import { format } from "@/i18n/dateFns";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -24,6 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { t as tr } from "@/i18n";
 
 interface AppointmentModalProps {
   appointment: Appointment | null;
@@ -75,45 +80,68 @@ export function AppointmentModal({
     if (!appointment?.apiId || !fullAppointment) return;
     setSavingClient(true);
     try {
-      const updated = await appointmentService.updateAppointment(appointment.apiId, {
-        businessId: fullAppointment.businessId,
-        staffId: fullAppointment.staffId,
-        serviceId: fullAppointment.serviceId,
-        appointmentDate: fullAppointment.appointmentDate,
-        startTime: fullAppointment.startTime,
-        endTime: fullAppointment.endTime,
+      const who = {
         clientId: client.id,
         clientName: `${client.firstName} ${client.lastName || ""}`.trim(),
         clientPhone: client.phone,
         clientEmail: client.email,
-        notes: fullAppointment.notes,
-        price: fullAppointment.price,
-      } as never);
-      setFullAppointment(updated);
+      };
+      // A visit belongs to one client: change it on every service of the visit.
+      const lines = appointment.visitMates && appointment.visitMates.length > 1
+        ? appointment.visitMates.map((m) => ({
+            id: m.id, staffId: Number(m.staffId), serviceId: Number(m.serviceId),
+            startTime: m.startTime, endTime: m.endTime, price: m.price,
+          }))
+        : [{ id: appointment.apiId, staffId: fullAppointment.staffId, serviceId: fullAppointment.serviceId,
+             startTime: fullAppointment.startTime, endTime: fullAppointment.endTime, price: fullAppointment.price }];
+      let updated: ApiAppointment | null = null;
+      for (const l of lines) {
+        const res = await appointmentService.updateAppointment(l.id, {
+          businessId: fullAppointment.businessId,
+          staffId: l.staffId,
+          serviceId: l.serviceId,
+          appointmentDate: fullAppointment.appointmentDate,
+          startTime: l.startTime,
+          endTime: l.endTime,
+          ...who,
+          notes: fullAppointment.notes,
+          price: l.price,
+        } as never);
+        if (l.id === appointment.apiId) updated = res;
+      }
+      if (updated) setFullAppointment(updated);
       setClientPickerOpen(false);
-      toast.success("Client updated");
+      toast.success(tr("calendar.clientUpdated"));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not change the client");
+      toast.error(e instanceof Error ? e.message : tr("calendar.couldNotChangeTheClient"));
     } finally {
       setSavingClient(false);
     }
   };
 
+  /** Every appointment of this visit (just this one for an ordinary booking). */
+  const visitIds = (): string[] =>
+    appointment?.visitMates && appointment.visitMates.length > 1
+      ? appointment.visitMates.filter((m) => (m.status || "").toUpperCase() !== "CANCELLED").map((m) => m.id)
+      : appointment?.apiId ? [appointment.apiId] : [];
+  /** null = the whole visit; an id = just that one service. */
+  const [cancelOnly, setCancelOnly] = useState<string | null>(null);
+
   const runLifecycle = async (action: "confirm" | "no-show") => {
     if (!appointment?.apiId) return;
     setLifecycleBusy(true);
     try {
-      if (action === "confirm") {
-        await appointmentService.confirmAppointment(appointment.apiId);
-        toast.success("Appointment confirmed");
-      } else {
-        await appointmentService.markNoShow(appointment.apiId);
-        toast.success("Marked as no-show");
+      // A visit with several services is acted on as one: every appointment of it.
+      const ids = visitIds();
+      for (const id of ids) {
+        if (action === "confirm") await appointmentService.confirmAppointment(id);
+        else await appointmentService.markNoShow(id);
       }
+      toast.success(action === "confirm" ? tr("calendar.appointmentConfirmed") : tr("calendar.markedAsNoShow"));
       onCancelled?.();   // the same refresh callback the cancel path uses
       onClose();
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Could not update the appointment");
+      toast.error(error instanceof Error ? error.message : tr("calendar.couldNotUpdateTheAppointment"));
     } finally {
       setLifecycleBusy(false);
     }
@@ -129,7 +157,7 @@ export function AppointmentModal({
         })
         .catch((error) => {
           // Error fetching appointment details - handled by toast
-          toast.error("Failed to load appointment details");
+          toast.error(tr("calendar.failedToLoadAppointmentDetails"));
           // Fallback to the appointment data we have
           setFullAppointment(null);
         })
@@ -172,7 +200,7 @@ export function AppointmentModal({
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
   const isFutureVisit = appointmentDate > format(new Date(), 'yyyy-MM-dd');
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
-  const serviceName = appointmentData.serviceName || appointment.service;
+  const repServiceName = appointmentData.serviceName || appointment.service;
   // The API sends "10:00:00"; a receptionist reads "10:00".
   const startTime = (appointmentData.startTime || appointment.startTime)?.slice(0, 5);
   const endTime = (appointmentData.endTime || appointment.endTime)?.slice(0, 5);
@@ -188,14 +216,28 @@ export function AppointmentModal({
   const selectedClient = clients.find((c) => c.id === appointmentData.clientId);
 
   // Colour carries the state, so the panel reads at a glance instead of being scanned.
-  const statusTone: Record<string, { band: string; chip: string; label: string }> = {
-    PENDING: { band: "bg-amber-500", chip: "bg-amber-100 text-amber-900", label: "Awaiting confirmation" },
-    CONFIRMED: { band: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-900", label: "Confirmed" },
-    COMPLETED: { band: "bg-slate-500", chip: "bg-slate-200 text-slate-900", label: "Completed" },
-    CANCELLED: { band: "bg-red-500", chip: "bg-red-100 text-red-900", label: "Cancelled" },
-    NO_SHOW: { band: "bg-rose-600", chip: "bg-rose-100 text-rose-900", label: "No-show" },
+  // Same palette as the calendar blocks (lib/appointmentStatus).
+  const tone = appointmentStatusStyle(status, "PENDING");
+  // Category colour: the same tint as the calendar block. Status stays in the chip.
+  const tint = categoryTint(appointment.categoryId, appointment.serviceId ?? appointmentData.serviceId);
+  // A multi-service visit is one appointment per service; list them all with the total.
+  const visitMates = appointment.visitMates && appointment.visitMates.length > 1 ? appointment.visitMates : null;
+  const isGone = (m: { status?: string }) => (m.status || "").toUpperCase() === "CANCELLED";
+  // Totals, times and counts are about what is still booked; cancelled services stay listed.
+  const liveMates = visitMates ? visitMates.filter((m) => !isGone(m)) : null;
+  const visitTotal = liveMates ? liveMates.reduce((n, m) => n + Number(m.price ?? 0), 0) : 0;
+  const mateMinutes = (m: { startTime: string; endTime: string }) => {
+    const mins = (t: string) => { const [h, mm] = String(t).split(":").map(Number); return h * 60 + mm; };
+    const d = mins(m.endTime) - mins(m.startTime);
+    return Number.isFinite(d) && d > 0 ? d : null;
   };
-  const tone = statusTone[status] ?? statusTone.PENDING;
+  // The header speaks for the whole visit, not for its first service.
+  const serviceName = liveMates ? liveMates.map((m) => m.service).join(" + ") : repServiceName;
+  const visitStaff = liveMates ? [...new Set(liveMates.map((m) => m.staffName).filter(Boolean))] as string[] : [];
+  const headStart = liveMates ? liveMates.map((m) => m.startTime.slice(0, 5)).sort()[0] : startTime;
+  const headEnd = liveMates ? liveMates.map((m) => m.endTime.slice(0, 5)).sort().slice(-1)[0] : endTime;
+  const headMinutes = liveMates ? liveMates.reduce((n, m) => n + (mateMinutes(m) ?? 0), 0) : durationMinutes;
+  const shownAnswers = visitMates ? appointment.answers : appointmentData.answers;
   const paid = paymentStatus === "PAID" || paymentStatus === "REFUNDED";
   /** Nothing can be done to it any more: the money is in, or it was called off. */
   const settled = paid || status === "CANCELLED";
@@ -212,26 +254,27 @@ export function AppointmentModal({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="!max-w-none w-[620px] p-0 flex flex-col h-screen max-h-screen gap-0">
-        <div className={`h-1.5 w-full shrink-0 ${tone.band}`} />
+      <SheetContent side="right" style={{ fontFamily: '"Plus Jakarta Sans", Inter, system-ui, sans-serif' }} className="!max-w-full w-full sm:w-[480px] p-0 flex flex-col h-[100dvh] max-h-[100dvh] gap-0 border-0 bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))] sm:border-l sm:border-[rgb(var(--reg-line))]">
+        <SheetTitle className="sr-only">{tr("calendar.appointmentDetails")}</SheetTitle>
+        <div className="h-1.5 w-full shrink-0" style={{ backgroundColor: tint.accent }} />
 
-        <div className="flex items-center justify-between px-5 py-3 shrink-0">
+        <div className="flex shrink-0 items-center justify-between px-5 pb-3 pr-14 pt-5 md:px-6">
           <div className="flex items-center gap-2">
-            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone.chip}`}>{tone.label}</span>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone.chip}`}>{tone.label}</span>
             <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                paid ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-slate-700"
+              className={`rounded-full px-3 py-1 text-xs font-bold ${
+                paid ? "bg-emerald-100 text-emerald-900" : "bg-white text-[rgb(var(--reg-ink)/0.7)] ring-1 ring-[rgb(var(--reg-line))]"
               }`}
             >
-              {paid ? "Paid" : "Unpaid"}
+              {paid ? tr("common.paid") : tr("calendar.unpaid")}
             </span>
           </div>
-          {loading && <span className="text-xs text-muted-foreground">Loading…</span>}
+          {loading && <span className="text-xs text-muted-foreground">{tr("common.loading2")}</span>}
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 pb-5 min-h-0">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-5 md:px-6">
           {/* Who */}
-          <div className="rounded-xl border p-4">
+          <div className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line))]">
             <div className="flex items-start gap-3">
               <div
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${clientColorClasses(
@@ -244,16 +287,16 @@ export function AppointmentModal({
                 <p className="truncate text-base font-semibold">{clientName}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {visits != null && visits <= 1 && (
-                    <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">New client</Badge>
+                    <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">{tr("calendar.newClient")}</Badge>
                   )}
                   {visits != null && visits >= 5 && (
                     <Badge className="bg-rose-600 text-[10px] text-white hover:bg-rose-600">
-                      Regular · {visits} visits
+                      {tr("calendar.regularVisits", { visits })}
                     </Badge>
                   )}
                   {requested && (
                     <Badge className="bg-amber-500 text-[10px] text-white hover:bg-amber-500">
-                      Asked for {staffName}
+                      {tr("calendar.askedFor", { staffName })}
                     </Badge>
                   )}
                 </div>
@@ -265,14 +308,14 @@ export function AppointmentModal({
               <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="sm" disabled={savingClient} className="h-7 shrink-0 text-xs">
-                    Change
+                    {tr("calendar.change")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[380px] p-0" align="end">
                   <Command>
-                    <CommandInput placeholder="Search clients..." className="text-xs" />
+                    <CommandInput placeholder={tr("calendar.searchClients")} className="text-xs" />
                     <CommandList>
-                      <CommandEmpty>No client found.</CommandEmpty>
+                      <CommandEmpty>{tr("calendar.noClientFound")}</CommandEmpty>
                       <CommandGroup>
                         {clients.map((client) => (
                           <CommandItem
@@ -298,21 +341,45 @@ export function AppointmentModal({
             </div>
           </div>
 
+          {/* The customer's answers to what the salon asked when booking */}
+          {(shownAnswers?.length ?? 0) > 0 && (
+            <div className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line))]">
+              <p className="text-xs font-bold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{tr("calendar.answersFromTheClient")}</p>
+              <dl className="mt-2 space-y-2">
+                {shownAnswers!.map((a, i) => (
+                  <div key={i}>
+                    <dt className="text-xs text-muted-foreground">{a.question}</dt>
+                    <dd className="text-sm font-medium">{a.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
           {/* What, when, how much */}
-          <div className="rounded-xl border p-4">
+          <div className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line))]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-semibold">{serviceName}</p>
-                <p className="mt-0.5 text-sm text-muted-foreground">with {staffName}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {tr("calendar.with", { value: liveMates ? `${tr("calendar.serviceCount", { count: liveMates.length })} · ` : "", value2: visitMates && visitStaff.length > 0 ? visitStaff.join(", ") : staffName })}
+                </p>
               </div>
               <p className="shrink-0 text-right">
-                {depositPaid > 0 ? (
+                {visitMates ? (
+                  <>
+                    <span className="block text-lg font-semibold">
+                      {visitTotal} {currencySymbol()}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">{tr("calendar.total")}</span>
+                  </>
+                ) : depositPaid > 0 ? (
                   <>
                     <span className="block text-lg font-semibold">
                       {dueNow} {currencySymbol()}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {price} {currencySymbol()} less {depositPaid} deposit
+                      {tr("calendar.lessDeposit", { price, value: currencySymbol(), depositPaid })}
                     </span>
                   </>
                 ) : (
@@ -322,50 +389,111 @@ export function AppointmentModal({
                 )}
               </p>
             </div>
+            {visitMates && (
+              <div className="mt-3 rounded-lg px-3 py-2" style={{ backgroundColor: tint.fill, color: tint.ink }}>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: tint.muted }}>
+                  {tr("calendar.confirmNoShowAndCancel", { value: tr("calendar.thisVisit", { services: tr("calendar.serviceCount", { count: liveMates!.length }) }), value2: liveMates!.length < visitMates.length ? tr("calendar.cancelledCount", { count: visitMates.length - liveMates!.length }) : "" })}
+                </p>
+                <ul className="mt-1 divide-y divide-white/70">
+                  {visitMates.map((m) => (
+                    <li key={m.id} className={`py-1.5 text-sm ${m.id === appointment.id && !isGone(m) ? "font-semibold" : ""} ${isGone(m) ? "opacity-70" : ""}`}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className={`min-w-0 truncate ${isGone(m) ? "line-through" : ""}`}>
+                        {m.service}
+                        {m.staffName ? <span className="font-normal" style={{ color: tint.muted }}> · {m.staffName}</span> : null}
+                      </span>
+                      <span className="shrink-0 text-xs" style={{ color: tint.muted }}>
+                        {m.startTime.slice(0, 5)}–{m.endTime.slice(0, 5)}
+                        {mateMinutes(m) != null ? tr("calendar.min", { value: mateMinutes(m) }) : ""}
+                        {m.price != null ? ` · ${m.price} ${currencySymbol()}` : ""}
+                        {!settled && !isGone(m) && (
+                          <button
+                            type="button"
+                            className="ml-2 font-semibold text-red-700 underline-offset-2 hover:underline"
+                            onClick={() => { setCancelOnly(m.id); setCancelDialogOpen(true); }}
+                          >
+                            {tr("common.cancel")}
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                    {isGone(m) && (
+                      <p className="mt-0.5 text-xs" style={{ color: tint.muted }}>
+                        {tr("calendar.cancelled", { value: m.cancelledBy === "SALON" ? tr("calendar.bySalon") : m.cancelledBy === "CUSTOMER" ? tr("calendar.byClient") : "", value2: m.cancellationNote ? ` · “${m.cancellationNote}”` : "" })}
+                      </p>
+                    )}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 flex justify-between border-t border-white pt-1.5 text-sm font-bold">
+                  <span>{tr("common.total")}</span>
+                  <span>{visitTotal} {currencySymbol()}</span>
+                </p>
+              </div>
+            )}
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
               <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="font-medium">
                 {appointmentDate ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM") : "—"}
               </span>
               <span className="text-muted-foreground">
-                {startTime}–{endTime}
-                {durationMinutes != null ? ` · ${durationMinutes} min` : ""}
+                {headStart}–{headEnd}
+                {headMinutes != null && headMinutes > 0 ? tr("calendar.min2", { headMinutes, value: visitMates ? tr("calendar.inTotal") : "" }) : ""}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Paying with</span>
+              <span className="text-muted-foreground">{tr("calendar.payingWith")}</span>
               <span className="font-medium">
                 {appointmentData.paymentPreference === "GIFT_CARD"
-                  ? `Gift card${appointmentData.giftCardCode ? ` ${appointmentData.giftCardCode}` : ""}`
+                  ? tr("calendar.giftCard", { value: appointmentData.giftCardCode ? ` ${appointmentData.giftCardCode}` : "" })
                   : appointmentData.paymentPreference === "WALLET"
-                    ? "Their wallet"
-                    : "At the salon"}
+                    ? tr("calendar.theirWallet")
+                    : tr("calendar.atTheSalon")}
               </span>
             </div>
             {pointsPaid > 0 && (
               <div className="mt-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Paid with points</span>
+                <span className="text-muted-foreground">{tr("calendar.paidWithPoints")}</span>
                 <span className="font-medium text-emerald-700">{formatPrice(pointsPaid)}</span>
               </div>
             )}
             {Number(appointmentData.prepaidAmount ?? 0) > 0 && (
               <div className="mt-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Paid online</span>
+                <span className="text-muted-foreground">{tr("calendar.paidOnline")}</span>
                 <span className="font-medium text-emerald-700">
-                  {formatPrice(Number(appointmentData.prepaidAmount))} from their gift card
+                  {tr("calendar.fromTheirGiftCard", { value: formatPrice(Number(appointmentData.prepaidAmount)) })}
                 </span>
               </div>
             )}
             <div className="mt-1 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Booking</span>
+              <span className="text-muted-foreground">{tr("calendar.booking")}</span>
               <span className="font-medium">#{appointment.apiId ? appointment.apiId.slice(0, 8).toUpperCase() : appointment.id}</span>
             </div>
           </div>
 
+          {/* Forced past a conflict: who confirmed it and why. */}
+          {appointmentData.overrideApplied && (
+            <div data-testid="override-details" className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-900">
+                <TriangleAlert size={14} aria-hidden /> {tr("bookingConflict.markerTitle")}
+              </p>
+              <p className="mt-1 text-sm text-amber-900">
+                {appointmentData.overrideByName
+                  ? tr("bookingConflict.overrideBy", { name: appointmentData.overrideByName })
+                  : tr("bookingConflict.overrideByUnknown")}
+              </p>
+              {appointmentData.overrideReason && (
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-amber-900">
+                  {tr("bookingConflict.overrideReason", { reason: appointmentData.overrideReason })}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Only when there is something to read. An empty grey box is noise. */}
           {customerNote && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs font-medium text-amber-900">Note from the client</p>
+              <p className="text-xs font-medium text-amber-900">{tr("calendar.noteFromTheClient")}</p>
               <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">{customerNote}</p>
             </div>
           )}
@@ -375,15 +503,15 @@ export function AppointmentModal({
             A paid appointment is settled: cancelling, editing or marking a no-show after
             the money is taken would leave the till and the diary disagreeing. A cancelled
             one is over, so there is nothing to do to it either. */}
-        <div className="space-y-2 border-t px-5 py-4 shrink-0">
+        <div className="shrink-0 space-y-2 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/90 px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:px-6">
           {/* Computed from your own cancellation window when the client cancelled. Nothing
               collects it automatically — it is here so you know to ask. */}
           {cancellationFee > 0 && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <span className="font-semibold">
-                Late cancellation fee: {cancellationFee} {currencySymbol()}
+                {tr("calendar.lateCancellationFee", { cancellationFee, value: currencySymbol() })}
               </span>
-              <span className="text-amber-800">— cancelled inside your notice window</span>
+              <span className="text-amber-800">{tr("calendar.cancelledInsideYourNoticeWindow")}</span>
             </div>
           )}
 
@@ -393,23 +521,23 @@ export function AppointmentModal({
               // one the salon let down, has to be given their money back, and the only way to
               // do it was the Stripe dashboard, where none of this is recorded.
               <div className="space-y-2">
-                <p className="text-center text-sm text-muted-foreground">Paid and settled.</p>
+                <p className="text-center text-sm text-muted-foreground">{tr("calendar.paidAndSettled")}</p>
                 {paymentStatus === "REFUNDED" ? (
-                  <p className="text-center text-sm text-muted-foreground">Already refunded.</p>
+                  <p className="text-center text-sm text-muted-foreground">{tr("calendar.alreadyRefunded")}</p>
                 ) : (
                   <Button
                     variant="outline"
-                    className="h-10 w-full gap-2 border-red-200 text-sm text-red-600 hover:bg-red-50"
+                    className="h-11 w-full gap-2 rounded-full border-red-200 text-sm font-semibold text-red-700 hover:bg-red-50"
                     onClick={() => setRefundOpen(true)}
                   >
                     <Undo2 className="h-4 w-4" />
-                    Refund
+                    {tr("calendar.refund")}
                   </Button>
                 )}
               </div>
             ) : (
               <p className="text-center text-sm text-muted-foreground">
-                This appointment was cancelled.
+                {tr("calendar.thisAppointmentWasCancelled")}
               </p>
             )
           ) : null}
@@ -417,22 +545,27 @@ export function AppointmentModal({
               too): it would show as completed to the customer before they have been. */}
           {!settled && !paid && isFutureVisit && (
             <p className="rounded-md bg-muted px-3 py-2 text-center text-sm text-muted-foreground">
-              Payment can be taken on the day of the visit. Until then you can change the time or cancel.
+              {tr("calendar.paymentCanBeTakenOn")}
             </p>
           )}
           {!settled && !paid && !isFutureVisit && (
             <Button
-              className="h-11 w-full gap-2 text-sm"
+              className="h-[52px] w-full gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] text-base font-semibold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110"
               onClick={() => {
-                // Straight to the till with this booking already in the basket.
-                navigate(getPath("sales"), { state: { appointmentId: appointment.apiId } });
+                // Straight to the till with the whole visit already in the basket: one ticket,
+                // one line per service still booked.
+                navigate(getPath("sales"), { state: { appointmentId: appointment.apiId, appointmentIds: visitIds() } });
                 onClose();
               }}
             >
               <CreditCard className="h-4 w-4" />
               {bookedPromo
-                ? `Take payment · ${bookedPromo} applied`
-                : `Take payment · ${dueNow} ${currencySymbol()}`}
+                ? tr("calendar.takePaymentApplied", { bookedPromo })
+                : liveMates && liveMates.length > 1
+                  ? tr("calendar.checkOutVisit", { count: liveMates.length, total: visitTotal, value: currencySymbol() })
+                  : visitMates
+                  ? tr("calendar.takePayment", { repServiceName, dueNow, value: currencySymbol() })
+                  : tr("calendar.takePayment2", { dueNow, value: currencySymbol() })}
             </Button>
           )}
           {!settled && (
@@ -440,35 +573,35 @@ export function AppointmentModal({
             {status === "PENDING" ? (
               <Button
                 variant="outline"
-                className="h-9 gap-1.5 text-xs"
+                className="h-11 gap-1.5 rounded-full text-sm font-semibold"
                 disabled={lifecycleBusy}
                 onClick={() => void runLifecycle("confirm")}
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Confirm
+                {tr("calendar.confirm")}
               </Button>
             ) : (
-              <Button variant="outline" className="h-9 gap-1.5 text-xs" onClick={() => onEdit(appointment)}>
+              <Button variant="outline" className="h-11 gap-1.5 rounded-full text-sm font-semibold" onClick={() => onEdit(appointment)}>
                 <Edit className="h-3.5 w-3.5" />
-                Edit
+                {tr("common.edit")}
               </Button>
             )}
             <Button
               variant="outline"
-              className="h-9 gap-1.5 text-xs"
+              className="h-11 gap-1.5 rounded-full text-sm font-semibold"
               disabled={lifecycleBusy || status === "NO_SHOW"}
               onClick={() => void runLifecycle("no-show")}
             >
               <UserX className="h-3.5 w-3.5" />
-              No-show
+              {tr("calendar.noShow")}
             </Button>
             <Button
               variant="outline"
-              className="h-9 gap-1.5 border-red-200 text-xs text-red-600 hover:bg-red-50"
-              onClick={() => setCancelDialogOpen(true)}
+              className="h-11 gap-1.5 rounded-full border-red-200 text-sm font-semibold text-red-700 hover:bg-red-50"
+              onClick={() => { setCancelOnly(null); setCancelDialogOpen(true); }}
             >
               <XCircle className="h-3.5 w-3.5" />
-              Cancel
+              {tr("common.cancel")}
             </Button>
           </div>
           )}
@@ -492,17 +625,21 @@ export function AppointmentModal({
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogTitle>{tr("calendar.cancelAppointment")}</DialogTitle>
             <DialogDescription>
-              Please provide a reason for cancelling this appointment.
+              {cancelOnly
+                ? tr("calendar.onlyThisServiceOfThe")
+                : visitIds().length > 1
+                  ? tr("calendar.thisCancelsTheWholeVisit", { count: visitIds().length })
+                  : tr("calendar.pleaseProvideAReasonFor")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="cancel-reason">Cancellation Reason *</Label>
+              <Label htmlFor="cancel-reason">{tr("calendar.cancellationReason")}</Label>
               <Textarea
                 id="cancel-reason"
-                placeholder="Enter reason for cancellation..."
+                placeholder={tr("calendar.enterReasonForCancellation")}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 className="min-h-[100px]"
@@ -516,26 +653,31 @@ export function AppointmentModal({
                   setCancelReason("");
                 }}
               >
-                Close
+                {tr("common.close")}
               </Button>
               <Button
                 variant="destructive"
                 onClick={async () => {
                   if (!cancelReason.trim()) {
-                    toast.error("Please provide a cancellation reason");
+                    toast.error(tr("calendar.pleaseProvideACancellationReason"));
                     return;
                   }
                   
                   if (appointment?.apiId) {
                     try {
-                      await appointmentService.cancelAppointment(appointment.apiId, cancelReason);
-                      toast.success("Appointment cancelled successfully");
+                      const ids = cancelOnly ? [cancelOnly] : visitIds();
+                      // The whole visit is ONE call, so the customer gets one message; a single
+                      // service of it is cancelled on its own and the rest stands.
+                      if (cancelOnly || ids.length <= 1) await appointmentService.cancelAppointment(cancelOnly ?? ids[0] ?? appointment.apiId, cancelReason);
+                      else await appointmentService.cancelAppointment(ids[0], cancelReason, true);
+                      toast.success(!cancelOnly && ids.length > 1 ? tr("calendar.visitCancelledServices", { count: ids.length }) : tr("calendar.appointmentCancelledSuccessfully"));
+                      setCancelOnly(null);
                       setCancelDialogOpen(false);
                       setCancelReason("");
                       onClose();
                       onCancelled?.();
                     } catch (error) {
-                      toast.error((error instanceof Error && error.message) || "Failed to cancel appointment");
+                      toast.error((error instanceof Error && error.message) || tr("calendar.failedToCancelAppointment"));
                     }
                   } else if (appointment?.id) {
                     onDelete(appointment.id);
@@ -545,7 +687,7 @@ export function AppointmentModal({
                 }}
                 disabled={!cancelReason.trim()}
               >
-                Cancel Appointment
+                {tr("calendar.cancelAppointment")}
               </Button>
             </div>
           </div>

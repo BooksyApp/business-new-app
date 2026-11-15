@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { appointmentService, type Appointment as ApiAppointment } from '@/services/appointmentService';
+import { appointmentService, BookingConflictDeclined, type Appointment as ApiAppointment } from '@/services/appointmentService';
 import { staffService, type Staff as ApiStaff } from '@/services/staffService';
 import { websocketService } from '@/services/websocketService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
-import { format, parse } from 'date-fns';
+import { parse } from 'date-fns';
+import { format } from '@/i18n/dateFns';
+import { t } from "@/i18n";
 
 // Frontend appointment type (compatible with AppointmentBlock)
 export interface Appointment {
@@ -25,6 +27,15 @@ export interface Appointment {
   // #30: drives which lifecycle actions the calendar modal offers.
   status?: string;
   clientId?: number;
+  serviceId?: number;
+  /** Shared by every service booked in one multi-service visit. */
+  visitId?: string | null;
+  answers?: { question: string; answer: string }[];
+  cancelledBy?: string | null;
+  cancellationNote?: string | null;
+  overrideApplied?: boolean;
+  overrideReason?: string | null;
+  overrideByName?: string | null;
 }
 
 // Frontend staff type
@@ -40,7 +51,7 @@ export interface Staff {
 const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment => {
   return {
     id: apiAppt.id.toString(),
-    clientName: apiAppt.clientName || 'Walk In Client',
+    clientName: apiAppt.clientName || t("sales.walkInClient"),
     service: apiAppt.serviceName || 'Service',
     startTime: apiAppt.startTime,
     endTime: apiAppt.endTime,
@@ -56,6 +67,14 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     notes: apiAppt.notes,
     price: apiAppt.price,
     status: apiAppt.status,   // #30
+    serviceId: apiAppt.serviceId,
+    visitId: apiAppt.visitId ?? null,
+    answers: apiAppt.answers,
+    cancelledBy: apiAppt.cancelledBy,
+    cancellationNote: apiAppt.cancellationNote,
+    overrideApplied: !!apiAppt.overrideApplied,
+    overrideReason: apiAppt.overrideReason,
+    overrideByName: apiAppt.overrideByName,
   };
 };
 
@@ -134,7 +153,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
 
   const loadAppointments = useCallback(async (targetDate: Date) => {
     if (!businessId) {
-      setError('Business ID is required');
+      setError(t("common.businessIdIsRequired"));
       setLoading(false);
       return;
     }
@@ -150,7 +169,8 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
 
       // Convert appointments and filter out cancelled ones
       const convertedAppointments = appointmentsData
-        .filter(apt => apt.status !== 'CANCELLED')
+        // A cancelled service of a multi-service visit stays: the visit is still one visit.
+        .filter(apt => apt.status !== 'CANCELLED' || !!apt.visitId)
         .map(apt => {
           const appointmentDate = parse(apt.appointmentDate, 'yyyy-MM-dd', new Date());
           return convertAppointment(apt, appointmentDate);
@@ -165,7 +185,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
       
       console.log(`✅ Loaded ${convertedAppointments.length} appointments for ${format(targetDate, 'yyyy-MM-dd')}`);
     } catch (err) {
-      const errorMessage = (err instanceof Error && err.message) || 'Failed to load appointments';
+      const errorMessage = (err instanceof Error && err.message) || t("hooks.failedToLoadAppointments");
       console.error('Failed to load appointments:', err);
       setError(errorMessage);
       
@@ -338,13 +358,15 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
       const appointmentDate = parse(created.appointmentDate, 'yyyy-MM-dd', new Date());
       const converted = convertAppointment(created, appointmentDate);
 
-      setAppointments(prev => [...prev, converted]);
+      // The live update for this booking can arrive before this response does; append only
+      // if it is not already there, or the calendar shows it twice (duplicate React keys).
+      setAppointments(prev => (prev.some(a => a.apiId === converted.apiId) ? prev : [...prev, converted]));
       // In batch/composite bookings (group, recurring, multi-service) the caller
       // shows a single summary toast, so per-item toasts are suppressed here.
-      if (!opts?.silent) toast.success('Appointment created successfully');
+      if (!opts?.silent) toast.success(t("hooks.appointmentCreatedSuccessfully"));
       return converted;
     } catch (err) {
-      if (!opts?.silent) toast.error((err instanceof Error && err.message) || 'Failed to create appointment');
+      if (!opts?.silent && !(err instanceof BookingConflictDeclined)) toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateAppointment"));
       throw err;
     }
   }, [businessId]);
@@ -369,10 +391,10 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
       const appointmentDate = parse(updated.appointmentDate, 'yyyy-MM-dd', new Date());
       const converted = convertAppointment(updated, appointmentDate);
       setAppointments(prev => prev.map(apt => apt.apiId === id ? converted : apt));
-      toast.success('Appointment updated successfully');
+      toast.success(t("hooks.appointmentUpdatedSuccessfully"));
       return converted;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to update appointment');
+      if (!(err instanceof BookingConflictDeclined)) toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateAppointment"));
       throw err;
     }
   }, [businessId]);
@@ -381,9 +403,9 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
     try {
       await appointmentService.deleteAppointment(id);
       setAppointments(prev => prev.filter(apt => apt.apiId !== id));
-      toast.success('Appointment cancelled successfully');
+      toast.success(t("hooks.appointmentCancelledSuccessfully"));
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || 'Failed to delete appointment');
+      toast.error((err instanceof Error && err.message) || t("hooks.failedToDeleteAppointment"));
       throw err;
     }
   }, []);
