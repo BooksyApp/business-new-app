@@ -553,6 +553,9 @@ const RegistrationPage = () => {
           }
           const owner = await staffService.createStaff(business.id, {
             name: `${formData.firstName} ${formData.lastName}`.trim() || formData.businessName,
+            // LR-03: the owner's own sign-in email links this staff row to their account
+            // (backend), so "my calendar" shows their bookings.
+            email: formData.email.trim() || undefined,
             phone: fullPhone || undefined,
             schedule: Object.keys(schedule).length > 0 ? schedule : undefined,
             inviteAndCreateAccount: false,
