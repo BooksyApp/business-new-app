@@ -469,7 +469,7 @@ export function MobileTopBar() {
       style={{ fontFamily: BRAND_FONT }}
       className="flex h-14 shrink-0 items-center gap-3 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas))] px-4 text-[rgb(var(--reg-ink))] md:hidden"
     >
-      <button type="button" onClick={() => setOpen(true)} aria-expanded={open} className="flex min-w-0 items-center gap-2.5" aria-label={t("layout.salonYourSalons", { businessName: m.businessName })}>
+      <button type="button" onClick={() => setOpen(true)} aria-expanded={open} className="flex h-11 min-w-0 items-center gap-2.5" aria-label={t("layout.salonYourSalons", { businessName: m.businessName })}>
         <SalonMark logo={m.businessLogo} mark={m.businessMark} className="h-8 w-8 rounded-lg" />
         <span className="truncate text-[15px] font-bold">{m.businessName}</span>
         <ChevronsUpDown size={16} className="shrink-0 text-[rgb(var(--reg-muted))]" />
