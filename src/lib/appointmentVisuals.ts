@@ -80,7 +80,7 @@ export function appointmentTags(input: {
 
   if (input.visits != null) {
     if (input.visits <= 1) {
-      tags.push({ Icon: Sparkles, label: t("utils.newClient"), className: "bg-emerald-600 text-white" });
+      tags.push({ Icon: Sparkles, label: t("utils.newClient"), className: "bg-[rgb(var(--reg-brand))] text-white" });
     } else if (input.visits >= 5) {
       tags.push({ Icon: Crown, label: t("utils.regularClient"), className: "bg-rose-600 text-white" });
     }

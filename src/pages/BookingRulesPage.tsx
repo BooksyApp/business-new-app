@@ -247,7 +247,7 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
                       ))}
                     </ul>
                   </>
-                ), "bg-emerald-50 text-emerald-700")}
+                ), "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}
 
                 {show("currency-tax") && section_(Receipt, t("bookingRules.currencyAndTax"), (
                   <div className="grid gap-4 sm:grid-cols-2">

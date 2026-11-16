@@ -668,7 +668,7 @@ export default function AddServicePage() {
                       onCheckedChange={(checked) =>
                         setSettingsData((prev) => ({ ...prev, allowSelfBooking: checked }))
                       }
-                      className="data-[state=checked]:bg-green-500"
+                     
                     />
                   </div>
 

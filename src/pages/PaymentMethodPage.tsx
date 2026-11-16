@@ -578,7 +578,7 @@ export default function PaymentMethodPage({
                       </button>
                     ))}
                 </div>
-                <div className={`mt-3 flex items-center justify-between rounded-xl px-3 py-2.5 ${paymentAmount - total < -0.005 ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800"}`}>
+                <div className={`mt-3 flex items-center justify-between rounded-xl px-3 py-2.5 ${paymentAmount - total < -0.005 ? "bg-rose-50 text-rose-800" : "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]"}`}>
                   <span className="text-sm font-semibold">{paymentAmount - total < -0.005 ? t("paymentMethod.stillToPay") : t("paymentMethod.changeToGive")}</span>
                   <span className="text-xl font-extrabold tabular-nums">{Math.abs(paymentAmount - total).toFixed(2)} {currencySymbol()}</span>
                 </div>
@@ -803,7 +803,7 @@ export default function PaymentMethodPage({
                         ? t("paymentMethod.alreadyPaidDepositGiftCard2")
                         : t("paymentMethod.depositAlreadyPaid")}
                 </span>
-                <span className="font-medium text-emerald-700">
+                <span className="font-medium text-[rgb(var(--reg-success))]">
                   -{depositCredit.toFixed(2)} {currencySymbol()}
                 </span>
               </div>
@@ -1044,7 +1044,7 @@ export default function PaymentMethodPage({
                   {parseFloat(tempPaymentAmount) > total && (
                     <div className="flex items-center justify-between text-sm pt-1 border-t border-[rgb(var(--reg-line)/0.8)]">
                       <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.return")}</span>
-                      <span className="font-medium text-green-600">{(parseFloat(tempPaymentAmount) - total).toFixed(2)} {currencySymbol()}</span>
+                      <span className="font-medium text-[rgb(var(--reg-success))]">{(parseFloat(tempPaymentAmount) - total).toFixed(2)} {currencySymbol()}</span>
                     </div>
                   )}
                   {parseFloat(tempPaymentAmount) < total && (
@@ -1261,7 +1261,7 @@ export default function PaymentMethodPage({
                   <span className="text-[rgb(var(--reg-muted))] font-semibold">{t("common.total")}</span>
                   <span className={`font-semibold ${
                     Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) < 0.01
-                      ? "text-green-600"
+                      ? "text-[rgb(var(--reg-success))]"
                       : "text-red-600"
                   }`}>
                     {((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0)).toFixed(2)} {currencySymbol()}

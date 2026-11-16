@@ -35,7 +35,7 @@ const priceText = (s: Service) => {
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?";
 
-const AVATAR_TONES = ["bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]", "bg-rose-50 text-rose-800", "bg-amber-50 text-amber-900", "bg-emerald-50 text-emerald-800", "bg-sky-50 text-sky-800"];
+const AVATAR_TONES = ["bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]", "bg-rose-50 text-rose-800", "bg-amber-50 text-amber-900", "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]", "bg-sky-50 text-sky-800"];
 
 type Sel = "all" | "uncategorized" | number;
 

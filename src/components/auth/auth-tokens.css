@@ -5,6 +5,9 @@
   --reg-brand: 111 82 237;
   --reg-brand-strong: 91 63 214;
   --reg-brand-soft: 244 241 255;
+  /* The one quiet green: paid, done, positive change. Same numbers as booqi-web --success-rgb. */
+  --reg-success: 18 112 75;
+  --reg-success-soft: 233 247 240;
   --reg-ink: 29 23 48;
   --reg-muted: 107 97 88;
   --reg-line: 227 218 206;

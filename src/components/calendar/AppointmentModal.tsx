@@ -267,7 +267,7 @@ export function AppointmentModal({
             <span className={`rounded-full px-3 py-1 text-xs font-bold ${tone.chip}`}>{tone.label}</span>
             <span
               className={`rounded-full px-3 py-1 text-xs font-bold ${
-                paid ? "bg-emerald-100 text-emerald-900" : "bg-white text-[rgb(var(--reg-ink)/0.7)] ring-1 ring-[rgb(var(--reg-line))]"
+                paid ? "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]" : "bg-white text-[rgb(var(--reg-ink)/0.7)] ring-1 ring-[rgb(var(--reg-line))]"
               }`}
             >
               {paid ? tr("common.paid") : tr("calendar.unpaid")}
@@ -291,7 +291,7 @@ export function AppointmentModal({
                 <p className="truncate text-base font-semibold">{clientName}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {visits != null && visits <= 1 && (
-                    <Badge className="bg-emerald-600 text-[10px] text-white hover:bg-emerald-600">{tr("calendar.newClient")}</Badge>
+                    <Badge className="bg-[rgb(var(--reg-brand))] text-[10px] text-white hover:bg-[rgb(var(--reg-brand))]">{tr("calendar.newClient")}</Badge>
                   )}
                   {visits != null && visits >= 5 && (
                     <Badge className="bg-rose-600 text-[10px] text-white hover:bg-rose-600">
@@ -458,13 +458,13 @@ export function AppointmentModal({
             {pointsPaid > 0 && (
               <div className="mt-1 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{tr("calendar.paidWithPoints")}</span>
-                <span className="font-medium text-emerald-700">{formatPrice(pointsPaid)}</span>
+                <span className="font-medium text-[rgb(var(--reg-success))]">{formatPrice(pointsPaid)}</span>
               </div>
             )}
             {Number(appointmentData.prepaidAmount ?? 0) > 0 && (
               <div className="mt-1 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{tr("calendar.paidOnline")}</span>
-                <span className="font-medium text-emerald-700">
+                <span className="font-medium text-[rgb(var(--reg-success))]">
                   {tr("calendar.fromTheirGiftCard", { value: formatPrice(Number(appointmentData.prepaidAmount)) })}
                 </span>
               </div>

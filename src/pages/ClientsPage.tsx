@@ -503,7 +503,7 @@ export default function ClientsPage() {
     })();
     if (inv?.status === "PENDING") return { label: tr("clients.invited"), cls: "bg-amber-100 text-amber-900" };
     if ((client.totalVisits ?? 0) >= 5) return { label: tr("clients.regular"), cls: "bg-[rgb(var(--reg-brand)/0.12)] text-[rgb(var(--reg-brand-strong))]" };
-    if ((client.totalVisits ?? 0) <= 1) return { label: tr("clients.new"), cls: "bg-emerald-100 text-emerald-900" };
+    if ((client.totalVisits ?? 0) <= 1) return { label: tr("clients.new"), cls: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" };
     return null;
   };
 
@@ -1172,7 +1172,7 @@ export default function ClientsPage() {
                       <div className="mt-1 flex justify-end gap-1">
                         <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", st.chip)}>{st.label}</span>
                         {v.payment_status && (
-                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", v.payment_status === "PAID" ? "bg-emerald-100 text-emerald-900" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]")}>
+                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", v.payment_status === "PAID" ? "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]")}>
                             {v.payment_status === "PAID" ? tr("common.paid") : v.payment_status.charAt(0) + v.payment_status.slice(1).toLowerCase().replace(/_/g, " ")}
                           </span>
                         )}
@@ -1184,7 +1184,7 @@ export default function ClientsPage() {
               );
             };
             const consent = (v: boolean | null | undefined) =>
-              v == null ? <span className="text-[rgb(var(--reg-muted))]">{tr("clients.notAsked")}</span> : v ? <span className="font-semibold text-emerald-700">{tr("clients.yes")}</span> : <span className="font-semibold text-rose-700">{tr("clients.no")}</span>;
+              v == null ? <span className="text-[rgb(var(--reg-muted))]">{tr("clients.notAsked")}</span> : v ? <span className="font-semibold text-[rgb(var(--reg-success))]">{tr("clients.yes")}</span> : <span className="font-semibold text-rose-700">{tr("clients.no")}</span>;
             const NOTE_KINDS: { v: NoteKind; l: string }[] = [
               { v: "NOTE", l: "Note" },
               { v: "FORMULA", l: "Formula" },
@@ -1307,7 +1307,7 @@ export default function ClientsPage() {
                                     />
                                   </div>
                                   {benefits.rewardsAvailable > 0 && (
-                                    <p className="mt-1.5 font-semibold text-emerald-700">{tr("clients.freeServicesToUse", { count: benefits.rewardsAvailable })}</p>
+                                    <p className="mt-1.5 font-semibold text-[rgb(var(--reg-success))]">{tr("clients.freeServicesToUse", { count: benefits.rewardsAvailable })}</p>
                                   )}
                                 </div>
                               )}
@@ -1463,7 +1463,7 @@ export default function ClientsPage() {
                         ["SMS", consent(c.allowSmsNotifications)],
                         [tr("clients.prefers"), c.preferredContactMethod ? <span className="font-semibold">{c.preferredContactMethod}</span> : <span className="text-[rgb(var(--reg-muted))]">—</span>],
                         [tr("clients.language"), c.preferredLanguage ? <span className="font-semibold">{c.preferredLanguage}</span> : <span className="text-[rgb(var(--reg-muted))]">—</span>],
-                        [tr("clients.booqiAccount"), pending ? <span className="font-semibold text-amber-800">{tr("clients.invited")}</span> : hasAccount(c) ? <span className="font-semibold text-emerald-700">{tr("clients.yes")}</span> : <span className="text-[rgb(var(--reg-muted))]">{tr("clients.no")}</span>],
+                        [tr("clients.booqiAccount"), pending ? <span className="font-semibold text-amber-800">{tr("clients.invited")}</span> : hasAccount(c) ? <span className="font-semibold text-[rgb(var(--reg-success))]">{tr("clients.yes")}</span> : <span className="text-[rgb(var(--reg-muted))]">{tr("clients.no")}</span>],
                         [tr("clients.invitation"), inv ? <span className="font-semibold">{inv.status.charAt(0) + inv.status.slice(1).toLowerCase()}</span> : <span className="text-[rgb(var(--reg-muted))]">{tr("clients.notSent")}</span>],
                       ].map(([k, v]) => (
                         <div key={k as string} className="flex items-center justify-between gap-3 px-4 py-3">

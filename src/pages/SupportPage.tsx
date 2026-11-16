@@ -23,7 +23,7 @@ const CHIP: Record<TicketStatus, string> = {
   NEW: "bg-sky-50 text-sky-800",
   OPEN: "bg-sky-50 text-sky-800",
   WAITING_ON_USER: "bg-amber-50 text-amber-800",
-  RESOLVED: "bg-emerald-50 text-emerald-800",
+  RESOLVED: "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]",
   CLOSED: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]",
 };
 

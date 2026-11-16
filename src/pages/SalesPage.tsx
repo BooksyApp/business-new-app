@@ -1128,7 +1128,7 @@ export default function SalesPage() {
       <div className="border-t border-[rgb(var(--reg-line)/0.8)] bg-white px-5 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
         <dl className="space-y-1 text-sm">
           <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.subtotal")}</dt><dd className="tabular-nums">{calculateTotal().toFixed(2)} {currencySymbol()}</dd></div>
-          {depositOnTicket > 0 && <div className="flex justify-between text-emerald-700"><dt>{tr("sales.depositAlreadyPaid")}</dt><dd className="tabular-nums">−{depositOnTicket.toFixed(2)}</dd></div>}
+          {depositOnTicket > 0 && <div className="flex justify-between text-[rgb(var(--reg-success))]"><dt>{tr("sales.depositAlreadyPaid")}</dt><dd className="tabular-nums">−{depositOnTicket.toFixed(2)}</dd></div>}
           {bookedPromo && <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.promo", { code: bookedPromo.code })}</dt><dd>{tr("sales.appliedAtPayment")}</dd></div>}
           {salonInfo.taxRate > 0 && <div className="flex justify-between text-[rgb(var(--reg-muted))]"><dt>{tr("sales.tax", { taxRate: salonInfo.taxRate })}</dt><dd>{tr("sales.included")}</dd></div>}
         </dl>
@@ -1158,7 +1158,7 @@ export default function SalesPage() {
             <h1 className="mt-5 text-[28px] font-extrabold tracking-[-0.03em]">{tr("sales.paid", { value: lastSale.total.toFixed(2), value2: currencySymbol() })}</h1>
             <p className="mt-1 text-[rgb(var(--reg-muted))]">{methodName[lastSale.method] ?? lastSale.method}{lastSale.client ? ` · ${lastSale.client}` : tr("sales.walkIn")}</p>
             {lastSale.change > 0 && (
-              <div className="mx-auto mt-5 inline-flex items-baseline gap-3 rounded-2xl bg-emerald-50 px-5 py-3 text-emerald-900 ring-1 ring-inset ring-emerald-200">
+              <div className="mx-auto mt-5 inline-flex items-baseline gap-3 rounded-2xl bg-[rgb(var(--reg-canvas))] px-5 py-3 text-[rgb(var(--reg-ink))] ring-1 ring-inset ring-[rgb(var(--reg-line))]">
                 <span className="text-sm font-semibold">{tr("sales.changeToGive")}</span>
                 <span className="text-2xl font-extrabold tabular-nums">{lastSale.change.toFixed(2)} {currencySymbol()}</span>
               </div>
@@ -1457,7 +1457,7 @@ export default function SalesPage() {
                                 <span className="min-w-0 text-sm font-extrabold tabular-nums">
                                   {hasPrice ? `${(total - paid).toFixed(2)} ${currencySymbol()}` : "—"}
                                   {/* #117: a deposit already taken, on the row the cashier reads first. */}
-                                  {paid > 0 && <span className="block text-[11px] font-semibold text-emerald-700">{tr("sales.depositPaid", { value: paid.toFixed(2) })}</span>}
+                                  {paid > 0 && <span className="block text-[11px] font-semibold text-[rgb(var(--reg-success))]">{tr("sales.depositPaid", { value: paid.toFixed(2) })}</span>}
                                 </span>
                                 <button
                                   type="button"

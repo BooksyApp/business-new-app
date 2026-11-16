@@ -8,7 +8,7 @@ export type Tone = "violet" | "sky" | "emerald" | "amber" | "rose" | "slate";
 const TONE: Record<Tone, { chip: string; value: string; bar: string; edge: string }> = {
   violet: { chip: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]", value: "text-[rgb(var(--reg-ink))]", bar: "bg-[linear-gradient(90deg,rgb(var(--reg-brand)),rgb(var(--reg-mesh-2)))]", edge: "" },
   sky: { chip: "bg-sky-50 text-sky-600", value: "text-[rgb(var(--reg-ink))]", bar: "bg-sky-500", edge: "border-l-sky-500" },
-  emerald: { chip: "bg-emerald-50 text-emerald-600", value: "text-[rgb(var(--reg-ink))]", bar: "bg-emerald-500", edge: "border-l-emerald-500" },
+  emerald: { chip: "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]", value: "text-[rgb(var(--reg-ink))]", bar: "bg-[rgb(var(--reg-success))]", edge: "border-l-[rgb(var(--reg-success))]" },
   amber: { chip: "bg-amber-50 text-amber-600", value: "text-[rgb(var(--reg-ink))]", bar: "bg-amber-500", edge: "border-l-amber-500" },
   rose: { chip: "bg-rose-50 text-rose-600", value: "text-[rgb(var(--reg-ink))]", bar: "bg-rose-500", edge: "border-l-rose-500" },
   slate: { chip: "bg-slate-100 text-slate-600", value: "text-[rgb(var(--reg-ink))]", bar: "bg-slate-400", edge: "border-l-slate-400" },

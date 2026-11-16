@@ -274,7 +274,7 @@ export default function MarketingPage() {
 
   const shortcuts = [
     { key: "EMAIL", title: tr("common.email"), body: tr("marketing.oneMessageToASegment"), icon: Mail, tone: "bg-sky-50 text-sky-700", run: () => openNewCampaign("EMAIL") },
-    { key: "SMS", title: "SMS", body: tr("marketing.onlyClientsWhoAgreedTo"), icon: MessageSquare, tone: "bg-emerald-50 text-emerald-700", run: () => openNewCampaign("SMS") },
+    { key: "SMS", title: "SMS", body: tr("marketing.onlyClientsWhoAgreedTo"), icon: MessageSquare, tone: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]", run: () => openNewCampaign("SMS") },
     { key: "LOYALTY", title: tr("common.loyalty"), body: tr("marketing.comeNTimesOneFree"), icon: Gift, tone: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]", flag: "loyalty_cards", run: () => navigate(getPath("/loyalty")) },
     { key: "REFERRAL", title: tr("common.referrals"), body: tr("marketing.clientsBringClients"), icon: Users, tone: "bg-amber-50 text-amber-700", flag: "platform_referral", run: () => navigate(getPath("/referral-program")) },
   ].filter((t) => !t.flag || flags[t.flag] !== false);
@@ -407,7 +407,7 @@ export default function MarketingPage() {
                     const Icon = c.channel === "SMS" ? MessageSquare : Mail;
                     return (
                       <li key={c.id} className={cn("flex items-center gap-3 px-4 py-3.5 md:px-5", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
-                        <span className={cn("hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex", c.channel === "SMS" ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700")}>
+                        <span className={cn("hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex", c.channel === "SMS" ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" : "bg-sky-50 text-sky-700")}>
                           <Icon size={18} strokeWidth={1.9} />
                         </span>
                         <div className="min-w-0 flex-1">
@@ -671,7 +671,7 @@ function PromoPreview({ form, price, serviceName }: { form: typeof EMPTY_PROMO; 
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-[rgb(var(--reg-canvas))] px-3 py-2 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
           <Ticket size={15} className="text-[rgb(var(--reg-muted))]" aria-hidden />
           <span className="font-mono text-sm font-bold tracking-[0.1em]">{code}</span>
-          <span className="ml-auto text-xs font-semibold text-emerald-700">{tr("marketing.applied")}</span>
+          <span className="ml-auto text-xs font-semibold text-[rgb(var(--reg-success))]">{tr("marketing.applied")}</span>
         </div>
         <div className={cn("mt-3 flex items-center justify-between text-sm font-semibold", GUAVA.text)}>
           <span>{tr("marketing.promoCode")}</span>

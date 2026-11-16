@@ -155,7 +155,7 @@ export default function ReviewsPage() {
     );
 
   const scoreTone =
-    (summary.average ?? 0) >= 4 ? "text-emerald-600" : (summary.average ?? 0) >= 3 ? "text-amber-600" : summary.average != null ? "text-rose-600" : "text-[rgb(var(--reg-muted))]";
+    (summary.average ?? 0) >= 4 ? "text-[rgb(var(--reg-success))]" : (summary.average ?? 0) >= 3 ? "text-amber-600" : summary.average != null ? "text-rose-600" : "text-[rgb(var(--reg-muted))]";
   const filterLabel =
     filter === "all" ? null : filter === "reply" ? t("reviews.needsReply") : filter === "photos" ? t("reviews.withPhotos") : `${filter}★`;
 
@@ -246,7 +246,7 @@ export default function ReviewsPage() {
                     <Reply size={18} className="text-rose-700" />
                   </button>
                 ) : reviews.length > 0 ? (
-                  <p className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 ring-1 ring-emerald-200">{t("reviews.everyReviewHasAReply")}</p>
+                  <p className="mt-6 rounded-2xl bg-[rgb(var(--reg-canvas))] px-4 py-3 text-sm font-semibold text-[rgb(var(--reg-ink))] ring-1 ring-[rgb(var(--reg-line))]">{t("reviews.everyReviewHasAReply")}</p>
                 ) : null}
                 <dl className="mt-5 space-y-2 border-t border-[rgb(var(--reg-line)/0.7)] pt-4 text-sm">
                   <div className="flex justify-between"><dt className="text-[rgb(var(--reg-muted))]">{t("reviews.replied")}</dt><dd className="font-semibold">{reviews.length ? `${repliedPercent}%` : "—"}</dd></div>

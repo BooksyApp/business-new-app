@@ -5,7 +5,7 @@ type Tone = "violet" | "emerald" | "amber" | "sky" | "rose" | "slate";
 
 const TONES: Record<Tone, { ring: string; icon: string; value: string }> = {
   violet: { ring: "bg-violet-50", icon: "text-violet-600", value: "text-violet-700" },
-  emerald: { ring: "bg-emerald-50", icon: "text-emerald-600", value: "text-emerald-700" },
+  emerald: { ring: "bg-[rgb(var(--reg-brand-soft))]", icon: "text-[rgb(var(--reg-brand))]", value: "text-[rgb(var(--reg-ink))]" },
   amber: { ring: "bg-amber-50", icon: "text-amber-600", value: "text-amber-700" },
   sky: { ring: "bg-sky-50", icon: "text-sky-600", value: "text-sky-700" },
   rose: { ring: "bg-rose-50", icon: "text-rose-600", value: "text-rose-700" },

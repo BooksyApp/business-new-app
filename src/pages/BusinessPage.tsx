@@ -424,7 +424,7 @@ export default function BusinessPage() {
                 <ul className="mt-4 space-y-2">
                   {completenessChecks.map((c) => (
                     <li key={c.label} className="flex items-center gap-2 text-sm">
-                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", c.ok ? "bg-emerald-500 text-white" : "ring-2 ring-inset ring-[rgb(var(--reg-line))]")}>
+                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", c.ok ? "bg-[rgb(var(--reg-success))] text-white" : "ring-2 ring-inset ring-[rgb(var(--reg-line))]")}>
                         {c.ok && <Check size={12} strokeWidth={3} />}
                       </span>
                       <span className={c.ok ? "" : "font-semibold"}>{c.label}</span>

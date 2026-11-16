@@ -449,7 +449,7 @@ export default function AnalyticsPage() {
                 />
                 <div className="grid gap-4 md:grid-cols-3">
                   <Metric icon={DollarSign} label={t("common.revenue")} value={`${money(profitability.totalRevenue)} ${currencySymbol()}`} tone="sky" />
-                  <Metric icon={TrendingUp} label={t("analytics.estimatedProfit")} value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="emerald" />
+                  <Metric icon={TrendingUp} label={t("analytics.estimatedProfit")} value={`${money(profitability.estimatedProfit)} ${currencySymbol()}`} tone="violet" />
                   <Metric
                     icon={Target}
                     label={t("analytics.margin")}
@@ -459,7 +459,7 @@ export default function AnalyticsPage() {
                 </div>
                 <BarList
                   title={t("analytics.whereTheMoneyGoes")}
-                  tone="emerald"
+                  tone="violet"
                   formatValue={(v) => `${money(v)} ${currencySymbol()}`}
                   rows={[
                     { label: t("analytics.keptEstimatedProfit"), value: profitability.estimatedProfit ?? 0 },
@@ -533,7 +533,7 @@ export default function AnalyticsPage() {
                   ]}
                 />
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Metric icon={TrendingUp} label={t("analytics.bestMonth")} value={monthName(seasonal.bestMonth) || "—"} tone="emerald" />
+                  <Metric icon={TrendingUp} label={t("analytics.bestMonth")} value={monthName(seasonal.bestMonth) || "—"} tone="violet" />
                   <Metric icon={TrendingDown} label={t("analytics.weakestMonth")} value={monthName(seasonal.worstMonth) || "—"} tone="amber" />
                 </div>
                 <BarList
@@ -797,11 +797,11 @@ export default function AnalyticsPage() {
                     tone={(customerRetention.retentionRate ?? 0) >= 50 ? "emerald" : "rose"}
                   />
                   <Metric icon={Users} label={t("analytics.totalClients2")} value={customerRetention.totalClients} tone="violet" />
-                  <Metric icon={UserCheck} label={t("analytics.cameBack")} value={customerRetention.returningClients} tone="emerald" />
+                  <Metric icon={UserCheck} label={t("analytics.cameBack")} value={customerRetention.returningClients} tone="violet" />
                 </div>
                 <BarList
                   title={t("analytics.whoIsComingBack")}
-                  tone="emerald"
+                  tone="violet"
                   rows={[
                     { label: t("analytics.returningClients"), value: customerRetention.returningClients },
                     {

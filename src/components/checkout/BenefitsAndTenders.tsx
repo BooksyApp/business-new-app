@@ -256,7 +256,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
             <span className="text-muted-foreground">{t("checkout.stillToPay")}</span>
             <span
               className={
-                remaining > 0.009 ? "font-medium text-destructive" : "font-medium text-green-600"
+                remaining > 0.009 ? "font-medium text-destructive" : "font-medium text-[rgb(var(--reg-success))]"
               }
             >
               {remaining.toFixed(2)} {currencySymbol()}

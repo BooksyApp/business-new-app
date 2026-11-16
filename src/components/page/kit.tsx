@@ -21,7 +21,7 @@ import type { Lifecycle } from "./kitStyles";
 import { t } from "@/i18n";
 
 const LIFECYCLE: Record<Lifecycle, { label: string; cls: string; dot: string }> = {
-  active: { get label() { return t("common.active"); }, cls: "bg-emerald-50 text-emerald-800 ring-emerald-200", dot: "bg-emerald-500" },
+  active: { get label() { return t("common.active"); }, cls: "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))] ring-[rgb(var(--reg-success)/0.25)]", dot: "bg-[rgb(var(--reg-success))]" },
   scheduled: { get label() { return t("common.scheduled"); }, cls: "bg-sky-50 text-sky-800 ring-sky-200", dot: "bg-sky-500" },
   ended: { get label() { return t("common.ended"); }, cls: "bg-[rgb(var(--reg-ink)/0.05)] text-[rgb(var(--reg-ink)/0.7)] ring-[rgb(var(--reg-line))]", dot: "bg-[rgb(var(--reg-ink)/0.35)]" },
   draft: { get label() { return t("page.draft"); }, cls: "bg-amber-50 text-amber-900 ring-amber-200", dot: "bg-amber-500" },

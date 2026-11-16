@@ -959,7 +959,7 @@ export default function StaffPage() {
                           <span className="block text-sm font-semibold capitalize">{c.category.replace("_", " ").toLowerCase()}</span>
                           <span className="block text-xs text-[rgb(var(--reg-muted))]">{tr("staff.sale", { value: money(c.saleAmount, currencySymbol()), value2: formatLocaleDate(new Date(c.commissionDate), { day: "numeric", month: "short" }) })}</span>
                         </span>
-                        <span className="text-sm font-extrabold tabular-nums text-emerald-700">{money(c.commissionAmount, currencySymbol())}</span>
+                        <span className="text-sm font-extrabold tabular-nums text-[rgb(var(--reg-ink))]">{money(c.commissionAmount, currencySymbol())}</span>
                       </li>
                     ))}
                   </ul>
@@ -1287,7 +1287,7 @@ export default function StaffPage() {
                                       {dayHours.isClosed ? (
                                         <XCircle size={16} className="text-red-500" />
                                       ) : (
-                                        <CheckCircle2 size={16} className="text-green-500" />
+                                        <CheckCircle2 size={16} className="text-[rgb(var(--reg-success))]" />
                                       )}
                                       <Label className="text-sm font-medium text-gray-900">
                                         {day.short}
@@ -1404,7 +1404,7 @@ export default function StaffPage() {
                                       {dayHours.isClosed ? (
                                         <XCircle size={16} className="text-red-500" />
                                       ) : (
-                                        <CheckCircle2 size={16} className="text-green-500" />
+                                        <CheckCircle2 size={16} className="text-[rgb(var(--reg-success))]" />
                                       )}
                                       <Label className="text-sm font-medium text-gray-900">
                                         {day.short}
@@ -2235,7 +2235,7 @@ const AVATAR_TONES = [
   "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]",
   "bg-rose-50 text-rose-800",
   "bg-amber-50 text-amber-900",
-  "bg-emerald-50 text-emerald-800",
+  "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]",
   "bg-sky-50 text-sky-800",
 ];
 

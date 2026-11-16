@@ -8,7 +8,7 @@ import { t } from "@/i18n";
 const TONES = [
   "bg-violet-50 text-violet-600",
   "bg-sky-50 text-sky-600",
-  "bg-emerald-50 text-emerald-600",
+  "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]",
   "bg-amber-50 text-amber-600",
 ];
 

@@ -80,7 +80,7 @@ const SECTIONS: SettingsSection[] = [
     get title() { return t("setup.money"); },
     get description() { return t("setup.clientsPayWhenTheyVisit"); },
     icon: CreditCard,
-    tone: "bg-emerald-50 text-emerald-700",
+    tone: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]",
     rows: [
       { get label() { return t("bookingRules.paymentMethods"); }, get hint() { return t("setup.paymentMethodsHint"); }, path: "setup/payment-methods", icon: CreditCard },
       { get label() { return t("setup.currencyTax"); }, get hint() { return t("setup.whatYourPricesAreIn"); }, path: "setup/currency-tax", icon: Receipt },

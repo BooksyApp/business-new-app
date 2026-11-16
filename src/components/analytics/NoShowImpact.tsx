@@ -106,7 +106,7 @@ export function NoShowImpact({
         />
         <Tile
           icon={Coins}
-          tone="bg-emerald-50 text-emerald-700"
+          tone="bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"
           label={t("analytics.feesRecorded")}
           value={money(fees)}
           hint={t("analytics.onBookings", { value: num(data.totals?.fees_count) })}

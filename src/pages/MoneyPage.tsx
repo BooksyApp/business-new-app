@@ -104,7 +104,7 @@ function Figure({ label, value, hint, tone }: {
   tone?: "good" | "bad" | "plain";
 }) {
   const colour =
-    tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-rose-600" : "text-foreground";
+    tone === "good" ? "text-[rgb(var(--reg-success))]" : tone === "bad" ? "text-rose-600" : "text-foreground";
   return (
     <div className="rounded-lg border p-4">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -568,7 +568,7 @@ function DrawerTab({ businessId }: { businessId: number }) {
                         {t("money.expectedCounted", { value: formatPrice(past.expected_cash ?? 0), value2: formatPrice(past.counted_cash ?? 0), value3: past.notes ? ` · ${past.notes}` : "" })}
                       </p>
                     </div>
-                    <span className={`tabular-nums font-semibold ${balanced ? "text-emerald-600" : "text-rose-600"}`}>
+                    <span className={`tabular-nums font-semibold ${balanced ? "text-[rgb(var(--reg-success))]" : "text-rose-600"}`}>
                       {balanced ? t("money.balanced") : `${diff > 0 ? "+" : "−"}${formatPrice(Math.abs(diff))}`}
                     </span>
                   </div>

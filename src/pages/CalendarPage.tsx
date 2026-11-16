@@ -1244,7 +1244,7 @@ export default function CalendarPage() {
       items.push({
         label: tr("calendar.takePayment3", { value: apt.clientName || tr("common.client") }),
         detail: `${apt.startTime} · ${apt.service}`,
-        tone: "bg-emerald-500",
+        tone: "bg-[rgb(var(--reg-brand))]",
         onClick: () => handleAppointmentClick(apt),
       });
     }
@@ -1924,7 +1924,7 @@ export default function CalendarPage() {
                             {w.clientName || w.clientEmail || tr("common.client")}
                           </p>
                           {w.status === "NOTIFIED" && (
-                            <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800">
+                            <span className="shrink-0 rounded-full bg-[rgb(var(--reg-success-soft))] px-1.5 py-0.5 text-[9px] font-medium text-[rgb(var(--reg-success))]">
                               {tr("calendar.told")}
                             </span>
                           )}

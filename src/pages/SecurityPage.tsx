@@ -67,7 +67,7 @@ export default function SecurityPage() {
                   <div className="flex items-center gap-2 pt-1" aria-live="polite">
                     <div className="flex flex-1 gap-1">
                       {[1, 2, 3, 4].map((i) => (
-                        <span key={i} className={cn("h-1.5 flex-1 rounded-full", i <= strength ? (strength >= 3 ? "bg-emerald-500" : "bg-amber-500") : "bg-[rgb(var(--reg-ink)/0.08)]")} />
+                        <span key={i} className={cn("h-1.5 flex-1 rounded-full", i <= strength ? (strength >= 3 ? "bg-[rgb(var(--reg-success))]" : "bg-amber-500") : "bg-[rgb(var(--reg-ink)/0.08)]")} />
                       ))}
                     </div>
                     <span className="w-12 text-right text-xs font-semibold text-[rgb(var(--reg-muted))]">{strengthLabel}</span>

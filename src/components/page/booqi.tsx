@@ -97,7 +97,7 @@ CardFooter.displayName = "CardFooter";
 type Tone = "violet" | "emerald" | "amber" | "sky" | "rose" | "slate";
 const TONE_ICON: Record<Tone, string> = {
   violet: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]",
-  emerald: "bg-emerald-50 text-emerald-600",
+  emerald: "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]",
   amber: "bg-amber-50 text-amber-600",
   sky: "bg-sky-50 text-sky-600",
   rose: "bg-rose-50 text-rose-600",

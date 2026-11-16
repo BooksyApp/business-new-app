@@ -312,7 +312,7 @@ export default function LoyaltyPage() {
                       <p className="flex items-center gap-2 truncate text-sm font-semibold">
                         <span className="truncate">{h.client_name || tr("common.client")}</span>
                         {h.rewards_available > 0 && (
-                          <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                          <span className="shrink-0 rounded-full bg-[rgb(var(--reg-success-soft))] px-2 py-0.5 text-[11px] font-bold text-[rgb(var(--reg-success))] ring-1 ring-inset ring-[rgb(var(--reg-success)/0.25)]">
                             {tr("memberships.free", { rewards_available: h.rewards_available })}
                           </span>
                         )}

@@ -23,7 +23,7 @@ interface OverviewTabProps {
 }
 
 const TONES = {
-  emerald: { chip: "bg-emerald-50 text-emerald-600", value: "text-emerald-700", bar: "bg-emerald-500" },
+  emerald: { chip: "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]", value: "text-[rgb(var(--reg-ink))]", bar: "bg-[rgb(var(--reg-success))]" },
   sky: { chip: "bg-sky-50 text-sky-600", value: "text-sky-700", bar: "bg-sky-500" },
   violet: { chip: "bg-violet-50 text-violet-600", value: "text-violet-700", bar: "bg-violet-500" },
   amber: { chip: "bg-amber-50 text-amber-600", value: "text-amber-700", bar: "bg-amber-500" },
@@ -46,7 +46,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
       value: `${money(data.totalRevenue)} ${currencySymbol()}`,
       change: data.revenueChange,
       icon: DollarSign,
-      tone: "emerald" as const,
+      tone: "violet" as const,
     },
     {
       title: t("analytics.bookings3"),
@@ -160,11 +160,11 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                 <p className={`mt-2 text-2xl font-semibold ${tone.value}`}>{metric.value}</p>
                 <div className="mt-1 flex items-center gap-1.5">
                   {up ? (
-                    <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                    <TrendingUp className="h-3.5 w-3.5 text-[rgb(var(--reg-success))]" />
                   ) : (
                     <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
                   )}
-                  <span className={`text-xs font-semibold ${up ? "text-emerald-600" : "text-rose-600"}`}>
+                  <span className={`text-xs font-semibold ${up ? "text-[rgb(var(--reg-success))]" : "text-rose-600"}`}>
                     {up ? "+" : ""}
                     {pct(metric.change)}%
                   </span>
@@ -196,14 +196,14 @@ export default function OverviewTab({ data }: OverviewTabProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500 bg-white">
+        <Card className="border-l-4 border-l-[rgb(var(--reg-brand))] bg-white">
           <CardContent className="flex items-center gap-3 p-4">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
-              <UserCheck size={18} className="text-emerald-600" />
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[rgb(var(--reg-brand-soft))]">
+              <UserCheck size={18} className="text-[rgb(var(--reg-brand))]" />
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{t("analytics.clientsWhoCameBack")}</p>
-              <p className="text-xl font-semibold text-emerald-700">
+              <p className="text-xl font-semibold text-[rgb(var(--reg-ink))]">
                 {growth?.returningClients ?? 0}
                 {retention != null ? (
                   <span className="ml-1 text-sm font-normal text-muted-foreground">{retention}%</span>
@@ -239,7 +239,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
             {bestDay && bestDay.revenue > 0 && (
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">{t("analytics.bestDay")}</p>
-                <p className="text-sm font-semibold text-emerald-700">
+                <p className="text-sm font-semibold text-[rgb(var(--reg-success))]">
                   {format(new Date(bestDay.date), "d MMM")} · {money(bestDay.revenue)} {currencySymbol()}
                 </p>
               </div>
@@ -270,7 +270,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                       <div
                         className={`w-full rounded-t transition-all ${
                           best
-                            ? "bg-emerald-500"
+                            ? "bg-[rgb(var(--reg-success))]"
                             : day.revenue >= avgRevenue
                               ? "bg-sky-500"
                               : "bg-slate-300"
@@ -322,7 +322,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                         </span>
                         <span className="truncate font-medium">{service.serviceName}</span>
                       </span>
-                      <span className="shrink-0 font-semibold text-emerald-700">
+                      <span className="shrink-0 font-semibold text-[rgb(var(--reg-ink))]">
                         {money(service.revenue)} {currencySymbol()}
                       </span>
                     </div>
@@ -369,7 +369,7 @@ export default function OverviewTab({ data }: OverviewTabProps) {
                         </span>
                         <span className="truncate font-medium">{member.staffName}</span>
                       </span>
-                      <span className="shrink-0 font-semibold text-emerald-700">
+                      <span className="shrink-0 font-semibold text-[rgb(var(--reg-ink))]">
                         {money(member.revenue)} {currencySymbol()}
                       </span>
                     </div>
