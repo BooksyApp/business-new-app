@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { useEffect, useRef, useState } from 'react';
 import { useMarket } from '@/services/platformService';
+import { pinOutsideMarket } from '@/lib/marketBounds';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 
 // #56: see the TileLayer below. Set VITE_MAP_TILE_URL / VITE_MAP_TILE_ATTRIBUTION to move
@@ -78,6 +79,11 @@ export default function AddressMapPicker({
   const [zoom, setZoom] = useState(15);
   const market = useMarket(country);
   const located = useRef(Boolean(initialPosition || selectedPosition));
+  // LR-15: a pin outside the salon's country is not passed on (so it cannot be saved);
+  // the marker stays at the last good spot and a warning says why.
+  const [outside, setOutside] = useState(false);
+  const marketRef = useRef(market);
+  marketRef.current = market;
 
   useEffect(() => {
     if (market && !located.current) {
@@ -96,8 +102,10 @@ export default function AddressMapPicker({
           setMapCenter(userPos);
           setZoom(15);
           
-          // If no position is set yet, use user location as default
-          if (!position && !initialPosition && !selectedPosition) {
+          // If no position is set yet, use user location as default — unless the device is
+          // abroad: an owner registering from another country must not get that pin (LR-15).
+          if (!position && !initialPosition && !selectedPosition
+              && !pinOutsideMarket(marketRef.current?.country, userPos[0], userPos[1])) {
             setPosition(userPos);
             onLocationSelect(userPos[0], userPos[1], '');
           }
@@ -155,7 +163,12 @@ export default function AddressMapPicker({
 
   const handlePositionChange = async (lat: number, lng: number) => {
     const newPos: [number, number] = [lat, lng];
+    const previous = position;
     setPosition(newPos);
+    const reject = () => {
+      setOutside(true);
+      setPosition(previous);
+    };
     // Don't update mapCenter when user clicks - this prevents zoom reset
     // The marker will move to the new position without changing zoom
     
@@ -168,12 +181,22 @@ export default function AddressMapPicker({
         `${API_BASE_URL}/public/geocode/reverse?lat=${lat}&lon=${lng}`
       );
       const data = await response.json();
+      if (pinOutsideMarket(marketRef.current?.country, lat, lng, data.address?.country_code)) {
+        reject();
+        return;
+      }
+      setOutside(false);
       const address = data.display_name || '';
       // Extract building number from address details
       const buildingNumber = data.address?.house_number || data.address?.building || '';
       onLocationSelect(lat, lng, address, buildingNumber);
     } catch (error) {
       console.error('Error reverse geocoding:', error);
+      if (pinOutsideMarket(marketRef.current?.country, lat, lng)) {
+        reject();
+        return;
+      }
+      setOutside(false);
       onLocationSelect(lat, lng, '', '');
     }
   };
@@ -215,6 +238,11 @@ export default function AddressMapPicker({
         )}
       </div>
       
+      {outside && (
+        <p role="alert" className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+          {t("addressMapPicker.pinOutsideCountry")}
+        </p>
+      )}
       <p className="mt-2 text-xs text-gray-600">
         {disabled ? t("addressMapPicker.pleaseCloseTheBusinessHours") : t("addressMapPicker.clickOnTheMapTo")}
       </p>

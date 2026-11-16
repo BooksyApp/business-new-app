@@ -203,7 +203,8 @@
     "locationError": "Location error: {value}",
     "unknownError": "Unknown error",
     "pleaseCloseTheBusinessHours": "Please close the business hours dialog to interact with the map",
-    "clickOnTheMapTo": "Click on the map to select your business location"
+    "clickOnTheMapTo": "Click on the map to select your business location",
+    "pinOutsideCountry": "That pin is outside your salon's country, so it was not saved. Place it where the salon is."
   },
   "addService": {
     "forClient": "FOR CLIENT",

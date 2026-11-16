@@ -203,7 +203,8 @@
     "locationError": "Məkan xətası: {value}",
     "unknownError": "Naməlum xəta",
     "pleaseCloseTheBusinessHours": "Xəritədən istifadə üçün iş saatları pəncərəsini bağlayın",
-    "clickOnTheMapTo": "Salonunuzun yerini seçmək üçün xəritəyə klikləyin"
+    "clickOnTheMapTo": "Salonunuzun yerini seçmək üçün xəritəyə klikləyin",
+    "pinOutsideCountry": "Pin ölkədən kənardadır — salonun yeri onun ölkəsində olmalıdır. Pini xəritədə düzgün yerə qoyun."
   },
   "addService": {
     "forClient": "MÜŞTƏRİ ÜÇÜN",
