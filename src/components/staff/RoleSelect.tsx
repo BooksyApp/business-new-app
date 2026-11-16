@@ -6,6 +6,7 @@ import { getCurrentBusinessId } from "@/config/api";
 import { myAccess } from "@/components/layout/navigation";
 import { roleService, type BusinessRole } from "@/services/roleService";
 import { t } from "@/i18n";
+import { roleDescription, roleName } from "@/lib/roleLabel";
 
 interface Props {
   /** The team member being edited; omitted on Add Staff. */
@@ -54,13 +55,13 @@ export function RoleSelect({ staffId, value, onChange }: Props) {
         <SelectContent>
           {offered.map((r) => (
             <SelectItem key={r.id} value={String(r.id)}>
-              {r.name}
+              {roleName(r)}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        {selected?.description ? `${selected.description} ` : ""}
+        {selected && roleDescription(selected) ? `${roleDescription(selected)} ` : ""}
         {isOwner ? (
           <Link to={`/${getCurrentBusinessId()}/roles`} className="font-medium text-primary">
             {t("staff.manageRoles")}

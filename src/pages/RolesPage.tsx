@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { roleService, type BusinessRole, type TeamPermissionInfo } from "@/services/roleService";
 import { t } from "@/i18n";
 
-import { roleName, roleDescription } from "@/lib/roleLabel";
+import { permDescription, permGroup, permLabel, roleDescription, roleName } from "@/lib/roleLabel";
 type Draft = { id?: number; name: string; description: string; permissions: Set<string>; isDefault: boolean };
 
 const brandSwitch = "data-[state=checked]:bg-[rgb(var(--reg-brand))]";
@@ -172,7 +172,7 @@ const RolesPage = () => {
         checked={r.permissions.includes(p.key)}
         disabled={pending === `${r.id}:${p.key}`}
         onCheckedChange={(v) => void flip(r, p.key, v)}
-        aria-label={`${roleName(r)}: ${p.label}`}
+        aria-label={`${roleName(r)}: ${permLabel(p)}`}
         className={brandSwitch}
       />
     );
@@ -242,14 +242,14 @@ const RolesPage = () => {
                     <tbody key={group}>
                       <tr>
                         <th colSpan={roles.length + 1} scope="colgroup" className="bg-[rgb(var(--reg-canvas))] px-5 py-2 text-left text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-ink)/0.7)]">
-                          {group}
+                          {permGroup(group)}
                         </th>
                       </tr>
                       {items.map((p) => (
                         <tr key={p.key} className="border-t border-[rgb(var(--reg-line)/0.5)]">
                           <th scope="row" className="px-5 py-3 text-left font-normal">
-                            <span className="block font-semibold">{p.label}</span>
-                            <span className="block text-xs text-[rgb(var(--reg-muted))]">{p.description}</span>
+                            <span className="block font-semibold">{permLabel(p)}</span>
+                            <span className="block text-xs text-[rgb(var(--reg-muted))]">{permDescription(p)}</span>
                           </th>
                           {roles.map((r) => (
                             <td key={r.id} className="px-3 py-3 text-center">{cell(r, p)}</td>
@@ -283,13 +283,13 @@ const RolesPage = () => {
                 {phoneRole &&
                   groups.map(([group, items]) => (
                     <section key={group} className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                      <h3 className="bg-[rgb(var(--reg-canvas))] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-ink)/0.7)]">{group}</h3>
+                      <h3 className="bg-[rgb(var(--reg-canvas))] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-ink)/0.7)]">{permGroup(group)}</h3>
                       <ul>
                         {items.map((p, i) => (
                           <li key={p.key} className={cn("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-[rgb(var(--reg-line)/0.5)]")}>
                             <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-semibold">{p.label}</span>
-                              <span className="block text-xs text-[rgb(var(--reg-muted))]">{p.description}</span>
+                              <span className="block text-sm font-semibold">{permLabel(p)}</span>
+                              <span className="block text-xs text-[rgb(var(--reg-muted))]">{permDescription(p)}</span>
                             </span>
                             {cell(phoneRole, p)}
                           </li>
@@ -336,7 +336,7 @@ const RolesPage = () => {
                 return (
                   <section key={group} className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                     <div className="flex items-center justify-between bg-[rgb(var(--reg-canvas)/0.6)] px-4 py-2.5">
-                      <h3 className="text-sm font-extrabold">{group}</h3>
+                      <h3 className="text-sm font-extrabold">{permGroup(group)}</h3>
                       <button type="button" className="text-xs font-bold text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => toggleGroup(items, !allOn)}>
                         {allOn ? t("roles.clearAll") : t("roles.selectAll")}
                       </button>
@@ -345,10 +345,10 @@ const RolesPage = () => {
                       {items.map((p) => (
                         <li key={p.key} className="flex items-center gap-3 border-t border-[rgb(var(--reg-line)/0.5)] px-4 py-3">
                           <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold">{p.label}</span>
-                            <span className="block text-xs text-[rgb(var(--reg-muted))]">{p.description}</span>
+                            <span className="block text-sm font-semibold">{permLabel(p)}</span>
+                            <span className="block text-xs text-[rgb(var(--reg-muted))]">{permDescription(p)}</span>
                           </span>
-                          <Switch checked={draft.permissions.has(p.key)} onCheckedChange={() => toggleDraft(p.key)} aria-label={p.label} className={brandSwitch} />
+                          <Switch checked={draft.permissions.has(p.key)} onCheckedChange={() => toggleDraft(p.key)} aria-label={permLabel(p)} className={brandSwitch} />
                         </li>
                       ))}
                     </ul>

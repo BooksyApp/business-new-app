@@ -1,4 +1,4 @@
-import { t } from "@/i18n";
+import { t, tDynamic } from "@/i18n";
 import type { BusinessRole } from "@/services/roleService";
 
 /**
@@ -25,4 +25,22 @@ export function roleDescription(r: R): string | null | undefined {
   if (r.name === "Manager" && r.description === DEFAULT_DESC.Manager) return t("roles.defaultManagerDesc");
   if (r.name === "Staff" && r.description === DEFAULT_DESC.Staff) return t("roles.defaultStaffDesc");
   return r.description;
+}
+
+/**
+ * The permission catalogue (TeamPermission.java) also comes from the backend in English;
+ * its key picks the translation, and an unknown (newer) permission keeps the server text.
+ */
+type P = { key: string; label: string; description?: string | null };
+
+export function permLabel(p: P): string {
+  return tDynamic(`roles.perm.${p.key}.label`, p.label);
+}
+
+export function permDescription(p: P): string {
+  return tDynamic(`roles.perm.${p.key}.desc`, p.description ?? "");
+}
+
+export function permGroup(group: string): string {
+  return tDynamic(`roles.permGroup.${group}`, group);
 }

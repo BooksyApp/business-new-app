@@ -2296,7 +2296,77 @@
     "defaultStaff": "Staff",
     "defaultOwnerDesc": "The salon's owner. Everything, always.",
     "defaultManagerDesc": "Runs the salon day to day.",
-    "defaultStaffDesc": "Their own calendar and the till."
+    "defaultStaffDesc": "Their own calendar and the till.",
+    "permGroup": {
+      "Calendar": "Calendar",
+      "Sales": "Sales",
+      "Clients": "Clients",
+      "Catalogue": "Catalogue",
+      "Team": "Team",
+      "Business": "Business"
+    },
+    "perm": {
+      "CALENDAR_ALL": {
+        "label": "See everyone's calendar",
+        "desc": "Without it, a team member sees only their own appointments."
+      },
+      "BOOKINGS_ALL": {
+        "label": "Change anyone's appointments",
+        "desc": "Book, move, cancel and mark no-shows for other team members too."
+      },
+      "BOOKING_OVERRIDE": {
+        "label": "Book despite conflicts",
+        "desc": "Save a booking even when the salon is closed, the team member is off or the time is already taken, after confirming."
+      },
+      "TILL": {
+        "label": "Take payments at the till",
+        "desc": "Ring up visits, sell products and gift cards, use the cash drawer."
+      },
+      "REFUNDS": {
+        "label": "Refund payments",
+        "desc": "Give money back for a completed sale."
+      },
+      "SALES_VIEW": {
+        "label": "See sales history",
+        "desc": "Past sales, receipts and invoices."
+      },
+      "ANALYTICS": {
+        "label": "See reports",
+        "desc": "Revenue, bookings and client trends."
+      },
+      "MONEY": {
+        "label": "Manage money",
+        "desc": "Tips, commissions, payroll, invoices, tax and cash drawer history."
+      },
+      "CLIENTS_VIEW": {
+        "label": "See clients",
+        "desc": "The client list, contact details and visit history."
+      },
+      "CLIENTS_MANAGE": {
+        "label": "Add and edit clients",
+        "desc": "Create clients and change their details."
+      },
+      "MARKETING": {
+        "label": "Run marketing",
+        "desc": "Campaigns, promo codes, offers, loyalty cards and referrals."
+      },
+      "REVIEWS": {
+        "label": "Reply to reviews",
+        "desc": "Write the salon's public replies."
+      },
+      "CATALOG": {
+        "label": "Manage services and products",
+        "desc": "Services, categories, add-ons, products, packages and memberships."
+      },
+      "TEAM": {
+        "label": "Manage the team",
+        "desc": "Add and edit team members, their hours and time off, and send invitations."
+      },
+      "SETTINGS": {
+        "label": "Change salon settings",
+        "desc": "Business profile, opening hours, booking rules and notifications."
+      }
+    }
   },
   "sales": {
     "priceOnRequest": "Price on request",

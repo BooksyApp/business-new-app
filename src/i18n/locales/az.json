@@ -2296,7 +2296,77 @@
     "defaultStaff": "Əməkdaş",
     "defaultOwnerDesc": "Salonun sahibi. Hər şey, həmişə.",
     "defaultManagerDesc": "Salonu gündəlik idarə edir.",
-    "defaultStaffDesc": "Öz təqvimi və kassa."
+    "defaultStaffDesc": "Öz təqvimi və kassa.",
+    "permGroup": {
+      "Calendar": "Təqvim",
+      "Sales": "Satışlar",
+      "Clients": "Müştərilər",
+      "Catalogue": "Kataloq",
+      "Team": "Komanda",
+      "Business": "Biznes"
+    },
+    "perm": {
+      "CALENDAR_ALL": {
+        "label": "Hamının təqvimini görür",
+        "desc": "Bu icazə olmasa, əməkdaş yalnız öz rezervlərini görür."
+      },
+      "BOOKINGS_ALL": {
+        "label": "İstənilən rezervi dəyişir",
+        "desc": "Digər ustalar üçün də rezerv yaradır, vaxtını dəyişir, ləğv edir və «gəlmədi» qeyd edir."
+      },
+      "BOOKING_OVERRIDE": {
+        "label": "Toqquşmaya baxmayaraq rezerv edir",
+        "desc": "Salon bağlı olanda, usta işləməyəndə və ya vaxt artıq tutulanda belə, təsdiqdən sonra rezervi yadda saxlayır."
+      },
+      "TILL": {
+        "label": "Kassada ödəniş qəbul edir",
+        "desc": "Vizitləri kassadan keçirir, məhsul və hədiyyə kartı satır, pul qutusundan istifadə edir."
+      },
+      "REFUNDS": {
+        "label": "Ödənişi geri qaytarır",
+        "desc": "Tamamlanmış satış üçün pulu geri qaytarır."
+      },
+      "SALES_VIEW": {
+        "label": "Satış tarixçəsini görür",
+        "desc": "Keçmiş satışlar, qəbzlər və hesab-fakturalar."
+      },
+      "ANALYTICS": {
+        "label": "Hesabatları görür",
+        "desc": "Gəlir, rezervlər və müştəri meylləri."
+      },
+      "MONEY": {
+        "label": "Maliyyəni idarə edir",
+        "desc": "Bəxşiş, komissiya, əmək haqqı, hesab-faktura, vergi və pul qutusunun tarixçəsi."
+      },
+      "CLIENTS_VIEW": {
+        "label": "Müştəriləri görür",
+        "desc": "Müştəri siyahısı, əlaqə məlumatları və vizit tarixçəsi."
+      },
+      "CLIENTS_MANAGE": {
+        "label": "Müştəri əlavə edir və redaktə edir",
+        "desc": "Yeni müştəri yaradır və məlumatlarını dəyişir."
+      },
+      "MARKETING": {
+        "label": "Marketinqlə məşğul olur",
+        "desc": "Kampaniyalar, promo-kodlar, təkliflər, sadiqlik kartları və tövsiyələr."
+      },
+      "REVIEWS": {
+        "label": "Rəylərə cavab verir",
+        "desc": "Salon adından açıq cavablar yazır."
+      },
+      "CATALOG": {
+        "label": "Xidmət və məhsulları idarə edir",
+        "desc": "Xidmətlər, kateqoriyalar, əlavələr, məhsullar, paketlər və abunəliklər."
+      },
+      "TEAM": {
+        "label": "Komandanı idarə edir",
+        "desc": "Əməkdaş əlavə edir və redaktə edir, iş saatlarını və məzuniyyətlərini təyin edir, dəvət göndərir."
+      },
+      "SETTINGS": {
+        "label": "Salon ayarlarını dəyişir",
+        "desc": "Biznes profili, iş saatları, rezerv qaydaları və bildirişlər."
+      }
+    }
   },
   "sales": {
     "priceOnRequest": "Qiymət razılaşma ilə",
