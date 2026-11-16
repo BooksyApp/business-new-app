@@ -250,6 +250,16 @@ export function publicSiteUrl(): string {
   return site.replace(/\/+$/, "");
 }
 
+/**
+ * R02: the salon's public page as the salon hands it out, tagged with the channel so booqi can
+ * tell the bookings the salon brought itself (its link, its QR code) from the ones booqi brought.
+ * booqi-web reads ?src=link|qr (lib/bookingSource). Use the plain URL for the owner's own preview.
+ */
+export function salonShareUrl(salonUrl: string, src: "link" | "qr"): string {
+  if (!salonUrl) return "";
+  return `${salonUrl}${salonUrl.includes("?") ? "&" : "?"}src=${src}`;
+}
+
 export function assetUrl(url: string | null | undefined): string {
   if (!url) return "";
   if (!url.startsWith("/api/")) return url;

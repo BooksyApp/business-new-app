@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, Check, ChevronRight, Copy, X } from "lucide-react";
 
 import { businessService } from "@/services/businessService";
-import { publicSiteUrl } from "@/config/api";
+import { publicSiteUrl, salonShareUrl } from "@/config/api";
 import { cn } from "@/lib/utils";
 import { t, tDynamic } from "@/i18n";
 import { salonPath } from "@/lib/salonKey";
@@ -64,8 +64,8 @@ export function VisibilityBanner({ businessId, showLive = true, className }: { b
     // Same link as Business profile: the public site's /salon/<slug>.
     businessService
       .getBusiness(businessId)
-      .then((b) => live && setBookingUrl(`${publicSiteUrl()}/salon/${b.slug ?? b.id}`))
-      .catch(() => live && setBookingUrl(`${publicSiteUrl()}/salon/${businessId}`));
+      .then((b) => live && setBookingUrl(salonShareUrl(`${publicSiteUrl()}/salon/${b.slug ?? b.id}`, "link")))
+      .catch(() => live && setBookingUrl(salonShareUrl(`${publicSiteUrl()}/salon/${businessId}`, "link")));
     return () => {
       live = false;
     };

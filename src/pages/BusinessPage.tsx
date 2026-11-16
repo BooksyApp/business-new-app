@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { formatPrice } from "@/lib/currency";
 import { reviewService, type Review, type RatingSummary } from "@/services/reviewService";
 import { ImageUploadField } from "@/components/media/ImageUploadField";
-import { assetUrl, publicSiteUrl } from "@/config/api";
+import { assetUrl, publicSiteUrl, salonShareUrl } from "@/config/api";
 import { t, fmtDate as formatLocaleDate, formatMinutes } from "@/i18n";
 
 function formatMoney(value?: number) {
@@ -130,6 +130,8 @@ export default function BusinessPage() {
     if (!business?.id) return "";
     return `${publicSiteUrl()}/salon/${business.slug ?? business.id}`;
   }, [business?.id, business?.slug]);
+  // What the salon copies and shares (Instagram bio, website): tagged so its bookings count as its own.
+  const shareUrl = useMemo(() => salonShareUrl(publicUrl, "link"), [publicUrl]);
 
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
@@ -175,7 +177,7 @@ export default function BusinessPage() {
 
   const handleCopyUrl = () => {
     if (!publicUrl) return;
-    const normalized = publicUrl.startsWith("http") ? publicUrl : `https://${publicUrl}`;
+    const normalized = shareUrl.startsWith("http") ? shareUrl : `https://${shareUrl}`;
     navigator.clipboard.writeText(normalized);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -229,7 +231,7 @@ export default function BusinessPage() {
 
   const handleShare = async () => {
     if (!publicUrl) return;
-    const normalized = publicUrl.startsWith("http") ? publicUrl : `https://${publicUrl}`;
+    const normalized = shareUrl.startsWith("http") ? shareUrl : `https://${shareUrl}`;
     try {
       if (typeof navigator.share === "function") {
         await navigator.share({
@@ -340,7 +342,7 @@ export default function BusinessPage() {
               >
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs font-semibold text-[rgb(var(--reg-muted))]">{t("business.yourBookingLink")}</span>
-                  <span className="block truncate text-sm font-semibold">{publicUrl || t("business.publicUrlUnavailable")}</span>
+                  <span className="block truncate text-sm font-semibold">{shareUrl || t("business.publicUrlUnavailable")}</span>
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">
                   {copied ? <><Check size={15} />{" "}{t("business.copied")}</> : <><Copy size={15} />{" "}{t("common.copy")}</>}
