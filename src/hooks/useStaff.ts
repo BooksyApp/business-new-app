@@ -42,14 +42,15 @@ export function useStaff(businessIdParam?: number) {
     }
   }, [businessId]);
 
-  const updateStaff = useCallback(async (id: number, request: UpdateStaffRequest) => {
+  // silent: the caller shows its own success/error toast (H-05: one toast, not two).
+  const updateStaff = useCallback(async (id: number, request: UpdateStaffRequest, opts?: { silent?: boolean }) => {
     try {
       const updated = await staffService.updateStaff(id, businessId, request);
       setStaff(prev => prev.map(s => s.id === id ? updated : s));
-      toast.success(t("hooks.staffMemberUpdatedSuccessfully"));
+      if (!opts?.silent) toast.success(t("hooks.staffMemberUpdatedSuccessfully"));
       return updated;
     } catch (err) {
-      toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateStaffMember"));
+      if (!opts?.silent) toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateStaffMember"));
       throw err;
     }
   }, [businessId]);

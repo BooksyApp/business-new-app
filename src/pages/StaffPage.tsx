@@ -434,8 +434,9 @@ export default function StaffPage() {
         phone: profileForm.phone.trim() || undefined,
         email: profileForm.email.trim() || undefined,
         position: profileForm.position.trim() || undefined,
-      });
+      }, { silent: true });
       await refreshStaff();
+      toast.success(tr("hooks.staffMemberUpdatedSuccessfully"));
     } catch (error) {
       toast.error((error instanceof Error && error.message) || tr("staff.couldNotSaveTheProfile"));
     } finally {
@@ -546,7 +547,7 @@ export default function StaffPage() {
           schedule[DAY_KEY_TO_BACKEND[day]] = [dayHours.start, dayHours.end];
         }
       });
-      await updateStaff(selectedStaff.id, { schedule });
+      await updateStaff(selectedStaff.id, { schedule }, { silent: true });
       // The refreshed staff object re-runs the hours effect; clearing the selection to
       // force it (as before) briefly fell back to the first member.
       await refreshStaff();
