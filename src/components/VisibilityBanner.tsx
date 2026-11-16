@@ -35,7 +35,7 @@ function liveCardDismissed(businessId: number): boolean {
 }
 
 /**
- * Once the salon can take bookings: a small green "you're live" card with the booking link and
+ * Once the salon can take bookings: a small brand-tinted "you're live" card with the booking link and
  * a Copy button, until the owner closes it (remembered per salon in this browser).
  * `showLive={false}` (the calendar) shows only the missing-steps banner.
  */
@@ -90,23 +90,23 @@ export function VisibilityBanner({ businessId, showLive = true, className }: { b
       setLiveDismissed(true);
     };
     return (
-      <div role="status" data-testid="live-card" className={cn(className, "rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900")}>
+      <div role="status" data-testid="live-card" className={cn(className, "rounded-2xl border border-primary/20 bg-primary/5 p-4 text-foreground")}>
         <div className="flex items-start justify-between gap-3">
           <p className="flex items-center gap-2 text-sm font-bold">
-            <Check className="h-4 w-4" aria-hidden />
+            <Check className="h-4 w-4 text-primary" aria-hidden />
             {t("readiness.liveTitle")}
           </p>
-          <button type="button" onClick={dismiss} aria-label={t("common.close")} className="-m-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-emerald-100">
+          <button type="button" onClick={dismiss} aria-label={t("common.close")} className="-m-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full hover:bg-primary/10">
             <X className="h-4 w-4" aria-hidden />
           </button>
         </div>
         <p className="mt-1 text-sm">{t("readiness.liveBody")}</p>
         {bookingUrl && (
           <div className="mt-3 flex items-center gap-2">
-            <a href={bookingUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm font-semibold underline-offset-2 hover:underline">
+            <a href={bookingUrl} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate rounded-xl bg-background px-3 py-2 text-sm font-semibold underline-offset-2 hover:underline">
               {bookingUrl.replace(/^https?:\/\//, "")}
             </a>
-            <button type="button" onClick={() => void copy()} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-sm font-semibold hover:bg-emerald-100">
+            <button type="button" onClick={() => void copy()} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-background px-3 py-2 text-sm font-semibold hover:bg-primary/10">
               {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
               {copied ? t("business.copied") : t("common.copy")}
             </button>
