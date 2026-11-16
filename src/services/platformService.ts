@@ -24,6 +24,8 @@ export interface PlatformSettings {
   countries: PlatformCountry[];
   /** Online card payments live for this deployment (same flag the web reads). v1: false. */
   onlinePayments?: boolean;
+  /** Support WhatsApp number; absent until the platform configures one. */
+  supportWhatsapp?: string;
   /** Which features the platform has switched on for this panel. */
   flags: Record<string, boolean>;
 }

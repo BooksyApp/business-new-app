@@ -3043,5 +3043,56 @@
     "categoryBUG": "Something is broken",
     "categoryFEEDBACK": "Feedback",
     "categoryOTHER": "Other"
+  },
+  "help": {
+    "title": "Help",
+    "subtitle": "Short answers to the questions we hear most.",
+    "search": "Search titles",
+    "noResults": "Nothing found. You can write to support below.",
+    "notFoundTitle": "Did not find an answer?",
+    "notFoundText": "Write to support and we will reply here and by email.",
+    "writeSupport": "Write to support",
+    "myRequests": "My requests",
+    "whatsapp": "Chat on WhatsApp",
+    "a1": {
+      "q": "Why can't customers see my salon?",
+      "a": "A salon shows up for customers once it has at least one service, one team member and opening hours. Check all three: a service is added, the team member performs it, and opening hours are set. The Overview page lists the steps you have not finished yet. A few minutes after they are done, the salon appears in search.",
+      "link": "Go to Overview"
+    },
+    "a2": {
+      "q": "How do I add services and prices?",
+      "a": "Open Services and press Add. Enter the name, duration and price, then save. You can change the price any time; bookings already made keep their old price. Grouping similar services into categories makes them easier for customers to pick.",
+      "link": "Go to Services"
+    },
+    "a3": {
+      "q": "Team and working hours",
+      "a": "Add a team member on the Team page and choose which services they perform. Each team member can have their own hours. Block the time for holidays or days off so nobody can book it. The salon's general opening hours are set on a separate page.",
+      "link": "Go to Team"
+    },
+    "a4": {
+      "q": "How do I share my booking link?",
+      "a": "You will find your booking link on the Business details page. Copy it and paste it into the link field of your Instagram profile. Use the same link when you message a customer on WhatsApp. The customer opens it and picks a time themselves, so no phone call is needed.",
+      "link": "Go to Business details"
+    },
+    "a5": {
+      "q": "Booking notifications",
+      "a": "You get an email whenever there is a new booking. Choose which notifications are sent in Settings, on the Email page. If nothing arrives, check your spam folder first and make sure your email address is correct.",
+      "link": "Go to Email settings"
+    },
+    "a6": {
+      "q": "How do I cancel or move a booking?",
+      "a": "Click the booking in the Calendar. In the window that opens you can change the time or cancel it. Customers can cancel their own bookings too, and the time becomes free again in the calendar. Remember to let the customer know about any change.",
+      "link": "Go to Calendar"
+    },
+    "a7": {
+      "q": "Till and payment",
+      "a": "For now payment is taken at the salon; there are no online card payments. After the service, mark the booking as paid in the Till section. Cash and card amounts are shown separately, which makes the end-of-day count easy.",
+      "link": "Go to Till"
+    },
+    "a8": {
+      "q": "I forgot my password",
+      "a": "On the sign-in page press Forgot password and enter your email. You will get a link to set a new one. If it does not arrive, check spam. If you are signed in, you can also change your password on the Security page.",
+      "link": "Go to Security"
+    }
   }
 }

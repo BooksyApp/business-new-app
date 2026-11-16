@@ -3043,5 +3043,56 @@
     "categoryBUG": "Nəsə işləmir",
     "categoryFEEDBACK": "Rəy",
     "categoryOTHER": "Digər"
+  },
+  "help": {
+    "title": "Kömək",
+    "subtitle": "Ən çox verilən suallara qısa cavablar.",
+    "search": "Başlıqlarda axtar",
+    "noResults": "Heç nə tapılmadı. Aşağıdan dəstəyə yaza bilərsiniz.",
+    "notFoundTitle": "Cavab tapmadınız?",
+    "notFoundText": "Dəstəyə yazın, cavabı burada və e-poçtla alacaqsınız.",
+    "writeSupport": "Dəstəyə yazın",
+    "myRequests": "Sorğularım",
+    "whatsapp": "WhatsApp-da yazın",
+    "a1": {
+      "q": "Salonum niyə görünmür?",
+      "a": "Salon müştərilərə o zaman görünür ki, ən azı bir xidməti, bir ustası və iş saatları olsun. Üç şeyi də yoxlayın: xidmət əlavə olunub, usta həmin xidməti göstərir, iş saatları yazılıb. İcmal səhifəsində hələ tamamlanmayan addımlar göstərilir. Hamısı bitəndən sonra salon bir neçə dəqiqəyə axtarışda çıxır.",
+      "link": "İcmala keç"
+    },
+    "a2": {
+      "q": "Xidmət və qiymət necə əlavə olunur?",
+      "a": "Xidmətlər səhifəsində «Əlavə et» düyməsinə basın. Adı, müddəti və qiyməti yazın, sonra saxlayın. Qiyməti istənilən vaxt dəyişə bilərsiniz, köhnə rezervlərin qiyməti dəyişmir. Oxşar xidmətləri kateqoriyalara bölsəniz, müştəri daha rahat seçər.",
+      "link": "Xidmətlərə keç"
+    },
+    "a3": {
+      "q": "Usta və iş saatları",
+      "a": "Komanda səhifəsində usta əlavə edin və onun hansı xidmətləri göstərdiyini seçin. Hər ustanın öz iş saatları ola bilər. Məzuniyyət və ya qeyri-iş günü üçün vaxtı bağlayın ki, həmin vaxta rezerv düşməsin. Salonun ümumi iş saatları ayrıca səhifədə yazılır.",
+      "link": "Komandaya keç"
+    },
+    "a4": {
+      "q": "Rezerv linkimi necə paylaşım?",
+      "a": "Salon məlumatları səhifəsində rezerv linkinizi tapacaqsınız. Onu kopyalayıb Instagram profilinizin «link» hissəsinə qoyun. WhatsApp-da müştəriyə göndərəndə də eyni linkdən istifadə edin. Müştəri linkə basıb özü vaxt seçir, sizə zəng etmək lazım olmur.",
+      "link": "Salon məlumatlarına keç"
+    },
+    "a5": {
+      "q": "Rezerv bildirişləri",
+      "a": "Yeni rezerv olanda e-poçt alırsınız. Hansı bildirişlərin gedəcəyini Ayarlar bölməsində, E-poçt səhifəsində seçə bilərsiniz. Bildiriş gəlmirsə, əvvəlcə «spam» qovluğuna baxın və e-poçt ünvanınızın düzgün yazıldığını yoxlayın.",
+      "link": "E-poçt ayarlarına keç"
+    },
+    "a6": {
+      "q": "Rezervi necə ləğv edim və ya vaxtını dəyişim?",
+      "a": "Təqvimdə rezervə basın. Açılan pəncərədə vaxtı dəyişə və ya rezervi ləğv edə bilərsiniz. Müştəri öz rezervini də ləğv edə bilər, bu zaman təqvimdə vaxt yenidən boşalır. Müştəriyə dəyişiklik barədə ayrıca xəbər verməyi unutmayın.",
+      "link": "Təqvimə keç"
+    },
+    "a7": {
+      "q": "Kassa və ödəniş",
+      "a": "Hələlik ödəniş salonda alınır, onlayn kart ödənişi yoxdur. Xidmət bitəndən sonra Kassa bölməsində rezervi ödənilmiş kimi qeyd edin. Nağd və kartla alınan məbləğ ayrıca görünür, beləcə günün sonunda hesablamaq asan olur.",
+      "link": "Kassaya keç"
+    },
+    "a8": {
+      "q": "Şifrəmi unutdum",
+      "a": "Giriş səhifəsində «Şifrəni unutdum» düyməsinə basın, e-poçtunuzu yazın. Sizə şifrəni yeniləmək üçün link gələcək. Gəlmirsə, spam qovluğuna baxın. Daxil olubsunuzsa, şifrəni Təhlükəsizlik səhifəsindən də dəyişə bilərsiniz.",
+      "link": "Təhlükəsizliyə keç"
+    }
   }
 }

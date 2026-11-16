@@ -42,6 +42,7 @@ const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
+const HelpPage = lazy(() => import("./pages/HelpPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const BrandingPage = lazy(() => import("./pages/BrandingPage"));
 const PhotosPage = lazy(() => import("./pages/PhotosPage"));
@@ -250,7 +251,7 @@ const App = () => (
               <Route path="branding" element={<Suspense fallback={<PageLoader />}><BrandingPage /></Suspense>} />
               <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
               <Route path="support" element={<Suspense fallback={<PageLoader />}><SupportPage /></Suspense>} />
-              <Route path="help" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
+              <Route path="help" element={<Suspense fallback={<PageLoader />}><HelpPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense>} />
               <Route path="payment-method" element={<Suspense fallback={<PageLoader />}><PaymentMethodPage /></Suspense>} />
             </Route>
