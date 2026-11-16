@@ -50,12 +50,20 @@ function formatterFor(tz: string): Intl.DateTimeFormat | null {
 
 function validZone(tz?: string | null): string | null {
   if (!tz) return null;
+  if (tz === MARKET_TIME_ZONE) return tz;
   return formatterFor(tz) ? tz : null;
 }
 
 /** Now (or `at`) as the salon sees it, as a local-field Date. */
 export function salonNow(tz?: string | null, at: Date = new Date()): Date {
   const zone = validZone(tz) ?? validZone(currentZone) ?? MARKET_TIME_ZONE;
+  // Azerbaijan has kept a fixed UTC+4 with no daylight saving since 2016: plain arithmetic,
+  // which also skips loading the time-zone data on the calendar's first render (~100 ms on
+  // a 4x-throttled phone). Every other zone goes through Intl.
+  if (zone === MARKET_TIME_ZONE) {
+    const u = new Date(at.getTime() + 4 * 3_600_000);
+    return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate(), u.getUTCHours(), u.getUTCMinutes(), u.getUTCSeconds());
+  }
   const parts = (formatterFor(zone) as Intl.DateTimeFormat).formatToParts(at);
   const n = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   return new Date(n("year"), n("month") - 1, n("day"), n("hour") % 24, n("minute"), n("second"));
