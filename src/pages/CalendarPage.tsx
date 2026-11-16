@@ -1430,7 +1430,7 @@ export default function CalendarPage() {
                   type="button"
                   aria-label={viewType === "Day" ? tr("calendar.previousDay") : viewType === "Weekly" ? tr("calendar.previousWeek") : tr("calendar.previousMonth")}
                   onClick={viewType === "Day" ? goToPrevDay : viewType === "Weekly" ? goToPrevWeek : goToPrevMonth}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
+                  className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
                 >
                   <ChevronLeft size={18} strokeWidth={1.75} />
                 </button>
@@ -1438,7 +1438,7 @@ export default function CalendarPage() {
                   type="button"
                   onClick={goToToday}
                   className={cn(
-                    "h-8 rounded-full px-3 text-sm font-semibold transition-colors",
+                    "relative after:absolute after:-inset-1 after:content-[''] h-8 rounded-full px-3 text-sm font-semibold transition-colors",
                     isCurrentDate && viewType === "Day" ? "text-[rgb(var(--reg-muted))]" : "text-[rgb(var(--reg-ink))] hover:bg-[rgb(var(--reg-canvas))]",
                   )}
                 >
@@ -1448,7 +1448,7 @@ export default function CalendarPage() {
                   type="button"
                   aria-label={viewType === "Day" ? tr("calendar.nextDay") : viewType === "Weekly" ? tr("calendar.nextWeek") : tr("calendar.nextMonth")}
                   onClick={viewType === "Day" ? goToNextDay : viewType === "Weekly" ? goToNextWeek : goToNextMonth}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
+                  className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
                 >
                   <ChevronRight size={18} strokeWidth={1.75} />
                 </button>
@@ -1689,7 +1689,7 @@ export default function CalendarPage() {
                     aria-selected={viewType === v}
                     onClick={() => setViewType(v)}
                     className={cn(
-                      "h-8 rounded-full px-3 text-sm font-semibold transition-colors md:px-3.5",
+                      "relative after:absolute after:-inset-1 after:content-[''] h-8 rounded-full px-3 text-sm font-semibold transition-colors md:px-3.5",
                       viewType === v
                         ? "bg-white text-[rgb(var(--reg-ink))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
                         : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]",
