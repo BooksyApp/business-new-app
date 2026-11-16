@@ -19,29 +19,44 @@ export function setCurrentSalonZone(tz: string | null | undefined): void {
   currentZone = tz || null;
 }
 
+/*
+ * One formatter per zone, built once. The calendar asks "is this today?" for every column
+ * and slot on each render; constructing up to three Intl.DateTimeFormat objects per call
+ * was ~250 ms of main thread per day change on a 4x-throttled phone.
+ */
+const formatters = new Map<string, Intl.DateTimeFormat | null>();
+function formatterFor(tz: string): Intl.DateTimeFormat | null {
+  if (!formatters.has(tz)) {
+    try {
+      formatters.set(
+        tz,
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: tz,
+          hourCycle: "h23",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+      );
+    } catch {
+      formatters.set(tz, null); // not a zone this browser knows
+    }
+  }
+  return formatters.get(tz) ?? null;
+}
+
 function validZone(tz?: string | null): string | null {
   if (!tz) return null;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
-    return tz;
-  } catch {
-    return null;
-  }
+  return formatterFor(tz) ? tz : null;
 }
 
 /** Now (or `at`) as the salon sees it, as a local-field Date. */
 export function salonNow(tz?: string | null, at: Date = new Date()): Date {
   const zone = validZone(tz) ?? validZone(currentZone) ?? MARKET_TIME_ZONE;
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: zone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(at);
+  const parts = (formatterFor(zone) as Intl.DateTimeFormat).formatToParts(at);
   const n = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   return new Date(n("year"), n("month") - 1, n("day"), n("hour") % 24, n("minute"), n("second"));
 }
