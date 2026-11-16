@@ -52,6 +52,29 @@ const LoginPage = lazy(() => import("./pages/LoginPage"));
 const PaymentMethodPage = lazy(() => import("./pages/PaymentMethodPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
+
+/*
+ * Opening the panel straight on a business page used to be a chain: main bundle → route
+ * guards → token check → ownership check → only then the page's own chunk → its data. On
+ * a phone each step is a round trip. Start the guards' and the first page's chunks now, in
+ * parallel with the checks; lazy() reuses the same in-flight import, so nothing loads twice.
+ */
+const FIRST_PAGE: Record<string, () => Promise<unknown>> = {
+  "": () => import("./pages/CalendarPage"),
+  calendar: () => import("./pages/CalendarPage"),
+  clients: () => import("./pages/ClientsPage"),
+  contacts: () => import("./pages/ClientsPage"),
+  sales: () => import("./pages/SalesPage"),
+  shopping: () => import("./pages/SalesPage"),
+};
+if (typeof window !== "undefined") {
+  const [first = "", second = ""] = window.location.pathname.replace(/^\/manage\/?/, "").split("/");
+  if (/^\d+$/.test(first)) {
+    void import("./components/ProtectedRoute");
+    void import("./components/BusinessOwnerRoute");
+    void FIRST_PAGE[second]?.().catch(() => undefined);
+  }
+}
 const PublicRoute = lazy(() => import("./components/PublicRoute"));
 const BusinessOwnerRoute = lazy(() => import("./components/BusinessOwnerRoute"));
 
