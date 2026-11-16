@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { cn } from "@/lib/utils";
 import { Link2, TriangleAlert } from "lucide-react";
@@ -28,7 +29,7 @@ export interface Appointment {
   // Additional fields from API
   /** The day it is on — set by useAppointments; the modal and edit form read it. */
   date?: Date;
-  clientId?: number;
+  clientId?: Id;
   clientPhone?: string;
   clientEmail?: string;
   notes?: string;
@@ -37,9 +38,9 @@ export interface Appointment {
   // #30: needed to decide which lifecycle actions apply. Optional because older
   // call sites build these without it; the footer simply shows fewer buttons then.
   status?: string;
-  serviceId?: number;
+  serviceId?: Id;
   /** The service's category, so the block can take the category's colour. */
-  categoryId?: number;
+  categoryId?: Id;
   categoryName?: string;
   visitId?: string | null;
   /**
@@ -259,7 +260,7 @@ export function StaffAvatar({ staff, size = "md" }: StaffAvatarProps) {
   };
 
   // Get consistent color based on staff id
-  const colorIndex = parseInt(staff.id) % avatarColors.length;
+  const colorIndex = [...String(staff.id)].reduce((h, c) => h + c.charCodeAt(0), 0) % avatarColors.length;
   const gradientClass = avatarColors[colorIndex];
 
   return (

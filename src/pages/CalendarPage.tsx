@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
@@ -85,7 +86,7 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     // Needed on the block itself: the "requested by client" flag lives in the notes, and
     // the badges are keyed off the client record rather than a name string.
     notes: apt.notes,
-    clientId: (apt as { clientId?: number }).clientId,
+    clientId: (apt as { clientId?: Id }).clientId,
     clientEmail: (apt as { clientEmail?: string }).clientEmail,
     date: apt.date,
     apiId: apt.apiId,
@@ -842,7 +843,7 @@ export default function CalendarPage() {
   const [editingVisit, setEditingVisit] = useState<{
     ids: string[];
     date: string;
-    original: { staffId: number; serviceId: number; startTime: string; endTime: string; price?: number }[];
+    original: { staffId: Id; serviceId: Id; startTime: string; endTime: string; price?: number }[];
   } | null>(null);
   const [appointmentForm, setAppointmentForm] = useState({
     clientId: "",
@@ -912,7 +913,7 @@ export default function CalendarPage() {
     return map;
   }, [clients]);
 
-  const visitsFor = (who?: { clientId?: number; clientName?: string; clientEmail?: string } | string) => {
+  const visitsFor = (who?: { clientId?: Id; clientName?: string; clientEmail?: string } | string) => {
     const key = typeof who === "string" ? { clientName: who } : who;
     if (!key) return null;
     if (key.clientId != null) {
@@ -933,7 +934,7 @@ export default function CalendarPage() {
   const blockVisuals = (apt: {
     clientName?: string;
     notes?: string;
-    clientId?: number;
+    clientId?: Id;
     clientEmail?: string;
     price?: number | string | null;
     listPrice?: number | string | null;
@@ -1015,8 +1016,8 @@ export default function CalendarPage() {
       for (const m of members) {
         if (!m.staffId || !m.startTime) continue;
         reqs.push({
-          staffId: parseInt(m.staffId),
-          serviceId: parseInt(base.serviceId),
+          staffId: m.staffId,
+          serviceId: base.serviceId,
           appointmentDate: base.date,
           startTime: m.startTime,
           endTime: addMinutesToTime(m.startTime, serviceDuration(base.serviceId)),
@@ -1043,8 +1044,8 @@ export default function CalendarPage() {
         const visitId = filled.length > 1 ? crypto.randomUUID() : undefined;
         for (const l of filled) {
           reqs.push({
-            staffId: parseInt(l.staffId),
-            serviceId: parseInt(l.serviceId),
+            staffId: l.staffId,
+            serviceId: l.serviceId,
             appointmentDate: d,
             startTime: l.startTime,
             endTime: l.endTime,
@@ -1327,7 +1328,7 @@ export default function CalendarPage() {
         ids: sorted.map((m) => m.id),
         date: appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(currentDate, 'yyyy-MM-dd'),
         original: sorted.map((m) => ({
-          staffId: Number(m.staffId), serviceId: Number(m.serviceId),
+          staffId: m.staffId, serviceId: m.serviceId,
           startTime: m.startTime, endTime: m.endTime, price: m.price,
         })),
       });
@@ -3656,7 +3657,7 @@ export default function CalendarPage() {
                     const date = appointmentForm.date || format(currentDate, 'yyyy-MM-dd');
                     const notes = withRequestedFlag(appointmentForm.notes, appointmentForm.requestedByClient);
                     const who = {
-                      clientId: appointmentForm.clientId ? parseInt(appointmentForm.clientId) : undefined,
+                      clientId: appointmentForm.clientId ? appointmentForm.clientId : undefined,
                       clientName: appointmentForm.clientName || undefined,
                       clientPhone: appointmentForm.clientPhone || undefined,
                       clientEmail: appointmentForm.clientEmail || undefined,
@@ -3668,8 +3669,8 @@ export default function CalendarPage() {
                         const o = editingVisit.original[i];
                         await appointmentService.updateAppointment(editingVisit.ids[i], {
                           businessId: businessId!,
-                          staffId: parseInt(l.staffId),
-                          serviceId: parseInt(l.serviceId),
+                          staffId: l.staffId,
+                          serviceId: l.serviceId,
                           appointmentDate: date,
                           startTime: l.startTime,
                           endTime: l.endTime,
@@ -3705,12 +3706,12 @@ export default function CalendarPage() {
                   const selectedService = services.find(s => s.id.toString() === appointmentForm.serviceId);
                   
                   const appointmentData = {
-                    staffId: parseInt(appointmentForm.staffId),
-                    serviceId: parseInt(appointmentForm.serviceId),
+                    staffId: appointmentForm.staffId,
+                    serviceId: appointmentForm.serviceId,
                     appointmentDate: appointmentForm.date || format(currentDate, 'yyyy-MM-dd'),
                     startTime: appointmentForm.startTime,
                     endTime: appointmentForm.endTime,
-                    clientId: appointmentForm.clientId ? parseInt(appointmentForm.clientId) : undefined,
+                    clientId: appointmentForm.clientId ? appointmentForm.clientId : undefined,
                     clientName: appointmentForm.clientName || undefined,
                     clientPhone: appointmentForm.clientPhone || undefined,
                     clientEmail: appointmentForm.clientEmail || undefined,
@@ -3890,7 +3891,7 @@ export default function CalendarPage() {
                   if (!staffIdToUse) { toast.error(tr("calendar.pleaseSelectAStaffMember")); return; }
                   await createTimeOff({
                     businessId,
-                    staffId: Number(staffIdToUse),
+                    staffId: staffIdToUse,
                     startDate: reservationForm.date,
                     endDate: reservationForm.date,
                     startTime: reservationForm.startTime,
@@ -4283,7 +4284,7 @@ export default function CalendarPage() {
                 try {
                   await createTimeOff({
                     businessId: businessId,
-                    staffId: parseInt(timeOffForm.staffId),
+                    staffId: timeOffForm.staffId,
                     startDate: timeOffForm.startDate,
                     endDate: timeOffForm.endDate,
                     startTime: timeOffForm.isFullDay ? undefined : timeOffForm.startTime || undefined,
@@ -4371,7 +4372,7 @@ export default function CalendarPage() {
                 try {
                   await createTimeOff({
                     businessId: businessId,
-                    staffId: parseInt(timeOffForm.staffId),
+                    staffId: timeOffForm.staffId,
                     startDate: timeOffForm.startDate,
                     endDate: timeOffForm.endDate,
                     startTime: timeOffForm.isFullDay ? undefined : timeOffForm.startTime || undefined,

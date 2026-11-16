@@ -1,17 +1,18 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { businessService } from "@/services/businessService";
 import { MARKET_TIME_ZONE, setCurrentSalonZone } from "@/lib/salonClock";
 
-const cache = new Map<number, string>();
+const cache = new Map<Id, string>();
 
 /**
  * The salon's IANA zone (businesses.timezone); Asia/Baku until known or when unset.
  * Also makes it the open salon's zone for salonNow()/salonToday() called without one.
  */
-export function useSalonTimeZone(businessId: number): string {
-  const [tz, setTz] = useState<string>(() => cache.get(businessId) ?? MARKET_TIME_ZONE);
+export function useSalonTimeZone(businessId: Id | null | undefined): string {
+  const [tz, setTz] = useState<string>(() => (businessId ? cache.get(businessId) : undefined) ?? MARKET_TIME_ZONE);
   useEffect(() => {
-    if (!businessId || businessId <= 0) return;
+    if (!businessId) return;
     const known = cache.get(businessId);
     if (known) {
       setCurrentSalonZone(known);

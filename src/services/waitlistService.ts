@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 /**
@@ -7,10 +8,10 @@ import { apiClient } from "@/config/api";
  * those clients whenever a slot freed up.
  */
 export interface WaitlistEntry {
-  id: number;
-  businessId: number;
-  staffId: number | null;
-  serviceId: number | null;
+  id: Id;
+  businessId: Id;
+  staffId: Id | null;
+  serviceId: Id | null;
   clientName: string | null;
   clientEmail: string | null;
   clientPhone: string | null;
@@ -23,12 +24,12 @@ export interface WaitlistEntry {
 }
 
 class WaitlistService {
-  async listForBusiness(businessId: number): Promise<WaitlistEntry[]> {
+  async listForBusiness(businessId: Id): Promise<WaitlistEntry[]> {
     return apiClient.get<WaitlistEntry[]>(`/waitlist/business/${businessId}`);
   }
 
   /** Take someone off the list — booked elsewhere, or no longer waiting. */
-  async remove(businessId: number, id: number): Promise<void> {
+  async remove(businessId: Id, id: Id): Promise<void> {
     return apiClient.delete<void>(`/waitlist/business/${businessId}/${id}`);
   }
 }

@@ -1,9 +1,10 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 import { format } from '@/i18n/dateFns';
 
 export interface SaleItem {
-  id?: number;
-  serviceId?: number;
+  id?: Id;
+  serviceId?: Id;
   serviceName: string;
   serviceType: string;
   quantity: number;
@@ -14,11 +15,11 @@ export interface SaleItem {
 }
 
 export interface Sale {
-  id: number;
-  businessId: number;
-  staffId?: number;
+  id: Id;
+  businessId: Id;
+  staffId?: Id;
   staffName?: string;
-  clientId?: number;
+  clientId?: Id;
   clientName?: string;
   clientPhone?: string;
   clientEmail?: string;
@@ -45,14 +46,14 @@ export interface Sale {
 }
 
 export interface CreateSaleRequest {
-  businessId: number;
-  staffId?: number;
-  clientId?: number;
+  businessId: Id;
+  staffId?: Id;
+  clientId?: Id;
   clientName?: string;
   clientPhone?: string;
   clientEmail?: string;
   items: Array<{
-    serviceId?: number;
+    serviceId?: Id;
     serviceName: string;
     serviceType: string;
     quantity: number;
@@ -77,13 +78,13 @@ export interface CreateSaleRequest {
    * Who the tip belongs to. Absent gives the whole tip to whoever did the work, which is
    * what a one-chair salon means when it types a tip in.
    */
-  tips?: Array<{ staffId?: number; amount: number; method?: string }>;
+  tips?: Array<{ staffId?: Id; amount: number; method?: string }>;
   splitCashAmount?: number;
   splitCardAmount?: number;
 }
 
 export const saleService = {
-  async getSalesByBusiness(businessId: number, date?: Date): Promise<Sale[]> {
+  async getSalesByBusiness(businessId: Id, date?: Date): Promise<Sale[]> {
     if (date) {
       const dateStr = format(date, 'yyyy-MM-dd');
       return apiClient.get<Sale[]>(`/sales/business/${businessId}?date=${dateStr}`);
@@ -91,13 +92,13 @@ export const saleService = {
     return apiClient.get<Sale[]>(`/sales/business/${businessId}`);
   },
 
-  async getSalesByDateRange(businessId: number, startDate: Date, endDate: Date): Promise<Sale[]> {
+  async getSalesByDateRange(businessId: Id, startDate: Date, endDate: Date): Promise<Sale[]> {
     const startDateStr = format(startDate, 'yyyy-MM-dd');
     const endDateStr = format(endDate, 'yyyy-MM-dd');
     return apiClient.get<Sale[]>(`/sales/business/${businessId}?startDate=${startDateStr}&endDate=${endDateStr}`);
   },
 
-  async getSaleById(id: number): Promise<Sale> {
+  async getSaleById(id: Id): Promise<Sale> {
     return apiClient.get<Sale>(`/sales/${id}`);
   },
 
@@ -105,7 +106,7 @@ export const saleService = {
     return apiClient.post<Sale>('/sales', request);
   },
 
-  async cancelSale(id: number): Promise<void> {
+  async cancelSale(id: Id): Promise<void> {
     return apiClient.delete<void>(`/sales/${id}`);
   },
 };

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 export interface DailyRevenue {
@@ -7,7 +8,7 @@ export interface DailyRevenue {
 }
 
 export interface TopService {
-  serviceId: number;
+  serviceId: Id;
   serviceName: string;
   bookings: number;
   revenue: number;
@@ -15,7 +16,7 @@ export interface TopService {
 }
 
 export interface TopStaff {
-  staffId: number;
+  staffId: Id;
   staffName: string;
   bookings: number;
   revenue: number;
@@ -60,7 +61,7 @@ export interface BookingTrends {
 
 export interface StaffPerformance {
   staffDetails: Array<{
-    staffId: number;
+    staffId: Id;
     staffName: string;
     bookings: number;
     revenue: number;
@@ -128,7 +129,7 @@ export interface ClientAnalytics {
   retentionRate: number;
   newClientRate: number;
   clientGrowth: Array<{ period: string; newClients: number; totalClients: number }>;
-  topClients: Array<{ clientId: number; clientName: string; totalBookings: number; totalSpent: number; lastVisitDaysAgo: number; averageTicket: number }>;
+  topClients: Array<{ clientId: Id; clientName: string; totalBookings: number; totalSpent: number; lastVisitDaysAgo: number; averageTicket: number }>;
   averageClientValue: number;
   averageVisitsPerClient: number;
   clientSegments: Array<{ segment: string; count: number; totalRevenue: number; percentage: number }>;
@@ -137,19 +138,19 @@ export interface ClientAnalytics {
 }
 
 export interface ServiceAnalytics {
-  servicePerformance: Array<{ serviceId: number; serviceName: string; categoryName: string; bookings: number; revenue: number; averagePrice: number; averageDuration: number; popularityScore: number; revenuePercentage: number }>;
+  servicePerformance: Array<{ serviceId: Id; serviceName: string; categoryName: string; bookings: number; revenue: number; averagePrice: number; averageDuration: number; popularityScore: number; revenuePercentage: number }>;
   categoryPerformance: Array<{ categoryName: string; totalBookings: number; totalRevenue: number; serviceCount: number; averageServicePrice: number; revenuePercentage: number }>;
   averageServicePrice: number;
-  mostPopularServiceId: number;
+  mostPopularServiceId: Id;
   mostPopularServiceName: string;
-  highestRevenueServiceId: number;
+  highestRevenueServiceId: Id;
   highestRevenueServiceName: string;
-  serviceTrends: Array<{ serviceId: number; serviceName: string; period: string; bookings: number; revenue: number; growth: number }>;
+  serviceTrends: Array<{ serviceId: Id; serviceName: string; period: string; bookings: number; revenue: number; growth: number }>;
   servicesByCategory: Record<string, number>;
 }
 
 export interface StaffDetail {
-  staffId: number;
+  staffId: Id;
   staffName: string;
   bookings: number;
   completed: number;
@@ -257,7 +258,7 @@ export interface NoShowImpact {
 
 export const analysisService = {
   async getNoShowImpact(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<NoShowImpact> {
@@ -271,7 +272,7 @@ export const analysisService = {
   },
 
   async getDiscountImpact(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<DiscountImpact> {
@@ -285,7 +286,7 @@ export const analysisService = {
   },
 
   async getAnalyticsOverview(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<AnalyticsOverview> {
@@ -300,7 +301,7 @@ export const analysisService = {
   },
   
   async getRevenueAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<RevenueAnalytics> {
@@ -315,7 +316,7 @@ export const analysisService = {
   },
   
   async getBookingAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<BookingAnalytics> {
@@ -330,7 +331,7 @@ export const analysisService = {
   },
   
   async getClientAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<ClientAnalytics> {
@@ -345,7 +346,7 @@ export const analysisService = {
   },
   
   async getServiceAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<ServiceAnalytics> {
@@ -360,7 +361,7 @@ export const analysisService = {
   },
   
   async getPerformanceAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<PerformanceAnalytics> {
@@ -375,7 +376,7 @@ export const analysisService = {
   },
   
   async getCancellationAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<CancellationAnalytics> {
@@ -390,7 +391,7 @@ export const analysisService = {
   },
   
   async getPeakHoursAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<PeakHoursAnalytics> {
@@ -405,7 +406,7 @@ export const analysisService = {
   },
   
   async getCustomerRetentionAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<CustomerRetentionAnalytics> {
@@ -420,7 +421,7 @@ export const analysisService = {
   },
   
   async getProfitabilityAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<ProfitabilityAnalytics> {
@@ -435,7 +436,7 @@ export const analysisService = {
   },
   
   async getPaymentMethodAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ): Promise<PaymentMethodsAnalytics> {
@@ -450,7 +451,7 @@ export const analysisService = {
   },
   
   async getSeasonalAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -465,7 +466,7 @@ export const analysisService = {
   },
   
   async getServiceDurationAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -480,7 +481,7 @@ export const analysisService = {
   },
   
   async getWaitTimeAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -495,7 +496,7 @@ export const analysisService = {
   },
   
   async getBookingLeadTimeAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -510,7 +511,7 @@ export const analysisService = {
   },
   
   async getRevenuePerHourAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -525,7 +526,7 @@ export const analysisService = {
   },
   
   async getCustomerAcquisitionAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -540,7 +541,7 @@ export const analysisService = {
   },
   
   async getServiceBundleAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {
@@ -555,7 +556,7 @@ export const analysisService = {
   },
   
   async getGrowthForecastAnalytics(
-    businessId: number,
+    businessId: Id,
     startDate?: string,
     endDate?: string
   ) {

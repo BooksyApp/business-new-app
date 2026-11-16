@@ -1,8 +1,9 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface BusinessHours {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   dayOfWeek: string;
   enabled: boolean;
   startTime: string | null;
@@ -17,11 +18,11 @@ export interface BusinessHoursUpdateItem {
 }
 
 export const businessHoursService = {
-  async getBusinessHoursByBusinessId(businessId: number): Promise<BusinessHours[]> {
+  async getBusinessHoursByBusinessId(businessId: Id): Promise<BusinessHours[]> {
     return apiClient.get<BusinessHours[]>(`/business-hours/business/${businessId}`);
   },
 
-  async updateBusinessHours(businessId: number, hours: BusinessHoursUpdateItem[]): Promise<BusinessHours[]> {
+  async updateBusinessHours(businessId: Id, hours: BusinessHoursUpdateItem[]): Promise<BusinessHours[]> {
     return apiClient.put<BusinessHours[]>(`/business-hours/business/${businessId}`, hours);
   },
 };
@@ -55,8 +56,8 @@ export const businessHoursService = {
  * openTime/closeTime are required exactly when `closed` is false.
  */
 export interface HoursException {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   startDate: string; // YYYY-MM-DD
   endDate: string;
   closed: boolean;
@@ -66,8 +67,8 @@ export interface HoursException {
 }
 
 export const hoursExceptionService = {
-  list: (businessId: number) => apiClient.get<HoursException[]>(`/business-hours-exceptions/business/${businessId}`),
+  list: (businessId: Id) => apiClient.get<HoursException[]>(`/business-hours-exceptions/business/${businessId}`),
   create: (input: Omit<HoursException, "id">) => apiClient.post<HoursException>(`/business-hours-exceptions`, input),
-  remove: (businessId: number, id: number) =>
+  remove: (businessId: Id, id: Id) =>
     apiClient.delete<void>(`/business-hours-exceptions/${id}?businessId=${businessId}`),
 };

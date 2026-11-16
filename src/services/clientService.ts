@@ -1,8 +1,9 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface ClientWithStats {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   firstName: string;
   lastName: string | null;
   email: string | null;
@@ -53,8 +54,8 @@ export interface ClientWithStats {
 }
 
 export interface Client {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   firstName: string;
   lastName: string | null;
   email: string | null;
@@ -81,7 +82,7 @@ export interface Client {
 }
 
 export interface ClientAppointmentRow {
-  id: number;
+  id: Id;
   appointment_date: string;
   start_time: string;
   end_time: string;
@@ -98,7 +99,7 @@ class ClientService {
    * This client's visits at THIS salon. Scoped by business on the server, so a client who
    * also goes elsewhere does not bring those visits with them.
    */
-  async getAppointmentsAtBusiness(businessId: number, clientId: number): Promise<ClientAppointmentRow[]> {
+  async getAppointmentsAtBusiness(businessId: Id, clientId: Id): Promise<ClientAppointmentRow[]> {
     return apiClient.get<ClientAppointmentRow[]>(
       `/businesses/${businessId}/clients/${clientId}/appointments`
     );
@@ -107,7 +108,7 @@ class ClientService {
   /**
    * Get clients who have booked appointments for a business
    */
-  async getClientsWithAppointments(businessId: number): Promise<ClientWithStats[]> {
+  async getClientsWithAppointments(businessId: Id): Promise<ClientWithStats[]> {
     // The endpoint pages (default 500, max 1000 rows); a big salon has more clients than one
     // page, and the rest silently went missing. Fetch page after page.
     const PAGE = 1000;
@@ -123,7 +124,7 @@ class ClientService {
   }
 
   /** History of a client known only by the list's key (walk-ins without a record). */
-  async getVisitsByKey(businessId: number, clientKey: string): Promise<ClientAppointmentRow[]> {
+  async getVisitsByKey(businessId: Id, clientKey: string): Promise<ClientAppointmentRow[]> {
     return apiClient.get<ClientAppointmentRow[]>(
       `/businesses/${businessId}/client-visits?key=${encodeURIComponent(clientKey)}`
     );
@@ -132,14 +133,14 @@ class ClientService {
   /**
    * Get all clients for a business (for dropdown selection)
    */
-  async getClientsByBusiness(businessId: number): Promise<Client[]> {
+  async getClientsByBusiness(businessId: Id): Promise<Client[]> {
     return apiClient.get<Client[]>(`/clients/business/${businessId}`);
   }
 
   /**
    * Create a new client for a business
    */
-  async createClient(businessId: number, clientData: {
+  async createClient(businessId: Id, clientData: {
     firstName: string;
     lastName?: string;
     email?: string;
@@ -154,9 +155,9 @@ class ClientService {
 }
 
 export interface Invitation {
-  id: number;
-  businessId: number;
-  clientId?: number;
+  id: Id;
+  businessId: Id;
+  clientId?: Id;
   recipientEmail: string;
   recipientPhone?: string;
   recipientName: string;
@@ -174,8 +175,8 @@ class InvitationService {
   /**
    * Create an invitation for a client
    */
-  async createInvitation(businessId: number, invitationData: {
-    clientId?: number;
+  async createInvitation(businessId: Id, invitationData: {
+    clientId?: Id;
     recipientName: string;
     recipientEmail?: string;
     recipientPhone?: string;
@@ -193,21 +194,21 @@ class InvitationService {
   /**
    * Get invitations by business
    */
-  async getInvitationsByBusiness(businessId: number): Promise<Invitation[]> {
+  async getInvitationsByBusiness(businessId: Id): Promise<Invitation[]> {
     return apiClient.get<Invitation[]>(`/invitations/business/${businessId}`);
   }
 
   /**
    * Cancel an invitation
    */
-  async cancelInvitation(invitationId: number): Promise<void> {
+  async cancelInvitation(invitationId: Id): Promise<void> {
     return apiClient.put(`/invitations/${invitationId}/cancel`, {});
   }
 
   /**
    * Mark invitation as sent
    */
-  async markAsSent(invitationId: number): Promise<Invitation> {
+  async markAsSent(invitationId: Id): Promise<Invitation> {
     return apiClient.put<Invitation>(`/invitations/${invitationId}/sent`, {});
   }
 

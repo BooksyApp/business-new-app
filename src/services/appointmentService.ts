@@ -1,17 +1,18 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 import { format } from '@/i18n/dateFns';
 import { t } from '@/i18n';
 
 export interface Appointment {
   id: string;
-  businessId: number;
-  staffId: number;
+  businessId: Id;
+  staffId: Id;
   staffName?: string;
-  clientId?: number;
+  clientId?: Id;
   clientName?: string;
   clientPhone?: string;
   clientEmail?: string;
-  serviceId: number;
+  serviceId: Id;
   serviceName?: string;
   /** Set when the customer booked several services in one visit: one appointment each, same id here. */
   visitId?: string | null;
@@ -117,13 +118,13 @@ async function withConflictConfirm<T>(send: (override?: BookingOverride) => Prom
 }
 
 export interface CreateAppointmentRequest {
-  businessId: number;
-  staffId: number;
-  clientId?: number;
+  businessId: Id;
+  staffId: Id;
+  clientId?: Id;
   clientName?: string;
   clientPhone?: string;
   clientEmail?: string;
-  serviceId: number;
+  serviceId: Id;
   appointmentDate: string; // YYYY-MM-DD
   startTime: string; // HH:mm
   endTime: string; // HH:mm
@@ -141,7 +142,7 @@ export const appointmentService = {
     return apiClient.get<Appointment>(`/bookings/${id}`);
   },
 
-  async getAppointmentsByBusiness(businessId: number, date?: Date): Promise<Appointment[]> {
+  async getAppointmentsByBusiness(businessId: Id, date?: Date): Promise<Appointment[]> {
     // Always provide a date - use provided date or default to today
     const targetDate = date || new Date();
     const dateStr = format(targetDate, 'yyyy-MM-dd');
@@ -156,14 +157,14 @@ export const appointmentService = {
   },
 
   /** Every booking between two dates (inclusive), e.g. for the client list's insights. */
-  async getAppointmentsInRange(businessId: number, start: Date, end: Date): Promise<Appointment[]> {
+  async getAppointmentsInRange(businessId: Id, start: Date, end: Date): Promise<Appointment[]> {
     const params = new URLSearchParams();
     params.append('startDate', format(start, 'yyyy-MM-dd'));
     params.append('endDate', format(end, 'yyyy-MM-dd'));
     return apiClient.get<Appointment[]>(`/bookings/business/${businessId}?${params.toString()}`);
   },
 
-  async getAppointmentsByStaff(staffId: number, date?: Date): Promise<Appointment[]> {
+  async getAppointmentsByStaff(staffId: Id, date?: Date): Promise<Appointment[]> {
     // Always provide a date - use provided date or default to today
     const targetDate = date || new Date();
     const dateStr = format(targetDate, 'yyyy-MM-dd');

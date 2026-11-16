@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { salonNow } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
@@ -77,7 +78,7 @@ export function AppointmentModal({
       .then(setClients)
       .catch(() => setClients([]));
   }, [isOpen, appointment?.apiId, fullAppointment?.businessId]);
-  const salonTz = useSalonTimeZone(Number(fullAppointment?.businessId ?? 0));
+  const salonTz = useSalonTimeZone(fullAppointment?.businessId);
 
   const reassignClient = async (client: Client) => {
     if (!appointment?.apiId || !fullAppointment) return;
@@ -92,7 +93,7 @@ export function AppointmentModal({
       // A visit belongs to one client: change it on every service of the visit.
       const lines = appointment.visitMates && appointment.visitMates.length > 1
         ? appointment.visitMates.map((m) => ({
-            id: m.id, staffId: Number(m.staffId), serviceId: Number(m.serviceId),
+            id: m.id, staffId: m.staffId, serviceId: m.serviceId,
             startTime: m.startTime, endTime: m.endTime, price: m.price,
           }))
         : [{ id: appointment.apiId, staffId: fullAppointment.staffId, serviceId: fullAppointment.serviceId,

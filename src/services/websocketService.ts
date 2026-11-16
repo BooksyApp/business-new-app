@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { WS_BASE_URL } from '@/config/api';
 import { Appointment } from './appointmentService';
 import { Sale } from './saleService';
@@ -304,7 +305,7 @@ class WebSocketService {
     };
   }
 
-  subscribeToAppointments(businessId: number, handler: MessageHandler<Appointment>): () => void {
+  subscribeToAppointments(businessId: Id, handler: MessageHandler<Appointment>): () => void {
     let subscription: Subscription | null = null;
     let unsubscribeCalled = false;
     let connectListener: (() => void) | null = null;
@@ -403,8 +404,8 @@ class WebSocketService {
    * "websocket disconnected" the dashboard kept showing.
    */
   subscribeToStaffAppointments(
-    businessId: number,
-    staffId: number,
+    businessId: Id,
+    staffId: Id,
     handler: MessageHandler<Appointment>
   ): () => void {
     if (!this.connected || !this.stompClient) {
@@ -430,7 +431,7 @@ class WebSocketService {
     };
   }
 
-  subscribeToSales(businessId: number, handler: MessageHandler<Sale>): () => void {
+  subscribeToSales(businessId: Id, handler: MessageHandler<Sale>): () => void {
     if (!this.connected || !this.stompClient) {
       return () => {};
     }
@@ -454,7 +455,7 @@ class WebSocketService {
     };
   }
 
-  subscribeToTimeOffs(businessId: number, handler: MessageHandler<TimeOff>): () => void {
+  subscribeToTimeOffs(businessId: Id, handler: MessageHandler<TimeOff>): () => void {
     let subscription: Subscription | null = null;
     let unsubscribeCalled = false;
     let connectListener: (() => void) | null = null;
@@ -525,11 +526,11 @@ export const websocketService = new WebSocketService();
  * member whose role shows only their own calendar may not subscribe to the whole salon
  * (the server refuses it), so they listen to their own column instead.
  */
-function appointmentsTopic(businessId: number): string {
+function appointmentsTopic(businessId: Id): string {
   try {
     const b = JSON.parse(localStorage.getItem("currentBusiness") || "{}");
     const own = !b?.isOwner && Array.isArray(b?.myPermissions) && !b.myPermissions.includes("CALENDAR_ALL");
-    if (own && b?.myStaffId && Number(b.id) === Number(businessId)) {
+    if (own && b?.myStaffId && String(b.id) === String(businessId)) {
       return `/topic/appointments/${businessId}/staff/${b.myStaffId}`;
     }
   } catch {
