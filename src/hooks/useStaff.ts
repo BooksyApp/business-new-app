@@ -34,7 +34,7 @@ export function useStaff(businessIdParam?: number) {
     try {
       const created = await staffService.createStaff(businessId, request);
       setStaff(prev => [...prev, created]);
-      toast.success(t("hooks.staffMemberCreatedSuccessfully"));
+      // No toast here: the add-staff page says what happened (added / invited / no invitation).
       return created;
     } catch (err) {
       toast.error((err instanceof Error && err.message) || t("hooks.failedToCreateStaffMember"));

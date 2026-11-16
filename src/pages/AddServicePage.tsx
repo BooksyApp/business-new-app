@@ -248,11 +248,9 @@ export default function AddServicePage() {
       };
 
       if (isEditMode && id) {
-        await safeUpdateService(parseInt(id), serviceData);
-        toast.success(tr("addService.serviceUpdatedSuccessfully"));
+        await safeUpdateService(parseInt(id), serviceData); // useServices shows the toast
       } else {
-        await safeCreateService(serviceData);
-        toast.success(tr("addService.serviceCreatedSuccessfully"));
+        await safeCreateService(serviceData); // useServices shows the toast
       }
       navigate(getPath("items-category"));
     } catch (error) {
@@ -293,7 +291,7 @@ export default function AddServicePage() {
         ...buildScheduling(),
         ...buildClientSettings(),
       });
-      toast.success(tr("addService.serviceCreatedSuccessfully"));
+      // useServices shows the "created" toast.
       // Reset form for next service
       setFormData({
         serviceName: "",

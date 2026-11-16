@@ -3204,8 +3204,12 @@ export default function CalendarPage() {
                 const { startHour, endHour, isEnabled } = getBusinessHoursForDate(isNaN(day.getTime()) ? currentDate : day);
                 const lo = isEnabled ? startHour : 8;
                 const hi = isEnabled ? endHour : 20;
+                // Today, a new booking cannot start in the past (the API refuses it with
+                // "Cannot create bookings in the past"), so those times are not offered.
+                const nowHm = !editingAppointmentId && isToday(day) ? format(new Date(), 'HH:mm') : null;
                 const slots = timeOptionsWith(appointmentForm.startTime).filter((t) => {
                   const h = parseInt(t.slice(0, 2), 10);
+                  if (nowHm && t < nowHm && t !== appointmentForm.startTime) return false;
                   return (h >= lo && h < hi) || t === appointmentForm.startTime;
                 });
                 return (
