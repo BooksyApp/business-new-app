@@ -995,8 +995,12 @@ export default function CalendarPage() {
       ];
       const dates = bookingMode === "recurring" ? computeRecurrenceDates(base.date, recurrence) : [base.date];
       for (const d of dates) {
-        for (const l of lines) {
-          if (!l.serviceId || !l.staffId || !l.startTime || !l.endTime) continue;
+        // H-01: 2+ services on one date are ONE visit — the same visit_id grouping a web
+        // cart gets, so the calendar card, details, till (one ticket) and partial cancel
+        // treat them as a single booking. A lone service stays a standalone booking.
+        const filled = lines.filter((l) => l.serviceId && l.staffId && l.startTime && l.endTime);
+        const visitId = filled.length > 1 ? crypto.randomUUID() : undefined;
+        for (const l of filled) {
           reqs.push({
             staffId: parseInt(l.staffId),
             serviceId: parseInt(l.serviceId),
@@ -1008,6 +1012,7 @@ export default function CalendarPage() {
             clientEmail: base.clientEmail || undefined,
             price: servicePrice(l.serviceId),
             notes,
+            ...(visitId ? { visitId } : {}),
           });
         }
       }

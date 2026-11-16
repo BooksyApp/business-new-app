@@ -130,6 +130,8 @@ export interface CreateAppointmentRequest {
   price?: number;
   color?: string;
   notes?: string;
+  /** H-01: shared by every service of one multi-service visit (like a web cart). */
+  visitId?: string;
 }
 
 export const appointmentService = {
