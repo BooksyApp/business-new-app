@@ -3094,5 +3094,11 @@
       "a": "Giriş səhifəsində «Şifrəni unutdum» düyməsinə basın, e-poçtunuzu yazın. Sizə şifrəni yeniləmək üçün link gələcək. Gəlmirsə, spam qovluğuna baxın. Daxil olubsunuzsa, şifrəni Təhlükəsizlik səhifəsindən də dəyişə bilərsiniz.",
       "link": "Təhlükəsizliyə keç"
     }
+  },
+  "impersonation": {
+    "banner": "Sahibin hesabına baxırsınız ({email}) — booqi ops tərəfindən açılıb",
+    "exit": "Çıx",
+    "invalidTitle": "Keçid artıq işləmir",
+    "invalidBody": "Bu birdəfəlik keçidin vaxtı bitib və ya artıq istifadə olunub. Admin paneldən yenidən \"Sahib kimi aç\" seçin."
   }
 }

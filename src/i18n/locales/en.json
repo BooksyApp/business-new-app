@@ -3094,5 +3094,11 @@
       "a": "On the sign-in page press Forgot password and enter your email. You will get a link to set a new one. If it does not arrive, check spam. If you are signed in, you can also change your password on the Security page.",
       "link": "Go to Security"
     }
+  },
+  "impersonation": {
+    "banner": "Viewing as owner ({email}) — opened by booqi ops",
+    "exit": "Exit",
+    "invalidTitle": "This link no longer works",
+    "invalidBody": "This one-time link has expired or was already used. Choose \"Open as owner\" in the admin again."
   }
 }

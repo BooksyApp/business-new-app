@@ -12,6 +12,8 @@ export async function startSession(authResponse: AuthResponse): Promise<void> {
   // #9: AuthResponse is a flat record (accessToken, refreshToken, userId, fullName,
   // email, role, businessId).
   const { accessToken, refreshToken, userId, fullName, email, role, businessId } = authResponse;
+  // A-01: a normal sign-in is never "viewing as owner"; the impersonation flow sets it after.
+  localStorage.removeItem("booqi.impersonation");
   localStorage.setItem("accessToken", accessToken);
   localStorage.setItem("refreshToken", refreshToken);
   localStorage.setItem("user", JSON.stringify({ id: userId, fullName, email, role }));

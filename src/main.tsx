@@ -9,6 +9,8 @@ import "./index.css";
 import { t, loadHubLocale } from "@/i18n";
 import { getHubLocale } from "@/lib/hubLocale";
 import { initSentry, reportError } from "@/lib/sentry";
+import { ImpersonationBanner, ImpersonationError } from "@/components/ImpersonationBanner";
+import { handleImpersonationLanding } from "@/lib/impersonation";
 
 initSentry();
 
@@ -75,10 +77,22 @@ if (!rootElement) {
 
 // A panel set to a lazily bundled language (ru) loads it first, so the first paint is not
 // English; az / en are in the main bundle and this resolves at once.
-loadHubLocale(getHubLocale()).finally(() => {
-  createRoot(rootElement).render(
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  );
-});
+loadHubLocale(getHubLocale())
+  // A-01: /impersonate?code=… is handled before the router exists (router-agnostic).
+  .then(() => handleImpersonationLanding().catch(() => "error" as const))
+  .catch(() => "none" as const)
+  .then((landing) => {
+    if (landing === "done") return; // navigating to the panel
+    createRoot(rootElement).render(
+      <ErrorBoundary>
+        {landing === "error" ? (
+          <ImpersonationError />
+        ) : (
+          <>
+            <ImpersonationBanner />
+            <App />
+          </>
+        )}
+      </ErrorBoundary>
+    );
+  });
