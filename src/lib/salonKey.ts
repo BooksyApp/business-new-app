@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 /**
  * business.getbooqi.tech/<slug>_<publicId>/calendar — the panel's salon address.
  *
@@ -15,15 +16,20 @@ export const SALON_KEYS_STORAGE = "booqi.hub.salonKeys";
 
 const UUID_AT_END = /(?:^|_)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
 
-/** publicId (lowercase) → [business id, canonical key] */
-type Store = Record<string, [number, string]>;
+/** publicId (lowercase) → [business id, canonical key]. UUID phase 2: the id IS the public id. */
+type Store = Record<string, [Id, string]>;
 
 let cache: Store | null = null;
 
 function load(): Store {
   if (cache) return cache;
   try {
-    cache = JSON.parse(localStorage.getItem(SALON_KEYS_STORAGE) || "{}") as Store;
+    const raw = JSON.parse(localStorage.getItem(SALON_KEYS_STORAGE) || "{}") as Record<string, [unknown, string]>;
+    // UUID phase 2: pairs saved before the switch hold numeric ids — drop them, the next
+    // owner-list / resolve call stores them again with the public id.
+    cache = Object.fromEntries(
+      Object.entries(raw).filter(([, v]) => Array.isArray(v) && typeof v[0] === "string"),
+    ) as Store;
   } catch {
     cache = {};
   }
@@ -42,15 +48,16 @@ export function isSalonKey(segment: string | undefined | null): boolean {
 }
 
 /** Remember what the server said about these salons (owner list, resolve, create). */
-export function rememberSalons(list: Array<{ id?: number; publicId?: string; panelKey?: string } | null | undefined>): void {
+export function rememberSalons(list: Array<{ id?: Id; publicId?: string; panelKey?: string } | null | undefined>): void {
   const store = load();
   let changed = false;
   for (const b of list) {
     if (!b?.id || !b.publicId || !b.panelKey) continue;
     const k = b.publicId.toLowerCase();
+    const id = String(b.id);
     const prev = store[k];
-    if (!prev || prev[0] !== b.id || prev[1] !== b.panelKey) {
-      store[k] = [b.id, b.panelKey];
+    if (!prev || prev[0] !== id || prev[1] !== b.panelKey) {
+      store[k] = [id, b.panelKey];
       changed = true;
     }
   }
@@ -62,16 +69,17 @@ export function rememberSalons(list: Array<{ id?: number; publicId?: string; pan
   }
 }
 
-/** The business id behind a panel key, when the server has told us; else undefined. */
-export function idForKey(key: string | undefined | null): number | undefined {
+/** The business id behind a panel key: since UUID phase 2 it is the key's public id itself. */
+export function idForKey(key: string | undefined | null): Id | undefined {
   const p = publicIdOf(key);
-  return p ? load()[p]?.[0] : undefined;
+  return p ? (load()[p]?.[0] ?? p) : undefined;
 }
 
 /** The canonical panel key of a salon id we know; undefined otherwise. */
-export function keyForId(id: number | null | undefined): string | undefined {
+export function keyForId(id: Id | null | undefined): string | undefined {
   if (!id) return undefined;
-  for (const [bid, key] of Object.values(load())) if (bid === id) return key;
+  const want = String(id).toLowerCase();
+  for (const [bid, key] of Object.values(load())) if (String(bid).toLowerCase() === want) return key;
   return undefined;
 }
 
@@ -79,7 +87,7 @@ export function keyForId(id: number | null | undefined): string | undefined {
  * Address of a panel page of a salon: `/<key>/<page>`. A salon we have no key for (should
  * not happen inside the panel) goes to the salon picker, which loads them.
  */
-export function salonPath(id: number | null | undefined, page = "calendar"): string {
+export function salonPath(id: Id | null | undefined, page = "calendar"): string {
   const key = keyForId(id);
   if (!key) return "/";
   const rest = page.replace(/^\/+/, "");

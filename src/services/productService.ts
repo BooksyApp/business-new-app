@@ -1,8 +1,9 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface Product {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   name: string;
   sku: string | null;
   price: number;
@@ -30,24 +31,24 @@ export interface ProductInput {
  * a single bottle.
  */
 class ProductService {
-  list(businessId: number): Promise<Product[]> {
+  list(businessId: Id): Promise<Product[]> {
     return apiClient.get<Product[]>(`/products/business/${businessId}`);
   }
 
-  lowStock(businessId: number): Promise<Product[]> {
+  lowStock(businessId: Id): Promise<Product[]> {
     return apiClient.get<Product[]>(`/products/business/${businessId}/low-stock`);
   }
 
-  create(businessId: number, input: ProductInput): Promise<Product> {
+  create(businessId: Id, input: ProductInput): Promise<Product> {
     return apiClient.post<Product>(`/products/business/${businessId}`, input);
   }
 
   /** A partial update is fine: the server keeps fields that are not sent. */
-  update(businessId: number, id: number, input: Partial<ProductInput>): Promise<Product> {
+  update(businessId: Id, id: Id, input: Partial<ProductInput>): Promise<Product> {
     return apiClient.put<Product>(`/products/${id}/business/${businessId}`, input);
   }
 
-  remove(businessId: number, id: number): Promise<void> {
+  remove(businessId: Id, id: Id): Promise<void> {
     return apiClient.delete<void>(`/products/${id}/business/${businessId}`);
   }
 }

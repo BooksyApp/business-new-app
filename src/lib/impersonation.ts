@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { API_BASE_URL } from "@/config/api";
 import { startSession } from "@/utils/session";
 
@@ -62,10 +63,10 @@ export async function handleImpersonationLanding(): Promise<"none" | "done" | "e
     if (!res.ok) return "error";
     const s = (await res.json()) as {
       accessToken: string;
-      userId: number;
+      userId: Id;
       email: string;
       role: string;
-      businessId: number | null;
+      businessId: Id | null;
       impersonatedBy?: string;
     };
     // Whatever this browser was signed in as is replaced, not mixed with the owner's session.

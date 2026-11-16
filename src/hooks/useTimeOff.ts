@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from "react";
 import { timeOffService, type TimeOff, type CreateTimeOffRequest, type UpdateTimeOffRequest } from "@/services/timeOffService";
 import { websocketService } from "@/services/websocketService";
@@ -5,7 +6,7 @@ import { toast } from "sonner";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { t } from "@/i18n";
 
-export const useTimeOff = (businessIdParam?: number) => {
+export const useTimeOff = (businessIdParam?: Id) => {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [timeOffs, setTimeOffs] = useState<TimeOff[]>([]);
@@ -96,7 +97,7 @@ export const useTimeOff = (businessIdParam?: number) => {
     }
   }, []);
 
-  const updateTimeOff = useCallback(async (id: number, data: UpdateTimeOffRequest): Promise<TimeOff | null> => {
+  const updateTimeOff = useCallback(async (id: Id, data: UpdateTimeOffRequest): Promise<TimeOff | null> => {
     try {
       const updated = await timeOffService.updateTimeOff(id, data);
       setTimeOffs(prev => prev.map(to => to.id === id ? updated : to));
@@ -108,7 +109,7 @@ export const useTimeOff = (businessIdParam?: number) => {
     }
   }, []);
 
-  const deleteTimeOff = useCallback(async (id: number): Promise<boolean> => {
+  const deleteTimeOff = useCallback(async (id: Id): Promise<boolean> => {
     try {
       await timeOffService.deleteTimeOff(id);
       // WebSocket will handle the update, but we can remove it optimistically
@@ -121,7 +122,7 @@ export const useTimeOff = (businessIdParam?: number) => {
     }
   }, []);
 
-  const approveTimeOff = useCallback(async (id: number, approvedBy: number): Promise<TimeOff | null> => {
+  const approveTimeOff = useCallback(async (id: Id, approvedBy: Id): Promise<TimeOff | null> => {
     try {
       const approved = await timeOffService.approveTimeOff(id, approvedBy);
       setTimeOffs(prev => prev.map(to => to.id === id ? approved : to));

@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface ReferralCode {
-  id: number;
+  id: Id;
   code: string;
-  businessId: number;
-  ownerId: number;
+  businessId: Id;
+  ownerId: Id;
   type: "CLIENT_REFERRAL" | "BUSINESS_REFERRAL" | "UNIVERSAL";
   status: "ACTIVE" | "INACTIVE" | "EXPIRED" | "SUSPENDED";
   description?: string;
@@ -20,12 +21,12 @@ export interface ReferralCode {
 }
 
 export interface ReferralUsage {
-  id: number;
-  referralCodeId: number;
-  businessId: number;
-  usedByUserId: number;
-  referredClientId?: number;
-  referredBusinessId?: number;
+  id: Id;
+  referralCodeId: Id;
+  businessId: Id;
+  usedByUserId: Id;
+  referredClientId?: Id;
+  referredBusinessId?: Id;
   status: "PENDING" | "REWARDED" | "FAILED" | "CANCELLED";
   rewardAmount?: number;
   rewardPoints?: number;
@@ -37,7 +38,7 @@ export interface ReferralUsage {
 }
 
 export interface ReferralAnalytics {
-  businessId: number;
+  businessId: Id;
   totalReferralCodes: number;
   activeReferralCodes: number;
   totalUsages: number;
@@ -51,8 +52,8 @@ export interface ReferralAnalytics {
 }
 
 export interface CreateReferralCodeRequest {
-  businessId: number;
-  ownerId: number;
+  businessId: Id;
+  ownerId: Id;
   type: "CLIENT_REFERRAL" | "BUSINESS_REFERRAL" | "UNIVERSAL";
   description?: string;
   rewardAmount?: number;
@@ -86,7 +87,7 @@ class ReferralService {
   /**
    * Get all referral codes for a business
    */
-  async getReferralCodesByBusiness(businessId: number): Promise<ReferralCode[]> {
+  async getReferralCodesByBusiness(businessId: Id): Promise<ReferralCode[]> {
     return apiClient.get<ReferralCode[]>(`/referrals/codes/business/${businessId}`);
   }
 
@@ -107,14 +108,14 @@ class ReferralService {
   /**
    * Get referral analytics for a business
    */
-  async getAnalytics(businessId: number): Promise<ReferralAnalytics> {
+  async getAnalytics(businessId: Id): Promise<ReferralAnalytics> {
     return apiClient.get<ReferralAnalytics>(`/referrals/analytics/business/${businessId}`);
   }
 
   /**
    * Get referral usages for a business
    */
-  async getReferralUsages(businessId: number): Promise<ReferralUsage[]> {
+  async getReferralUsages(businessId: Id): Promise<ReferralUsage[]> {
     // Note: This endpoint might need to be added to the backend
     return apiClient.get<ReferralUsage[]>(`/referrals/usages/business/${businessId}`);
   }
@@ -122,7 +123,7 @@ class ReferralService {
   /**
    * Use a referral code
    */
-  async useReferralCode(code: string, businessId: number, userId: number, referredClientId?: number, referredBusinessId?: number): Promise<ReferralUsage> {
+  async useReferralCode(code: string, businessId: Id, userId: Id, referredClientId?: Id, referredBusinessId?: Id): Promise<ReferralUsage> {
     return apiClient.post<ReferralUsage>("/referrals/use", {
       code,
       businessId,
@@ -135,14 +136,14 @@ class ReferralService {
   /**
    * Process reward for a referral usage
    */
-  async processReward(usageId: number): Promise<ReferralUsage> {
+  async processReward(usageId: Id): Promise<ReferralUsage> {
     return apiClient.put<ReferralUsage>(`/referrals/usages/${usageId}/process`, {});
   }
 
   /**
    * Get the universal referral code for a business owner
    */
-  async getReferralCodeByOwner(ownerId: number): Promise<ReferralCode | null> {
+  async getReferralCodeByOwner(ownerId: Id): Promise<ReferralCode | null> {
     try {
       return await apiClient.get<ReferralCode>(`/referrals/codes/owner/${ownerId}`);
     } catch (error) {
@@ -153,7 +154,7 @@ class ReferralService {
   /**
    * Get the universal referral code for a business
    */
-  async getBusinessUniversalCode(businessId: number): Promise<ReferralCode | null> {
+  async getBusinessUniversalCode(businessId: Id): Promise<ReferralCode | null> {
     try {
       return await apiClient.get<ReferralCode>(`/referrals/codes/business/${businessId}/universal`);
     } catch (error) {

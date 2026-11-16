@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 /**
@@ -8,7 +9,7 @@ import { apiClient } from '@/config/api';
  * that actually makes somebody stop scrolling.
  */
 export interface ServiceDiscount {
-  id: number;
+  id: Id;
   name: string;
   price: number;
   duration: number;
@@ -32,13 +33,13 @@ export interface DiscountInput {
 }
 
 export const discountService = {
-  list: (businessId: number) =>
+  list: (businessId: Id) =>
     apiClient.get<ServiceDiscount[]>(`/services/business/${businessId}/discounts`),
 
-  setForService: (businessId: number, serviceId: number, input: DiscountInput) =>
+  setForService: (businessId: Id, serviceId: Id, input: DiscountInput) =>
     apiClient.put<void>(`/services/${serviceId}/discount`, { businessId, ...input }),
 
   /** The same offer across the whole menu, because setting twenty by hand never finishes. */
-  setForAll: (businessId: number, input: DiscountInput) =>
+  setForAll: (businessId: Id, input: DiscountInput) =>
     apiClient.put<{ services: number }>(`/services/business/${businessId}/discount`, input),
 };

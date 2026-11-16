@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from 'react';
 
 import { discountService, type ServiceDiscount } from '@/services/discountService';
@@ -21,8 +22,8 @@ export interface ServiceOffer {
  *
  * One request per business, shared by both screens.
  */
-export function useServiceOffers(businessId: number): Map<number, ServiceOffer> {
-  const [offers, setOffers] = useState<Map<number, ServiceOffer>>(new Map());
+export function useServiceOffers(businessId: Id): Map<Id, ServiceOffer> {
+  const [offers, setOffers] = useState<Map<Id, ServiceOffer>>(new Map());
 
   useEffect(() => {
     if (!businessId) return;
@@ -31,7 +32,7 @@ export function useServiceOffers(businessId: number): Map<number, ServiceOffer> 
       .list(businessId)
       .then((rows: ServiceDiscount[]) => {
         if (!live) return;
-        const next = new Map<number, ServiceOffer>();
+        const next = new Map<Id, ServiceOffer>();
         rows.forEach((row) => {
           const running = row.running && row.sale_price != null;
           next.set(row.id, {

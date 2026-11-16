@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -122,10 +123,10 @@ const day = (value: string | null | undefined) => (value ? String(value).slice(0
 
 // ---------------------------------------------------------------------------
 
-function PayoutsTab({ businessId }: { businessId: number }) {
+function PayoutsTab({ businessId }: { businessId: Id }) {
   const [data, setData] = useState<PayoutOverview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [openBatch, setOpenBatch] = useState<number | null>(null);
+  const [openBatch, setOpenBatch] = useState<Id | null>(null);
   const [items, setItems] = useState<Record<number, PayoutOverview["batches"][number]["items"]>>({});
 
   const load = useCallback(() => {
@@ -139,7 +140,7 @@ function PayoutsTab({ businessId }: { businessId: number }) {
 
   useEffect(load, [load]);
 
-  const expand = async (batchId: number) => {
+  const expand = async (batchId: Id) => {
     if (openBatch === batchId) { setOpenBatch(null); return; }
     setOpenBatch(batchId);
     if (items[batchId]) return;
@@ -267,10 +268,10 @@ function PayoutsTab({ businessId }: { businessId: number }) {
 
 // ---------------------------------------------------------------------------
 
-function TipsTab({ businessId }: { businessId: number }) {
+function TipsTab({ businessId }: { businessId: Id }) {
   const [data, setData] = useState<TipSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState<number | "all" | null>(null);
+  const [paying, setPaying] = useState<Id | "all" | null>(null);
 
   const load = useCallback(() => {
     if (!businessId) { setLoading(false); return; }
@@ -283,7 +284,7 @@ function TipsTab({ businessId }: { businessId: number }) {
 
   useEffect(load, [load]);
 
-  const settle = async (staffId?: number) => {
+  const settle = async (staffId?: Id) => {
     setPaying(staffId ?? "all");
     try {
       const result = await moneyService.payOutTips(businessId, staffId);
@@ -366,7 +367,7 @@ function TipsTab({ businessId }: { businessId: number }) {
 
 // ---------------------------------------------------------------------------
 
-function DrawerTab({ businessId }: { businessId: number }) {
+function DrawerTab({ businessId }: { businessId: Id }) {
   const [session, setSession] = useState<DrawerSession | null>(null);
   const [history, setHistory] = useState<DrawerSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -584,7 +585,7 @@ function DrawerTab({ businessId }: { businessId: number }) {
 
 // ---------------------------------------------------------------------------
 
-function InvoicesTab({ businessId }: { businessId: number }) {
+function InvoicesTab({ businessId }: { businessId: Id }) {
   const [rows, setRows] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [saleId, setSaleId] = useState("");
@@ -607,7 +608,7 @@ function InvoicesTab({ businessId }: { businessId: number }) {
     if (!saleId.trim()) { toast.error(t("money.whichSale")); return; }
     setBusy(true);
     try {
-      const invoice = await moneyService.issueInvoice(businessId, Number(saleId), {
+      const invoice = await moneyService.issueInvoice(businessId, saleId, {
         buyerName: buyerName || undefined,
         buyerTaxNumber: buyerTax || undefined,
       });
@@ -681,7 +682,7 @@ function InvoicesTab({ businessId }: { businessId: number }) {
 
 // ---------------------------------------------------------------------------
 
-function DepositsTab({ businessId }: { businessId: number }) {
+function DepositsTab({ businessId }: { businessId: Id }) {
   const [report, setReport] = useState<ForfeitReport | null>(null);
   const [candidates, setCandidates] = useState<ForfeitCandidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -786,7 +787,7 @@ function DepositsTab({ businessId }: { businessId: number }) {
 
 // ---------------------------------------------------------------------------
 
-function SettingsTab({ businessId }: { businessId: number }) {
+function SettingsTab({ businessId }: { businessId: Id }) {
   const onlinePayments = useOnlinePayments();
   const [settings, setSettings] = useState<MoneySettings | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { businessService } from "@/services/businessService";
@@ -16,9 +17,10 @@ const LegacyPanelRedirect = () => {
 
   useEffect(() => {
     const [, idPart = "", ...rest] = location.pathname.split("/").filter(Boolean);
-    const id = /^\d+$/.test(idPart) ? Number(idPart) : NaN;
-    const user = getCurrentUser() as { id?: number } | null;
-    if (!Number.isFinite(id) || !user?.id) {
+    // UUID phase 2: a pre-key link carries the salon id; numeric ones no longer match anything.
+    const id = idPart;
+    const user = getCurrentUser() as { id?: Id } | null;
+    if (!id || !user?.id) {
       setTarget("/");
       return;
     }

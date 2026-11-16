@@ -1,3 +1,5 @@
+import { idTone } from "@/lib/idTone";
+import type { Id } from "@/types/id";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { salonNow } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
@@ -104,10 +106,10 @@ function getStaffDayHours(
 export default function StaffPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("staff-members");
-  const [selectedStaffId, setSelectedStaffId] = useState<number | null>(null);
+  const [selectedStaffId, setSelectedStaffId] = useState<Id | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [servicesSearchQuery, setServicesSearchQuery] = useState("");
-  const [selectedServicesForStaff, setSelectedServicesForStaff] = useState<number[]>([]);
+  const [selectedServicesForStaff, setSelectedServicesForStaff] = useState<Id[]>([]);
   const [workingHoursForm, setWorkingHoursForm] = useState<Record<string, { start: string; end: string; isClosed: boolean }>>({});
   const [selectedDate, setSelectedDate] = useState(() => salonNow()); // The salon's today (LR-09)
   const [selectedStaffer, setSelectedStaffer] = useState("All");
@@ -158,7 +160,7 @@ export default function StaffPage() {
     }
   };
 
-  const removeResourceType = async (id: number) => {
+  const removeResourceType = async (id: Id) => {
     setResourceBusy(true);
     try {
       // Backend deactivates rather than deleting, so existing bookings keep resolving.
@@ -177,9 +179,9 @@ export default function StaffPage() {
   // all along with no caller. Backend create() also approved everything unconditionally,
   // so nothing was ever pending — that half is fixed on the backend; this is the screen
   // that lets a manager actually act on a pending request.
-  const [approvingTimeOffId, setApprovingTimeOffId] = useState<number | null>(null);
+  const [approvingTimeOffId, setApprovingTimeOffId] = useState<Id | null>(null);
 
-  const approveTimeOffRequest = async (timeOffId: number) => {
+  const approveTimeOffRequest = async (timeOffId: Id) => {
     setApprovingTimeOffId(timeOffId);
     try {
       await timeOffService.approveTimeOff(timeOffId, businessId);
@@ -215,7 +217,7 @@ export default function StaffPage() {
   const { businessHours, getDefaultHours, getHoursForDay } = useBusinessHours(businessId);
   
   // Commission and Payment hooks
-  const selectedStaffIdForCommissions = selectedStaffer !== "All" ? parseInt(selectedStaffer) : undefined;
+  const selectedStaffIdForCommissions = selectedStaffer !== "All" ? selectedStaffer : undefined;
   const {
     commissions,
     pendingCommissions,
@@ -254,8 +256,8 @@ export default function StaffPage() {
     type: CommissionType.PERCENTAGE,
     value: 0,
     description: "",
-    staffId: undefined as number | undefined,
-    serviceId: undefined as number | undefined,
+    staffId: undefined as Id | undefined,
+    serviceId: undefined as Id | undefined,
     scope: "category" as "category" | "service", // New field to determine if rule is for category or specific service
   });
   const [paymentForm, setPaymentForm] = useState({
@@ -362,7 +364,7 @@ export default function StaffPage() {
 
   // ── resources: cards + a sheet to create one or link services to it ──
   const [resourceSheet, setResourceSheet] = useState<ResourceType | null | false>(false);
-  const [resourceLinks, setResourceLinks] = useState<number[]>([]);
+  const [resourceLinks, setResourceLinks] = useState<Id[]>([]);
   const activeResources = resourceTypes.filter((r) => r.isActive !== false);
   const openResource = (r: ResourceType | null) => {
     setResourceLinks([]);
@@ -400,7 +402,7 @@ export default function StaffPage() {
   const [memberOpen, setMemberOpen] = useState(false);
   const [memberTab, setMemberTab] = useState<"profile" | "services" | "hours" | "permissions">("profile");
   const [roles, setRoles] = useState<BusinessRole[]>([]);
-  const [pickedRoleId, setPickedRoleId] = useState<number | null>(null);
+  const [pickedRoleId, setPickedRoleId] = useState<Id | null>(null);
   const [roleBusy, setRoleBusy] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: "", position: "", phone: "", email: "" });
   const [profileBusy, setProfileBusy] = useState(false);
@@ -413,9 +415,9 @@ export default function StaffPage() {
   }, [businessId]);
   useEffect(() => { loadRoles(); }, [loadRoles]);
 
-  const roleOf = (staffId: number) => roles.find((r) => r.memberIds?.includes(staffId));
+  const roleOf = (staffId: Id) => roles.find((r) => r.memberIds?.includes(staffId));
 
-  const openMember = (id: number, tab: "profile" | "services" | "hours" | "permissions") => {
+  const openMember = (id: Id, tab: "profile" | "services" | "hours" | "permissions") => {
     const s = apiStaff.find((x) => x.id === id);
     setSelectedStaffId(id);
     setMemberTab(tab);
@@ -475,7 +477,7 @@ export default function StaffPage() {
 
 
   // Toggle service selection for staff
-  const handleToggleService = (serviceId: number) => {
+  const handleToggleService = (serviceId: Id) => {
     setSelectedServicesForStaff(prev => {
       if (prev.includes(serviceId)) {
         return prev.filter(id => id !== serviceId);
@@ -718,7 +720,7 @@ export default function StaffPage() {
             ) : (
               <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {activeResources.map((r) => {
-                  const linked = apiServices.filter((s) => (s as { resourceTypeId?: number | null }).resourceTypeId === r.id);
+                  const linked = apiServices.filter((s) => (s as { resourceTypeId?: Id | null }).resourceTypeId === r.id);
                   return (
                     <li key={r.id} className="flex flex-col rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                       <div className="flex items-start gap-3">
@@ -780,7 +782,7 @@ export default function StaffPage() {
             {resourceSheet ? (
               <ul className="max-h-[50vh] space-y-1.5 overflow-y-auto">
                 {apiServices.map((s) => {
-                  const current = (s as { resourceTypeId?: number | null }).resourceTypeId;
+                  const current = (s as { resourceTypeId?: Id | null }).resourceTypeId;
                   const already = current === resourceSheet.id;
                   return (
                     <li key={s.id}>
@@ -1055,7 +1057,7 @@ export default function StaffPage() {
             ) : memberTab === "permissions" ? (
               <>
                 <Button variant="outline" className={sheetSecondary} onClick={() => setMemberOpen(false)}>{tr("common.close")}</Button>
-                <Button className={sheetPrimary} disabled={roleBusy || !pickedRoleId || pickedRoleId === roleOf(selectedStaff?.id ?? 0)?.id} onClick={() => void saveRole()}>
+                <Button className={sheetPrimary} disabled={roleBusy || !pickedRoleId || pickedRoleId === roleOf(selectedStaff?.id ?? "")?.id} onClick={() => void saveRole()}>
                   {roleBusy ? tr("common.saving") : tr("staff.saveRole")}
                 </Button>
               </>
@@ -1791,7 +1793,7 @@ export default function StaffPage() {
                 try {
                   await createTimeOff({
                     businessId: businessId,
-                    staffId: parseInt(timeOffForm.staffId),
+                    staffId: timeOffForm.staffId,
                     startDate: timeOffForm.startDate,
                     endDate: timeOffForm.endDate,
                     startTime: timeOffForm.isFullDay ? null : timeOffForm.startTime || null,
@@ -1891,7 +1893,7 @@ export default function StaffPage() {
                   value={commissionRuleForm.serviceId ? commissionRuleForm.serviceId.toString() : ""}
                   onValueChange={(value) => setCommissionRuleForm(prev => ({ 
                     ...prev, 
-                    serviceId: value ? parseInt(value) : undefined,
+                    serviceId: value ? value : undefined,
                     // Preserve other values
                     value: prev.value,
                     type: prev.type,
@@ -1921,7 +1923,7 @@ export default function StaffPage() {
               <Select
                 value={commissionRuleForm.staffId ? commissionRuleForm.staffId.toString() : "all"}
                 onValueChange={(value) => {
-                  const newStaffId = value === "all" ? undefined : parseInt(value);
+                  const newStaffId = value === "all" ? undefined : value;
                   setCommissionRuleForm(prev => ({ 
                     ...prev, 
                     staffId: newStaffId,
@@ -2239,11 +2241,11 @@ const AVATAR_TONES = [
   "bg-sky-50 text-sky-800",
 ];
 
-function MemberAvatar({ name, id, url, size }: { name: string; id: number; url?: string; size: string }) {
+function MemberAvatar({ name, id, url, size }: { name: string; id: Id; url?: string; size: string }) {
   return url ? (
     <img src={url} alt="" className={cn("shrink-0 rounded-full object-cover", size)} />
   ) : (
-    <span className={cn("flex shrink-0 items-center justify-center rounded-full font-bold", AVATAR_TONES[id % AVATAR_TONES.length], size)}>
+    <span className={cn("flex shrink-0 items-center justify-center rounded-full font-bold", AVATAR_TONES[idTone(id, AVATAR_TONES.length)], size)}>
       {getInitials(name)}
     </span>
   );

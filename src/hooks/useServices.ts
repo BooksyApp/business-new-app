@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { serviceService, type Service, type CreateServiceRequest, type UpdateServiceRequest } from '@/services/serviceService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
 import { t } from "@/i18n";
 
-export function useServices(businessIdParam?: number, categoryId?: number) {
+export function useServices(businessIdParam?: Id, categoryId?: Id) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [services, setServices] = useState<Service[]>([]);
@@ -12,7 +13,7 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
   const [error, setError] = useState<string | null>(null);
 
   const loadServices = useCallback(async () => {
-    if (!businessId || businessId <= 0) {
+    if (!businessId) {
       setError(t("common.businessIdIsRequired"));
       setLoading(false);
       return;
@@ -38,7 +39,7 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
   }, [loadServices]);
 
   const createService = useCallback(async (request: CreateServiceRequest) => {
-    if (!businessId || businessId <= 0) {
+    if (!businessId) {
       const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;
@@ -54,7 +55,7 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
     }
   }, [businessId]);
 
-  const updateService = useCallback(async (id: number, request: UpdateServiceRequest) => {
+  const updateService = useCallback(async (id: Id, request: UpdateServiceRequest) => {
     try {
       const updated = await serviceService.updateService(id, businessId, request);
       setServices(prev => prev.map(svc => svc.id === id ? updated : svc));
@@ -66,7 +67,7 @@ export function useServices(businessIdParam?: number, categoryId?: number) {
     }
   }, [businessId]);
 
-  const deleteService = useCallback(async (id: number) => {
+  const deleteService = useCallback(async (id: Id) => {
     try {
       await serviceService.deleteService(id, businessId);
       setServices(prev => prev.filter(svc => svc.id !== id));

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Boxes, Coins, Minus, Package, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,7 +29,7 @@ export default function InventoryPage() {
   const [sheet, setSheet] = useState<{ mode: "new" } | { mode: "edit"; product: Product } | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
-  const [moving, setMoving] = useState<number | null>(null);
+  const [moving, setMoving] = useState<Id | null>(null);
 
   const load = async () => {
     setProducts(await productService.list(businessId).catch(() => []));

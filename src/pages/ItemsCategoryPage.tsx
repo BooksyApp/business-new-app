@@ -1,3 +1,5 @@
+import { idTone } from "@/lib/idTone";
+import type { Id } from "@/types/id";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronRight, FolderPlus, Layers, MapPin, Package, Pencil, Plus, Scissors, Search, Sparkles, Trash2, Video } from "lucide-react";
@@ -37,7 +39,7 @@ const initials = (name: string) =>
 
 const AVATAR_TONES = ["bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]", "bg-rose-50 text-rose-800", "bg-amber-50 text-amber-900", "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]", "bg-sky-50 text-sky-800"];
 
-type Sel = "all" | "uncategorized" | number;
+type Sel = "all" | "uncategorized" | Id;
 
 /**
  * The service menu: categories on the left (chips on a phone), services on the right with
@@ -70,7 +72,7 @@ export default function ItemsCategoryPage() {
 
   const filtered = services.filter((s) => {
     if (selected === "uncategorized" && s.categoryId) return false;
-    if (typeof selected === "number" && s.categoryId !== selected) return false;
+    if (selected !== "all" && selected !== "uncategorized" && s.categoryId !== selected) return false;
     return s.name.toLowerCase().includes(query.trim().toLowerCase());
   });
 
@@ -292,7 +294,7 @@ export default function ItemsCategoryPage() {
                       <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                         {g.items.map((s, i) => {
                           const on = isVisible(s);
-                          const people = (s.staffIds ?? []).map((id) => staffById.get(id)).filter(Boolean) as { id: number; name: string; avatarUrl?: string }[];
+                          const people = (s.staffIds ?? []).map((id) => staffById.get(id)).filter(Boolean) as { id: Id; name: string; avatarUrl?: string }[];
                           return (
                             <li key={s.id} className={cn("group flex items-center gap-3 px-3 py-3 md:px-4", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
                               <span className="h-11 w-1 shrink-0 rounded-full" style={{ backgroundColor: s.color?.startsWith("#") ? s.color : "rgb(var(--reg-brand) / 0.35)" }} aria-hidden />
@@ -315,7 +317,7 @@ export default function ItemsCategoryPage() {
                                     p.avatarUrl ? (
                                       <img key={p.id} src={p.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-white" />
                                     ) : (
-                                      <span key={p.id} className={cn("flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold tracking-tight ring-2 ring-white", AVATAR_TONES[p.id % AVATAR_TONES.length])}>
+                                      <span key={p.id} className={cn("flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold tracking-tight ring-2 ring-white", AVATAR_TONES[idTone(p.id, AVATAR_TONES.length)])}>
                                         {initials(p.name)}
                                       </span>
                                     ),

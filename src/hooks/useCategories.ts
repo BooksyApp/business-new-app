@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { categoryService, type Category, type CreateCategoryRequest, type UpdateCategoryRequest } from '@/services/categoryService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
 import { t } from "@/i18n";
 
-export function useCategories(businessIdParam?: number) {
+export function useCategories(businessIdParam?: Id) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [categories, setCategories] = useState<Category[]>([]);
@@ -42,7 +43,7 @@ export function useCategories(businessIdParam?: number) {
     }
   }, [businessId]);
 
-  const updateCategory = useCallback(async (id: number, request: UpdateCategoryRequest) => {
+  const updateCategory = useCallback(async (id: Id, request: UpdateCategoryRequest) => {
     try {
       const updated = await categoryService.updateCategory(id, businessId, request);
       setCategories(prev => prev.map(cat => cat.id === id ? updated : cat));
@@ -54,7 +55,7 @@ export function useCategories(businessIdParam?: number) {
     }
   }, [businessId]);
 
-  const deleteCategory = useCallback(async (id: number) => {
+  const deleteCategory = useCallback(async (id: Id) => {
     try {
       await categoryService.deleteCategory(id, businessId);
       setCategories(prev => prev.filter(cat => cat.id !== id));

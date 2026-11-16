@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { shiftService, type Shift, type CreateShiftRequest, type UpdateShiftRequest } from '@/services/shiftService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
 import { t } from "@/i18n";
 
-export function useShifts(businessIdParam?: number, date?: string) {
+export function useShifts(businessIdParam?: Id, date?: string) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -12,7 +13,7 @@ export function useShifts(businessIdParam?: number, date?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const loadShifts = useCallback(async () => {
-    if (!businessId || businessId <= 0 || !date) {
+    if (!businessId || !date) {
       setLoading(false);
       return;
     }
@@ -35,7 +36,7 @@ export function useShifts(businessIdParam?: number, date?: string) {
   }, [loadShifts]);
 
   const createShift = useCallback(async (request: CreateShiftRequest) => {
-    if (!businessId || businessId <= 0) {
+    if (!businessId) {
       const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;
@@ -51,8 +52,8 @@ export function useShifts(businessIdParam?: number, date?: string) {
     }
   }, [businessId]);
 
-  const updateShift = useCallback(async (id: number, request: UpdateShiftRequest) => {
-    if (!businessId || businessId <= 0) {
+  const updateShift = useCallback(async (id: Id, request: UpdateShiftRequest) => {
+    if (!businessId) {
       const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;
@@ -68,8 +69,8 @@ export function useShifts(businessIdParam?: number, date?: string) {
     }
   }, [businessId]);
 
-  const deleteShift = useCallback(async (id: number) => {
-    if (!businessId || businessId <= 0) {
+  const deleteShift = useCallback(async (id: Id) => {
+    if (!businessId) {
       const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;

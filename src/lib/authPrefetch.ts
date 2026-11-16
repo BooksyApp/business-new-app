@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { rememberSalons } from "@/lib/salonKey";
 import { API_BASE_URL } from "@/config/api";
 import { getAccessToken } from "@/utils/authUtils";
@@ -15,7 +16,7 @@ import firstScreen from "./firstScreen.json";
  * means the guard asks again itself.
  */
 type Validation = { valid: boolean; message: string; user?: unknown };
-type Owned = { id: number; publicId?: string; panelKey?: string }[];
+type Owned = { id: Id; publicId?: string; panelKey?: string }[];
 
 /** Unexpired by its own clock. JWTs are base64url; plain atob() rejects "-" and "_". */
 function unexpired(token: string): boolean {
@@ -29,7 +30,7 @@ function unexpired(token: string): boolean {
 }
 
 let validation: { token: string; answer: Promise<Validation | null> } | null = null;
-let owned: { token: string; userId: number; answer: Promise<Owned | null> } | null = null;
+let owned: { token: string; userId: Id; answer: Promise<Owned | null> } | null = null;
 
 const get = <T,>(path: string, token: string, init?: RequestInit): Promise<T | null> =>
   fetch(`${API_BASE_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } })
@@ -87,7 +88,7 @@ export function prefetchAuthChecks(businessId?: string, page?: string): void {
       token,
       answer: bootValidation ? parsed<Validation>(bootValidation) : get<Validation>("/auth/validate", token, { method: "POST" }),
     };
-    const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
+    const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: Id } | null;
     if (user?.id) {
       const ownedUrl = `/businesses/owner/${user.id}`;
       const bootOwned = fromBoot(ownedUrl);
@@ -118,7 +119,7 @@ export async function takeValidation(token: string): Promise<Validation | null> 
 }
 
 /** The early ownership list for this user and token, once; null when there is none. */
-export async function takeOwnedBusinesses(userId: number, token: string): Promise<Owned | null> {
+export async function takeOwnedBusinesses(userId: Id, token: string): Promise<Owned | null> {
   const o = owned;
   owned = null;
   if (!o || o.userId !== userId || o.token !== token) return null;

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export type TicketCategory = "BOOKING" | "PAYMENT" | "ACCOUNT" | "SALON_PROFILE" | "BUG" | "FEEDBACK" | "OTHER";
@@ -21,7 +22,7 @@ export interface SupportTicket {
 }
 
 export interface SupportMessage {
-  id: number;
+  id: Id;
   authorType: "USER" | "ADMIN" | "SYSTEM";
   authorName: string | null;
   body: string;

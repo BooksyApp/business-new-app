@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 /**
@@ -7,19 +8,19 @@ import { apiClient } from "@/config/api";
  * shown them was commented out.
  */
 export interface ResourceType {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   name: string;
   quantity: number;
   isActive: boolean;
 }
 
 class ResourceTypeService {
-  async list(businessId: number): Promise<ResourceType[]> {
+  async list(businessId: Id): Promise<ResourceType[]> {
     return apiClient.get<ResourceType[]>(`/resource-types/business/${businessId}`);
   }
 
-  async create(businessId: number, name: string, quantity: number): Promise<ResourceType> {
+  async create(businessId: Id, name: string, quantity: number): Promise<ResourceType> {
     return apiClient.post<ResourceType>(`/resource-types/business/${businessId}`, {
       businessId,
       name,
@@ -28,7 +29,7 @@ class ResourceTypeService {
   }
 
   /** Soft-delete: the backend deactivates rather than removing, so bookings keep resolving. */
-  async deactivate(businessId: number, id: number): Promise<void> {
+  async deactivate(businessId: Id, id: Id): Promise<void> {
     return apiClient.delete<void>(`/resource-types/business/${businessId}/${id}`);
   }
 }

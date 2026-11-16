@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
@@ -55,7 +56,7 @@ const SECTIONS: { title: string; slugs: string[] }[] = [
 
 /* ── shared helpers ─────────────────────────────────────────────────────── */
 
-type MyBusiness = { id: number; name: string; logoUrl?: string };
+type MyBusiness = { id: Id; name: string; logoUrl?: string };
 
 /** The owner's salons, for the switcher. Loaded once; an error just leaves the list short. */
 function useMyBusinesses(enabled: boolean) {
@@ -78,9 +79,9 @@ const initialsOfName = (name: string) =>
 
 /** The salon list: every salon (current one checked) and "Add salon" at the end. */
 function SalonList({ onPick, onAdd, currentId, businesses, large = false }: {
-  onPick: (id: number) => void;
+  onPick: (id: Id) => void;
   onAdd: () => void;
-  currentId: number;
+  currentId: Id;
   businesses: MyBusiness[] | null;
   large?: boolean;
 }) {
@@ -161,7 +162,7 @@ function useNavModel() {
   };
   // Same as picking a card on the salon picker: open that salon's calendar; the business
   // route stores it as the current one.
-  const switchTo = (id: number) => {
+  const switchTo = (id: Id) => {
     if (id !== businessId) navigate(salonPath(id));
   };
   // The existing add-business flow (CreateBusinessPage).

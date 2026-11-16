@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { formatPrice } from "@/lib/currency";
 import { reviewService, type Review, type RatingSummary } from "@/services/reviewService";
 import { ImageUploadField } from "@/components/media/ImageUploadField";
-import { assetUrl, publicSiteUrl, salonShareUrl } from "@/config/api";
+import { assetUrl, getCurrentBusinessId, publicSiteUrl, salonShareUrl } from "@/config/api";
 import { t, fmtDate as formatLocaleDate, formatMinutes } from "@/i18n";
 
 function formatMoney(value?: number) {
@@ -90,9 +90,8 @@ export default function BusinessPage() {
   // The card said "Reviews are coming soon" whatever the salon had: reviews have been
   // live (web, app, reply from the manager) for a while.
   useEffect(() => {
-    const idRaw = localStorage.getItem("currentBusinessId");
-    const id = idRaw ? Number.parseInt(idRaw, 10) : NaN;
-    if (!Number.isFinite(id) || id <= 0) return;
+    const id = getCurrentBusinessId();
+    if (!id) return;
     reviewService.getByBusiness(id).then((r) => setReviews(r || [])).catch(() => setReviews([]));
     reviewService.getSummary(id).then(setRatingSummary).catch(() => setRatingSummary(null));
   }, []);
@@ -104,17 +103,15 @@ export default function BusinessPage() {
   }, []);
 
   useEffect(() => {
-    const idRaw = localStorage.getItem("currentBusinessId");
-    const id = idRaw ? Number.parseInt(idRaw, 10) : NaN;
-    if (!Number.isFinite(id) || id <= 0) return;
+    const id = getCurrentBusinessId();
+    if (!id) return;
     subscriptionService.getStatus(id).then(setSubscription).catch(() => setSubscription(null));
     subscriptionService.getPlans().then((p) => setPlans(p || [])).catch(() => setPlans([]));
   }, []);
 
   const startCheckout = async (planKey: string) => {
-    const idRaw = localStorage.getItem("currentBusinessId");
-    const id = idRaw ? Number.parseInt(idRaw, 10) : NaN;
-    if (!Number.isFinite(id) || id <= 0) return;
+    const id = getCurrentBusinessId();
+    if (!id) return;
     setCheckoutBusy(true);
     try {
       // Stripe hosts the payment page; leaving the app is the intended flow.
@@ -136,10 +133,9 @@ export default function BusinessPage() {
 
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
-    const businessIdRaw = localStorage.getItem("currentBusinessId");
-    const businessId = businessIdRaw ? Number.parseInt(businessIdRaw, 10) : NaN;
+    const businessId = getCurrentBusinessId();
 
-    if (!accessToken || !Number.isFinite(businessId) || businessId <= 0) {
+    if (!accessToken || !businessId) {
       setError(t("business.missingBusinessContextPleaseLog"));
       setIsLoading(false);
       return;
@@ -189,9 +185,8 @@ export default function BusinessPage() {
   };
 
   const handleSaveProfile = async () => {
-    const businessIdRaw = localStorage.getItem("currentBusinessId");
-    const businessId = businessIdRaw ? Number.parseInt(businessIdRaw, 10) : NaN;
-    if (!Number.isFinite(businessId) || businessId <= 0) return;
+    const businessId = getCurrentBusinessId();
+    if (!businessId) return;
     // Founder decision: a salon always has a category.
     if (!editForm.category) {
       toast.error(t("business.categoryRequired"));

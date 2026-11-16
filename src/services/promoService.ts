@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 /**
@@ -6,8 +7,8 @@ import { apiClient } from "@/config/api";
  * Rows come straight from `SELECT *` on promo_codes, hence the snake_case fields.
  */
 export interface PromoCode {
-  id: number;
-  business_id: number;
+  id: Id;
+  business_id: Id;
   code: string;
   type: "PERCENT" | "FIXED" | string;
   value: number;
@@ -30,22 +31,22 @@ export interface PromoCodeRequest {
 
 class PromoService {
   /** What a code takes off this subtotal, per the server. Throws if the code is not valid. */
-  async validate(businessId: number, code: string, subtotal: number): Promise<{ code: string; discount: number }> {
+  async validate(businessId: Id, code: string, subtotal: number): Promise<{ code: string; discount: number }> {
     return apiClient.get<{ code: string; discount: number }>(
       `/promo-codes/business/${businessId}/validate?code=${encodeURIComponent(code)}&subtotal=${subtotal}`
     );
   }
 
-  async list(businessId: number): Promise<PromoCode[]> {
+  async list(businessId: Id): Promise<PromoCode[]> {
     return apiClient.get<PromoCode[]>(`/promo-codes/business/${businessId}`);
   }
 
-  async create(businessId: number, body: PromoCodeRequest): Promise<PromoCode> {
+  async create(businessId: Id, body: PromoCodeRequest): Promise<PromoCode> {
     return apiClient.post<PromoCode>(`/promo-codes/business/${businessId}`, body);
   }
 
   /** The backend deactivates rather than deleting, so redeemed history stays intact. */
-  async deactivate(businessId: number, id: number): Promise<void> {
+  async deactivate(businessId: Id, id: Id): Promise<void> {
     return apiClient.delete<void>(`/promo-codes/business/${businessId}/${id}`);
   }
 }

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
 import { salonToday } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
@@ -50,6 +51,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { t as tr } from "@/i18n";
 import { salonPath } from "@/lib/salonKey";
+
+/** An invitation row shown as a client before it is accepted (no client row yet). */
+const isPendingId = (id: unknown): boolean => String(id).startsWith("pending:");
 
 /** A client's next booking, as the list row carries it. */
 type NextVisit = { appointmentDate: string; startTime: string; serviceName?: string | null; staffName?: string | null };
@@ -119,7 +123,7 @@ export default function ClientsPage() {
    * here is a client, not a lead to chase.
    */
   const hasAccount = (client: ClientWithStats) => {
-    if (client.id < 0 || client.status === "PENDING") return false;
+    if (isPendingId(client.id) || client.status === "PENDING") return false;
     try {
       const invitation = getClientInvitation(client.id);
       if (invitation?.status === "ACCEPTED") return true;
@@ -135,7 +139,7 @@ export default function ClientsPage() {
     // Walk-in clients have no record (id 0): their history comes by the list's client key.
     const request = !businessId
       ? null
-      : client.id > 0
+      : client?.id
         ? clientService.getAppointmentsAtBusiness(businessId, client.id)
         : client.clientKey
           ? clientService.getVisitsByKey(businessId, client.clientKey)
@@ -147,7 +151,7 @@ export default function ClientsPage() {
     request.then(setClientVisits).catch(() => setClientVisits([]));
   };
 
-  const loadLoyalty = (clientId: number) => {
+  const loadLoyalty = (clientId: Id) => {
     setLoyaltyPoints(null);
     if (!businessId || !clientId) return;
     loyaltyService
@@ -231,7 +235,7 @@ export default function ClientsPage() {
     }
   };
 
-  const getClientInvitation = (clientId?: number) => {
+  const getClientInvitation = (clientId?: Id) => {
     if (!clientId) return null;
     return invitations.find(inv => inv.clientId === clientId);
   };
@@ -247,7 +251,7 @@ export default function ClientsPage() {
         const lastName = nameParts.slice(1).join(" ") || null;
 
         return {
-          id: inv.clientId || inv.id * -1, // Use negative ID for non-registered clients
+          id: inv.clientId || `pending:${inv.id}`, // UUID phase 2: a marked id for non-registered clients (was a negative number)
           businessId: inv.businessId,
           firstName,
           lastName,
@@ -282,7 +286,7 @@ export default function ClientsPage() {
         // Only include pending clients that are not already in the clients list
         // (i.e., they don't have a registered clientId that matches an existing client)
         return !clients.some(client => 
-          pendingClient.id > 0 && client.id === pendingClient.id
+          Boolean(pendingClient?.id) && client.id === pendingClient.id
         );
       });
   };
@@ -347,7 +351,7 @@ export default function ClientsPage() {
   };
 
   // Segments the data actually supports (no "blocked" flag exists on a client yet).
-  const isPending = (c: ClientWithStats) => c.id < 0 || c.status === "PENDING";
+  const isPending = (c: ClientWithStats) => isPendingId(c.id) || c.status === "PENDING";
   const SEGMENTS: { key: typeof segment; label: string; test: (c: ClientWithStats) => boolean }[] = [
     { key: "all", label: tr("common.all"), test: () => true },
     { key: "new", label: tr("clients.new"), test: (c) => !isPending(c) && (c.totalVisits ?? 0) <= 1 },
@@ -466,7 +470,7 @@ export default function ClientsPage() {
     }
   };
 
-  const loadProfileExtras = (clientId: number) => {
+  const loadProfileExtras = (clientId: Id) => {
     setBenefits(null);
     setRecord(null);
     if (!businessId || !clientId) return;
@@ -491,7 +495,7 @@ export default function ClientsPage() {
 
   const bookForClient = (c: ClientWithStats) => {
     const q = new URLSearchParams({ new: "1", clientName: getFullName(c.firstName, c.lastName) });
-    if (c.id > 0) q.set("clientId", String(c.id));
+    if (c?.id) q.set("clientId", String(c.id));
     if (c.phone) q.set("clientPhone", c.phone);
     if (c.email) q.set("clientEmail", c.email);
     navigate(`${salonPath(businessId)}?${q.toString()}`);
@@ -950,8 +954,8 @@ export default function ClientsPage() {
                     const selectedService = services.find(s => s.id.toString() === invitationForm.serviceId);
                     const appointment = await appointmentService.createAppointment({
                       businessId,
-                      staffId: parseInt(invitationForm.staffId),
-                      serviceId: parseInt(invitationForm.serviceId),
+                      staffId: invitationForm.staffId,
+                      serviceId: invitationForm.serviceId,
                       clientId: selectedClient?.id,
                       clientName: selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName || ""}`.trim() : undefined,
                       clientEmail: selectedClient?.email || undefined,
@@ -1311,7 +1315,7 @@ export default function ClientsPage() {
                         </section>
                       )}
 
-                      {c.id > 0 && (
+                      {Boolean(c?.id) && (
                         <section className="space-y-2">
                           <p className={label}>{tr("clients.loyaltyBenefits")}</p>
                           {benefits === null ? (
@@ -1376,7 +1380,7 @@ export default function ClientsPage() {
                   {profileTab === "bookings" && (
                     pending ? (
                       <p className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">{tr("clients.invitedTheyAppearAsA")}</p>
-                    ) : c.id > 0 && clientVisits === null ? (
+                    ) : Boolean(c?.id) && clientVisits === null ? (
                       <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.loadingBookings")}</p>
                     ) : rows.length === 0 ? (
                       <p className="rounded-2xl border border-dashed border-[rgb(var(--reg-line))] p-4 text-sm text-[rgb(var(--reg-muted))]">{tr("clients.noBookingsWithYouYet")}</p>
@@ -1502,7 +1506,7 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex shrink-0 gap-2 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/90 px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:px-6">
-                  {c.id > 0 && (
+                  {Boolean(c?.id) && (
                     <button
                       type="button"
                       onClick={() => { setProfileTab("notes"); setTimeout(() => noteRef.current?.focus(), 50); }}

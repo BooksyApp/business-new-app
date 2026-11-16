@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
@@ -98,7 +99,7 @@ export default function ServicesPage() {
     try {
       await createService({
         name: serviceForm.name.trim(),
-        categoryId: serviceForm.categoryId ? Number(serviceForm.categoryId) : undefined,
+        categoryId: serviceForm.categoryId ? serviceForm.categoryId : undefined,
         durationMinutes: serviceForm.durationMinutes ? Number(serviceForm.durationMinutes) : undefined,
         price: serviceForm.price ? Number(serviceForm.price) : undefined,
         description: serviceForm.description || undefined,
@@ -128,7 +129,7 @@ export default function ServicesPage() {
     }
   };
 
-  const handleDeleteService = async (id: number, name: string) => {
+  const handleDeleteService = async (id: Id, name: string) => {
     if (!confirm(t("services.delete", { name }))) return;
     await deleteService(id);
   };
@@ -443,7 +444,7 @@ export default function ServicesPage() {
                 <Label>{t("common.category")}</Label>
                 <Select
                   value={editingService.categoryId ? String(editingService.categoryId) : "none"}
-                  onValueChange={v => setEditingService(s => s ? { ...s, categoryId: v && v !== "none" ? Number(v) : undefined } : s)}
+                  onValueChange={v => setEditingService(s => s ? { ...s, categoryId: v && v !== "none" ? v : undefined } : s)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t("services.selectCategory")} />

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { RouteSheet } from "@/components/page/RouteSheet";
@@ -51,7 +52,7 @@ export default function AddStaffPage() {
   const { createStaff, loading: creating } = useStaff();
   const { services, loading: servicesLoading } = useServices();
   const { businessHours } = useBusinessHours(businessId);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Id[]>([]);
   const [schedule, setSchedule] = useState<WeekSchedule>(DEFAULT_WEEK);
   const [scheduleSeededFromBusinessHours, setScheduleSeededFromBusinessHours] = useState(false);
 
@@ -87,7 +88,7 @@ export default function AddStaffPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleServiceToggle = (serviceId: number) => {
+  const handleServiceToggle = (serviceId: Id) => {
     setSelectedServiceIds((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -128,7 +129,7 @@ export default function AddStaffPage() {
       }
       // #13/#293: role has its own endpoint — createStaff's DTO has no field for it.
       if (created?.id && formData.permissionLevel && myAccess().isOwner) {
-        await roleService.assign(created.id, Number(formData.permissionLevel));
+        await roleService.assign(created.id, formData.permissionLevel);
       }
       // #55: the button used to promise an invite and then say nothing at all. Report
       // what was actually requested. Whether the invitation is *emailed* is a separate

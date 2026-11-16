@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 
@@ -12,7 +13,7 @@ import { analysisService, type ClientSources } from "@/services/analysisService"
  * found the salon on booqi's marketplace, and the salon's own clients who booked online through
  * its link or QR code (booqi takes nothing from those). Last 30 days, and all time.
  */
-export function BooqiBroughtCard({ businessId }: { businessId: number }) {
+export function BooqiBroughtCard({ businessId }: { businessId: Id }) {
   const { t } = useT();
   const [data, setData] = useState<ClientSources | null>(null);
   const [failed, setFailed] = useState(false);

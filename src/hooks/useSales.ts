@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { saleService, type Sale, type CreateSaleRequest } from '@/services/saleService';
 import { websocketService } from '@/services/websocketService';
@@ -6,7 +7,7 @@ import { toast } from 'sonner';
 import { format } from '@/i18n/dateFns';
 import { t } from "@/i18n";
 
-export function useSales(businessIdParam?: number, date?: Date) {
+export function useSales(businessIdParam?: Id, date?: Date) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [sales, setSales] = useState<Sale[]>([]);
@@ -78,7 +79,7 @@ export function useSales(businessIdParam?: number, date?: Date) {
     }
   }, []);
 
-  const cancelSale = useCallback(async (id: number) => {
+  const cancelSale = useCallback(async (id: Id) => {
     try {
       await saleService.cancelSale(id);
       setSales(prev => prev.filter(s => s.id !== id));

@@ -1,11 +1,12 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { paymentService, Payment, CreatePaymentRequest, PaymentStatus } from '@/services/paymentService';
 import { useBusinessId } from './useBusinessId';
 import { t } from "@/i18n";
 
 interface UsePaymentsOptions {
-  staffId?: number;
-  businessId?: number;
+  staffId?: Id;
+  businessId?: Id;
 }
 
 export const usePayments = (options?: UsePaymentsOptions) => {
@@ -74,7 +75,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
     }
   }, [businessId, staffId]);
 
-  const updatePaymentStatus = useCallback(async (id: number, status: PaymentStatus) => {
+  const updatePaymentStatus = useCallback(async (id: Id, status: PaymentStatus) => {
     setLoading(true);
     setError(null);
     try {
@@ -90,7 +91,7 @@ export const usePayments = (options?: UsePaymentsOptions) => {
     }
   }, [refresh]);
 
-  const cancelPayment = useCallback(async (id: number) => {
+  const cancelPayment = useCallback(async (id: Id) => {
     setLoading(true);
     setError(null);
     try {

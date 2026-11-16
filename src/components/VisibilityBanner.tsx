@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, Check, ChevronRight, Copy, X } from "lucide-react";
@@ -25,9 +26,9 @@ const FIX: Record<string, string> = {
  * link to each fix. Gone as soon as the salon can take a booking. The rules come from the
  * backend (the same ones admin Activation uses), so the banner can never disagree with it.
  */
-const liveKey = (businessId: number) => `live-card-dismissed:${businessId}`;
+const liveKey = (businessId: Id) => `live-card-dismissed:${businessId}`;
 
-function liveCardDismissed(businessId: number): boolean {
+function liveCardDismissed(businessId: Id): boolean {
   try {
     return localStorage.getItem(liveKey(businessId)) === "1";
   } catch {
@@ -40,7 +41,7 @@ function liveCardDismissed(businessId: number): boolean {
  * a Copy button, until the owner closes it (remembered per salon in this browser).
  * `showLive={false}` (the calendar) shows only the missing-steps banner.
  */
-export function VisibilityBanner({ businessId, showLive = true, className }: { businessId: number; showLive?: boolean; className?: string }) {
+export function VisibilityBanner({ businessId, showLive = true, className }: { businessId: Id; showLive?: boolean; className?: string }) {
   const [state, setState] = useState<{ bookable: boolean; missing: string[]; recommended: string[] } | null>(null);
   const [liveDismissed, setLiveDismissed] = useState(() => liveCardDismissed(businessId));
   const [bookingUrl, setBookingUrl] = useState("");

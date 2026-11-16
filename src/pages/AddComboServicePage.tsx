@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { RouteSheet, SheetTabs } from "@/components/page/RouteSheet";
@@ -46,7 +47,7 @@ const sidebarItems = [
 
 interface ComboService {
   id: string;
-  serviceId: number;
+  serviceId: Id;
   name: string;
   durationMinutes?: number;
   price?: number;
@@ -103,7 +104,7 @@ export default function AddComboServicePage() {
           // Load combo service items
           try {
             console.log("Loading combo service items for combo service ID:", id);
-            const comboItems = await serviceService.getComboServiceItems(parseInt(id));
+            const comboItems = await serviceService.getComboServiceItems(id);
             console.log("Loaded combo items:", comboItems);
             console.log("Available services:", services);
             
@@ -172,7 +173,7 @@ export default function AddComboServicePage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAddService = (serviceId: number) => {
+  const handleAddService = (serviceId: Id) => {
     const service = services.find((s) => s.id === serviceId);
     if (service && !comboServices.some((cs) => cs.serviceId === serviceId)) {
       setComboServices([
@@ -370,7 +371,7 @@ export default function AddComboServicePage() {
         priceType: formData.comboPriceType as 'FIXED' | 'FROM' | 'RANGE',
         serviceType: 'COMBO' as const,
         color: formData.color || undefined,
-        categoryId: formData.categoryId && formData.categoryId !== "none" ? parseInt(formData.categoryId) : undefined,
+        categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
         comboServiceIds: comboServiceIds && comboServiceIds.length > 0 ? comboServiceIds : undefined,
         timeBetweenMinutes: timeBetweenMinutes && timeBetweenMinutes.length > 0 ? timeBetweenMinutes : undefined,
       };
@@ -378,7 +379,7 @@ export default function AddComboServicePage() {
       console.log("Saving combo service with data:", serviceData);
       
       if (isEditMode && id) {
-        await updateService(parseInt(id), serviceData);
+        await updateService(id, serviceData);
       } else {
         await createService(serviceData);
       }
@@ -475,7 +476,7 @@ export default function AddComboServicePage() {
         priceType: formData.comboPriceType as 'FIXED' | 'FROM' | 'RANGE',
         serviceType: 'COMBO' as const,
         color: formData.color || undefined,
-        categoryId: formData.categoryId && formData.categoryId !== "none" ? parseInt(formData.categoryId) : undefined,
+        categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
         comboServiceIds: comboServiceIds && comboServiceIds.length > 0 ? comboServiceIds : undefined,
         timeBetweenMinutes: timeBetweenMinutes && timeBetweenMinutes.length > 0 ? timeBetweenMinutes : undefined,
       };
@@ -484,7 +485,7 @@ export default function AddComboServicePage() {
       
       if (isEditMode && id) {
         // In edit mode, just save and go back
-        await updateService(parseInt(id), serviceData);
+        await updateService(id, serviceData);
         navigate(getPath("items-category"));
         return;
       }
@@ -880,7 +881,7 @@ export default function AddComboServicePage() {
                           <Loader2 className="h-5 w-5 animate-spin text-[rgb(var(--reg-muted)/0.8)]" />
                         </div>
                       ) : (
-                        <Select onValueChange={(value) => handleAddService(parseInt(value))}>
+                        <Select onValueChange={(value) => handleAddService(value)}>
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder={t("addComboService.selectAServiceToAdd")} />
                           </SelectTrigger>

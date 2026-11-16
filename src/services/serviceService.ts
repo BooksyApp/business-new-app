@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 import { t } from "@/i18n";
 
 export interface Service {
-  id: number;
-  businessId: number;
-  categoryId?: number;
+  id: Id;
+  businessId: Id;
+  categoryId?: Id;
   categoryName?: string;
   name: string;
   description?: string;
@@ -15,7 +16,7 @@ export interface Service {
   color?: string;
   isActive: boolean;
   isVisible: boolean;
-  staffIds?: number[];
+  staffIds?: Id[];
   mobileService?: boolean;
   virtualAppointment?: boolean;
   bookingInterval?: number; // minutes between offered start times; 0 = step by duration
@@ -31,11 +32,11 @@ export interface Service {
   parallelClients?: number;
   /** Percent VAT; null/absent = the business's own rate. */
   taxRate?: number | null;
-  resourceTypeId?: number | null; // #282: a shared room/equipment this service needs
+  resourceTypeId?: Id | null; // #282: a shared room/equipment this service needs
 }
 
 export interface CreateServiceRequest {
-  categoryId?: number;
+  categoryId?: Id;
   name: string;
   description?: string;
   durationMinutes?: number;
@@ -43,9 +44,9 @@ export interface CreateServiceRequest {
   priceType?: 'FIXED' | 'FROM' | 'RANGE';
   serviceType?: string;
   color?: string;
-  comboServiceIds?: number[];
+  comboServiceIds?: Id[];
   timeBetweenMinutes?: number[];
-  staffIds?: number[];
+  staffIds?: Id[];
   isVisible?: boolean;
   mobileService?: boolean;
   virtualAppointment?: boolean;
@@ -61,8 +62,8 @@ export interface CreateServiceRequest {
 }
 
 export interface UpdateServiceRequest {
-  resourceTypeId?: number;
-  categoryId?: number;
+  resourceTypeId?: Id;
+  categoryId?: Id;
   name?: string;
   description?: string;
   durationMinutes?: number;
@@ -72,9 +73,9 @@ export interface UpdateServiceRequest {
   color?: string;
   isActive?: boolean;
   isVisible?: boolean;
-  comboServiceIds?: number[];
+  comboServiceIds?: Id[];
   timeBetweenMinutes?: number[];
-  staffIds?: number[];
+  staffIds?: Id[];
   mobileService?: boolean;
   virtualAppointment?: boolean;
   bookingInterval?: number;
@@ -89,24 +90,24 @@ export interface UpdateServiceRequest {
 }
 
 export interface ComboServiceItem {
-  id: number;
-  comboServiceId: number;
-  serviceId: number;
+  id: Id;
+  comboServiceId: Id;
+  serviceId: Id;
   serviceName?: string;
   displayOrder: number;
   timeBetweenMinutes?: number;
 }
 
 export const serviceService = {
-  async getServicesByBusiness(businessId: number): Promise<Service[]> {
+  async getServicesByBusiness(businessId: Id): Promise<Service[]> {
     return apiClient.get<Service[]>(`/services/business/${businessId}`);
   },
 
-  async getServicesByCategory(categoryId: number): Promise<Service[]> {
+  async getServicesByCategory(categoryId: Id): Promise<Service[]> {
     return apiClient.get<Service[]>(`/services/category/${categoryId}`);
   },
 
-  async createService(businessId: number, request: CreateServiceRequest): Promise<Service> {
+  async createService(businessId: Id, request: CreateServiceRequest): Promise<Service> {
     if (request.price !== undefined && request.price !== null && request.price < 0) {
       throw new Error(t("services.servicePriceCannotBeNegative"));
     }
@@ -116,7 +117,7 @@ export const serviceService = {
     return apiClient.post<Service>(`/services/business/${businessId}`, request);
   },
 
-  async updateService(id: number, businessId: number, request: UpdateServiceRequest): Promise<Service> {
+  async updateService(id: Id, businessId: Id, request: UpdateServiceRequest): Promise<Service> {
     if (request.price !== undefined && request.price !== null && request.price < 0) {
       throw new Error(t("services.servicePriceCannotBeNegative"));
     }
@@ -126,23 +127,23 @@ export const serviceService = {
     return apiClient.put<Service>(`/services/${id}/business/${businessId}`, request);
   },
 
-  async deleteService(id: number, businessId: number): Promise<void> {
+  async deleteService(id: Id, businessId: Id): Promise<void> {
     return apiClient.delete<void>(`/services/${id}/business/${businessId}`);
   },
 
-  async getComboServiceItems(serviceId: number): Promise<ComboServiceItem[]> {
+  async getComboServiceItems(serviceId: Id): Promise<ComboServiceItem[]> {
     return apiClient.get<ComboServiceItem[]>(`/services/${serviceId}/combo-items`);
   },
 
   // Service↔staff assignments viewed from the staff side. Assignments are owned by
   // service-catalog; these let the staff form load and save which services a staff
   // member can perform (the counterpart of the staffIds field on the service form).
-  async getStaffServiceIds(businessId: number, staffId: number): Promise<number[]> {
-    return apiClient.get<number[]>(`/services/assignments/business/${businessId}/staff/${staffId}`);
+  async getStaffServiceIds(businessId: Id, staffId: Id): Promise<Id[]> {
+    return apiClient.get<Id[]>(`/services/assignments/business/${businessId}/staff/${staffId}`);
   },
 
-  async setStaffServiceIds(businessId: number, staffId: number, serviceIds: number[]): Promise<number[]> {
-    return apiClient.put<number[]>(
+  async setStaffServiceIds(businessId: Id, staffId: Id, serviceIds: Id[]): Promise<Id[]> {
+    return apiClient.put<Id[]>(
       `/services/assignments/business/${businessId}/staff/${staffId}`,
       { serviceIds }
     );

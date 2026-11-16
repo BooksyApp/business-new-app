@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { CopyPlus, Gift, Minus, Palette, Plus, Search, Stamp, Trophy, Users, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -56,7 +57,7 @@ export default function LoyaltyPage() {
   const [openCard, setOpenCard] = useState<LoyaltyCard | null>(null);
   const [holders, setHolders] = useState<CardHolder[] | null>(null);
   const [query, setQuery] = useState("");
-  const [stamping, setStamping] = useState<number | null>(null);
+  const [stamping, setStamping] = useState<Id | null>(null);
 
   const [styleCard, setStyleCard] = useState<LoyaltyCard | null>(null);
   const [styleTheme, setStyleTheme] = useState(CARD_THEMES[0]);
@@ -93,7 +94,7 @@ export default function LoyaltyPage() {
       const created = await loyaltyCardsService.create(businessId, {
         name: form.name.trim(),
         visitsRequired: visits,
-        rewardServiceId: form.rewardServiceId ? Number(form.rewardServiceId) : null,
+        rewardServiceId: form.rewardServiceId ? form.rewardServiceId : null,
         validUntil: form.validUntil || null,
         colorFrom: form.colorFrom,
         colorTo: form.colorTo,
@@ -148,7 +149,7 @@ export default function LoyaltyPage() {
   };
 
   // It used to swallow a failed stamp silently, so the count simply did not move.
-  const stamp = async (card: LoyaltyCard, clientId: number, delta: number) => {
+  const stamp = async (card: LoyaltyCard, clientId: Id, delta: number) => {
     setStamping(clientId);
     try {
       await loyaltyCardsService.stamp(businessId, card.id, clientId, delta);

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface TeamPermissionInfo {
@@ -8,13 +9,13 @@ export interface TeamPermissionInfo {
 }
 
 export interface BusinessRole {
-  id: number;
+  id: Id;
   name: string;
   description?: string | null;
   isOwner: boolean;
   isDefault: boolean;
   permissions: string[];
-  memberIds: number[];
+  memberIds: Id[];
   memberCount: number;
 }
 
@@ -27,13 +28,13 @@ export interface RoleInput {
 
 export const roleService = {
   catalog: () => apiClient.get<TeamPermissionInfo[]>("/team-permissions"),
-  list: (businessId: number) => apiClient.get<BusinessRole[]>(`/businesses/${businessId}/roles`),
-  create: (businessId: number, input: RoleInput) =>
+  list: (businessId: Id) => apiClient.get<BusinessRole[]>(`/businesses/${businessId}/roles`),
+  create: (businessId: Id, input: RoleInput) =>
     apiClient.post<BusinessRole>(`/businesses/${businessId}/roles`, input),
-  update: (businessId: number, roleId: number, input: RoleInput) =>
+  update: (businessId: Id, roleId: Id, input: RoleInput) =>
     apiClient.put<BusinessRole>(`/businesses/${businessId}/roles/${roleId}`, input),
-  remove: (businessId: number, roleId: number) =>
+  remove: (businessId: Id, roleId: Id) =>
     apiClient.delete<void>(`/businesses/${businessId}/roles/${roleId}`),
   /** Give a team member one of the salon's roles (owner only). */
-  assign: (staffId: number, roleId: number) => apiClient.put<BusinessRole>(`/staff/${staffId}/role`, { roleId }),
+  assign: (staffId: Id, roleId: Id) => apiClient.put<BusinessRole>(`/staff/${staffId}/role`, { roleId }),
 };

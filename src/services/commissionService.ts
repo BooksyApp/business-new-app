@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 export enum CommissionCategory {
@@ -21,12 +22,12 @@ export enum CommissionStatus {
 }
 
 export interface CommissionRule {
-  id?: number;
-  businessId: number;
+  id?: Id;
+  businessId: Id;
   category: CommissionCategory;
-  staffId?: number;
-  serviceId?: number;
-  categoryId?: number;
+  staffId?: Id;
+  serviceId?: Id;
+  categoryId?: Id;
   type: CommissionType;
   value: number;
   description?: string;
@@ -34,27 +35,27 @@ export interface CommissionRule {
 }
 
 export interface Commission {
-  id: number;
-  businessId: number;
-  staffId: number;
+  id: Id;
+  businessId: Id;
+  staffId: Id;
   appointmentId?: string;
-  serviceId?: number;
-  saleId?: number;
+  serviceId?: Id;
+  saleId?: Id;
   category: CommissionCategory;
   saleAmount: number;
   commissionAmount: number;
   status: CommissionStatus;
   commissionDate: string;
-  paymentId?: number;
+  paymentId?: Id;
   notes?: string;
 }
 
 export interface CreateCommissionRuleRequest {
-  businessId: number;
+  businessId: Id;
   category: CommissionCategory;
-  staffId?: number;
-  serviceId?: number;
-  categoryId?: number;
+  staffId?: Id;
+  serviceId?: Id;
+  categoryId?: Id;
   type: CommissionType;
   value: number;
   description?: string;
@@ -63,15 +64,15 @@ export interface CreateCommissionRuleRequest {
 
 export const commissionService = {
   // Commission Rules
-  async getCommissionRules(businessId: number): Promise<CommissionRule[]> {
+  async getCommissionRules(businessId: Id): Promise<CommissionRule[]> {
     return apiClient.get<CommissionRule[]>(`/commission-rules/business/${businessId}`);
   },
 
-  async getCommissionRulesByCategory(businessId: number, category: CommissionCategory): Promise<CommissionRule[]> {
+  async getCommissionRulesByCategory(businessId: Id, category: CommissionCategory): Promise<CommissionRule[]> {
     return apiClient.get<CommissionRule[]>(`/commission-rules/business/${businessId}/category/${category}`);
   },
 
-  async getCommissionRulesByStaff(businessId: number, staffId: number): Promise<CommissionRule[]> {
+  async getCommissionRulesByStaff(businessId: Id, staffId: Id): Promise<CommissionRule[]> {
     return apiClient.get<CommissionRule[]>(`/commission-rules/business/${businessId}/staff/${staffId}`);
   },
 
@@ -79,28 +80,28 @@ export const commissionService = {
     return apiClient.post<CommissionRule>('/commission-rules', request);
   },
 
-  async updateCommissionRule(id: number, request: Partial<CommissionRule>): Promise<CommissionRule> {
+  async updateCommissionRule(id: Id, request: Partial<CommissionRule>): Promise<CommissionRule> {
     return apiClient.put<CommissionRule>(`/commission-rules/${id}`, request);
   },
 
-  async deleteCommissionRule(id: number): Promise<void> {
+  async deleteCommissionRule(id: Id): Promise<void> {
     return apiClient.delete(`/commission-rules/${id}`);
   },
 
-  async deactivateCommissionRule(id: number): Promise<void> {
+  async deactivateCommissionRule(id: Id): Promise<void> {
     return apiClient.put(`/commission-rules/${id}/deactivate`, {});
   },
 
-  async deleteAllCommissionRules(businessId: number): Promise<void> {
+  async deleteAllCommissionRules(businessId: Id): Promise<void> {
     return apiClient.delete(`/commission-rules/business/${businessId}/all`);
   },
 
   // Commissions
-  async getCommissionsByStaff(businessId: number, staffId: number): Promise<Commission[]> {
+  async getCommissionsByStaff(businessId: Id, staffId: Id): Promise<Commission[]> {
     return apiClient.get<Commission[]>(`/commissions/business/${businessId}/staff/${staffId}`);
   },
 
-  async getPendingCommissions(businessId: number, staffId: number): Promise<Commission[]> {
+  async getPendingCommissions(businessId: Id, staffId: Id): Promise<Commission[]> {
     return apiClient.get<Commission[]>(`/commissions/business/${businessId}/staff/${staffId}/pending`);
   },
 
@@ -111,7 +112,7 @@ export const commissionService = {
   // throwing during render — the actual cause of "selecting a staffer under
   // COMMISSIONS crashes the whole page" (a same-tick, unrelated 500 from a different
   // endpoint was the red herring that made this look network-related).
-  async getTotalPendingCommission(businessId: number, staffId: number): Promise<number> {
+  async getTotalPendingCommission(businessId: Id, staffId: Id): Promise<number> {
     const result = await apiClient.get<{ totalPending: number }>(
       `/commissions/business/${businessId}/staff/${staffId}/total-pending`
     );
@@ -119,8 +120,8 @@ export const commissionService = {
   },
 
   async getCommissionsByDateRange(
-    businessId: number,
-    staffId: number,
+    businessId: Id,
+    staffId: Id,
     startDate: string,
     endDate: string
   ): Promise<Commission[]> {
@@ -130,10 +131,10 @@ export const commissionService = {
   },
 
   async calculateCommission(
-    businessId: number,
-    staffId: number,
+    businessId: Id,
+    staffId: Id,
     appointmentId: string,
-    serviceId: number,
+    serviceId: Id,
     saleAmount: number
   ): Promise<Commission> {
     return apiClient.post<Commission>(
@@ -142,7 +143,7 @@ export const commissionService = {
     );
   },
 
-  async cancelCommission(id: number): Promise<void> {
+  async cancelCommission(id: Id): Promise<void> {
     return apiClient.put(`/commissions/${id}/cancel`, {});
   },
 

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { API_BASE_URL } from "@/config/api";
 import { getErrorMessage, ErrorResponse } from "@/utils/errorHandler";
 import { t } from "@/i18n";
@@ -48,11 +49,11 @@ export interface LoginRequest {
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
-  userId: number;
+  userId: Id;
   fullName: string;
   email: string;
   role: string;
-  businessId: number | null;
+  businessId: Id | null;
 }
 
 // Use API_BASE_URL from config which handles both dev (proxy) and production (full URL)

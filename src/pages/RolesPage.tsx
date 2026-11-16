@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CopyPlus, Lock, Pencil, Plus, ShieldCheck, Star, Trash2, Users } from "lucide-react";
@@ -16,7 +17,7 @@ import { roleService, type BusinessRole, type TeamPermissionInfo } from "@/servi
 import { t } from "@/i18n";
 
 import { permDescription, permGroup, permLabel, roleDescription, roleName } from "@/lib/roleLabel";
-type Draft = { id?: number; name: string; description: string; permissions: Set<string>; isDefault: boolean };
+type Draft = { id?: Id; name: string; description: string; permissions: Set<string>; isDefault: boolean };
 
 const brandSwitch = "data-[state=checked]:bg-[rgb(var(--reg-brand))]";
 
@@ -35,7 +36,7 @@ const RolesPage = () => {
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   // On a phone the matrix is one role at a time.
-  const [phoneRoleId, setPhoneRoleId] = useState<number | null>(null);
+  const [phoneRoleId, setPhoneRoleId] = useState<Id | null>(null);
 
   const load = async () => {
     try {

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
@@ -58,14 +59,14 @@ interface PaymentMethodPageProps {
   /** The promo code the customer booked with, and what it takes off. */
   bookedPromo?: { code: string; discount: number } | null;
   selectedClient?: { id: string; name: string; avatar?: string } | null;
-  selectedStaff?: { id: number; name: string; avatarUrl?: string; position?: string } | null;
+  selectedStaff?: { id: Id; name: string; avatarUrl?: string; position?: string } | null;
   // #15: the full roster this sale's staff can be picked from, and a callback so the
   // parent (which is what actually sends staffId to the backend) learns about a change
   // made here via "CHANGE" — previously that button did nothing at all, so a walk-in
   // sale's staff (and therefore who commission gets attributed to) was locked to
   // whatever the caller defaulted to, with no way to correct it from this screen.
-  staffList?: Array<{ id: number; name: string; avatarUrl?: string; position?: string }>;
-  onStaffChange?: (staff: { id: number; name: string; avatarUrl?: string; position?: string }) => void;
+  staffList?: Array<{ id: Id; name: string; avatarUrl?: string; position?: string }>;
+  onStaffChange?: (staff: { id: Id; name: string; avatarUrl?: string; position?: string }) => void;
   /** Throws the ticket away (the bin in the footer). Back keeps it. */
   onDiscard?: () => void;
   onConfirm?: (paymentData: {
@@ -153,7 +154,7 @@ export default function PaymentMethodPage({
   const [splitCashAmount, setSplitCashAmount] = useState("");
   const [splitCardAmount, setSplitCardAmount] = useState("");
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; avatar?: string } | null>(propSelectedClient);
-  const [selectedStaff, setSelectedStaff] = useState<{ id: number; name: string; avatarUrl?: string; position?: string } | null>(propSelectedStaff);
+  const [selectedStaff, setSelectedStaff] = useState<{ id: Id; name: string; avatarUrl?: string; position?: string } | null>(propSelectedStaff);
   const [showStaffPicker, setShowStaffPicker] = useState(false);
 
   // Update selected client when prop changes
@@ -593,13 +594,13 @@ export default function PaymentMethodPage({
         <div className="p-6 pb-0 shrink-0">
           <BenefitsAndTenders
             businessId={checkoutBusinessId}
-            clientId={selectedClient?.id ? Number(selectedClient.id) : null}
+            clientId={selectedClient?.id ? selectedClient.id : null}
             orderItems={orderItems.map((item) => ({
               id: item.id,
               name: item.name,
               quantity: item.quantity,
               price: item.price,
-              serviceId: (item as { serviceId?: number }).serviceId,
+              serviceId: (item as { serviceId?: Id }).serviceId,
             }))}
             total={subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit}
             onChange={setMulti}

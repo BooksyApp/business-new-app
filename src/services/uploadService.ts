@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 import { t } from "@/i18n";
 
@@ -73,14 +74,14 @@ export async function uploadImage(file: File, purpose: UploadPurpose): Promise<U
 }
 
 export interface BusinessPhoto {
-  id: number;
+  id: Id;
   url: string;
 }
 
 export const businessPhotoService = {
-  list: (businessId: number | string) => apiClient.get<BusinessPhoto[]>(`/businesses/${businessId}/photos`),
-  add: (businessId: number | string, uploadId: string) =>
+  list: (businessId: Id | string) => apiClient.get<BusinessPhoto[]>(`/businesses/${businessId}/photos`),
+  add: (businessId: Id | string, uploadId: string) =>
     apiClient.post<BusinessPhoto>(`/businesses/${businessId}/photos`, { upload: uploadId }),
-  remove: (businessId: number | string, photoId: number) =>
+  remove: (businessId: Id | string, photoId: Id) =>
     apiClient.delete<void>(`/businesses/${businessId}/photos/${photoId}`),
 };

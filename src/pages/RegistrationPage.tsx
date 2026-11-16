@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { API_BASE_URL } from '@/config/api';
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useMarket } from "@/services/platformService";
@@ -400,7 +401,7 @@ const RegistrationPage = () => {
   // Set after a successful sign-up: a calm "welcome" screen, then the calendar (still "/").
   const [registered, setRegistered] = useState(false);
   // LR-02: the welcome button goes to the overview (readiness checklist), not an empty calendar.
-  const [registeredBusinessId, setRegisteredBusinessId] = useState<number | null>(null);
+  const [registeredBusinessId, setRegisteredBusinessId] = useState<Id | null>(null);
 
   const handleCompleteRegistration = async () => {
     setIsRegistering(true);
@@ -502,7 +503,7 @@ const RegistrationPage = () => {
       }
 
       // Create services added during registration (ids kept: a solo owner offers them all)
-      const createdServiceIds: number[] = [];
+      const createdServiceIds: Id[] = [];
       for (const svc of formData.services) {
         try {
           // duration stored as "hours:minutes" string e.g. "0:30"

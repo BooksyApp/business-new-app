@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { appointmentService, BookingConflictDeclined, type Appointment as ApiAppointment } from '@/services/appointmentService';
 import { staffService, type Staff as ApiStaff } from '@/services/staffService';
@@ -26,8 +27,8 @@ export interface Appointment {
   price?: number;
   // #30: drives which lifecycle actions the calendar modal offers.
   status?: string;
-  clientId?: number;
-  serviceId?: number;
+  clientId?: Id;
+  serviceId?: Id;
   /** Shared by every service booked in one multi-service visit. */
   visitId?: string | null;
   answers?: { question: string; answer: string }[];
@@ -89,7 +90,7 @@ const convertStaff = (apiStaff: ApiStaff): Staff => {
   };
 };
 
-export function useAppointments(businessIdParam?: number, date?: Date) {
+export function useAppointments(businessIdParam?: Id, date?: Date) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -332,8 +333,8 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
   }, [businessId, date, playIncomingBookingSound]); // Include date in dependencies to re-subscribe when date changes
 
   const createAppointment = useCallback(async (request: {
-    staffId: number;
-    serviceId: number;
+    staffId: Id;
+    serviceId: Id;
     appointmentDate: string;
     startTime: string;
     endTime: string;
@@ -382,12 +383,12 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
   }, [businessId]);
 
   const updateAppointment = useCallback(async (id: string, request: {
-    staffId: number;
-    serviceId: number;
+    staffId: Id;
+    serviceId: Id;
     appointmentDate: string;
     startTime: string;
     endTime: string;
-    clientId?: number;
+    clientId?: Id;
     clientName?: string;
     clientPhone?: string;
     clientEmail?: string;

@@ -42,7 +42,7 @@ export default function HomePage() {
   const [statsLoading, setStatsLoading] = useState(false);
 
   const numericBusinessId = businessId ? (idForKey(businessId) ?? null) : null;
-  const salonTz = useSalonTimeZone(numericBusinessId ?? 0);
+  const salonTz = useSalonTimeZone(numericBusinessId ?? "");
 
   // Fetch real dashboard stats when on a business route
   useEffect(() => {

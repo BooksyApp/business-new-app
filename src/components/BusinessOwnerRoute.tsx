@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { Navigate, useLocation, useParams } from "react-router-dom";
 import { myAccess, pageClosedToRole } from "@/components/layout/navigation";
 import { useEffect, useState } from "react";
@@ -32,7 +33,7 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
     const validate = async () => {
       try {
         if (!salonKey || !isSalonKey(salonKey)) return done("notFound");
-        const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
+        const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: Id } | null;
         const accessToken = getAccessToken();
         if (!user?.id || !accessToken) return done("denied");
 

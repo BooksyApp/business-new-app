@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { addonService, type Addon, type CreateAddonRequest, type UpdateAddonRequest } from '@/services/addonService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
 import { t } from "@/i18n";
 
-export function useAddons(businessIdParam?: number) {
+export function useAddons(businessIdParam?: Id) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [addons, setAddons] = useState<Addon[]>([]);
@@ -12,7 +13,7 @@ export function useAddons(businessIdParam?: number) {
   const [error, setError] = useState<string | null>(null);
 
   const loadAddons = useCallback(async () => {
-    if (!businessId || businessId <= 0) {
+    if (!businessId) {
       setError(t("common.businessIdIsRequired"));
       setLoading(false);
       return;
@@ -36,7 +37,7 @@ export function useAddons(businessIdParam?: number) {
   }, [loadAddons]);
 
   const createAddon = useCallback(async (request: CreateAddonRequest) => {
-    if (!businessId || businessId <= 0) {
+    if (!businessId) {
       const error = new Error(t("common.businessIdIsRequired"));
       toast.error(error.message);
       throw error;
@@ -52,7 +53,7 @@ export function useAddons(businessIdParam?: number) {
     }
   }, [businessId]);
 
-  const updateAddon = useCallback(async (id: number, request: UpdateAddonRequest) => {
+  const updateAddon = useCallback(async (id: Id, request: UpdateAddonRequest) => {
     try {
       const updated = await addonService.updateAddon(id, businessId, request);
       setAddons(prev => prev.map(addon => addon.id === id ? updated : addon));
@@ -64,7 +65,7 @@ export function useAddons(businessIdParam?: number) {
     }
   }, [businessId]);
 
-  const deleteAddon = useCallback(async (id: number) => {
+  const deleteAddon = useCallback(async (id: Id) => {
     try {
       await addonService.deleteAddon(id, businessId);
       setAddons(prev => prev.filter(addon => addon.id !== id));

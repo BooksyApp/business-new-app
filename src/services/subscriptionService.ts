@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 /**
@@ -6,7 +7,7 @@ import { apiClient } from "@/config/api";
  * app at all.
  */
 export interface SubscriptionStatus {
-  businessId: number;
+  businessId: Id;
   planKey: string | null;
   /** NONE when the business has never subscribed. */
   status: string;
@@ -14,7 +15,7 @@ export interface SubscriptionStatus {
 }
 
 class SubscriptionService {
-  async getStatus(businessId: number): Promise<SubscriptionStatus> {
+  async getStatus(businessId: Id): Promise<SubscriptionStatus> {
     return apiClient.get<SubscriptionStatus>(`/businesses/${businessId}/subscription`);
   }
 
@@ -24,7 +25,7 @@ class SubscriptionService {
   }
 
   /** Returns the Stripe-hosted checkout URL the browser should be sent to. */
-  async createCheckout(businessId: number, planKey: string): Promise<string> {
+  async createCheckout(businessId: Id, planKey: string): Promise<string> {
     const origin = window.location.origin;
     const res = await apiClient.post<{ checkoutUrl: string }>(
       `/businesses/${businessId}/subscription/checkout`,

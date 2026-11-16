@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { RouteSheet, SheetTabs } from "@/components/page/RouteSheet";
@@ -62,13 +63,13 @@ export default function AddServicePage() {
   
   // Verify businessId is available
   useEffect(() => {
-    if (!businessId || businessId <= 0) {
+    if (!businessId) {
       toast.error(tr("addService.businessIdIsMissingPlease"));
       console.error("Business ID is missing:", businessId);
     }
   }, [businessId]);
   const [activeSidebarItem, setActiveSidebarItem] = useState("general");
-  const [selectedStaff, setSelectedStaff] = useState<number[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<Id[]>([]);
   const [settingsData, setSettingsData] = useState({
     allowSelfBooking: true,
     mobileService: false,
@@ -237,7 +238,7 @@ export default function AddServicePage() {
         priceType: formData.priceType as 'FIXED' | 'FROM' | 'RANGE',
         serviceType: formData.serviceType || 'standard',
         color: formData.color || undefined,
-        categoryId: formData.categoryId && formData.categoryId !== "none" ? parseInt(formData.categoryId) : undefined,
+        categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
         staffIds: selectedStaff, // Always send staffIds array (even if empty) so backend can update relationships
         isVisible: settingsData.allowSelfBooking, // "Allow self-booking" gates visibility in the customer app
         mobileService: settingsData.mobileService,
@@ -248,7 +249,7 @@ export default function AddServicePage() {
       };
 
       if (isEditMode && id) {
-        await safeUpdateService(parseInt(id), serviceData); // useServices shows the toast
+        await safeUpdateService(id, serviceData); // useServices shows the toast
       } else {
         await safeCreateService(serviceData); // useServices shows the toast
       }
@@ -283,7 +284,7 @@ export default function AddServicePage() {
         priceType: formData.priceType as 'FIXED' | 'FROM' | 'RANGE',
         serviceType: formData.serviceType || 'standard',
         color: formData.color || undefined,
-        categoryId: formData.categoryId && formData.categoryId !== "none" ? parseInt(formData.categoryId) : undefined,
+        categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
         staffIds: selectedStaff, // Always send staffIds array (even if empty) so backend can update relationships
         isVisible: settingsData.allowSelfBooking,
         mobileService: settingsData.mobileService,
@@ -322,7 +323,7 @@ export default function AddServicePage() {
     }
   };
 
-  const handleStaffToggle = (staffId: number) => {
+  const handleStaffToggle = (staffId: Id) => {
     setSelectedStaff((prev) =>
       prev.includes(staffId)
         ? prev.filter((id) => id !== staffId)

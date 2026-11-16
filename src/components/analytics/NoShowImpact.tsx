@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { CalendarX, Coins, UserX } from "lucide-react";
 
@@ -34,7 +35,7 @@ export function NoShowImpact({
   startDate,
   endDate,
 }: {
-  businessId: number;
+  businessId: Id;
   startDate?: string;
   endDate?: string;
 }) {

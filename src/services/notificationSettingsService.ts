@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 /**
@@ -6,7 +7,7 @@ import { apiClient } from "@/config/api";
  * sender honour it.
  */
 export interface NotificationSettings {
-  businessId: number;
+  businessId: Id;
   emailConfirmation: boolean;
   emailReminder: boolean;
   emailCancellation: boolean;
@@ -26,11 +27,11 @@ export interface NotificationSettings {
 }
 
 class NotificationSettingsService {
-  async get(businessId: number): Promise<NotificationSettings> {
+  async get(businessId: Id): Promise<NotificationSettings> {
     return apiClient.get<NotificationSettings>(`/businesses/${businessId}/notification-settings`);
   }
 
-  async save(businessId: number, settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
+  async save(businessId: Id, settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
     return apiClient.put<NotificationSettings>(`/businesses/${businessId}/notification-settings`, settings);
   }
 }

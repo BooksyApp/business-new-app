@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { salonNow, salonToday } from "@/lib/salonClock";
 import { currencySymbol } from "@/lib/currency";
@@ -158,7 +159,7 @@ interface QuickSaleItem {
   price: string;
   color: string;
   type: 'service' | 'combo';
-  serviceId?: number;
+  serviceId?: Id;
 }
 
 /** A line in the basket: a service, combo, product, membership, gift card or booking. */
@@ -169,9 +170,9 @@ interface BasketItem {
   price: string;
   duration?: string;
   type?: string;
-  serviceId?: number;
-  productId?: number;
-  membershipId?: number;
+  serviceId?: Id;
+  productId?: Id;
+  membershipId?: Id;
   giftCardAmount?: number;
   appointmentId?: string;
 }
@@ -184,8 +185,8 @@ interface BasketItem {
  * the money, which is the worst moment.
  */
 function servicePriceLabel(
-  service: { price?: number | null; priceType?: string | null; id: number },
-  offers: Map<number, { price: number; wasPrice?: number }>
+  service: { price?: number | null; priceType?: string | null; id: Id },
+  offers: Map<Id, { price: number; wasPrice?: number }>
 ): string {
   const offer = offers.get(service.id);
   const payable = offer ? offer.price : service.price;
@@ -197,7 +198,7 @@ function servicePriceLabel(
 
 /** Tax of a sale's items; null when no tax applies. A service's own rate wins over the salon's. */
 function receiptTax(
-  sale: { total: number; items: { serviceId?: number; serviceName?: string; unitPrice: number; quantity: number }[] },
+  sale: { total: number; items: { serviceId?: Id; serviceName?: string; unitPrice: number; quantity: number }[] },
   salonRate: number,
   services: Service[],
 ) {
@@ -330,7 +331,7 @@ export default function SalesPage() {
       ? [incomingAppointmentId]
       : [];
   const incomingKey = incomingAppointmentIds.join(",");
-  const [selectedAppointmentStaffId, setSelectedAppointmentStaffId] = useState<number | null>(null);
+  const [selectedAppointmentStaffId, setSelectedAppointmentStaffId] = useState<Id | null>(null);
   // The promo code the selected booking was made with, priced by the server.
   const [bookedPromo, setBookedPromo] = useState<{ code: string; discount: number } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -347,7 +348,7 @@ export default function SalesPage() {
   const [ticketNote, setTicketNote] = useState("");
   // The sale just taken, for the success screen (receipt, change to give, "New sale").
   const [lastSale, setLastSale] = useState<{
-    saleId: number;
+    saleId: Id;
     total: number;
     change: number;
     method: string;
@@ -858,7 +859,7 @@ export default function SalesPage() {
   // Save quick sale configuration
   const saveQuickSaleConfig = async () => {
     try {
-      const serviceIds = selectedQuickSaleItems.map(id => parseInt(id));
+      const serviceIds = [...selectedQuickSaleItems];
       const savedItems = await quickSaleService.updateQuickSaleItems(businessId, serviceIds);
       
       // Convert API items to display format
@@ -942,7 +943,7 @@ export default function SalesPage() {
     if (!confirm(tr("sales.voidSaleItStaysIn", { id: t.id, amount: t.amount }))) return;
     setVoiding(true);
     try {
-      await saleService.cancelSale(Number(t.id));
+      await saleService.cancelSale(t.id);
       toast.success(tr("sales.saleVoided", { id: t.id }));
       setSelectedTransaction(null);
       setTxReload((n) => n + 1);
@@ -1296,7 +1297,7 @@ export default function SalesPage() {
               const confirmationRequest: PaymentConfirmationRequest = {
                 businessId: businessId!,
                 staffId: staffId,
-                clientId: selectedClient ? Number(selectedClient.id) : undefined,
+                clientId: selectedClient ? selectedClient.id : undefined,
                 clientName: selectedClient ? getClientDisplayName(selectedClient) : undefined,
                 items: saleItems,
                 // #31: these were hardcoded to zero, so the recorded sale was always at

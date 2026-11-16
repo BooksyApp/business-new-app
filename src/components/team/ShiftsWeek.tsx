@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { salonToday } from "@/lib/salonClock";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addDays, parseISO, startOfWeek } from "date-fns";
@@ -39,10 +40,10 @@ export function ShiftsWeek({
   onApprove,
   onAddTimeOff,
 }: {
-  businessId: number;
+  businessId: Id;
   timeOffs: TimeOff[];
-  approvingId: number | null;
-  onApprove: (id: number) => Promise<void> | void;
+  approvingId: Id | null;
+  onApprove: (id: Id) => Promise<void> | void;
   onAddTimeOff: () => void;
 }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));

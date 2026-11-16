@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +28,7 @@ export function DiscountImpact({
   startDate,
   endDate,
 }: {
-  businessId: number;
+  businessId: Id;
   startDate?: string;
   endDate?: string;
 }) {

@@ -1,9 +1,10 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 export interface Shift {
-  id: number;
-  businessId: number;
-  staffId: number;
+  id: Id;
+  businessId: Id;
+  staffId: Id;
   staffName?: string;
   shiftDate: string; // ISO date string (YYYY-MM-DD)
   startTime: string; // HH:mm format
@@ -12,7 +13,7 @@ export interface Shift {
 }
 
 export interface CreateShiftRequest {
-  staffId: number;
+  staffId: Id;
   shiftDate: string; // ISO date string (YYYY-MM-DD)
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
@@ -27,23 +28,23 @@ export interface UpdateShiftRequest {
 }
 
 export const shiftService = {
-  async getShiftsByBusinessAndDate(businessId: number, date: string): Promise<Shift[]> {
+  async getShiftsByBusinessAndDate(businessId: Id, date: string): Promise<Shift[]> {
     return apiClient.get<Shift[]>(`/shifts/business/${businessId}/date/${date}`);
   },
 
-  async getShiftsByStaffAndDate(staffId: number, date: string): Promise<Shift[]> {
+  async getShiftsByStaffAndDate(staffId: Id, date: string): Promise<Shift[]> {
     return apiClient.get<Shift[]>(`/shifts/staff/${staffId}/date/${date}`);
   },
 
-  async createShift(businessId: number, request: CreateShiftRequest): Promise<Shift> {
+  async createShift(businessId: Id, request: CreateShiftRequest): Promise<Shift> {
     return apiClient.post<Shift>(`/shifts/business/${businessId}`, request);
   },
 
-  async updateShift(id: number, businessId: number, request: UpdateShiftRequest): Promise<Shift> {
+  async updateShift(id: Id, businessId: Id, request: UpdateShiftRequest): Promise<Shift> {
     return apiClient.put<Shift>(`/shifts/${id}/business/${businessId}`, request);
   },
 
-  async deleteShift(id: number, businessId: number): Promise<void> {
+  async deleteShift(id: Id, businessId: Id): Promise<void> {
     return apiClient.delete<void>(`/shifts/${id}/business/${businessId}`);
   },
 };

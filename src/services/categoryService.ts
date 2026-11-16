@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 import { getLocale } from "@/i18n";
 
 /** A salon's own service category (Hair, Colour, …) — not the salon-type list above. */
 export interface Category {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   name: string;
   description?: string;
   color?: string;
@@ -50,19 +51,19 @@ class CategoryService {
 
   // Service categories. fe55021 rewrote this file for the salon-type list and dropped
   // these, which left useCategories and the till calling methods that no longer existed.
-  async getCategoriesByBusiness(businessId: number): Promise<Category[]> {
+  async getCategoriesByBusiness(businessId: Id): Promise<Category[]> {
     return apiClient.get<Category[]>(`/categories/business/${businessId}`);
   }
 
-  async createCategory(businessId: number, request: CreateCategoryRequest): Promise<Category> {
+  async createCategory(businessId: Id, request: CreateCategoryRequest): Promise<Category> {
     return apiClient.post<Category>(`/categories/business/${businessId}`, request);
   }
 
-  async updateCategory(id: number, businessId: number, request: UpdateCategoryRequest): Promise<Category> {
+  async updateCategory(id: Id, businessId: Id, request: UpdateCategoryRequest): Promise<Category> {
     return apiClient.put<Category>(`/categories/${id}/business/${businessId}`, request);
   }
 
-  async deleteCategory(id: number, businessId: number): Promise<void> {
+  async deleteCategory(id: Id, businessId: Id): Promise<void> {
     return apiClient.delete<void>(`/categories/${id}/business/${businessId}`);
   }
 }

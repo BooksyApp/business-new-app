@@ -42,7 +42,7 @@ type Target = { kind: "all" } | { kind: "one"; row: ServiceDiscount };
  */
 export default function OffersPage() {
   const businessId = getCurrentBusinessId();
-  useSalonTimeZone(Number(businessId) || 0);
+  useSalonTimeZone(businessId);
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const [rows, setRows] = useState<ServiceDiscount[] | null>(null);

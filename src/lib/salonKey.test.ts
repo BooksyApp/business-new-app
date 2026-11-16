@@ -15,18 +15,19 @@ describe("salon panel keys", () => {
   });
 
   it("maps keys and ids the server told us about, by UUID whatever the name part", () => {
-    rememberSalons([{ id: 7, publicId: U, panelKey: `baki-sac_${U}` }]);
-    expect(idForKey(`old-name_${U}`)).toBe(7);
-    expect(keyForId(7)).toBe(`baki-sac_${U}`);
-    expect(salonPath(7)).toBe(`/baki-sac_${U}/calendar`);
-    expect(salonPath(7, "/roles")).toBe(`/baki-sac_${U}/roles`);
-    // Never the numeric id: an unknown salon goes to the picker.
-    expect(salonPath(8)).toBe("/");
+    // UUID phase 2: the salon id IS its public id.
+    rememberSalons([{ id: U, publicId: U, panelKey: `baki-sac_${U}` }]);
+    expect(idForKey(`old-name_${U}`)).toBe(U);
+    expect(keyForId(U)).toBe(`baki-sac_${U}`);
+    expect(salonPath(U)).toBe(`/baki-sac_${U}/calendar`);
+    expect(salonPath(U, "/roles")).toBe(`/baki-sac_${U}/roles`);
+    // An unknown salon goes to the picker.
+    expect(salonPath("00000000-0000-4000-8000-000000000000")).toBe("/");
   });
 
   it("forgets everything on sign-out", () => {
-    rememberSalons([{ id: 7, publicId: U, panelKey: `s_${U}` }]);
+    rememberSalons([{ id: U, publicId: U, panelKey: `s_${U}` }]);
     forgetSalons();
-    expect(idForKey(`s_${U}`)).toBeUndefined();
+    expect(keyForId(U)).toBeUndefined();
   });
 });

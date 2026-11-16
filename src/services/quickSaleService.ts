@@ -1,9 +1,10 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface QuickSaleItem {
-  id: number;
-  businessId: number;
-  serviceId: number;
+  id: Id;
+  businessId: Id;
+  serviceId: Id;
   serviceName: string;
   serviceType: 'SERVICE' | 'COMBO';
   durationMinutes?: number;
@@ -14,11 +15,11 @@ export interface QuickSaleItem {
 }
 
 export const quickSaleService = {
-  async getQuickSaleItems(businessId: number): Promise<QuickSaleItem[]> {
+  async getQuickSaleItems(businessId: Id): Promise<QuickSaleItem[]> {
     return apiClient.get<QuickSaleItem[]>(`/quick-sale/business/${businessId}`);
   },
 
-  async updateQuickSaleItems(businessId: number, serviceIds: number[]): Promise<QuickSaleItem[]> {
+  async updateQuickSaleItems(businessId: Id, serviceIds: Id[]): Promise<QuickSaleItem[]> {
     return apiClient.put<QuickSaleItem[]>(`/quick-sale/business/${businessId}`, serviceIds);
   },
 };

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 export enum PaymentMethod {
@@ -17,9 +18,9 @@ export enum PaymentStatus {
 }
 
 export interface Payment {
-  id: number;
-  businessId: number;
-  staffId: number;
+  id: Id;
+  businessId: Id;
+  staffId: Id;
   amount: number;
   method: PaymentMethod;
   status: PaymentStatus;
@@ -31,14 +32,14 @@ export interface Payment {
 }
 
 export interface CreatePaymentRequest {
-  businessId: number;
-  staffId: number;
+  businessId: Id;
+  staffId: Id;
   amount: number;
   method: PaymentMethod;
   paymentDate: string;
   periodStart?: string;
   periodEnd?: string;
-  commissionIds?: number[];
+  commissionIds?: Id[];
   referenceNumber?: string;
   notes?: string;
 }
@@ -48,13 +49,13 @@ export const paymentService = {
     return apiClient.post<Payment>('/payments', request);
   },
 
-  async getPaymentsByStaff(businessId: number, staffId: number): Promise<Payment[]> {
+  async getPaymentsByStaff(businessId: Id, staffId: Id): Promise<Payment[]> {
     return apiClient.get<Payment[]>(`/payments/business/${businessId}/staff/${staffId}`);
   },
 
   async getPaymentsByDateRange(
-    businessId: number,
-    staffId: number,
+    businessId: Id,
+    staffId: Id,
     startDate: string,
     endDate: string
   ): Promise<Payment[]> {
@@ -63,15 +64,15 @@ export const paymentService = {
     );
   },
 
-  async getPaymentsByBusiness(businessId: number): Promise<Payment[]> {
+  async getPaymentsByBusiness(businessId: Id): Promise<Payment[]> {
     return apiClient.get<Payment[]>(`/payments/business/${businessId}`);
   },
 
-  async updatePaymentStatus(id: number, status: PaymentStatus): Promise<Payment> {
+  async updatePaymentStatus(id: Id, status: PaymentStatus): Promise<Payment> {
     return apiClient.put<Payment>(`/payments/${id}/status?status=${status}`, {});
   },
 
-  async cancelPayment(id: number): Promise<void> {
+  async cancelPayment(id: Id): Promise<void> {
     return apiClient.put(`/payments/${id}/cancel`, {});
   },
 };

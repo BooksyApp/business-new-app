@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { businessService } from "@/services/businessService";
 import { getAccessToken } from "./authUtils";
 
@@ -25,7 +26,7 @@ export const isBusinessOwner = (): boolean => {
 /**
  * Checks if the current user owns a specific business
  */
-export const ownsBusiness = async (businessId: number): Promise<boolean> => {
+export const ownsBusiness = async (businessId: Id): Promise<boolean> => {
   const user = getCurrentUser();
   if (!user || (user.role !== "BUSINESS_OWNER" && user.role !== "STAFF")) {
     return false;

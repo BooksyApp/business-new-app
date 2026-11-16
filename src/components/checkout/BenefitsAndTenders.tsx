@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +13,9 @@ import { t } from "@/i18n";
 export type Coverage = Record<string, "MEMBERSHIP" | "PACKAGE" | "VISIT_REWARD" | undefined>;
 
 interface Props {
-  businessId: number;
-  clientId?: number | null;
-  orderItems: Array<{ id: string; name: string; quantity: number; price: number; serviceId?: number }>;
+  businessId: Id;
+  clientId?: Id | null;
+  orderItems: Array<{ id: string; name: string; quantity: number; price: number; serviceId?: Id }>;
   /** Bill total, after discount and tip. */
   total: number;
   onChange: (state: { coverage: Coverage; payments: SalePayment[]; due: number; remaining: number }) => void;
@@ -83,14 +84,14 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   }, [JSON.stringify(coverage), JSON.stringify(payments), due, remaining]);
 
   /** A membership covers a line when it lists that service, or lists none at all. */
-  const membershipCovers = (serviceId?: number) =>
+  const membershipCovers = (serviceId?: Id) =>
     (benefits?.memberships ?? []).some(
       (m) =>
         (m.serviceIds.length === 0 || (serviceId != null && m.serviceIds.includes(serviceId))) &&
         (m.sessions_remaining > 0 || m.discount_percent > 0)
     );
 
-  const packageCovers = (serviceId?: number) =>
+  const packageCovers = (serviceId?: Id) =>
     (benefits?.packages ?? []).some((p) => p.service_id == null || p.service_id === serviceId);
 
   if (!clientId) {

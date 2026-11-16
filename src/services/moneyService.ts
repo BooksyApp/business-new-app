@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 /**
@@ -44,7 +45,7 @@ export interface MoneySettingsUpdate {
 export type PayoutStatus = 'PENDING' | 'IN_TRANSIT' | 'PAID' | 'FAILED';
 
 export interface PayoutBatch {
-  id: number;
+  id: Id;
   period_start: string;
   period_end: string;
   currency: string | null;
@@ -60,9 +61,9 @@ export interface PayoutBatch {
 }
 
 export interface PayoutItem {
-  id: number;
+  id: Id;
   booking_id: string | null;
-  refund_id: number | null;
+  refund_id: Id | null;
   kind: 'SALE' | 'REFUND' | 'FEE' | 'ADJUSTMENT';
   description: string;
   amount: number;
@@ -91,7 +92,7 @@ export interface PayoutOverview {
 export interface TipSummary {
   totals: { total: number; outstanding: number; cash: number; card: number; lines: number };
   byStaff: Array<{
-    staff_id: number | null;
+    staff_id: Id | null;
     staff_name: string | null;
     earned: number;
     outstanding: number;
@@ -100,10 +101,10 @@ export interface TipSummary {
 }
 
 export interface TipLine {
-  id: number;
-  sale_id: number | null;
+  id: Id;
+  sale_id: Id | null;
   booking_id: string | null;
-  staff_id: number | null;
+  staff_id: Id | null;
   staff_name: string | null;
   amount: number;
   method: string;
@@ -115,7 +116,7 @@ export interface TipLine {
 // ---------------------------------------------------------------- cash drawer
 
 export interface DrawerMovement {
-  id: number;
+  id: Id;
   direction: 'IN' | 'OUT';
   amount: number;
   reason: string | null;
@@ -123,7 +124,7 @@ export interface DrawerMovement {
 }
 
 export interface DrawerSession {
-  id: number;
+  id: Id;
   opened_at: string;
   closed_at: string | null;
   opening_float: number;
@@ -140,7 +141,7 @@ export interface DrawerSession {
 // ---------------------------------------------------------------- invoices
 
 export interface InvoiceSummary {
-  id: number;
+  id: Id;
   number: string;
   issued_on: string;
   buyer_name: string | null;
@@ -161,7 +162,7 @@ export interface InvoiceLine {
 }
 
 export interface Invoice extends InvoiceSummary {
-  sale_id: number | null;
+  sale_id: Id | null;
   seller_name: string | null;
   seller_address: string | null;
   seller_tax_no: string | null;
@@ -190,7 +191,7 @@ export interface ForfeitReport {
   totals: { kept: number; bookings: number };
   uncovered: { bookings: number; lost: number };
   kept: Array<{
-    id: number;
+    id: Id;
     appointment_date: string;
     client_name: string | null;
     amount: number;
@@ -211,26 +212,26 @@ const range = (from?: string, to?: string) => {
 
 export const moneyService = {
   // settings
-  getSettings: (businessId: number) =>
+  getSettings: (businessId: Id) =>
     apiClient.get<MoneySettings>(`/businesses/${businessId}/money-settings`),
-  updateSettings: (businessId: number, body: MoneySettingsUpdate) =>
+  updateSettings: (businessId: Id, body: MoneySettingsUpdate) =>
     apiClient.put<MoneySettings>(`/businesses/${businessId}/money-settings`, body),
 
   // payouts
-  getPayouts: (businessId: number) =>
+  getPayouts: (businessId: Id) =>
     apiClient.get<PayoutOverview>(`/businesses/${businessId}/payouts`),
-  getPayout: (businessId: number, batchId: number) =>
+  getPayout: (businessId: Id, batchId: Id) =>
     apiClient.get<PayoutBatch>(`/businesses/${businessId}/payouts/${batchId}`),
-  closePayoutPeriod: (businessId: number, periodStart: string, periodEnd: string) =>
+  closePayoutPeriod: (businessId: Id, periodStart: string, periodEnd: string) =>
     apiClient.post<PayoutBatch>(
       `/businesses/${businessId}/payouts/close?periodStart=${periodStart}&periodEnd=${periodEnd}`,
       {},
     ),
 
   // tips
-  getTips: (businessId: number, from?: string, to?: string) =>
+  getTips: (businessId: Id, from?: string, to?: string) =>
     apiClient.get<TipSummary>(`/businesses/${businessId}/tips${range(from, to)}`),
-  getTipLines: (businessId: number, staffId?: number, from?: string, to?: string) => {
+  getTipLines: (businessId: Id, staffId?: Id, from?: string, to?: string) => {
     const params = new URLSearchParams();
     if (staffId) params.set('staffId', String(staffId));
     if (from) params.set('from', from);
@@ -238,30 +239,30 @@ export const moneyService = {
     const query = params.toString();
     return apiClient.get<TipLine[]>(`/businesses/${businessId}/tips/lines${query ? `?${query}` : ''}`);
   },
-  payOutTips: (businessId: number, staffId?: number, upTo?: string) =>
-    apiClient.post<{ staffId: number | null; amount: number; lines: number }>(
+  payOutTips: (businessId: Id, staffId?: Id, upTo?: string) =>
+    apiClient.post<{ staffId: Id | null; amount: number; lines: number }>(
       `/businesses/${businessId}/tips/payout`,
       { staffId: staffId ?? null, upTo: upTo ?? null },
     ),
 
   // cash drawer
-  getDrawer: (businessId: number) =>
+  getDrawer: (businessId: Id) =>
     apiClient.get<DrawerSession | null>(`/businesses/${businessId}/cash-drawer`),
-  getDrawerHistory: (businessId: number, limit = 30) =>
+  getDrawerHistory: (businessId: Id, limit = 30) =>
     apiClient.get<DrawerSession[]>(`/businesses/${businessId}/cash-drawer/history?limit=${limit}`),
-  openDrawer: (businessId: number, openingFloat: number, staffId?: number) =>
+  openDrawer: (businessId: Id, openingFloat: number, staffId?: Id) =>
     apiClient.post<DrawerSession>(`/businesses/${businessId}/cash-drawer/open`, {
       openingFloat,
       staffId: staffId ?? null,
     }),
-  closeDrawer: (businessId: number, sessionId: number, countedCash: number, notes?: string) =>
+  closeDrawer: (businessId: Id, sessionId: Id, countedCash: number, notes?: string) =>
     apiClient.post<DrawerSession>(`/businesses/${businessId}/cash-drawer/${sessionId}/close`, {
       countedCash,
       notes: notes ?? null,
     }),
   moveCash: (
-    businessId: number,
-    sessionId: number,
+    businessId: Id,
+    sessionId: Id,
     direction: 'IN' | 'OUT',
     amount: number,
     reason: string,
@@ -272,26 +273,26 @@ export const moneyService = {
     ),
 
   // invoices
-  getInvoices: (businessId: number, from?: string, to?: string) =>
+  getInvoices: (businessId: Id, from?: string, to?: string) =>
     apiClient.get<InvoiceSummary[]>(`/businesses/${businessId}/invoices${range(from, to)}`),
-  getInvoice: (businessId: number, invoiceId: number) =>
+  getInvoice: (businessId: Id, invoiceId: Id) =>
     apiClient.get<Invoice>(`/businesses/${businessId}/invoices/${invoiceId}`),
   issueInvoice: (
-    businessId: number,
-    saleId: number,
+    businessId: Id,
+    saleId: Id,
     buyer?: { buyerName?: string; buyerAddress?: string; buyerTaxNumber?: string; buyerEmail?: string },
   ) => apiClient.post<Invoice>(`/businesses/${businessId}/invoices`, { saleId, ...(buyer ?? {}) }),
-  voidInvoice: (businessId: number, invoiceId: number, reason: string) =>
+  voidInvoice: (businessId: Id, invoiceId: Id, reason: string) =>
     apiClient.post<Invoice>(`/businesses/${businessId}/invoices/${invoiceId}/void`, { reason }),
 
   // kept deposits
-  getForfeits: (businessId: number, from?: string, to?: string) =>
+  getForfeits: (businessId: Id, from?: string, to?: string) =>
     apiClient.get<ForfeitReport>(`/businesses/${businessId}/deposit-forfeits${range(from, to)}`),
-  getForfeitCandidates: (businessId: number) =>
+  getForfeitCandidates: (businessId: Id) =>
     apiClient.get<ForfeitCandidate[]>(`/businesses/${businessId}/deposit-forfeits/eligible`),
-  keepDeposit: (businessId: number, bookingId: string, reason: string) =>
+  keepDeposit: (businessId: Id, bookingId: string, reason: string) =>
     apiClient.post<{ amount: number }>(`/businesses/${businessId}/deposit-forfeits/${bookingId}`, { reason }),
-  releaseDeposit: (businessId: number, bookingId: string) =>
+  releaseDeposit: (businessId: Id, bookingId: string) =>
     apiClient.delete<{ released: boolean }>(`/businesses/${businessId}/deposit-forfeits/${bookingId}`),
 };
 

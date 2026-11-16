@@ -1,9 +1,10 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from "react";
 import { businessHoursService, type BusinessHours, type BusinessHoursUpdateItem } from "@/services/businessHoursService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { t } from "@/i18n";
 
-export function useBusinessHours(businessIdParam?: number) {
+export function useBusinessHours(businessIdParam?: Id) {
   const routeBusinessId = useBusinessId();
   const currentBusinessId = businessIdParam ?? routeBusinessId;
   const [businessHours, setBusinessHours] = useState<BusinessHours[]>([]);

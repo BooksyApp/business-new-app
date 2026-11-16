@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 /**
@@ -25,7 +26,7 @@ export interface RotaDay {
 }
 
 export interface RotaRow {
-  id: number;
+  id: Id;
   name: string;
   position: string | null;
   hourly_rate: number | null;
@@ -39,8 +40,8 @@ export interface Rota {
 }
 
 export interface RecurringBlock {
-  id: number;
-  staff_id: number | null;
+  id: Id;
+  staff_id: Id | null;
   staff_name: string | null;
   label: string;
   day_of_week: number;
@@ -54,7 +55,7 @@ export interface RecurringBlock {
 // ---------------------------------------------------------------- timesheets
 
 export interface TimesheetRow {
-  staff_id: number;
+  staff_id: Id;
   staff_name: string | null;
   hourly_rate: number | null;
   shifts: number;
@@ -64,8 +65,8 @@ export interface TimesheetRow {
 }
 
 export interface TimeEntry {
-  id: number;
-  staff_id: number;
+  id: Id;
+  staff_id: Id;
   staff_name: string | null;
   work_date: string;
   clock_in: string;
@@ -79,8 +80,8 @@ export interface TimeEntry {
 // ---------------------------------------------------------------- payroll
 
 export interface PayrollLine {
-  id: number;
-  staff_id: number;
+  id: Id;
+  staff_id: Id;
   staff_name: string | null;
   hours: number;
   base_pay: number;
@@ -92,7 +93,7 @@ export interface PayrollLine {
 }
 
 export interface PayrollRun {
-  id: number;
+  id: Id;
   period_start: string;
   period_end: string;
   status: 'DRAFT' | 'APPROVED' | 'PAID';
@@ -106,7 +107,7 @@ export interface PayrollRun {
 export type NoteKind = 'NOTE' | 'FORMULA' | 'ALLERGY' | 'PREFERENCE' | 'VISIT';
 
 export interface ClientNote {
-  id: number;
+  id: Id;
   kind: NoteKind;
   body: string;
   pinned: boolean;
@@ -117,7 +118,7 @@ export interface ClientNote {
 }
 
 export interface ClientPhoto {
-  id: number;
+  id: Id;
   url: string;
   kind: 'BEFORE' | 'AFTER';
   caption: string | null;
@@ -129,7 +130,7 @@ export interface ClientRecord {
   notes: ClientNote[];
   photos: ClientPhoto[];
   visits: Array<{
-    id: number;
+    id: Id;
     appointment_date: string;
     start_time: string;
     service_name: string | null;
@@ -142,7 +143,7 @@ export interface ClientRecord {
 // ---------------------------------------------------------------- stock
 
 export interface LowStockItem {
-  id: number;
+  id: Id;
   name: string;
   sku: string | null;
   quantity_on_hand: number;
@@ -153,19 +154,19 @@ export interface LowStockItem {
 }
 
 export interface StockMovement {
-  id: number;
-  product_id: number;
+  id: Id;
+  product_id: Id;
   product_name: string;
   change: number;
   reason: 'SALE' | 'SERVICE' | 'DELIVERY' | 'COUNT' | 'WASTE' | 'RETURN' | 'ADJUSTMENT';
-  sale_id: number | null;
+  sale_id: Id | null;
   note: string | null;
   created_at: string;
 }
 
 export interface RecipeLine {
-  id: number;
-  product_id: number;
+  id: Id;
+  product_id: Id;
   name: string;
   sku: string | null;
   quantity: number;
@@ -175,7 +176,7 @@ export interface RecipeLine {
 // ---------------------------------------------------------------- suppliers
 
 export interface Supplier {
-  id: number;
+  id: Id;
   name: string;
   contact_name: string | null;
   email: string | null;
@@ -185,8 +186,8 @@ export interface Supplier {
 }
 
 export interface PurchaseOrderLine {
-  id: number;
-  product_id: number;
+  id: Id;
+  product_id: Id;
   product_name: string;
   sku: string | null;
   quantity: number;
@@ -195,7 +196,7 @@ export interface PurchaseOrderLine {
 }
 
 export interface PurchaseOrder {
-  id: number;
+  id: Id;
   reference: string | null;
   status: 'DRAFT' | 'ORDERED' | 'PARTIAL' | 'RECEIVED' | 'CANCELLED';
   ordered_on: string | null;
@@ -213,7 +214,7 @@ export type ExpenseCategory =
   | 'EQUIPMENT' | 'INSURANCE' | 'SOFTWARE' | 'TRAVEL' | 'FEES' | 'OTHER';
 
 export interface Expense {
-  id: number;
+  id: Id;
   category: ExpenseCategory;
   description: string | null;
   amount: number;
@@ -243,7 +244,7 @@ export interface DaySheet {
   date: string;
   business: { name: string; address: string | null; phone: string | null };
   appointments: Array<{
-    id: number;
+    id: Id;
     start_time: string;
     end_time: string;
     service_name: string | null;
@@ -258,155 +259,155 @@ export interface DaySheet {
     staff_name: string | null;
     allergy: string | null;
   }>;
-  working: Array<{ id: number; name: string; start_time: string | null; end_time: string | null }>;
+  working: Array<{ id: Id; name: string; start_time: string | null; end_time: string | null }>;
   totals: { bookings: number; expected: number; already_paid: number };
 }
 
 // ----------------------------------------------------------------
 
-const base = (businessId: number) => `/businesses/${businessId}`;
+const base = (businessId: Id) => `/businesses/${businessId}`;
 
 export const salonDayService = {
   // rota
-  getRota: (businessId: number, weekStart: string) =>
+  getRota: (businessId: Id, weekStart: string) =>
     apiClient.get<Rota>(`${base(businessId)}/rota?weekStart=${weekStart}`),
   setShift: (
-    businessId: number,
-    shift: { staffId: number; date: string; start: string; end: string; notes?: string },
+    businessId: Id,
+    shift: { staffId: Id; date: string; start: string; end: string; notes?: string },
   ) => apiClient.put<unknown>(`${base(businessId)}/rota/shifts`, shift),
-  clearShift: (businessId: number, staffId: number, date: string) =>
+  clearShift: (businessId: Id, staffId: Id, date: string) =>
     apiClient.delete<void>(`${base(businessId)}/rota/shifts?staffId=${staffId}&date=${date}`),
-  copyWeek: (businessId: number, from: string, to: string) =>
+  copyWeek: (businessId: Id, from: string, to: string) =>
     apiClient.post<{ copied: number }>(`${base(businessId)}/rota/copy?from=${from}&to=${to}`, {}),
-  getBlocks: (businessId: number) =>
+  getBlocks: (businessId: Id) =>
     apiClient.get<RecurringBlock[]>(`${base(businessId)}/rota/blocks`),
   addBlock: (
-    businessId: number,
-    block: { staffId?: number | null; label: string; days: number[]; start: string; end: string },
+    businessId: Id,
+    block: { staffId?: Id | null; label: string; days: number[]; start: string; end: string },
   ) => apiClient.post<{ created: number }>(`${base(businessId)}/rota/blocks`, block),
-  removeBlock: (businessId: number, blockId: number) =>
+  removeBlock: (businessId: Id, blockId: Id) =>
     apiClient.delete<void>(`${base(businessId)}/rota/blocks/${blockId}`),
 
   // timesheets
-  getTimesheets: (businessId: number, from: string, to: string) =>
+  getTimesheets: (businessId: Id, from: string, to: string) =>
     apiClient.get<{ byStaff: TimesheetRow[]; entries: TimeEntry[] }>(
       `${base(businessId)}/timesheets?from=${from}&to=${to}`,
     ),
-  getClockedIn: (businessId: number) =>
-    apiClient.get<Array<{ id: number; staff_id: number; staff_name: string; clock_in: string }>>(
+  getClockedIn: (businessId: Id) =>
+    apiClient.get<Array<{ id: Id; staff_id: Id; staff_name: string; clock_in: string }>>(
       `${base(businessId)}/timesheets/open`,
     ),
-  clockIn: (businessId: number, staffId: number) =>
+  clockIn: (businessId: Id, staffId: Id) =>
     apiClient.post<TimeEntry>(`${base(businessId)}/timesheets/clock-in`, { staffId }),
-  clockOut: (businessId: number, staffId: number, breakMinutes = 0) =>
+  clockOut: (businessId: Id, staffId: Id, breakMinutes = 0) =>
     apiClient.post<TimeEntry>(`${base(businessId)}/timesheets/clock-out`, { staffId, breakMinutes }),
   correctEntry: (
-    businessId: number,
-    entryId: number,
+    businessId: Id,
+    entryId: Id,
     change: { clockIn?: string; clockOut?: string; breakMinutes?: number; note?: string },
   ) => apiClient.put<TimeEntry>(`${base(businessId)}/timesheets/${entryId}`, change),
 
   // payroll
-  getPayrollRuns: (businessId: number) =>
+  getPayrollRuns: (businessId: Id) =>
     apiClient.get<PayrollRun[]>(`${base(businessId)}/payroll`),
-  getPayrollRun: (businessId: number, runId: number) =>
+  getPayrollRun: (businessId: Id, runId: Id) =>
     apiClient.get<PayrollRun>(`${base(businessId)}/payroll/${runId}`),
-  buildPayroll: (businessId: number, from: string, to: string) =>
+  buildPayroll: (businessId: Id, from: string, to: string) =>
     apiClient.post<PayrollRun>(`${base(businessId)}/payroll?from=${from}&to=${to}`, {}),
-  adjustPayrollLine: (businessId: number, runId: number, lineId: number, amount: number, note?: string) =>
+  adjustPayrollLine: (businessId: Id, runId: Id, lineId: Id, amount: number, note?: string) =>
     apiClient.put<PayrollRun>(`${base(businessId)}/payroll/${runId}/lines/${lineId}`, { amount, note }),
-  approvePayroll: (businessId: number, runId: number) =>
+  approvePayroll: (businessId: Id, runId: Id) =>
     apiClient.post<PayrollRun>(`${base(businessId)}/payroll/${runId}/approve`, {}),
-  markPayrollPaid: (businessId: number, runId: number) =>
+  markPayrollPaid: (businessId: Id, runId: Id) =>
     apiClient.post<PayrollRun>(`${base(businessId)}/payroll/${runId}/paid`, {}),
 
   // client record
-  getClientRecord: (businessId: number, clientId: number) =>
+  getClientRecord: (businessId: Id, clientId: Id) =>
     apiClient.get<ClientRecord>(`${base(businessId)}/clients/${clientId}/record`),
-  getClientAlerts: (businessId: number, clientId: number) =>
-    apiClient.get<Array<{ id: number; kind: NoteKind; body: string }>>(
+  getClientAlerts: (businessId: Id, clientId: Id) =>
+    apiClient.get<Array<{ id: Id; kind: NoteKind; body: string }>>(
       `${base(businessId)}/clients/${clientId}/alerts`,
     ),
   addClientNote: (
-    businessId: number,
-    clientId: number,
+    businessId: Id,
+    clientId: Id,
     note: { kind: NoteKind; body: string; pinned?: boolean; appointmentId?: string; authorName?: string },
   ) => apiClient.post<ClientNote>(`${base(businessId)}/clients/${clientId}/notes`, note),
-  updateClientNote: (businessId: number, noteId: number, change: { body?: string; pinned?: boolean }) =>
+  updateClientNote: (businessId: Id, noteId: Id, change: { body?: string; pinned?: boolean }) =>
     apiClient.put<ClientNote>(`${base(businessId)}/client-notes/${noteId}`, change),
-  deleteClientNote: (businessId: number, noteId: number) =>
+  deleteClientNote: (businessId: Id, noteId: Id) =>
     apiClient.delete<void>(`${base(businessId)}/client-notes/${noteId}`),
   addClientPhoto: (
-    businessId: number,
-    clientId: number,
+    businessId: Id,
+    clientId: Id,
     photo: { url: string; kind: 'BEFORE' | 'AFTER'; caption?: string; appointmentId?: string },
   ) => apiClient.post<ClientPhoto>(`${base(businessId)}/clients/${clientId}/photos`, photo),
-  deleteClientPhoto: (businessId: number, photoId: number) =>
+  deleteClientPhoto: (businessId: Id, photoId: Id) =>
     apiClient.delete<void>(`${base(businessId)}/client-photos/${photoId}`),
 
   // stock
-  getLowStock: (businessId: number) =>
+  getLowStock: (businessId: Id) =>
     apiClient.get<{ items: LowStockItem[]; outOfStock: number }>(`${base(businessId)}/stock/low`),
-  getStockMovements: (businessId: number, productId?: number, limit = 100) => {
+  getStockMovements: (businessId: Id, productId?: Id, limit = 100) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (productId) params.set('productId', String(productId));
     return apiClient.get<StockMovement[]>(`${base(businessId)}/stock/movements?${params}`);
   },
-  countStock: (businessId: number, productId: number, counted: number, note?: string) =>
+  countStock: (businessId: Id, productId: Id, counted: number, note?: string) =>
     apiClient.post<{ difference: number }>(`${base(businessId)}/stock/count`, { productId, counted, note }),
-  adjustStock: (businessId: number, productId: number, change: number, reason: string, note?: string) =>
+  adjustStock: (businessId: Id, productId: Id, change: number, reason: string, note?: string) =>
     apiClient.post<unknown>(`${base(businessId)}/stock/adjust`, { productId, change, reason, note }),
-  getRecipe: (businessId: number, serviceId: number) =>
+  getRecipe: (businessId: Id, serviceId: Id) =>
     apiClient.get<RecipeLine[]>(`${base(businessId)}/services/${serviceId}/products`),
-  setRecipeLine: (businessId: number, serviceId: number, productId: number, quantity: number) =>
+  setRecipeLine: (businessId: Id, serviceId: Id, productId: Id, quantity: number) =>
     apiClient.put<unknown>(`${base(businessId)}/services/${serviceId}/products`, { productId, quantity }),
 
   // suppliers and orders
-  getSuppliers: (businessId: number) =>
+  getSuppliers: (businessId: Id) =>
     apiClient.get<Supplier[]>(`${base(businessId)}/suppliers`),
-  createSupplier: (businessId: number, body: Partial<Supplier>) =>
+  createSupplier: (businessId: Id, body: Partial<Supplier>) =>
     apiClient.post<Supplier>(`${base(businessId)}/suppliers`, body),
-  updateSupplier: (businessId: number, supplierId: number, body: Partial<Supplier>) =>
+  updateSupplier: (businessId: Id, supplierId: Id, body: Partial<Supplier>) =>
     apiClient.put<Supplier>(`${base(businessId)}/suppliers/${supplierId}`, body),
-  getOrders: (businessId: number, status?: string) =>
+  getOrders: (businessId: Id, status?: string) =>
     apiClient.get<PurchaseOrder[]>(`${base(businessId)}/purchase-orders${status ? `?status=${status}` : ''}`),
-  getOrder: (businessId: number, orderId: number) =>
+  getOrder: (businessId: Id, orderId: Id) =>
     apiClient.get<PurchaseOrder>(`${base(businessId)}/purchase-orders/${orderId}`),
-  suggestOrder: (businessId: number) =>
-    apiClient.get<Array<{ product_id: number; name: string; quantity_on_hand: number; suggested: number }>>(
+  suggestOrder: (businessId: Id) =>
+    apiClient.get<Array<{ product_id: Id; name: string; quantity_on_hand: number; suggested: number }>>(
       `${base(businessId)}/purchase-orders/suggest`,
     ),
   createOrder: (
-    businessId: number,
+    businessId: Id,
     order: {
-      supplierId?: number | null;
+      supplierId?: Id | null;
       reference?: string;
       expectedOn?: string;
-      lines: Array<{ productId: number; quantity: number; unitCost: number }>;
+      lines: Array<{ productId: Id; quantity: number; unitCost: number }>;
     },
   ) => apiClient.post<PurchaseOrder>(`${base(businessId)}/purchase-orders`, order),
-  markOrdered: (businessId: number, orderId: number) =>
+  markOrdered: (businessId: Id, orderId: Id) =>
     apiClient.post<PurchaseOrder>(`${base(businessId)}/purchase-orders/${orderId}/order`, {}),
   receiveOrder: (
-    businessId: number,
-    orderId: number,
-    lines: Array<{ lineId: number; quantity: number }>,
+    businessId: Id,
+    orderId: Id,
+    lines: Array<{ lineId: Id; quantity: number }>,
   ) => apiClient.post<PurchaseOrder>(`${base(businessId)}/purchase-orders/${orderId}/receive`, { lines }),
 
   // expenses
-  getExpenses: (businessId: number, from: string, to: string, category?: string) => {
+  getExpenses: (businessId: Id, from: string, to: string, category?: string) => {
     const params = new URLSearchParams({ from, to });
     if (category) params.set('category', category);
     return apiClient.get<Expense[]>(`${base(businessId)}/expenses?${params}`);
   },
-  addExpense: (businessId: number, body: Record<string, unknown>) =>
+  addExpense: (businessId: Id, body: Record<string, unknown>) =>
     apiClient.post<Expense>(`${base(businessId)}/expenses`, body),
-  deleteExpense: (businessId: number, expenseId: number) =>
+  deleteExpense: (businessId: Id, expenseId: Id) =>
     apiClient.delete<void>(`${base(businessId)}/expenses/${expenseId}`),
-  getProfitAndLoss: (businessId: number, from: string, to: string) =>
+  getProfitAndLoss: (businessId: Id, from: string, to: string) =>
     apiClient.get<ProfitAndLoss>(`${base(businessId)}/profit-and-loss?from=${from}&to=${to}`),
 
   // the printed sheet
-  getDaySheet: (businessId: number, date: string) =>
+  getDaySheet: (businessId: Id, date: string) =>
     apiClient.get<DaySheet>(`${base(businessId)}/day-sheet?date=${date}`),
 };

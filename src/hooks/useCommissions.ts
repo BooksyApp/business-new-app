@@ -1,11 +1,12 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { commissionService, Commission, CommissionRule, CommissionCategory, CommissionStatus } from '@/services/commissionService';
 import { useBusinessId } from './useBusinessId';
 import { t } from "@/i18n";
 
 interface UseCommissionsOptions {
-  staffId?: number;
-  businessId?: number;
+  staffId?: Id;
+  businessId?: Id;
 }
 
 export const useCommissions = (options?: UseCommissionsOptions) => {
@@ -68,7 +69,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
 
   const calculateCommission = useCallback(async (
     appointmentId: string,
-    serviceId: number,
+    serviceId: Id,
     saleAmount: number
   ) => {
     if (!businessId || !staffId) return null;
@@ -94,7 +95,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
     }
   }, [businessId, staffId, refresh]);
 
-  const cancelCommission = useCallback(async (id: number) => {
+  const cancelCommission = useCallback(async (id: Id) => {
     setLoading(true);
     setError(null);
     try {
@@ -122,7 +123,7 @@ export const useCommissions = (options?: UseCommissionsOptions) => {
   };
 };
 
-export const useCommissionRules = (businessId?: number) => {
+export const useCommissionRules = (businessId?: Id) => {
   const defaultBusinessId = useBusinessId();
   const bid = businessId || defaultBusinessId;
 
@@ -167,7 +168,7 @@ export const useCommissionRules = (businessId?: number) => {
     }
   }, [bid]);
 
-  const getRulesByStaff = useCallback(async (staffId: number) => {
+  const getRulesByStaff = useCallback(async (staffId: Id) => {
     if (!bid) return [];
 
     setLoading(true);
@@ -202,7 +203,7 @@ export const useCommissionRules = (businessId?: number) => {
     }
   }, [bid, loadRules]);
 
-  const updateRule = useCallback(async (id: number, rule: Partial<CommissionRule>) => {
+  const updateRule = useCallback(async (id: Id, rule: Partial<CommissionRule>) => {
     setLoading(true);
     setError(null);
     try {
@@ -218,7 +219,7 @@ export const useCommissionRules = (businessId?: number) => {
     }
   }, [loadRules]);
 
-  const deleteRule = useCallback(async (id: number) => {
+  const deleteRule = useCallback(async (id: Id) => {
     setLoading(true);
     setError(null);
     try {
@@ -233,7 +234,7 @@ export const useCommissionRules = (businessId?: number) => {
     }
   }, [loadRules]);
 
-  const deactivateRule = useCallback(async (id: number) => {
+  const deactivateRule = useCallback(async (id: Id) => {
     setLoading(true);
     setError(null);
     try {

@@ -1,8 +1,9 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 export interface Staff {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   name: string;
   email?: string;
   phone?: string;
@@ -22,7 +23,7 @@ export interface Staff {
   // Per-day working hours from the backend (keys "MONDAY"…, values "HH:mm[:ss]").
   workingHoursStart?: Record<string, string>;
   workingHoursEnd?: Record<string, string>;
-  serviceIds?: number[];
+  serviceIds?: Id[];
   isActive: boolean;
 }
 
@@ -31,7 +32,7 @@ export interface CreateStaffRequest {
   email?: string;
   phone?: string;
   position?: string;
-  serviceIds?: number[];
+  serviceIds?: Id[];
   inviteAndCreateAccount?: boolean;
   /** "/api/public/uploads/<id>.jpg" from uploadImage(…, "STAFF_AVATAR"). */
   avatarUrl?: string;
@@ -44,7 +45,7 @@ export interface UpdateStaffRequest {
   email?: string;
   phone?: string;
   position?: string;
-  serviceIds?: number[];
+  serviceIds?: Id[];
   isActive?: boolean;
   /** "" removes the photo. */
   avatarUrl?: string;
@@ -53,23 +54,23 @@ export interface UpdateStaffRequest {
 }
 
 export const staffService = {
-  async getStaffByBusiness(businessId: number): Promise<Staff[]> {
+  async getStaffByBusiness(businessId: Id): Promise<Staff[]> {
     return apiClient.get<Staff[]>(`/staff/business/${businessId}`);
   },
 
-  async getStaffById(id: number, businessId: number): Promise<Staff> {
+  async getStaffById(id: Id, businessId: Id): Promise<Staff> {
     return apiClient.get<Staff>(`/staff/${id}/business/${businessId}`);
   },
 
-  async createStaff(businessId: number, request: CreateStaffRequest): Promise<Staff> {
+  async createStaff(businessId: Id, request: CreateStaffRequest): Promise<Staff> {
     return apiClient.post<Staff>(`/staff/business/${businessId}`, request);
   },
 
-  async updateStaff(id: number, businessId: number, request: UpdateStaffRequest): Promise<Staff> {
+  async updateStaff(id: Id, businessId: Id, request: UpdateStaffRequest): Promise<Staff> {
     return apiClient.put<Staff>(`/staff/${id}/business/${businessId}`, request);
   },
 
-  async deleteStaff(id: number, businessId: number): Promise<void> {
+  async deleteStaff(id: Id, businessId: Id): Promise<void> {
     return apiClient.delete<void>(`/staff/${id}/business/${businessId}`);
   },
 
@@ -77,11 +78,11 @@ export const staffService = {
   // value never reached the backend (there's no such field on the create/update DTO).
   // Role has its own dedicated endpoint instead.
   /** Email (or re-email) the link that lets this team member set up their own sign-in. */
-  async sendInvite(id: number): Promise<{ email: string; sent: boolean; expiresAt: string }> {
+  async sendInvite(id: Id): Promise<{ email: string; sent: boolean; expiresAt: string }> {
     return apiClient.post(`/staff/${id}/invite`, {});
   },
 
-  async setRole(id: number, role: string): Promise<Staff> {
+  async setRole(id: Id, role: string): Promise<Staff> {
     return apiClient.put<Staff>(`/staff/${id}/role`, { role });
   },
 };

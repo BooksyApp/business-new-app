@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 
 /**
@@ -34,7 +35,7 @@ export interface PromotionQuote {
 }
 
 export interface PromotionRow {
-  id: number;
+  id: Id;
   startsAt: string;
   endsAt: string;
   /** The rate agreed, and what it totalled over the run. */
@@ -61,47 +62,47 @@ export const promotionService = {
    * What a daily budget is likely to buy. Re-read as the salon changes the number: the
    * whole point of a budget model is that the answer moves with it.
    */
-  quote: (businessId: number, dailyBudget?: number, days = 7) => {
+  quote: (businessId: Id, dailyBudget?: number, days = 7) => {
     const q = new URLSearchParams({ days: String(days) });
     if (dailyBudget != null) q.set('dailyBudget', String(dailyBudget));
     return apiClient.get<PromotionQuote>(`/businesses/${businessId}/promotion?${q.toString()}`);
   },
 
   /** Reserve a run. Returns it PENDING — placement starts once the money lands. */
-  buy: (businessId: number, dailyBudget: number, days: number) =>
-    apiClient.post<{ id: number; amount: number; currency: string | null; endsAt: string }>(
+  buy: (businessId: Id, dailyBudget: number, days: number) =>
+    apiClient.post<{ id: Id; amount: number; currency: string | null; endsAt: string }>(
       `/businesses/${businessId}/promotion`,
       { dailyBudget, days }
     ),
 
   /** The Stripe page that pays for a reservation. */
-  checkout: (businessId: number, promotionId: number, successUrl: string, cancelUrl: string) =>
+  checkout: (businessId: Id, promotionId: Id, successUrl: string, cancelUrl: string) =>
     apiClient.post<{ checkoutUrl: string }>(
       `/businesses/${businessId}/promotion/${promotionId}/checkout`,
       { successUrl, cancelUrl }
     ),
 
   /** Drop a reservation that was never paid for, so a new campaign can be started. */
-  discard: (businessId: number, promotionId: number) =>
+  discard: (businessId: Id, promotionId: Id) =>
     apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/discard`, {}),
 
   /** Stop delivering. Paused days are added back to the end when it resumes. */
-  pause: (businessId: number, promotionId: number) =>
+  pause: (businessId: Id, promotionId: Id) =>
     apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/pause`, {}),
 
-  resume: (businessId: number, promotionId: number) =>
+  resume: (businessId: Id, promotionId: Id) =>
     apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/resume`, {}),
 
   /** Change what a running campaign spends a day. Applies to the days still to come. */
-  setBudget: (businessId: number, promotionId: number, dailyBudget: number) =>
+  setBudget: (businessId: Id, promotionId: Id, dailyBudget: number) =>
     apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/budget`, {
       dailyBudget,
       days: 0,
     }),
 
-  history: (businessId: number) =>
+  history: (businessId: Id) =>
     apiClient.get<PromotionRow[]>(`/businesses/${businessId}/promotion/history`),
 
-  daily: (businessId: number, promotionId: number) =>
+  daily: (businessId: Id, promotionId: Id) =>
     apiClient.get<PromotionDay[]>(`/businesses/${businessId}/promotion/${promotionId}/daily`),
 };

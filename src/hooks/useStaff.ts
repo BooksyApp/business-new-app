@@ -1,10 +1,11 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect, useCallback } from 'react';
 import { staffService, type Staff, type CreateStaffRequest, type UpdateStaffRequest } from '@/services/staffService';
 import { useBusinessId } from '@/hooks/useBusinessId';
 import { toast } from 'sonner';
 import { t } from "@/i18n";
 
-export function useStaff(businessIdParam?: number) {
+export function useStaff(businessIdParam?: Id) {
   const routeBusinessId = useBusinessId();
   const businessId = businessIdParam ?? routeBusinessId;
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -43,7 +44,7 @@ export function useStaff(businessIdParam?: number) {
   }, [businessId]);
 
   // silent: the caller shows its own success/error toast (H-05: one toast, not two).
-  const updateStaff = useCallback(async (id: number, request: UpdateStaffRequest, opts?: { silent?: boolean }) => {
+  const updateStaff = useCallback(async (id: Id, request: UpdateStaffRequest, opts?: { silent?: boolean }) => {
     try {
       const updated = await staffService.updateStaff(id, businessId, request);
       setStaff(prev => prev.map(s => s.id === id ? updated : s));
@@ -55,7 +56,7 @@ export function useStaff(businessIdParam?: number) {
     }
   }, [businessId]);
 
-  const deleteStaff = useCallback(async (id: number) => {
+  const deleteStaff = useCallback(async (id: Id) => {
     try {
       await staffService.deleteStaff(id, businessId);
       setStaff(prev => prev.filter(s => s.id !== id));
@@ -67,7 +68,7 @@ export function useStaff(businessIdParam?: number) {
   }, [businessId]);
 
   // #13/#293: separate endpoint from updateStaff — see staffService.setRole.
-  const setStaffRole = useCallback(async (id: number, role: string) => {
+  const setStaffRole = useCallback(async (id: Id, role: string) => {
     const updated = await staffService.setRole(id, role);
     setStaff(prev => prev.map(s => s.id === id ? updated : s));
     return updated;

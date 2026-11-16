@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { ServiceChip } from "@/components/ServiceChip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BooqiScope, PageHeader, Card, CardContent, CardDescription, CardHeader, CardTitle, EmptyState, StatCard } from "@/components/page/booqi";
@@ -44,7 +45,7 @@ export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<RatingSummary>({ count: 0, average: null });
   const [loading, setLoading] = useState(true);
-  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Id | null>(null);
   const [replyText, setReplyText] = useState("");
   const [savingReply, setSavingReply] = useState(false);
   // How many customers could be asked. Shown on the button so a salon knows whether
@@ -54,7 +55,7 @@ export default function ReviewsPage() {
   const [filter, setFilter] = useState<"all" | "reply" | "photos" | number>("all");
   const [sortBy, setSortBy] = useState<"newest" | "lowest">("newest");
 
-  const saveReply = async (reviewId: number, text?: string) => {
+  const saveReply = async (reviewId: Id, text?: string) => {
     if (!businessId) return;
     setSavingReply(true);
     try {

@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 // API Configuration
 // The manager site and the API are served from the same origin (Caddy on the VPS
 // reverse-proxies /api/** to the backend, everything else is this SPA) — so both
@@ -9,40 +10,32 @@ export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || '';
 
 // Get current business ID from localStorage (set after login/registration)
 // Note: In business-specific routes, use useBusinessId() hook instead
-export const getCurrentBusinessId = (): number => {
-  // First, try to get from currentBusinessId
-  const businessId = localStorage.getItem('currentBusinessId');
-  if (businessId) {
-    const parsedId = parseInt(businessId, 10);
-    if (!isNaN(parsedId) && parsedId > 0) {
-      return parsedId;
-    }
-  }
-  
-  // Try to get from currentBusiness object
+export const getCurrentBusinessId = (): Id => {
+  // UUID phase 2: the salon id is its public UUID. A numeric id left from before the switch is
+  // dropped here (with the cached salon), so the next sign-in / salon pick stores the new one.
+  const isUuid = (v: unknown): v is string =>
+    typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+  const stored = localStorage.getItem('currentBusinessId');
+  if (isUuid(stored)) return stored;
+  if (stored) localStorage.removeItem('currentBusinessId');
+
   const businessStr = localStorage.getItem('currentBusiness');
   if (businessStr) {
     try {
       const business = JSON.parse(businessStr);
-      if (business && business.id) {
-        const parsedId = parseInt(business.id.toString(), 10);
-        if (!isNaN(parsedId) && parsedId > 0) {
-          localStorage.setItem('currentBusinessId', parsedId.toString());
-          return parsedId;
-        }
+      if (isUuid(business?.id)) {
+        localStorage.setItem('currentBusinessId', business.id);
+        return business.id;
       }
+      localStorage.removeItem('currentBusiness');
     } catch (e) {
       console.error('Error parsing currentBusiness from localStorage:', e);
     }
   }
-  
-  // Return a safe default that will cause an error on the backend
-  // This is better than silently using business ID 1
-  return 0; // Return 0 instead of 1, which should cause a validation error on backend
+  // No salon: "" makes the API call fail visibly instead of hitting someone else's id.
+  return "";
 };
 
-// Default business ID (fallback for development - use getCurrentBusinessId() instead)
-export const DEFAULT_BUSINESS_ID = 1;
 
 import { getAccessToken, isTokenValid, clearAuthData } from '@/utils/authUtils';
 import { takeEarly } from '@/lib/authPrefetch';

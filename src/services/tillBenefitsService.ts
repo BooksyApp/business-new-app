@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 export interface ClientBenefits {
@@ -6,16 +7,16 @@ export interface ClientBenefits {
   visitsForReward: number;
   rewardsAvailable: number;
   memberships: Array<{
-    id: number;
-    membership_id: number;
+    id: Id;
+    membership_id: Id;
     name: string;
     discount_percent: number;
     included_sessions: number;
     sessions_remaining: number;
     renews_at: string;
-    serviceIds: number[];
+    serviceIds: Id[];
   }>;
-  packages: Array<{ id: number; name: string; service_id: number | null; sessions_remaining: number }>;
+  packages: Array<{ id: Id; name: string; service_id: Id | null; sessions_remaining: number }>;
   giftCards: Array<{ code: string; balance: number }>;
 }
 
@@ -28,7 +29,7 @@ export interface ClientBenefits {
  * never offered.
  */
 class TillBenefitsService {
-  get(businessId: number, clientId: number): Promise<ClientBenefits> {
+  get(businessId: Id, clientId: Id): Promise<ClientBenefits> {
     return apiClient.get<ClientBenefits>(`/businesses/${businessId}/clients/${clientId}/benefits`);
   }
 }

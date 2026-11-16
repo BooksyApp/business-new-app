@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { RoleSelect } from "@/components/staff/RoleSelect";
@@ -53,7 +54,7 @@ export default function EditStaffPage() {
   const businessId = useBusinessId();
   const { updateStaff, loading: updating } = useStaff(businessId);
   const { services, loading: servicesLoading } = useServices(businessId);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<Id[]>([]);
   const [schedule, setSchedule] = useState<WeekSchedule>(DEFAULT_WEEK);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -74,7 +75,7 @@ export default function EditStaffPage() {
       if (!id) return;
       try {
         setLoading(true);
-        const staff = await staffService.getStaffById(Number(id), businessId);
+        const staff = await staffService.getStaffById(id!, businessId);
         setFormData({
           name: staff.name,
           phone: staff.phone || "",
@@ -99,7 +100,7 @@ export default function EditStaffPage() {
         // Which services this staff can perform lives in service-catalog, not on the
         // staff record — load it from the assignments endpoint.
         try {
-          const svcIds = await serviceService.getStaffServiceIds(businessId, Number(id));
+          const svcIds = await serviceService.getStaffServiceIds(businessId, id!);
           setSelectedServiceIds(svcIds || []);
         } catch (e) {
           console.error("Failed to load staff service assignments:", e);
@@ -118,7 +119,7 @@ export default function EditStaffPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleServiceToggle = (serviceId: number) => {
+  const handleServiceToggle = (serviceId: Id) => {
     setSelectedServiceIds((prev) =>
       prev.includes(serviceId)
         ? prev.filter((id) => id !== serviceId)
@@ -129,7 +130,7 @@ export default function EditStaffPage() {
   const handleSave = async () => {
     if (!id) return;
     try {
-      await updateStaff(Number(id), {
+      await updateStaff(id!, {
         name: formData.name,
         email: formData.email || undefined,
         phone: formData.phone || undefined,
@@ -139,12 +140,12 @@ export default function EditStaffPage() {
         schedule: scheduleToPayload(schedule),
       });
       // Persist the staff↔service assignments (owned by service-catalog).
-      await serviceService.setStaffServiceIds(businessId, Number(id), selectedServiceIds);
+      await serviceService.setStaffServiceIds(businessId, id!, selectedServiceIds);
       if (formData.permissionLevel && myAccess().isOwner) {
         const roles = await roleService.list(businessId);
-        const current = roles.find((r) => r.memberIds.includes(Number(id)));
+        const current = roles.find((r) => r.memberIds.includes(id!));
         if (String(current?.id ?? "") !== formData.permissionLevel) {
-          await roleService.assign(Number(id), Number(formData.permissionLevel));
+          await roleService.assign(id!, formData.permissionLevel);
         }
       }
       navigate(getPath("staff"));
@@ -247,7 +248,7 @@ export default function EditStaffPage() {
                       onClick={async () => {
                         setInviting(true);
                         try {
-                          const r = await staffService.sendInvite(Number(id));
+                          const r = await staffService.sendInvite(id!);
                           toast.success(t("editStaff.invitationSentTo", { email: r.email }));
                         } catch (err) {
                           toast.error((err instanceof Error && err.message) || t("editStaff.couldNotSendTheInvitation"));
@@ -264,7 +265,7 @@ export default function EditStaffPage() {
                   {/* Role — one of the salon's roles (Team → Roles). It always showed "Owner"
                       and was never saved. */}
                   <RoleSelect
-                    staffId={Number(id)}
+                    staffId={id!}
                     value={formData.permissionLevel}
                     onChange={(v) => handleInputChange("permissionLevel", v)}
                   />

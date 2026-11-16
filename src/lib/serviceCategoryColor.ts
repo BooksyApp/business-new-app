@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 /**
  * One colour per service category, for the calendar blocks and the details sheet.
  *
@@ -33,7 +34,7 @@ export const CATEGORY_PALETTE: CategoryTint[] = [
 ];
 
 /** Stable: the same category (or, without one, the same service) is always the same tint. */
-export function categoryTint(categoryId?: number | null, serviceId?: number | null): CategoryTint {
+export function categoryTint(categoryId?: Id | null, serviceId?: Id | null): CategoryTint {
   const key = categoryId ?? serviceId;
   if (key == null || !Number.isFinite(Number(key))) return CATEGORY_PALETTE[0];
   const n = Math.abs(Math.trunc(Number(key)));

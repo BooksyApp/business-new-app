@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
 
 /**
@@ -6,10 +7,10 @@ import { apiClient } from "@/config/api";
  * invented 4.8 average. Nothing on the client had ever called the real endpoints.
  */
 export interface Review {
-  id: number;
-  businessId: number;
-  userId: number | null;
-  staffId: number | null;
+  id: Id;
+  businessId: Id;
+  userId: Id | null;
+  staffId: Id | null;
   appointmentId: string | null;
   rating: number;
   comment: string | null;
@@ -42,27 +43,27 @@ export interface RatingSummary {
 }
 
 class ReviewService {
-  async getByBusiness(businessId: number): Promise<Review[]> {
+  async getByBusiness(businessId: Id): Promise<Review[]> {
     return apiClient.get<Review[]>(`/reviews/business/${businessId}`);
   }
 
-  async getSummary(businessId: number): Promise<RatingSummary> {
+  async getSummary(businessId: Id): Promise<RatingSummary> {
     return apiClient.get<RatingSummary>(`/reviews/business/${businessId}/summary`);
   }
 
   /** Post or clear the salon's public answer. An empty string removes it. */
-  async reply(businessId: number, reviewId: number, reply: string): Promise<Review> {
+  async reply(businessId: Id, reviewId: Id, reply: string): Promise<Review> {
     // Under /businesses, not /reviews: GET /api/reviews/** is public and the prefix is a
     // tenant exemption, so a salon-side write there was callable in any salon's name.
     return apiClient.put<Review>(`/businesses/${businessId}/reviews/${reviewId}/reply`, { reply });
   }
 
   /** Who would be asked to review, so the count is visible before anything is sent. */
-  async requestPreview(businessId: number): Promise<ReviewRequestPreview> {
+  async requestPreview(businessId: Id): Promise<ReviewRequestPreview> {
     return apiClient.get<ReviewRequestPreview>(`/businesses/${businessId}/review-requests`);
   }
 
-  async sendRequests(businessId: number): Promise<{ requested: number; skipped: number }> {
+  async sendRequests(businessId: Id): Promise<{ requested: number; skipped: number }> {
     return apiClient.post<{ requested: number; skipped: number }>(
       `/businesses/${businessId}/review-requests`,
       {}

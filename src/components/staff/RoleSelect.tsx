@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,7 @@ import { salonPath } from "@/lib/salonKey";
 
 interface Props {
   /** The team member being edited; omitted on Add Staff. */
-  staffId?: number;
+  staffId?: Id;
   /** Selected role id, as a string ("" = none chosen yet). */
   value: string;
   onChange: (roleId: string) => void;

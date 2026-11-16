@@ -1,3 +1,4 @@
+import type { Id } from "@/types/id";
 import { rememberSalons } from "@/lib/salonKey";
 import { apiClient } from '@/config/api';
 
@@ -7,7 +8,7 @@ export interface BusinessRequest {
   depositPercent?: number;
   cancellationWindowHours?: number;
   lateCancellationFee?: number;
-  ownerId: number;
+  ownerId: Id;
   name: string;
   description?: string;
   category?: string;
@@ -60,8 +61,8 @@ export interface Business {
   depositPercent?: number;
   cancellationWindowHours?: number;
   lateCancellationFee?: number;
-  id: number;
-  ownerId: number;
+  id: Id;
+  ownerId: Id;
   name: string;
   description?: string;
   category?: string;
@@ -98,11 +99,11 @@ export interface Business {
   myRole?: string;
   isOwner?: boolean;
   myPermissions?: string[];
-  myStaffId?: number;
+  myStaffId?: Id;
 }
 
 export interface BranchRequest {
-  businessId: number;
+  businessId: Id;
   name: string;
   address?: string;
   city?: string;
@@ -116,8 +117,8 @@ export interface BranchRequest {
 }
 
 export interface Branch {
-  id: number;
-  businessId: number;
+  id: Id;
+  businessId: Id;
   name: string;
   address?: string;
   city?: string;
@@ -143,30 +144,30 @@ class BusinessService {
    * The salon behind a panel URL segment, for its owner/team only — anyone else gets 404
    * (ApiError status 404). `canonical: false` = the name part is stale, move to `panelKey`.
    */
-  async resolvePanelKey(key: string): Promise<{ id: number; publicId: string; name: string; panelKey: string; canonical: boolean }> {
-    const r = await apiClient.get<{ id: number; publicId: string; name: string; panelKey: string; canonical: boolean }>(
+  async resolvePanelKey(key: string): Promise<{ id: Id; publicId: string; name: string; panelKey: string; canonical: boolean }> {
+    const r = await apiClient.get<{ id: Id; publicId: string; name: string; panelKey: string; canonical: boolean }>(
       `/businesses/panel/${encodeURIComponent(key)}`,
     );
     rememberSalons([r]);
     return r;
   }
 
-  async getBusiness(id: number, _accessToken?: string): Promise<Business> {
+  async getBusiness(id: Id, _accessToken?: string): Promise<Business> {
     return apiClient.get<Business>(`/businesses/${id}`);
   }
 
   /** What is still missing before customers can book this salon (same rules as admin Activation). */
-  async getReadiness(id: number): Promise<{ bookable: boolean; missing: string[]; recommended: string[] }> {
+  async getReadiness(id: Id): Promise<{ bookable: boolean; missing: string[]; recommended: string[] }> {
     return apiClient.get(`/businesses/${id}/readiness`);
   }
 
-  async getBusinessesByOwner(ownerId: number, _accessToken?: string): Promise<Business[]> {
+  async getBusinessesByOwner(ownerId: Id, _accessToken?: string): Promise<Business[]> {
     const list = await apiClient.get<Business[]>(`/businesses/owner/${ownerId}`);
     rememberSalons(list ?? []);
     return list;
   }
 
-  async updateBusiness(id: number, data: Partial<BusinessRequest>, _accessToken?: string): Promise<Business> {
+  async updateBusiness(id: Id, data: Partial<BusinessRequest>, _accessToken?: string): Promise<Business> {
     const updated = await apiClient.put<Business>(`/businesses/${id}`, data);
     // Every price on every screen reads the currency from this cache (lib/currency). A
     // location change can move the salon to another country — and so another currency —
@@ -182,7 +183,7 @@ class BusinessService {
   }
 
   /** GET has existed since the branches endpoint shipped; nothing had ever called it. */
-  async getBranches(businessId: number): Promise<Branch[]> {
+  async getBranches(businessId: Id): Promise<Branch[]> {
     return apiClient.get<Branch[]>(`/businesses/${businessId}/branches`);
   }
 

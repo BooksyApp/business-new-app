@@ -22,13 +22,13 @@ export async function startSession(authResponse: AuthResponse): Promise<void> {
     const businesses = await businessService.getBusinessesByOwner(userId, accessToken);
     const chosen = businesses.find((b) => b.id === businessId) ?? businesses[0];
     if (chosen) {
-      localStorage.setItem("currentBusinessId", chosen.id.toString());
+      localStorage.setItem("currentBusinessId", String(chosen.id));
       localStorage.setItem("currentBusiness", JSON.stringify(chosen));
       return;
     }
     if (businessId) {
       const business = await businessService.getBusiness(businessId, accessToken);
-      localStorage.setItem("currentBusinessId", business.id.toString());
+      localStorage.setItem("currentBusinessId", String(business.id));
       localStorage.setItem("currentBusiness", JSON.stringify(business));
     }
   } catch (err) {
