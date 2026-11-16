@@ -1,4 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import { SalonQrCard } from "@/components/SalonQrCard";
 import { subscriptionService, type SubscriptionStatus } from "@/services/subscriptionService";
 import { Check, Copy, ExternalLink, Eye, MapPin, Pencil, Share2 } from "lucide-react";
 import { BooqiScope, FormSheet, PageHeader } from "@/components/page/booqi";
@@ -348,6 +349,8 @@ export default function BusinessPage() {
                   {copied ? <><Check size={15} />{" "}{t("business.copied")}</> : <><Copy size={15} />{" "}{t("common.copy")}</>}
                 </span>
               </button>
+
+              <SalonQrCard salonUrl={publicUrl} salonName={business?.slug ?? business?.name} />
 
               <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
                 <SectionTitle>{t("business.about")}</SectionTitle>

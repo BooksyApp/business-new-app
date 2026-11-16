@@ -5,7 +5,7 @@ import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import type { ClientAppointmentRow } from "@/services/clientService";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
-import { CalendarCheck, Coins, Star, UserPlus, Users } from "lucide-react";
+import { CalendarCheck, Coins, Download, Star, UserPlus, Users } from "lucide-react";
 import { loyaltyService } from "@/services/growthService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import "@/components/auth/auth-tokens.css";
 import { appointmentService } from "@/services/appointmentService";
 import { clientService, ClientWithStats, invitationService, Invitation } from "@/services/clientService";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { hasPermission, myAccess } from "@/components/layout/navigation";
 import { format } from "@/i18n/dateFns";
 import { toast } from "sonner";
 import {
@@ -75,7 +76,8 @@ export default function ClientsPage() {
 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [segment, setSegment] = useState<"all" | "new" | "regulars" | "cancelled" | "invited">("all");
+  const [segment, setSegment] = useState<"all" | "new" | "regulars" | "lapsed60" | "cancelled" | "invited">("all");
+  const [exporting, setExporting] = useState(false);
   const [sort, setSort] = useState<{ key: "name" | "last" | "visits" | "spent"; dir: "asc" | "desc" }>({ key: "last", dir: "desc" });
   // Rows drawn at once. A salon with thousands of clients drew every one of them twice
   // (table + phone cards) on each render; the rest come in pages of the same size.
@@ -350,6 +352,8 @@ export default function ClientsPage() {
     { key: "all", label: tr("common.all"), test: () => true },
     { key: "new", label: tr("clients.new"), test: (c) => !isPending(c) && (c.totalVisits ?? 0) <= 1 },
     { key: "regulars", label: tr("clients.regulars"), test: (c) => (c.totalVisits ?? 0) >= 5 },
+    // R02 L-10: came before, not in 60+ days, nothing booked — who a win-back campaign is for.
+    { key: "lapsed60", label: tr("clients.r02Lapsed60"), test: (c) => !isPending(c) && !c.nextVisitDate && !!c.lastVisitDate && Date.now() - new Date(c.lastVisitDate).getTime() >= 60 * 86_400_000 },
     { key: "cancelled", label: tr("clients.cancelledBefore"), test: (c) => (c.cancelledAppointments ?? 0) > 0 },
     { key: "invited", label: tr("clients.invited"), test: isPending },
   ];
@@ -547,6 +551,27 @@ export default function ClientsPage() {
                 </button>
               )}
             </div>
+            {/* R02 G3: "your client list is yours" — owner or a role that runs marketing; audit-logged. */}
+            {businessId && hasPermission(myAccess(), "MARKETING") && (
+              <button
+                type="button"
+                disabled={exporting}
+                onClick={async () => {
+                  setExporting(true);
+                  try {
+                    await clientService.downloadClientsCsv(businessId);
+                  } catch {
+                    toast.error(tr("clients.r02ExportFailed"));
+                  } finally {
+                    setExporting(false);
+                  }
+                }}
+                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] transition hover:bg-[rgb(var(--reg-brand-soft))] disabled:opacity-60"
+              >
+                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} strokeWidth={2} />}
+                {tr("clients.r02ExportCsv")}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setAddClientDialogOpen(true)}

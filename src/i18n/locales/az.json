@@ -656,6 +656,11 @@
     "sharePublicProfile": "Profili paylaş",
     "share": "Paylaş",
     "editProfile": "Profili redaktə et",
+    "qrTitle": "Salonunuzun QR kodu",
+    "qrHint": "Çap edib vitrinə, güzgüyə və ya vizit kartına qoyun. Müştəri skan edib birbaşa sizə yazılır — bu rezervlər sizin öz kanalınız kimi sayılır.",
+    "qrDownload": "PNG yüklə",
+    "qrAlt": "Salonun rezerv səhifəsi üçün QR kod",
+    "qrFailed": "QR kodu yaratmaq alınmadı. Səhifəni yeniləyin.",
     "yourBookingLink": "Rezerv linkiniz",
     "publicUrlUnavailable": "Link hələ hazır deyil",
     "copied": "Kopyalandı",
@@ -1134,7 +1139,10 @@
     "booqiAccount": "booqi hesabı",
     "invitation": "Dəvət",
     "densityCompact": "Yığcam",
-    "densityDetailed": "Ətraflı"
+    "densityDetailed": "Ətraflı",
+    "r02Lapsed60": "60+ gündür gəlməyib",
+    "r02ExportCsv": "CSV yüklə",
+    "r02ExportFailed": "Müştəri siyahısını yükləmək alınmadı. Yenidən cəhd edin."
   },
   "createBusiness": {
     "enterYourBusinessName": "Salonun adını yazın",
@@ -1216,7 +1224,16 @@
     "selectBusiness": "Salon seçin",
     "chooseABusinessToManage": "İdarə etmək üçün salon seçin",
     "manageBusiness": "Salonu idarə et",
-    "addABusiness": "Salon əlavə et"
+    "addABusiness": "Salon əlavə et",
+    "r02BooqiBroughtTitle": "booqi sizə {count} yeni müştəri gətirdi",
+    "r02BooqiBroughtTitleLoading": "booqi sizə nə gətirdi",
+    "r02BooqiBroughtSub": "booqi-də sizi tapan yeni müştərilər linkiniz və ya QR kodunuzla onlayn yazılan öz müştərilərinizdən ayrıca göstərilir.",
+    "r02FromBooqi": "booqi-dən yeni",
+    "r02FromBooqiHint": "İlk rezervləri booqi axtarışından gəlib.",
+    "r02YourOwn": "Öz müştəriləriniz, onlayn",
+    "r02YourOwnHint": "Linkiniz və ya QR kodunuzla yazılıblar.",
+    "r02Last30Days": "son 30 gün",
+    "r02AllTime": "ümumilikdə: {count}"
   },
   "hooks": {
     "failedToLoadAddons": "Əlavələri yükləmək alınmadı",
@@ -1560,7 +1577,12 @@
     "theirInbox": "müştərinin poçtu",
     "segmentLapsed": "90 gündür gəlməyib",
     "segmentTopSpenders": "Ən çox xərcləyənlər",
-    "recipientCount": "· {count, plural, one {# alıcı} other {# alıcı}}"
+    "recipientCount": "· {count, plural, one {# alıcı} other {# alıcı}}",
+    "r02Lapsed60": "60+ gün",
+    "r02Lapsed60Hint": "60 gündür gəlməyib",
+    "r02SegmentLapsed60": "60 gündür gəlməyib",
+    "r02Lapsed60Subject": "Çoxdandır görüşmürük",
+    "r02Lapsed60Body": "Son gəlişinizdən xeyli vaxt keçib. Bu həftə rahat saatlar boşdur, onlayn yazılmaq bir dəqiqə çəkir."
   },
   "media": {
     "thePhotoCouldNotBe": "Şəkli yükləmək alınmadı.",

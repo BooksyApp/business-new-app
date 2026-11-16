@@ -656,6 +656,11 @@
     "sharePublicProfile": "Поделиться профилем",
     "share": "Поделиться",
     "editProfile": "Изменить профиль",
+    "qrTitle": "QR-код вашего салона",
+    "qrHint": "Распечатайте для витрины, зеркала или визиток. Клиент сканирует и записывается прямо к вам — такие записи считаются вашим собственным каналом.",
+    "qrDownload": "Скачать PNG",
+    "qrAlt": "QR-код страницы записи салона",
+    "qrFailed": "Не удалось создать QR-код. Обновите страницу.",
     "yourBookingLink": "Ваша ссылка для записи",
     "publicUrlUnavailable": "Ссылка пока недоступна",
     "copied": "Скопировано",
@@ -1134,7 +1139,10 @@
     "booqiAccount": "Аккаунт booqi",
     "invitation": "Приглашение",
     "densityCompact": "Компактно",
-    "densityDetailed": "Подробно"
+    "densityDetailed": "Подробно",
+    "r02Lapsed60": "Не были 60+ дней",
+    "r02ExportCsv": "Скачать CSV",
+    "r02ExportFailed": "Не удалось выгрузить список клиентов. Попробуйте ещё раз."
   },
   "createBusiness": {
     "enterYourBusinessName": "Введите название салона",
@@ -1216,7 +1224,16 @@
     "selectBusiness": "Выберите салон",
     "chooseABusinessToManage": "Выберите салон для управления",
     "manageBusiness": "Управлять салоном",
-    "addABusiness": "Добавить салон"
+    "addABusiness": "Добавить салон",
+    "r02BooqiBroughtTitle": "Новых клиентов от booqi: {count}",
+    "r02BooqiBroughtTitleLoading": "Что вам принёс booqi",
+    "r02BooqiBroughtSub": "Новые клиенты, которые нашли вас в booqi, — отдельно от ваших клиентов, записавшихся онлайн по вашей ссылке или QR-коду.",
+    "r02FromBooqi": "Новые из booqi",
+    "r02FromBooqiHint": "Первая запись пришла из поиска booqi.",
+    "r02YourOwn": "Ваши клиенты, онлайн",
+    "r02YourOwnHint": "Записались по вашей ссылке или QR-коду.",
+    "r02Last30Days": "за 30 дней",
+    "r02AllTime": "всего: {count}"
   },
   "hooks": {
     "failedToLoadAddons": "Не удалось загрузить доп. услуги",
@@ -1560,7 +1577,12 @@
     "theirInbox": "почта клиента",
     "segmentLapsed": "Не были 90 дней",
     "segmentTopSpenders": "Тратят больше всех",
-    "recipientCount": "· {count, plural, one {# получатель} few {# получателя} many {# получателей} other {# получателя}}"
+    "recipientCount": "· {count, plural, one {# получатель} few {# получателя} many {# получателей} other {# получателя}}",
+    "r02Lapsed60": "60+ дней",
+    "r02Lapsed60Hint": "Не были 60 дней",
+    "r02SegmentLapsed60": "Не были 60 дней",
+    "r02Lapsed60Subject": "Давно не виделись",
+    "r02Lapsed60Body": "С вашего последнего визита прошло немало времени. На этой неделе есть удобные окошки, а онлайн-запись займёт минуту."
   },
   "media": {
     "thePhotoCouldNotBe": "Не удалось загрузить фото.",

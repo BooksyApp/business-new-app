@@ -49,9 +49,10 @@ import { t as tr, fmtDate as formatLocaleDate } from "@/i18n";
 
 type PromoType = "PERCENT" | "FIXED";
 type Channel = "EMAIL" | "SMS";
-type Segment = "LAPSED_90D" | "TOP_SPENDERS";
+type Segment = "LAPSED_60D" | "LAPSED_90D" | "TOP_SPENDERS";
 
 const SEGMENT_LABEL: Record<Segment, string> = {
+  get LAPSED_60D() { return tr("marketing.r02SegmentLapsed60"); },
   get LAPSED_90D() { return tr("marketing.segmentLapsed"); },
   get TOP_SPENDERS() { return tr("marketing.segmentTopSpenders"); },
 };
@@ -483,8 +484,16 @@ export default function MarketingPage() {
             <Segmented
               label={tr("marketing.segment")}
               value={campaignForm.segment}
-              onChange={(segment) => setCampaignForm((f) => ({ ...f, segment }))}
+              onChange={(segment) =>
+                setCampaignForm((f) =>
+                  // R02 L-10: the 60-day win-back starts from a ready message (only into empty fields).
+                  segment === "LAPSED_60D"
+                    ? { ...f, segment, subject: f.subject || tr("marketing.r02Lapsed60Subject"), body: f.body || tr("marketing.r02Lapsed60Body") }
+                    : { ...f, segment },
+                )
+              }
               options={[
+                { value: "LAPSED_60D", label: tr("marketing.r02Lapsed60"), hint: tr("marketing.r02Lapsed60Hint") },
                 { value: "LAPSED_90D", label: tr("marketing.lapsed"), hint: tr("marketing.notSeenInDays") },
                 { value: "TOP_SPENDERS", label: tr("marketing.topSpenders"), hint: tr("marketing.yourBestClients") },
               ]}
