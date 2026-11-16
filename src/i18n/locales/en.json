@@ -635,6 +635,9 @@
     "yourFooterPrintsHere": "Your footer prints here."
   },
   "business": {
+    "tierAdvanced": "Advanced",
+    "tierGrowing": "Growing",
+    "tierNovice": "Novice",
     "reviewCount": "{count, plural, one {# review} other {# reviews}}",
     "priceNotSet": "Price not set",
     "locationCoordinates": "Location coordinates",
@@ -1153,7 +1156,8 @@
     "catBrowsLashes": "Brows & Lashes",
     "catSkinCare": "Skin care",
     "catHairSalons": "Hair salons",
-    "catAestheticMedicine": "Aesthetic medicine"
+    "catAestheticMedicine": "Aesthetic medicine",
+    "catBarbers": "Barbers"
   },
   "editStaff": {
     "editTeamMember": "Edit team member",
@@ -1458,6 +1462,8 @@
     "pleaseRefreshThePageIf": "Please refresh the page. If the issue persists, contact support."
   },
   "marketing": {
+    "campaignSent": "Sent",
+    "campaignCancelled": "Cancelled",
     "useCount": "{count, plural, one {# use} other {# uses}}",
     "aCodeAndANon": "A code and a non-negative value are required",
     "aPercentageDiscountCannotExceed": "A percentage discount cannot exceed 100",
@@ -1541,6 +1547,7 @@
     "moreFor": "More for {code}",
     "endCode": "End code",
     "bookingSummary": "booking summary",
+    "sampleCode": "YOURCODE",
     "applied": "Applied",
     "promoCode": "Promo code",
     "payAtTheSalon": "Pay at the salon",
@@ -2158,6 +2165,7 @@
     "teamSize": "Team size",
     "people": "People",
     "addPerson": "Add person",
+    "justMeAsStaffHint": "We will add you to the calendar as a team member, so clients can book you directly.",
     "you": "You",
     "owner": "Owner",
     "remove": "Remove {name}",

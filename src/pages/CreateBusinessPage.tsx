@@ -27,7 +27,7 @@ const featuredCategories = [
   { id: "skin-care", get name() { return t("createBusiness.catSkinCare"); }, icon: Heart },
   { id: "hair-salons", get name() { return t("createBusiness.catHairSalons"); }, icon: Scissors },
   { id: "aesthetic-medicine", get name() { return t("createBusiness.catAestheticMedicine"); }, icon: Stethoscope },
-  { id: "barbers", name: "Barbers", icon: Scissors },
+  { id: "barbers", get name() { return t("createBusiness.catBarbers"); }, icon: Scissors },
 ];
 
 const otherCategories = [

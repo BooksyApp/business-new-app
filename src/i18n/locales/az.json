@@ -635,6 +635,9 @@
     "yourFooterPrintsHere": "Alt yazınız burada çap olunacaq."
   },
   "business": {
+    "tierAdvanced": "Güclü",
+    "tierGrowing": "İnkişafda",
+    "tierNovice": "Başlanğıc",
     "reviewCount": "{count, plural, one {# rəy} other {# rəy}}",
     "priceNotSet": "Qiymət yazılmayıb",
     "locationCoordinates": "Xəritədə yer",
@@ -1153,7 +1156,8 @@
     "catBrowsLashes": "Qaş və kirpik",
     "catSkinCare": "Dəriyə qulluq",
     "catHairSalons": "Bərbər və saç salonları",
-    "catAestheticMedicine": "Estetik kosmetologiya"
+    "catAestheticMedicine": "Estetik kosmetologiya",
+    "catBarbers": "Bərbərxanalar"
   },
   "editStaff": {
     "editTeamMember": "Ustanı redaktə et",
@@ -1458,6 +1462,8 @@
     "pleaseRefreshThePageIf": "Səhifəni yeniləyin. Problem qalırsa, dəstəyə yazın."
   },
   "marketing": {
+    "campaignSent": "Göndərildi",
+    "campaignCancelled": "Ləğv edildi",
     "useCount": "{count, plural, one {# istifadə} other {# istifadə}}",
     "aCodeAndANon": "Kod və mənfi olmayan dəyər lazımdır",
     "aPercentageDiscountCannotExceed": "Faizlə endirim 100-dən çox ola bilməz",
@@ -1541,6 +1547,7 @@
     "moreFor": "{code}: digər əməliyyatlar",
     "endCode": "Kodu dayandır",
     "bookingSummary": "rezervin xülasəsi",
+    "sampleCode": "KODUNUZ",
     "applied": "Tətbiq olundu",
     "promoCode": "Promo kod",
     "payAtTheSalon": "Ödəniş salonda",
@@ -2158,6 +2165,7 @@
     "teamSize": "Komandanın sayı",
     "people": "Ustalar",
     "addPerson": "Usta əlavə et",
+    "justMeAsStaffHint": "Sizi təqvimdə usta kimi əlavə edəcəyik — müştərilər birbaşa sizə yazıla biləcək.",
     "you": "Siz",
     "owner": "Sahib",
     "remove": "Sil: {name}",

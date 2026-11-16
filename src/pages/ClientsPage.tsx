@@ -1030,7 +1030,7 @@ export default function ClientsPage() {
                 className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
                 id="phone"
                 type="tel"
-                placeholder="+44 123 456 7890"
+                placeholder="+994 50 123 45 67"
                 value={newClientForm.phone}
                 onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
               />

@@ -635,6 +635,9 @@
     "yourFooterPrintsHere": "Здесь будет ваша подпись."
   },
   "business": {
+    "tierAdvanced": "Сильный",
+    "tierGrowing": "Растёт",
+    "tierNovice": "Начальный",
     "reviewCount": "{count, plural, one {# отзыв} few {# отзыва} many {# отзывов} other {# отзыва}}",
     "priceNotSet": "Цена не указана",
     "locationCoordinates": "Место на карте",
@@ -1153,7 +1156,8 @@
     "catBrowsLashes": "Брови и ресницы",
     "catSkinCare": "Уход за кожей",
     "catHairSalons": "Парикмахерские",
-    "catAestheticMedicine": "Эстетическая медицина"
+    "catAestheticMedicine": "Эстетическая медицина",
+    "catBarbers": "Барбершопы"
   },
   "editStaff": {
     "editTeamMember": "Изменить мастера",
@@ -1458,6 +1462,8 @@
     "pleaseRefreshThePageIf": "Обновите страницу. Если ошибка повторится, напишите в поддержку."
   },
   "marketing": {
+    "campaignSent": "Отправлена",
+    "campaignCancelled": "Отменена",
     "useCount": "{count, plural, one {# использование} few {# использования} many {# использований} other {# использования}}",
     "aCodeAndANon": "Нужны код и неотрицательное значение",
     "aPercentageDiscountCannotExceed": "Скидка в процентах не может быть больше 100",
@@ -1541,6 +1547,7 @@
     "moreFor": "Ещё для {code}",
     "endCode": "Остановить код",
     "bookingSummary": "детали записи",
+    "sampleCode": "ВАШКОД",
     "applied": "Применён",
     "promoCode": "Промокод",
     "payAtTheSalon": "Оплата в салоне",
@@ -2158,6 +2165,7 @@
     "teamSize": "Размер команды",
     "people": "Мастера",
     "addPerson": "Добавить мастера",
+    "justMeAsStaffHint": "Мы добавим вас в календарь как мастера — клиенты смогут записываться прямо к вам.",
     "you": "Вы",
     "owner": "Владелец",
     "remove": "Удалить {name}",

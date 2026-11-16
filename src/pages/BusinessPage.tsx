@@ -250,7 +250,7 @@ export default function BusinessPage() {
   const completenessChecks = useMemo(() => getCompletenessChecks(business, services), [business, services]);
   const completedCount = completenessChecks.filter((check) => check.ok).length;
   const completionPercent = Math.round((completedCount / completenessChecks.length) * 100);
-  const completionTier = completionPercent >= 80 ? "Advanced" : completionPercent >= 50 ? "Growing" : "Novice";
+  const completionTier = t(completionPercent >= 80 ? "business.tierAdvanced" : completionPercent >= 50 ? "business.tierGrowing" : "business.tierNovice");
   const hasCoords = typeof business?.latitude === "number" && typeof business?.longitude === "number";
   const locationLabel =
     hasCoords

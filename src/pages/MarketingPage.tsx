@@ -65,7 +65,7 @@ const promoStatus = (p: PromoCode): Lifecycle =>
 const campaignStatus = (c: Campaign): Lifecycle =>
   c.status === "DRAFT" ? "draft" : c.status === "QUEUED" ? "queued" : c.status === "FAILED" ? "failed" : c.status === "SENT" ? "active" : "ended";
 
-const campaignLabel = (c: Campaign) => (c.status === "SENT" ? "Sent" : c.status === "CANCELLED" ? "Cancelled" : undefined);
+const campaignLabel = (c: Campaign) => (c.status === "SENT" ? tr("marketing.campaignSent") : c.status === "CANCELLED" ? tr("marketing.campaignCancelled") : undefined);
 
 const valueLabel = (type: string, value: number | string) =>
   type === "PERCENT" ? `${Number(value) || 0}% off` : `${money(value, currencySymbol())} off`;
@@ -660,7 +660,7 @@ function PromoCard({
 function PromoPreview({ form, price, serviceName }: { form: typeof EMPTY_PROMO; price: number; serviceName: string }) {
   const v = Math.max(0, Number(form.value) || 0);
   const off = form.type === "PERCENT" ? Math.min(price, (price * Math.min(v, 100)) / 100) : Math.min(price, v);
-  const code = form.code.trim() || "YOURCODE";
+  const code = form.code.trim() || tr("marketing.sampleCode");
   return (
     <ClientPreview where={tr("marketing.bookingSummary")}>
       <div className="rounded-2xl bg-white p-4 text-[rgb(var(--reg-ink))] shadow-[0_8px_24px_-16px_rgb(var(--reg-ink)/0.25)]">
