@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
+import { createHash } from "crypto";
 import { componentTagger } from "lovable-tagger";
 import type { Plugin } from "vite";
 import type { OutputBundle, OutputChunk } from "rollup";
@@ -88,7 +89,8 @@ function firstScreenPreload(): Plugin {
         `go("/auth/validate","POST");var us=null;try{us=JSON.parse(localStorage.getItem("user")||"null")}catch(e){}` +
         `if(us&&us.id)go("/businesses/owner/"+us.id);` +
         `(T[A[p[1]||""]||p[1]]||[]).forEach(function(u){go(u.replace(/\\{b\\}/g,p[0]).replace(/\\{day\\}/g,day))})}catch(e){}})();`;
-      const fileName = `assets/js/boot-${Buffer.from(code).toString("base64url").slice(-10)}.js`;
+      // Content hash: assets are served immutable for a year, so the name must change with the code.
+      const fileName = `assets/js/boot-${createHash("sha256").update(code).digest("hex").slice(0, 10)}.js`;
       this.emitFile({ type: "asset", fileName, source: code });
       html.source = String(html.source).replace(
         "<script type=\"module\"",
