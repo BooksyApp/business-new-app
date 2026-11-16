@@ -1,3 +1,4 @@
+import { rememberSalons } from "@/lib/salonKey";
 import { apiClient } from '@/config/api';
 
 export interface BusinessRequest {
@@ -43,6 +44,10 @@ export interface BusinessRequest {
 export interface Business {
   /** Public URL reference, e.g. "krakow-cuts_482913" (backend V118). */
   slug?: string;
+  /** businesses.public_id (V143): the salon's UUID, what panel URLs carry instead of the id. */
+  publicId?: string;
+  /** The panel's address segment: `<name-slug>_<publicId>` (business.getbooqi.tech/<panelKey>/calendar). */
+  panelKey?: string;
   /** #12: ISO code from businesses.currency (V17). Drives every price display. */
   currency?: string;
   taxRate?: number;
@@ -129,7 +134,21 @@ export interface Branch {
 
 class BusinessService {
   async createBusiness(data: BusinessRequest, _accessToken?: string): Promise<Business> {
-    return apiClient.post<Business>('/businesses', data);
+    const created = await apiClient.post<Business>('/businesses', data);
+    rememberSalons([created]);
+    return created;
+  }
+
+  /**
+   * The salon behind a panel URL segment, for its owner/team only — anyone else gets 404
+   * (ApiError status 404). `canonical: false` = the name part is stale, move to `panelKey`.
+   */
+  async resolvePanelKey(key: string): Promise<{ id: number; publicId: string; name: string; panelKey: string; canonical: boolean }> {
+    const r = await apiClient.get<{ id: number; publicId: string; name: string; panelKey: string; canonical: boolean }>(
+      `/businesses/panel/${encodeURIComponent(key)}`,
+    );
+    rememberSalons([r]);
+    return r;
   }
 
   async getBusiness(id: number, _accessToken?: string): Promise<Business> {
@@ -142,7 +161,9 @@ class BusinessService {
   }
 
   async getBusinessesByOwner(ownerId: number, _accessToken?: string): Promise<Business[]> {
-    return apiClient.get<Business[]>(`/businesses/owner/${ownerId}`);
+    const list = await apiClient.get<Business[]>(`/businesses/owner/${ownerId}`);
+    rememberSalons(list ?? []);
+    return list;
   }
 
   async updateBusiness(id: number, data: Partial<BusinessRequest>, _accessToken?: string): Promise<Business> {

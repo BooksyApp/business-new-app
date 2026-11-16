@@ -70,15 +70,18 @@ function firstScreenPreload(): Plugin {
       }
       const templates = JSON.parse(fs.readFileSync(path.resolve(__dirname, "src/lib/firstScreen.json"), "utf8"));
       const code =
-        `(function(){try{var R=${JSON.stringify(routes)},D=${JSON.stringify(dicts)},B="/manage/";` +
-        `var p=location.pathname.replace(/^\\/manage\\/?/,"").split("/"),l;` +
+        // The panel's salon pages are /<slug>_<publicId>/<page> (src/lib/salonKey.ts: K is its
+        // pattern, S the localStorage pairs publicId → [business id, key] the app wrote).
+        `(function(){try{var R=${JSON.stringify(routes)},D=${JSON.stringify(dicts)},B="/";` +
+        `var K=/(?:^|_)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;` +
+        `var p=location.pathname.replace(/^\\/+/,"").split("/"),l;` +
         `try{l=localStorage.getItem("booqi.hub.locale")}catch(e){}if(!D[l])l="az";` +
-        `var f=(/^\\d+$/.test(p[0]||"")?R[p[1]||""]||[]:[]).concat(D[l]?[D[l]]:[]);` +
+        `var f=(K.test(p[0]||"")?R[p[1]||""]||[]:[]).concat(D[l]?[D[l]]:[]);` +
         `f.forEach(function(x){var k=document.createElement("link");k.rel="modulepreload";k.crossOrigin="";k.href=B+x;document.head.appendChild(k)})}catch(e){}})();` +
         // The same first-screen GETs lib/authPrefetch starts, begun here a second earlier and
         // handed over through window.__booqiEarly (adopted only with the same token).
         `(function(){try{var T=${JSON.stringify(templates)},A={"":"calendar",contacts:"clients",shopping:"sales"};` +
-        `var p=location.pathname.replace(/^\\/manage\\/?/,"").split("/");if(!/^\\d+$/.test(p[0]||""))return;` +
+        `var p=location.pathname.replace(/^\\/+/,"").split("/"),m=K.exec(p[0]||"");if(!m)return;` +
         `var t=localStorage.getItem("accessToken");if(!t)return;` +
         `var q=t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");while(q.length%4)q+="=";` +
         `var x=JSON.parse(atob(q)).exp;if(!x||Date.now()>x*1e3-3e4)return;` +
@@ -87,25 +90,27 @@ function firstScreenPreload(): Plugin {
         `var go=function(u,m){E[u]={token:t,at:n,answer:fetch("/api"+u,{method:m||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t}})` +
         `.then(function(r){return r.ok&&r.status!==204?r.text():null})["catch"](function(){return null})}};` +
         `go("/auth/validate","POST");var us=null;try{us=JSON.parse(localStorage.getItem("user")||"null")}catch(e){}` +
-        `if(us&&us.id)go("/businesses/owner/"+us.id);` +
-        `(T[A[p[1]||""]||p[1]]||[]).forEach(function(u){go(u.replace(/\\{b\\}/g,p[0]).replace(/\\{day\\}/g,day))})}catch(e){}})();`;
+        `if(us&&us.id)go("/businesses/owner/"+us.id);go("/businesses/panel/"+encodeURIComponent(p[0]));` +
+        // The page's own data needs the numeric id: only when this browser has seen the salon.
+        `var S={};try{S=JSON.parse(localStorage.getItem("booqi.hub.salonKeys")||"{}")||{}}catch(e){}` +
+        `var b=(S[m[1].toLowerCase()]||[])[0];if(!b)return;` +
+        `(T[A[p[1]||""]||p[1]]||[]).forEach(function(u){go(u.replace(/\\{b\\}/g,b).replace(/\\{day\\}/g,day))})}catch(e){}})();`;
       // Content hash: assets are served immutable for a year, so the name must change with the code.
       const fileName = `assets/js/boot-${createHash("sha256").update(code).digest("hex").slice(0, 10)}.js`;
       this.emitFile({ type: "asset", fileName, source: code });
       html.source = String(html.source).replace(
         "<script type=\"module\"",
-        `<script async src="/manage/${fileName}"></script>\n    <script type="module"`,
+        `<script async src="/${fileName}"></script>\n    <script type="module"`,
       );
     },
   };
 }
 
 // https://vitejs.dev/config/
-// The manager app moved off the root: srv1946733.hstgr.cloud now serves the public
-// site, and salon-hub lives under /manage. Assets are requested with that prefix, so the
-// build has to emit it.
+// The panel has its own host (business.getbooqi.tech) and lives at its root; the old
+// getbooqi.tech/manage/* addresses are 301'd there by Caddy.
 export default defineConfig(({ mode }) => ({
-  base: "/manage/",
+  base: "/",
   define: { global: "globalThis" },
   root: process.cwd(),
   publicDir: 'public',

@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t as tr } from "@/i18n";
+import { salonPath } from "@/lib/salonKey";
 
 /** A client's next booking, as the list row carries it. */
 type NextVisit = { appointmentDate: string; startTime: string; serviceName?: string | null; staffName?: string | null };
@@ -489,7 +490,7 @@ export default function ClientsPage() {
     if (c.id > 0) q.set("clientId", String(c.id));
     if (c.phone) q.set("clientPhone", c.phone);
     if (c.email) q.set("clientEmail", c.email);
-    navigate(`/${businessId}/calendar?${q.toString()}`);
+    navigate(`${salonPath(businessId)}?${q.toString()}`);
   };
 
   const statusChip = (client: ClientWithStats) => {

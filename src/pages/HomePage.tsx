@@ -17,9 +17,11 @@ import { format } from "@/i18n/dateFns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { VisibilityBanner } from "@/components/VisibilityBanner";
+import { idForKey, salonPath } from "@/lib/salonKey";
 
 export default function HomePage() {
-  const { businessId } = useParams<{ businessId?: string }>();
+  // The salon key (/<slug>_<publicId>/tasks); the numeric id comes from lib/salonKey.
+  const { salonKey: businessId } = useParams<{ salonKey?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // #9 (salon-hub QA): the Sidebar's "Switch Business" button links here with this flag
@@ -38,7 +40,7 @@ export default function HomePage() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  const numericBusinessId = businessId ? parseInt(businessId, 10) : null;
+  const numericBusinessId = businessId ? (idForKey(businessId) ?? null) : null;
   const salonTz = useSalonTimeZone(numericBusinessId ?? 0);
 
   // Fetch real dashboard stats when on a business route
@@ -89,7 +91,7 @@ export default function HomePage() {
           // Store business ID in localStorage
           localStorage.setItem("currentBusinessId", userBusinesses[0].id.toString());
           localStorage.setItem("currentBusiness", JSON.stringify(userBusinesses[0]));
-          navigate(`/${userBusinesses[0].id}/calendar`, { replace: true });
+          navigate(salonPath(userBusinesses[0].id), { replace: true });
           return;
         }
 
@@ -122,7 +124,7 @@ export default function HomePage() {
       localStorage.setItem("currentBusinessId", business.id.toString());
       localStorage.setItem("currentBusiness", JSON.stringify(business));
       toast.success(t("home.businessCreated"));
-      navigate(`/${business.id}/calendar`, { replace: true });
+      navigate(salonPath(business.id), { replace: true });
     } catch {
       toast.error(t("home.failedToCreateBusinessPlease"));
     } finally {
@@ -375,7 +377,7 @@ export default function HomePage() {
               <Card
                 key={business.id}
                 className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-105"
-                onClick={() => navigate(`/${business.id}/calendar`)}
+                onClick={() => navigate(salonPath(business.id))}
               >
                 <CardHeader>
                   <div className="flex items-center gap-3">
@@ -399,7 +401,7 @@ export default function HomePage() {
                   <Button
                     className="w-full mt-4"
                     variant="outline"
-                    onClick={() => navigate(`/${business.id}/calendar`)}
+                    onClick={() => navigate(salonPath(business.id))}
                   >
                     {t("home.manageBusiness")}
                   </Button>

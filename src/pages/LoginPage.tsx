@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { authService } from "@/services/authService";
@@ -12,6 +12,7 @@ import { t } from "@/i18n";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,8 +37,13 @@ const LoginPage = () => {
 
       toast.success(t("login.loginSuccessfulWelcomeBack"));
       
-      // Redirect to portal (home page)
-      navigate("/");
+      // Back to the page that asked for a sign-in (e.g. an email's "Open in calendar" link —
+      // business.getbooqi.tech starts without a session), else the salon picker.
+      const from = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+      const back = from?.pathname && from.pathname.startsWith("/") && !from.pathname.startsWith("//") && from.pathname !== "/login"
+        ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}`
+        : "/";
+      navigate(back, { replace: true });
     } catch (error) {
       console.error("Login error:", error);
       const e = error as { message?: string; response?: { message?: string; error?: string }; status?: number } | null;

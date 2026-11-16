@@ -13,6 +13,7 @@ import AddressMapPicker from "@/components/AddressMapPicker";
 import { businessService } from "@/services/businessService";
 import { getCurrentUser } from "@/utils/businessUtils";
 import { t, tOpt } from "@/i18n";
+import { salonPath } from "@/lib/salonKey";
 
 // #9 (salon-hub QA follow-up): "Add a business" used to be a bare name field on the
 // picker screen that created a business with nothing else filled in — not what an
@@ -99,7 +100,7 @@ export default function CreateBusinessPage() {
       localStorage.setItem("currentBusinessId", business.id.toString());
       localStorage.setItem("currentBusiness", JSON.stringify(business));
       toast.success(t("createBusiness.businessCreated"));
-      navigate(`/${business.id}/calendar`, { replace: true });
+      navigate(salonPath(business.id), { replace: true });
     } catch {
       toast.error(t("createBusiness.failedToCreateBusinessPlease"));
     } finally {

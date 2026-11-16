@@ -3,7 +3,7 @@
 # Build the salon manager here and copy it onto the VPS.
 #
 # No image and no container: Caddy serves this as static files from /opt/booksy/web, which
-# it maps to /manage. So a release is a build and an rsync, and nothing restarts.
+# it maps to the panel host's root (it was /manage before business.getbooqi.tech). So a release is a build and an rsync, and nothing restarts.
 #
 # The build is done locally on purpose. The box has 8 GB shared with Postgres and the API,
 # and a Vite build there competes with the thing customers are using.
@@ -28,10 +28,10 @@ fi
 echo "==> building"
 npm run build
 
-# vite.config sets base: "/manage/", so the built asset URLs already carry the path Caddy
-# serves this under. A build without it produces a white page and no error.
-if ! grep -q "/manage/" dist/index.html; then
-  echo "dist/index.html does not reference /manage/ — check base in vite.config" >&2
+# vite.config sets base: "/" (the panel has its own host, business.getbooqi.tech). A build
+# with another base produces a white page there and no error.
+if ! grep -q 'src="/assets/' dist/index.html; then
+  echo "dist/index.html does not load /assets/ from the root — check base in vite.config" >&2
   exit 1
 fi
 
@@ -40,4 +40,4 @@ echo "==> copying to $HOST:$TARGET"
 # hashed bundle lingers forever and the directory only grows.
 rsync -az --delete dist/ "$HOST:$TARGET/"
 
-echo "==> done: https://srv1946733.hstgr.cloud/manage/"
+echo "==> done (the panel's host serves it at /)"

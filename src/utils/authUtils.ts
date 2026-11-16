@@ -1,3 +1,4 @@
+import { forgetSalons } from "@/lib/salonKey";
 /**
  * Authentication utility functions for JWT token validation
  */
@@ -79,6 +80,7 @@ export const clearAuthData = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('currentBusinessId');
   localStorage.removeItem('currentBusiness');
+  forgetSalons();
 };
 
 /**

@@ -29,6 +29,7 @@ import { staffService } from "@/services/staffService";
 import { getPlatformSettings } from "@/services/platformService";
 import { TERMS_VERSION } from "@/config/legal";
 import { t as tr, tOpt } from "@/i18n";
+import { salonPath } from "@/lib/salonKey";
 
 interface RegistrationData {
   firstName: string;
@@ -675,7 +676,7 @@ const RegistrationPage = () => {
           <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-[rgb(var(--reg-muted))]">
             {tr("registration.isSetUpOpenYour", { value: formData.businessName || tr("common.yourSalon") })}
           </p>
-          <button type="button" onClick={() => navigate(registeredBusinessId ? `/${registeredBusinessId}/tasks` : "/")} className={cn(brandCta, "mt-8 w-full")}>
+          <button type="button" onClick={() => navigate(registeredBusinessId ? salonPath(registeredBusinessId, "tasks") : "/")} className={cn(brandCta, "mt-8 w-full")}>
             {tr("registration.prepareMySalon")}
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>

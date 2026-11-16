@@ -1,22 +1,17 @@
 import { useParams } from "react-router-dom";
 import { getCurrentBusinessId as getStoredBusinessId } from "@/config/api";
+import { idForKey } from "@/lib/salonKey";
 
 /**
- * Hook to get the current business ID from route params or localStorage
- * This ensures we always have the correct business ID based on the current route
+ * The current salon's numeric id (what the API takes), from the panel URL's salon key
+ * (/<slug>_<publicId>/…, lib/salonKey). BusinessOwnerRoute resolves the key before any
+ * business page renders, so the pair is known here; outside a salon, the stored one.
  */
 export function useBusinessId(): number {
-  const { businessId } = useParams<{ businessId?: string }>();
-  
-  // If businessId is in the route, use it
-  if (businessId) {
-    const parsedId = parseInt(businessId, 10);
-    if (!isNaN(parsedId) && parsedId > 0) {
-      return parsedId;
-    }
-  }
-  
-  // Fallback to stored business ID (for backward compatibility)
+  const { salonKey } = useParams<{ salonKey?: string }>();
+  const fromKey = idForKey(salonKey);
+  if (fromKey && fromKey > 0) return fromKey;
+
   try {
     return getStoredBusinessId();
   } catch {
@@ -24,5 +19,3 @@ export function useBusinessId(): number {
     return 0;
   }
 }
-
-

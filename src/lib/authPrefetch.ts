@@ -1,3 +1,4 @@
+import { rememberSalons } from "@/lib/salonKey";
 import { API_BASE_URL } from "@/config/api";
 import { getAccessToken } from "@/utils/authUtils";
 import firstScreen from "./firstScreen.json";
@@ -14,7 +15,7 @@ import firstScreen from "./firstScreen.json";
  * means the guard asks again itself.
  */
 type Validation = { valid: boolean; message: string; user?: unknown };
-type Owned = { id: number }[];
+type Owned = { id: number; publicId?: string; panelKey?: string }[];
 
 /** Unexpired by its own clock. JWTs are base64url; plain atob() rejects "-" and "_". */
 function unexpired(token: string): boolean {
@@ -64,7 +65,7 @@ export function takeEarly(endpoint: string, token: string | null): Promise<strin
   return e.answer;
 }
 
-/** `businessId` / `page`: the first two path segments under /manage, when on a business page. */
+/** `businessId` / `page`: the salon (numeric id, from lib/salonKey) and page of a panel URL. */
 export function prefetchAuthChecks(businessId?: string, page?: string): void {
   try {
     const token = getAccessToken();
@@ -122,5 +123,7 @@ export async function takeOwnedBusinesses(userId: number, token: string): Promis
   owned = null;
   if (!o || o.userId !== userId || o.token !== token) return null;
   const answer = await o.answer;
-  return Array.isArray(answer) ? answer : null;
+  if (!Array.isArray(answer)) return null;
+  rememberSalons(answer);
+  return answer;
 }

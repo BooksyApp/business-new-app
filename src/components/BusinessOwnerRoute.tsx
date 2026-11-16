@@ -6,6 +6,8 @@ import { businessService } from "@/services/businessService";
 import { toast } from "sonner";
 import { t } from "@/i18n";
 import { takeOwnedBusinesses } from "@/lib/authPrefetch";
+import { isSalonKey } from "@/lib/salonKey";
+import NotFound from "@/pages/NotFound";
 
 interface BusinessOwnerRouteProps {
   children: React.ReactNode;
@@ -15,110 +17,80 @@ interface BusinessOwnerRouteProps {
  * Protected route that ensures:
  * 1. User is authenticated
  * 2. User is a BUSINESS_OWNER
- * 3. User owns the business specified in the URL
+ * 3. User owns or works at the salon in the URL (/<slug>_<publicId>/…); else a 404 page
  */
 const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
-  const { businessId } = useParams<{ businessId: string }>();
+  const { salonKey } = useParams<{ salonKey: string }>();
   const location = useLocation();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // "ok" | "notFound" | "denied" | a canonical path to move to (stale name part)
+  const [state, setState] = useState<string | null>(null);
 
   useEffect(() => {
-    const validateBusinessOwnership = async () => {
+    let cancelled = false;
+    const done = (s: string) => !cancelled && setState(s);
+    setState(null);
+    const validate = async () => {
       try {
-        // Check if businessId is provided
-        if (!businessId) {
-          console.error("BusinessOwnerRoute: No businessId in URL");
-          setIsAuthorized(false);
-          setIsLoading(false);
-          return;
-        }
-
-        // Get user from localStorage
-        const userStr = localStorage.getItem("user");
-        if (!userStr) {
-          console.error("BusinessOwnerRoute: No user found");
-          setIsAuthorized(false);
-          setIsLoading(false);
-          return;
-        }
-
-        const user = JSON.parse(userStr);
-
-        // Get access token
+        if (!salonKey || !isSalonKey(salonKey)) return done("notFound");
+        const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
         const accessToken = getAccessToken();
-        if (!accessToken) {
-          console.error("BusinessOwnerRoute: No access token");
-          setIsAuthorized(false);
-          setIsLoading(false);
-          return;
+        if (!user?.id || !accessToken) return done("denied");
+
+        // The salon behind the key — answered only for its owner and team, 404 for anyone
+        // else (never 403: a guessed key does not learn that a salon exists). In parallel,
+        // the person's salons (prefetched at startup by lib/authPrefetch) for role + switcher.
+        const [resolved, businesses] = await Promise.all([
+          businessService.resolvePanelKey(salonKey).catch((e: { response?: { status?: number } }) => {
+            const status = e?.response?.status;
+            if (status === 404 || status === 403) return null;
+            throw e;
+          }),
+          (async () =>
+            (await takeOwnedBusinesses(user.id!, accessToken)) ??
+            (await businessService.getBusinessesByOwner(user.id!, accessToken)))(),
+        ]);
+        if (!resolved) return done("notFound");
+
+        const business = businesses.find((b) => b.id === resolved.id);
+        if (!business) return done("notFound");
+        localStorage.setItem("currentBusinessId", business.id.toString());
+        localStorage.setItem("currentBusiness", JSON.stringify(business));
+
+        if (!resolved.canonical) {
+          // Same page, the salon's current name in the address.
+          const rest = location.pathname.split("/").slice(2).join("/");
+          return done(`/${resolved.panelKey}${rest ? `/${rest}` : ""}${location.search}${location.hash}`);
         }
-
-        // Fetch businesses owned by the user
-        // Started at startup in parallel with the token check (lib/authPrefetch); else ask now.
-        const businesses =
-          (await takeOwnedBusinesses(user.id, accessToken)) ??
-          (await businessService.getBusinessesByOwner(user.id, accessToken));
-        
-        // Check if the businessId in the URL belongs to the user
-        const businessIdNum = parseInt(businessId, 10);
-        const ownsBusiness = businesses.some(b => b.id === businessIdNum);
-
-        if (!ownsBusiness) {
-          console.error("BusinessOwnerRoute: User does not own this business", {
-            userId: user.id,
-            businessId: businessIdNum,
-            ownedBusinesses: businesses.map(b => b.id)
-          });
-          toast.error(t("businessOwnerRoute.accessDeniedYouDoNot"));
-          setIsAuthorized(false);
-          setIsLoading(false);
-          return;
-        }
-
-        // Update localStorage with the current business
-        const business = businesses.find(b => b.id === businessIdNum);
-        if (business) {
-          localStorage.setItem("currentBusinessId", business.id.toString());
-          localStorage.setItem("currentBusiness", JSON.stringify(business));
-        }
-
-        console.log("BusinessOwnerRoute: User is authorized", {
-          userId: user.id,
-          businessId: businessIdNum
-        });
-        setIsAuthorized(true);
-        setIsLoading(false);
+        done("ok");
       } catch (error) {
-        console.error("BusinessOwnerRoute: Error validating business ownership", error);
+        console.error("BusinessOwnerRoute: Error validating business access", error);
         toast.error(t("businessOwnerRoute.failedToVerifyBusinessAccess"));
-        setIsAuthorized(false);
-        setIsLoading(false);
+        done("denied");
       }
     };
+    validate();
+    return () => {
+      cancelled = true;
+    };
+    // location is read only for a stale-slug redirect; re-checking on every page change is not needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salonKey]);
 
-    validateBusinessOwnership();
-  }, [businessId]);
-
-  // Show loading while checking authorization
-  if (isLoading) {
+  if (state === null) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-500">{t("businessOwnerRoute.verifyingAccess")}</div>
       </div>
     );
   }
-
-  // Redirect if not authorized
-  if (!isAuthorized) {
-    // Redirect to home or business selection page
-    return <Navigate to="/" replace />;
-  }
+  if (state === "notFound") return <NotFound />;
+  if (state === "denied") return <Navigate to="/" replace />;
+  if (state !== "ok") return <Navigate to={state} replace />;
 
   // A team member's role leaves some pages out of the menu; opening one by its address
   // used to show "Failed to load" (the server refuses it). Go to their calendar instead.
   if (pageClosedToRole(myAccess(), location.pathname)) {
-    return <Navigate to={`/${businessId}/calendar`} replace />;
+    return <Navigate to={`/${salonKey}/calendar`} replace />;
   }
 
   return <>{children}</>;

@@ -6,6 +6,7 @@ import { businessService } from "@/services/businessService";
 import { publicSiteUrl } from "@/config/api";
 import { cn } from "@/lib/utils";
 import { t, tDynamic } from "@/i18n";
+import { salonPath } from "@/lib/salonKey";
 
 /** Where each missing step is fixed. Keys match the backend's SalonReadiness. */
 const FIX: Record<string, string> = {
@@ -128,7 +129,7 @@ export function VisibilityBanner({ businessId, showLive = true, className }: { b
       <ul className="mt-3 space-y-1.5">
         {state.missing.map((key) => (
           <li key={key}>
-            <Link to={`/${businessId}/${FIX[key] ?? "business"}`} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm font-semibold hover:bg-rose-100">
+            <Link to={salonPath(businessId, FIX[key] ?? "business")} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm font-semibold hover:bg-rose-100">
               <span>{tDynamic(`readiness.missing_${key}`)}</span>
               <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>

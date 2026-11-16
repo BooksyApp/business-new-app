@@ -31,7 +31,7 @@ const linkLabel = (id: Article) => t(`help.${id}.link` as "help.a1.link");
 
 /** Kömək: short static answers, and the way to Support when they are not enough. */
 export default function HelpPage() {
-  const { businessId } = useParams<{ businessId?: string }>();
+  const { salonKey: businessId } = useParams<{ salonKey?: string }>();
   const [query, setQuery] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
 

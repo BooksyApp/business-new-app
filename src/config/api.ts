@@ -82,7 +82,7 @@ export const refreshSession = (): Promise<string | null> => {
 
 const clearAuthAndRedirect = () => {
   clearAuthData();
-  // The app lives under /manage/ (vite `base`); a bare '/login' is the public site's 404.
+  // The app's base path (vite `base`, "/" on business.getbooqi.tech).
   window.location.href = `${import.meta.env.BASE_URL}login`;
 };
 

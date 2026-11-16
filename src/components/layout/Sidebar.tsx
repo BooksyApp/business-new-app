@@ -36,6 +36,7 @@ import "@/components/auth/auth-tokens.css";
 import { useVisibleNavGroups, type NavGroup } from "./navigation";
 import { t } from "@/i18n";
 import { useSupportHref } from "@/services/platformService";
+import { keyForId, salonPath } from "@/lib/salonKey";
 
 /**
  * The panel's navigation, in the booqi look of the new auth and calendar pages: a light
@@ -118,12 +119,14 @@ function useNavModel() {
   const groups = useVisibleNavGroups();
 
   // Prepend the business id inside a business, as the old rail did.
-  const getPath = (path: string): string => (businessId > 0 && path !== "/" ? `/${businessId}${path}` : path);
+  // /<slug>_<publicId><path> (lib/salonKey) — never the numeric id in the address.
+  const salonKey = keyForId(businessId);
+  const getPath = (path: string): string => (salonKey && path !== "/" ? `/${salonKey}${path}` : path);
   const groupHref = (g: NavGroup) => (g.path ? getPath(g.path) : getPath(`/section/${g.slug}`));
   const matches = (full: string) =>
     location.pathname === full ||
     location.pathname.startsWith(full + "/") ||
-    (full === getPath("/business") && location.pathname === `/${businessId}`);
+    (full === getPath("/business") && location.pathname === `/${salonKey}`);
   const groupActive = (g: NavGroup) =>
     (g.items ? [...g.items.map((i) => getPath(i.path)), getPath(`/section/${g.slug}`)] : [getPath(g.path!)]).some(matches);
 
@@ -159,7 +162,7 @@ function useNavModel() {
   // Same as picking a card on the salon picker: open that salon's calendar; the business
   // route stores it as the current one.
   const switchTo = (id: number) => {
-    if (id !== businessId) navigate(`/${id}/calendar`);
+    if (id !== businessId) navigate(salonPath(id));
   };
   // The existing add-business flow (CreateBusinessPage).
   const addSalon = () => navigate("/create-business");

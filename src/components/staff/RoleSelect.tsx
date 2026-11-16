@@ -7,6 +7,7 @@ import { myAccess } from "@/components/layout/navigation";
 import { roleService, type BusinessRole } from "@/services/roleService";
 import { t } from "@/i18n";
 import { roleDescription, roleName } from "@/lib/roleLabel";
+import { salonPath } from "@/lib/salonKey";
 
 interface Props {
   /** The team member being edited; omitted on Add Staff. */
@@ -63,7 +64,7 @@ export function RoleSelect({ staffId, value, onChange }: Props) {
       <p className="text-xs text-muted-foreground">
         {selected && roleDescription(selected) ? `${roleDescription(selected)} ` : ""}
         {isOwner ? (
-          <Link to={`/${getCurrentBusinessId()}/roles`} className="font-medium text-primary">
+          <Link to={salonPath(getCurrentBusinessId(), "roles")} className="font-medium text-primary">
             {t("staff.manageRoles")}
           </Link>
         ) : (

@@ -8,6 +8,7 @@ import LoadingView from "@/components/ui/loading-view";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { BookingConflictDialog } from "@/components/calendar/BookingConflictDialog";
 import { prefetchAuthChecks } from "@/lib/authPrefetch";
+import { idForKey, isSalonKey } from "@/lib/salonKey";
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -53,6 +54,7 @@ const AcceptInvitePage = lazy(() => import("./pages/AcceptInvitePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const PaymentMethodPage = lazy(() => import("./pages/PaymentMethodPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const LegacyPanelRedirect = lazy(() => import("./components/LegacyPanelRedirect"));
 const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 
 /*
@@ -70,9 +72,12 @@ const FIRST_PAGE: Record<string, () => Promise<unknown>> = {
   shopping: () => import("./pages/SalesPage"),
 };
 if (typeof window !== "undefined") {
-  const [first = "", second = ""] = window.location.pathname.replace(/^\/manage\/?/, "").split("/");
-  if (/^\d+$/.test(first)) {
-    prefetchAuthChecks(first, second);
+  // business.getbooqi.tech/<slug>_<publicId>/<page>: the API wants the numeric id, which
+  // only the pairs the server gave us before know (lib/salonKey); unknown → guards only.
+  const [first = "", second = ""] = window.location.pathname.replace(/^\/+/, "").split("/");
+  if (isSalonKey(first)) {
+    const known = idForKey(first);
+    prefetchAuthChecks(known ? String(known) : undefined, second);
     // The platform flags (one cached request per tab) gate parts of every screen.
     void import("./services/platformService").then((m) => m.platformSettings()).catch(() => undefined);
     void import("./components/ProtectedRoute");
@@ -136,9 +141,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BookingConflictDialog />
-      {/* The manager app is served under /manage; the router has to agree or every link
-          points one level up at the public site. */}
-      <BrowserRouter basename="/manage">
+      {/* business.getbooqi.tech serves the panel at the root (it was getbooqi.tech/manage;
+          Caddy 301s those old links to /legacy/<id>/<page> here). */}
+      <BrowserRouter>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes - Login and Registration */}
@@ -195,9 +200,26 @@ const App = () => (
               }
             />
 
-            {/* Business-specific routes */}
+            {/* Old getbooqi.tech/manage/<id>/<page> links (Caddy 301 → /legacy/<id>/<page>):
+                the id is looked up among the signed-in person's own salons only. */}
             <Route
-              path="/:businessId"
+              path="/legacy/*"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <ProtectedRoute>
+                    <LegacyPanelRedirect />
+                  </ProtectedRoute>
+                </Suspense>
+              }
+            />
+            {/* A-01 slot: admin "open as owner" lands on /impersonate?code=… — built by the
+                A-01 engineer (exchange the code, then go to the salon). Not implemented here;
+                the route only keeps the address from being read as a salon key. */}
+            <Route path="/impersonate" element={<Navigate to="/login" replace />} />
+
+            {/* Business-specific routes: /<slug>_<publicId>/<page> (lib/salonKey) */}
+            <Route
+              path="/:salonKey"
               element={
                 <Suspense fallback={<PageLoader />}>
                   <ProtectedRoute>

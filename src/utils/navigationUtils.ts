@@ -1,4 +1,5 @@
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { keyForId } from "@/lib/salonKey";
 
 /**
  * Hook to get navigation helper that includes businessId in paths
@@ -21,9 +22,10 @@ export function useNavigation() {
       fullPath = `${cleanPath}/${id}`;
     }
     
-    // If we have a businessId and the path doesn't already include it, prepend it
-    if (businessId > 0 && !fullPath.startsWith(`${businessId}/`)) {
-      return `/${businessId}/${fullPath}`;
+    // Inside a salon: /<slug>_<publicId>/<path> (lib/salonKey), never the numeric id.
+    const key = keyForId(businessId);
+    if (key && !fullPath.startsWith(`${key}/`)) {
+      return `/${key}/${fullPath}`;
     }
     
     return `/${fullPath}`;
