@@ -9,8 +9,7 @@
  * changes, so plain `t(...)` calls in render are always current. Lookup order: active
  * locale -> en -> the key itself (with a console.warn in dev only).
  */
-import en from "./locales/en.json";
-import az from "./locales/az.json";
+import type en from "./locales/en.json";
 import { getHubLocale, type HubLocale } from "@/lib/hubLocale";
 import { formatDate, formatNumber } from "./format";
 
@@ -24,12 +23,15 @@ type Paths<T> = {
 export type TKey = Paths<typeof en>;
 export type TParams = Record<string, string | number | boolean | null | undefined>;
 
-// en (fallback) and az (default panel language) ship in the main bundle; ru (~200 kB of
-// JSON) is its own chunk, loaded before first render only for a panel set to Russian
-// (main.tsx) or when someone switches to it (I18nProvider). Until it lands, t() falls back
-// to en like any missing key.
-const DICTS: Partial<Record<HubLocale, Tree>> = { en: en as Tree, az: az as Tree };
+// Every language is its own chunk (~45 KB gzipped each). main.tsx loads the panel's
+// language before the first render, so only that one is downloaded up front: az and en used
+// to sit in the main bundle together, two thirds of it, on every phone's first load. en,
+// the fallback for a missing key, follows on idle (az and ru are kept complete by
+// i18n:check, so nothing waits for it). A switch loads the new language (I18nProvider).
+const DICTS: Partial<Record<HubLocale, Tree>> = {};
 const LAZY: Partial<Record<HubLocale, () => Promise<{ default: unknown }>>> = {
+  en: () => import("./locales/en.json"),
+  az: () => import("./locales/az.json"),
   ru: () => import("./locales/ru.json"),
 };
 const flatCache = new Map<HubLocale, Map<string, string>>();
@@ -46,7 +48,15 @@ export async function loadHubLocale(locale: HubLocale): Promise<void> {
     DICTS[locale] = (await load()).default as Tree;
     flatCache.delete(locale);
   } catch {
-    /* offline / chunk missing: keep falling back to en */
+    // Chunk missing (a deploy mid-session) or offline: at least have the fallback.
+    if (locale !== "en") await loadHubLocale("en");
+    return;
+  }
+  if (locale !== "en" && !DICTS.en && typeof window !== "undefined") {
+    const later = () => void loadHubLocale("en");
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
+    if (idle) idle(later);
+    else setTimeout(later, 3000);
   }
 }
 

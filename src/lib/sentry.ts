@@ -37,8 +37,28 @@ export function scrubEvent<T>(e: T): T {
 
 let sdk: Promise<typeof import("@sentry/react")> | null = null;
 
+/*
+ * The SDK chunk is ~160 KB gzipped. Requested at startup it shared a phone's bandwidth with
+ * the first screen's own chunks and data and pushed the first paint back by ~1 s on 4G, so
+ * it now loads once the page has finished loading and the browser is idle. An error caught
+ * by an error boundary before then loads it at once and is still reported (reportError
+ * waits for it); uncaught errors in those first seconds are not — a deliberate trade.
+ */
 export function initSentry() {
-  if (!dsn || sdk) return;
+  if (!dsn || sdk || typeof window === "undefined") return;
+  const start = () => {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
+      .requestIdleCallback;
+    if (idle) idle(() => void load(), { timeout: 5000 });
+    else setTimeout(() => void load(), 1500);
+  };
+  if (document.readyState === "complete") start();
+  else window.addEventListener("load", start, { once: true });
+}
+
+function load(): Promise<typeof import("@sentry/react")> | null {
+  if (!dsn) return null;
+  if (sdk) return sdk;
   sdk = import("@sentry/react").then((Sentry) => {
     Sentry.init({
       dsn,
@@ -50,11 +70,12 @@ export function initSentry() {
     });
     return Sentry;
   });
+  return sdk;
 }
 
 /** Report an error caught by a React error boundary (no-op when Sentry is off). */
 export function reportError(error: unknown, componentStack?: string | null) {
-  void sdk?.then((Sentry) =>
+  void load()?.then((Sentry) =>
     Sentry.captureException(error, { contexts: { react: { componentStack: componentStack ?? "" } } }),
   );
 }
