@@ -3,6 +3,16 @@
  */
 
 /**
+ * A JWT segment is base64url ("-", "_", no padding); atob() only takes base64 and throws on
+ * "-"/"_". A user whose token happened to contain one looked expired, so the API client
+ * refreshed the session before every single request.
+ */
+const decodeJwtPart = (part: string): string => {
+  const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+  return atob(b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "="));
+};
+
+/**
  * Checks if a JWT token is valid (exists, not expired, and properly formatted)
  */
 export const isTokenValid = (token: string | null): boolean => {
@@ -12,7 +22,7 @@ export const isTokenValid = (token: string | null): boolean => {
     const parts = token.split('.');
     if (parts.length !== 3) return false;
 
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = JSON.parse(decodeJwtPart(parts[1]));
     if (!payload.exp) return false;
 
     return Date.now() < payload.exp * 1000;
@@ -31,7 +41,7 @@ export const isTokenExpired = (token: string | null): boolean => {
     const parts = token.split('.');
     if (parts.length !== 3) return true;
     
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = JSON.parse(decodeJwtPart(parts[1]));
     if (!payload.exp) return true;
     
     const exp = payload.exp * 1000;
@@ -51,7 +61,7 @@ export const getTokenExpiration = (token: string | null): number | null => {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = JSON.parse(decodeJwtPart(parts[1]));
     if (!payload.exp) return null;
     
     return payload.exp * 1000;
