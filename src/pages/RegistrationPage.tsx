@@ -498,7 +498,8 @@ const RegistrationPage = () => {
         // Non-fatal — hours can be set later in settings
       }
 
-      // Create services added during registration
+      // Create services added during registration (ids kept: a solo owner offers them all)
+      const createdServiceIds: number[] = [];
       for (const svc of formData.services) {
         try {
           // duration stored as "hours:minutes" string e.g. "0:30"
@@ -507,12 +508,13 @@ const RegistrationPage = () => {
           const priceTypeMap: Record<string, 'FIXED' | 'FROM' | 'RANGE'> = {
             Fixed: 'FIXED', From: 'FROM', Range: 'RANGE',
           };
-          await serviceService.createService(business.id, {
+          const created = await serviceService.createService(business.id, {
             name: svc.name,
             durationMinutes,
             price: svc.price ? parseFloat(svc.price) : undefined,
             priceType: priceTypeMap[svc.priceType] || 'FIXED',
           });
+          if (created?.id != null) createdServiceIds.push(created.id);
         } catch {
           // Non-fatal — services can be added later
         }
@@ -530,6 +532,35 @@ const RegistrationPage = () => {
           });
         } catch {
           // Non-fatal — staff can be added later
+        }
+      }
+
+      // LR-03: a salon with no staff is not bookable. When the owner works alone ("Just me",
+      // or no team size and nobody added), add the owner as the first staff member, with the
+      // services and the open hours from this wizard. No email/invite: the owner already
+      // has an account. If this fails, the overview banner still says "add a staff member".
+      if (formData.teamSize === "just-me" || (!formData.teamSize && formData.staffMembers.length === 0)) {
+        try {
+          const schedule: Record<string, string[]> = {};
+          for (const [day, val] of Object.entries(formData.businessHours)) {
+            if (!val.enabled) continue;
+            const [start, end] = val.hours.includes('-')
+              ? val.hours.split('-').map((t: string) => t.trim())
+              : ['09:00', '17:00'];
+            schedule[DAY_MAP[day] || day.toUpperCase()] = [start, end];
+          }
+          const owner = await staffService.createStaff(business.id, {
+            name: `${formData.firstName} ${formData.lastName}`.trim() || formData.businessName,
+            phone: fullPhone || undefined,
+            schedule: Object.keys(schedule).length > 0 ? schedule : undefined,
+            inviteAndCreateAccount: false,
+          });
+          // The create DTO has no serviceIds; services are assigned on their own endpoint.
+          if (owner?.id != null && createdServiceIds.length > 0) {
+            await serviceService.setStaffServiceIds(business.id, owner.id, createdServiceIds);
+          }
+        } catch {
+          // Non-fatal — the owner can add themselves under Team later
         }
       }
 
@@ -1076,6 +1107,9 @@ const RegistrationPage = () => {
                       );
                     })}
                   </div>
+                  {formData.teamSize === "just-me" && (
+                    <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{tr("registration.justMeAsStaffHint")}</p>
+                  )}
                 </div>
 
                 <div>
