@@ -132,6 +132,8 @@ export interface CreateAppointmentRequest {
   notes?: string;
   /** H-01: shared by every service of one multi-service visit (like a web cart). */
   visitId?: string;
+  /** H-01: more services of this visit follow — the backend holds the confirmation email. */
+  visitPending?: boolean;
 }
 
 export const appointmentService = {

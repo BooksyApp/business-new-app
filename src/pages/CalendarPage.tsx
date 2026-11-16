@@ -1058,9 +1058,11 @@ export default function CalendarPage() {
       i = j;
       const savedIds: string[] = [];
       let failure: unknown = null;
-      for (const r of group) {
+      for (const [k, r] of group.entries()) {
         try {
-          const saved = await createAppointmentAPI(r, { silent: true });
+          // Only the visit's last service triggers the (one) confirmation email.
+          const req = visitId && k < group.length - 1 ? { ...r, visitPending: true } : r;
+          const saved = await createAppointmentAPI(req, { silent: true });
           if (saved?.apiId) savedIds.push(saved.apiId);
         } catch (err) {
           failure = err;

@@ -344,6 +344,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
     color?: string;
     notes?: string;
     visitId?: string;
+    visitPending?: boolean;
   }, opts?: { silent?: boolean }) => {
     try {
       const apiRequest = {
@@ -360,6 +361,7 @@ export function useAppointments(businessIdParam?: number, date?: Date) {
         color: request.color,
         notes: request.notes,
         ...(request.visitId ? { visitId: request.visitId } : {}),
+        ...(request.visitId && request.visitPending ? { visitPending: true } : {}),
       };
 
       const created = await appointmentService.createAppointment(apiRequest);
