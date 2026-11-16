@@ -1,4 +1,6 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { salonNow } from "@/lib/salonClock";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,7 @@ export default function HomePage() {
   const [statsLoading, setStatsLoading] = useState(false);
 
   const numericBusinessId = businessId ? parseInt(businessId, 10) : null;
+  const salonTz = useSalonTimeZone(numericBusinessId ?? 0);
 
   // Fetch real dashboard stats when on a business route
   useEffect(() => {
@@ -44,10 +47,12 @@ export default function HomePage() {
     const fetchDashboardData = async () => {
       setStatsLoading(true);
       try {
-        const today = format(new Date(), "yyyy-MM-dd");
+        // LR-09: the salon's today, not the browser's.
+        const now = salonNow(salonTz);
+        const today = format(now, "yyyy-MM-dd");
         const [overviewData, appts] = await Promise.all([
           analysisService.getAnalyticsOverview(numericBusinessId, today, today),
-          appointmentService.getAppointmentsByBusiness(numericBusinessId, new Date()),
+          appointmentService.getAppointmentsByBusiness(numericBusinessId, now),
         ]);
         setOverview(overviewData);
         setTodayAppointments(appts.slice(0, 4));
@@ -58,7 +63,7 @@ export default function HomePage() {
       }
     };
     fetchDashboardData();
-  }, [numericBusinessId]);
+  }, [numericBusinessId, salonTz]);
 
   useEffect(() => {
     const loadBusinesses = async () => {

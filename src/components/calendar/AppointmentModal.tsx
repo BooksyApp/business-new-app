@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { salonNow } from "@/lib/salonClock";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { currencySymbol, formatPrice } from "@/lib/currency";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { categoryTint } from "@/lib/serviceCategoryColor";
@@ -75,6 +77,7 @@ export function AppointmentModal({
       .then(setClients)
       .catch(() => setClients([]));
   }, [isOpen, appointment?.apiId, fullAppointment?.businessId]);
+  const salonTz = useSalonTimeZone(Number(fullAppointment?.businessId ?? 0));
 
   const reassignClient = async (client: Client) => {
     if (!appointment?.apiId || !fullAppointment) return;
@@ -198,7 +201,8 @@ export function AppointmentModal({
   const status = appointmentData.status || "PENDING";
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-  const isFutureVisit = appointmentDate > format(new Date(), 'yyyy-MM-dd');
+  // LR-09: compared with the salon's today (market zone until the salon's is known).
+  const isFutureVisit = appointmentDate > format(salonNow(salonTz), 'yyyy-MM-dd');
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
   const repServiceName = appointmentData.serviceName || appointment.service;
   // The API sends "10:00:00"; a receptionist reads "10:00".

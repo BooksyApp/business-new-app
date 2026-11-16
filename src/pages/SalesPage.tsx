@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { salonNow } from "@/lib/salonClock";
 import { currencySymbol } from "@/lib/currency";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -36,15 +37,8 @@ import { t as tr, tOpt, fmtDate as formatLocaleDate, getLocale, formatMinutes } 
 
 // Open and not yet paid, on any day. The settle list adds "today"; "Take payment" from the
 // calendar can be for any day.
-/** Today's date (yyyy-MM-dd) on the salon's own clock; the browser's when the salon has none set. */
-const todayIn = (timeZone?: string | null): string => {
-  try {
-    if (timeZone) return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  } catch {
-    // an unknown zone name: fall through to the browser's day
-  }
-  return format(new Date(), "yyyy-MM-dd");
-};
+/** Today's date (yyyy-MM-dd) on the salon's own clock; the market's (Asia/Baku) when none is set — never the browser's. */
+const todayIn = (timeZone?: string | null): string => format(salonNow(timeZone), "yyyy-MM-dd");
 /** A local Date on that calendar day (noon, so formatting it back never slips a day). */
 const dayDate = (ymd: string, addDays = 0): Date => {
   const d = new Date(`${ymd}T12:00:00`);
@@ -68,7 +62,8 @@ const isUnsettled = (apt: Appointment): boolean => {
 // Helper function to filter and sort unsettled appointments
 const filterAndSortUnsettledAppointments = (appointments: Appointment[], today: string): Appointment[] => {
   return appointments
-    .filter(apt => format(new Date(apt.appointmentDate), 'yyyy-MM-dd') === today && isUnsettled(apt))
+    // The date string itself: new Date("2026-11-16") is UTC midnight, which is the 15th west of UTC.
+    .filter(apt => String(apt.appointmentDate).slice(0, 10) === today && isUnsettled(apt))
     .sort((a, b) => {
       // Compare start times (HH:mm format)
       const timeA = a.startTime.split(':').map(Number);
@@ -286,7 +281,7 @@ export default function SalesPage() {
   const [methodFilter, setMethodFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [rangeFrom, setRangeFrom] = useState(() => format(new Date(Date.now() - 30 * 86400000), "yyyy-MM-dd"));
-  const [rangeTo, setRangeTo] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [rangeTo, setRangeTo] = useState(() => format(salonNow(), "yyyy-MM-dd"));
   const [voiding, setVoiding] = useState(false);
   const [txReload, setTxReload] = useState(0);
   const [staffFilter, setStaffFilter] = useState("All");
