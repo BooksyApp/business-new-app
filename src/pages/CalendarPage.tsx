@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, isToday, getDay, parse } from "date-fns";
+import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, getDay, parse } from "date-fns";
 import { format } from "@/i18n/dateFns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ import { useServices } from "@/hooks/useServices";
 import { useTimeOff } from "@/hooks/useTimeOff";
 import type { TimeOff } from "@/services/timeOffService";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
+import { isSalonToday, salonNow } from "@/lib/salonClock";
 import { VisibilityBanner } from "@/components/VisibilityBanner";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -476,8 +478,11 @@ function groupConflictingAppointments(appointments: Appointment[]): Appointment[
 export default function CalendarPage() {
   const navigate = useNavigate();
   // LR-01: the salon email's "Open in calendar" link lands on ?date=YYYY-MM-DD — open that day.
-  const [currentDate, setCurrentDate] = useState(() => dateFromQuery(window.location.search) ?? new Date());
+  const [currentDate, setCurrentDate] = useState(() => dateFromQuery(window.location.search) ?? salonNow());
   const businessId = useBusinessId();
+  // LR-09: "today" and the "now" line are the salon's clock (businesses.timezone), not the browser's.
+  const salonTz = useSalonTimeZone(businessId);
+  const salonToday = (d: Date) => isSalonToday(d, salonTz);
   
   const { getPath } = useNavigation();
   const { appointments: apiAppointments, staff: apiStaff, loading, createAppointment: createAppointmentAPI, updateAppointment: updateAppointmentAPI, deleteAppointment: deleteAppointmentAPI, websocketStatus, refresh: refreshAppointments } = useAppointments(businessId, currentDate);
@@ -707,7 +712,7 @@ export default function CalendarPage() {
     startTime: string;
     endTime: string;
   } | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(() => salonNow(salonTz));
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const flags = useFeatureFlags();
   const offers = useServiceOffers(businessId);
@@ -1163,9 +1168,9 @@ export default function CalendarPage() {
   const goToPrevDay = () => setCurrentDate(subDays(currentDate, 1));
   const goToNextDay = () => setCurrentDate(addDays(currentDate, 1));
   const goToToday = () => {
-    setCurrentDate(new Date());
-    setMonthViewDate(new Date());
-    setWeekViewDate(new Date());
+    setCurrentDate(salonNow(salonTz));
+    setMonthViewDate(salonNow(salonTz));
+    setWeekViewDate(salonNow(salonTz));
   };
 
   const goToPrevMonth = () => setMonthViewDate(subMonths(monthViewDate, 1));
@@ -1246,19 +1251,20 @@ export default function CalendarPage() {
 
   // Update current time every minute
   useEffect(() => {
+    setCurrentTime(salonNow(salonTz));
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
+      setCurrentTime(salonNow(salonTz));
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [salonTz]);
 
   // Note: useAppointments and useTimeOff hooks already handle loading data
   // when currentDate changes and on mount. WebSocket handles all real-time updates.
   // No need for additional refresh logic here.
 
   // Check if current date is being viewed
-  const isCurrentDate = isToday(currentDate);
+  const isCurrentDate = salonToday(currentDate);
 
   // Open the day at the salon's opening hour (or an hour before now, today) instead of
   // midnight: the grid used to start with nine hours of closed, hatched rows.
@@ -1266,10 +1272,10 @@ export default function CalendarPage() {
   const openingHour = getBusinessHoursForDate(currentDate).startHour;
   useEffect(() => {
     if (viewType !== "Day" || loading || !dayGridRef.current) return;
-    const nowHour = new Date().getHours();
+    const nowHour = salonNow(salonTz).getHours();
     const target = isCurrentDate ? Math.max(openingHour, Math.min(nowHour - 1, 23)) : openingHour;
     dayGridRef.current.scrollTop = Math.max(0, target) * 4 * SLOT_HEIGHT;
-  }, [viewType, loading, openingHour, isCurrentDate, currentDate]);
+  }, [viewType, loading, openingHour, isCurrentDate, currentDate, salonTz]);
 
   // Get current time position
   const getCurrentTimePosition = (): number | null => {
@@ -1531,7 +1537,7 @@ export default function CalendarPage() {
                             return days.map((day, idx) => {
                               const isCurrentMonth = isSameMonth(day, datePickerMonth);
                               const isSelected = isSameDay(day, currentDate);
-                              const isTodayDate = isToday(day);
+                              const isTodayDate = salonToday(day);
                               const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                               
                               return (
@@ -2406,7 +2412,7 @@ export default function CalendarPage() {
                       return calendarDays.map((day, idx) => {
                         const dayAppointments = getAppointmentsForDate(day);
                         const isCurrentMonth = isSameMonth(day, monthViewDate);
-                        const isCurrentDay = isToday(day);
+                        const isCurrentDay = salonToday(day);
 
                         return (
                           <div
@@ -2523,7 +2529,7 @@ export default function CalendarPage() {
               <div className="flex flex-1">
                 {getWeekDays(weekViewDate).map((day) => {
                   const dayAppointments = getAppointmentsForDate(day);
-                  const isCurrentDay = isToday(day);
+                  const isCurrentDay = salonToday(day);
                   
                   return (
                     <div
@@ -3092,7 +3098,7 @@ export default function CalendarPage() {
                   const parsed = parse(v, 'yyyy-MM-dd', new Date());
                   if (!isNaN(parsed.getTime())) setCurrentDate(parsed);
                 };
-                const days = Array.from({ length: 21 }, (_, i) => addDays(new Date(), i));
+                const days = Array.from({ length: 21 }, (_, i) => addDays(salonNow(salonTz), i));
                 return (
                   <>
                     <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="radiogroup" aria-label={tr("calendar.date2")}>
@@ -3113,7 +3119,7 @@ export default function CalendarPage() {
                               !open && !on && "opacity-50",
                             )}
                           >
-                            <span className={cn("text-[11px] font-semibold uppercase", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{isToday(d) ? tr("common.today") : format(d, 'EEE')}</span>
+                            <span className={cn("text-[11px] font-semibold uppercase", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{salonToday(d) ? tr("common.today") : format(d, 'EEE')}</span>
                             <span className="text-lg font-extrabold leading-tight">{format(d, 'd')}</span>
                             <span className={cn("text-[10px]", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{format(d, 'MMM')}</span>
                           </button>
@@ -3125,7 +3131,7 @@ export default function CalendarPage() {
                       <Input
                         type="date"
                         value={appointmentForm.date}
-                        min={format(new Date(), 'yyyy-MM-dd')}
+                        min={format(salonNow(salonTz), 'yyyy-MM-dd')}
                         onChange={(e) => { if (e.target.value) pick(e.target.value); }}
                         aria-label={tr("calendar.date2")}
                         className="h-10 w-auto rounded-xl border-[rgb(var(--reg-line))] text-sm"
@@ -3277,7 +3283,7 @@ export default function CalendarPage() {
                 const hi = isEnabled ? endHour : 20;
                 // Today, a new booking cannot start in the past (the API refuses it with
                 // "Cannot create bookings in the past"), so those times are not offered.
-                const nowHm = !editingAppointmentId && isToday(day) ? format(new Date(), 'HH:mm') : null;
+                const nowHm = !editingAppointmentId && salonToday(day) ? format(salonNow(salonTz), 'HH:mm') : null;
                 const slots = timeOptionsWith(appointmentForm.startTime).filter((t) => {
                   const h = parseInt(t.slice(0, 2), 10);
                   if (nowHm && t < nowHm && t !== appointmentForm.startTime) return false;
@@ -3601,8 +3607,8 @@ export default function CalendarPage() {
                   }
 
                   // Past date check for new appointments only
-                  const appointmentDate = new Date(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'));
-                  const today = new Date();
+                  const appointmentDate = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
+                  const today = salonNow(salonTz);
                   today.setHours(0, 0, 0, 0);
                   if (!editingAppointmentId && appointmentDate < today) {
                     toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
