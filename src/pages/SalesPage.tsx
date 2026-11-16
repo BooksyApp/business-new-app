@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, lazy, Suspense } from "react";
 import { salonNow, salonToday } from "@/lib/salonClock";
 import { currencySymbol } from "@/lib/currency";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -8,7 +8,10 @@ import "@/components/auth/auth-tokens.css";
 import { Button } from "@/components/ui/button";
 import { User, Plus, Minus, Trash2, ArrowLeft, Search, Receipt, CreditCard, X, Send, MoreVertical, Edit2, Save, Check, X as XIcon } from "lucide-react";
 import { format } from "@/i18n/dateFns";
-import PaymentMethodPage from "./PaymentMethodPage";
+// The payment step is its own chunk (fetched on idle once the till has painted), not part
+// of the till's first load.
+const loadPaymentMethodPage = () => import("./PaymentMethodPage");
+const PaymentMethodPage = lazy(loadPaymentMethodPage);
 import { useServices } from "@/hooks/useServices";
 import { useAddons } from "@/hooks/useAddons";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -234,6 +237,16 @@ export default function SalesPage() {
   );
   // null until the salon is loaded: "today" is the salon's day, so nothing date-based runs before.
   const [salonTz, setSalonTz] = useState<string | null>(null);
+  // Warm the payment step once the till has painted, so checkout opens without a wait.
+  useEffect(() => {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const warm = () => void loadPaymentMethodPage().catch(() => undefined);
+    const id = idle ? idle(warm) : window.setTimeout(warm, 2000);
+    return () => {
+      if (!idle) window.clearTimeout(id);
+    };
+  }, []);
+
   useEffect(() => {
     if (!businessId) return;
     businessService
@@ -1192,160 +1205,162 @@ export default function SalesPage() {
     });
 
     return (
-      <PaymentMethodPage
-        orderItems={orderItems}
-        subtotal={calculateTotal()}
-        // #117: what the customer already paid up front on this booking. The backend has
-        // always subtracted it; the screen did not, so the cashier asked for the full
-        // price and the customer paid the deposit twice.
-        depositPaid={(() => {
-          return ticketAppts.reduce((sum, a) => sum + (a.depositPaid ? Number(a.depositAmount ?? 0) : 0), 0);
-        })()}
-        bookedPromo={bookedPromo}
-        pointsCredit={(() => {
-          return ticketAppts.reduce((sum, a) => sum + Number((a as { pointsDiscount?: number }).pointsDiscount ?? 0), 0);
-        })()}
-        prepaidOnline={(() => {
-          return ticketAppts.reduce((sum, a) => sum + Number((a as { prepaidAmount?: number }).prepaidAmount ?? 0), 0);
-        })()}
-        // The client object, not its name: every benefit at the till — membership,
-        // package, points, the stamp card — is keyed by client id, and this was passing
-        // the whole record in as a name string.
-        selectedClient={
-          selectedClient
-            ? { id: String(selectedClient.id), name: getClientDisplayName(selectedClient) }
-            : null
-        }
-        selectedStaff={staff?.find(s => s.id === selectedAppointmentStaffId) ?? (staff && staff.length > 0 ? staff[0] : null)}
-        // #15: a walk-in sale defaults to the first staff member (harmless with one
-        // staff member, silently wrong with several) — staffList + onStaffChange make
-        // that default visible and correctable via the checkout screen's "CHANGE"
-        // control instead of being locked in with no way to fix it.
-        staffList={staff ?? []}
-        onStaffChange={(member) => setSelectedAppointmentStaffId(member.id)}
-        onConfirm={async (paymentData) => {
-          try {
-            // Map payment method from PaymentMethodPage format to backend format
-            const paymentMethodMap: Record<string, 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'SPLIT' | 'MEMBERSHIP' | 'GIFT_CARD' | 'PACKAGE'> = {
-              'cash': 'CASH',
-              'card-terminal': 'CARD_TERMINAL',
-              'check': 'CHECK',
-              'split': 'SPLIT',
-              'membership': 'MEMBERSHIP',
-              'gift-card': 'GIFT_CARD',
-              'package': 'PACKAGE',
-            };
-
-            // Convert basket items to sale items
-            const saleItems = basket.map(item => {
-              const rawPrice = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
-              const price = isNaN(rawPrice) ? 0 : rawPrice;
-              return {
-                serviceId: item.serviceId,
-                serviceName: item.name,
-                serviceType:
-                  item.type === 'combo'
-                    ? 'COMBO'
-                    : item.type === 'membership'
-                      ? 'MEMBERSHIP'
-                      : item.type === 'gift-card'
-                        ? 'GIFT_CARD'
-                        : item.type === 'product'
-                          ? 'PRODUCT'
-                          : 'SERVICE',
-                // A product line is priced and taken off the shelf by the server.
-                productId: item.productId,
-                quantity: 1,
-                unitPrice: price,
-                duration: item.duration,
-                // Which benefit covers this line, when one does. Set per line so a basket
-                // can mix a service that is free on the membership with one that is paid.
-                // Keyed the way the checkout screen keys it (orderItems use basketId). Looking it
-                // up by item.id found nothing, so a line marked "Free (earned)", a membership or
-                // a package went to the server as a normal paid line: the client was charged
-                // and the reward stayed unspent.
-                coveredBy: paymentData.coverage?.[lineKey(item)],
-                membershipId: item.membershipId,
-                giftCardAmount: item.giftCardAmount,
-                // Which booking this line is, so the receipt and the commission follow it.
-                appointmentId: item.appointmentId,
+      <Suspense fallback={null}>
+        <PaymentMethodPage
+          orderItems={orderItems}
+          subtotal={calculateTotal()}
+          // #117: what the customer already paid up front on this booking. The backend has
+          // always subtracted it; the screen did not, so the cashier asked for the full
+          // price and the customer paid the deposit twice.
+          depositPaid={(() => {
+            return ticketAppts.reduce((sum, a) => sum + (a.depositPaid ? Number(a.depositAmount ?? 0) : 0), 0);
+          })()}
+          bookedPromo={bookedPromo}
+          pointsCredit={(() => {
+            return ticketAppts.reduce((sum, a) => sum + Number((a as { pointsDiscount?: number }).pointsDiscount ?? 0), 0);
+          })()}
+          prepaidOnline={(() => {
+            return ticketAppts.reduce((sum, a) => sum + Number((a as { prepaidAmount?: number }).prepaidAmount ?? 0), 0);
+          })()}
+          // The client object, not its name: every benefit at the till — membership,
+          // package, points, the stamp card — is keyed by client id, and this was passing
+          // the whole record in as a name string.
+          selectedClient={
+            selectedClient
+              ? { id: String(selectedClient.id), name: getClientDisplayName(selectedClient) }
+              : null
+          }
+          selectedStaff={staff?.find(s => s.id === selectedAppointmentStaffId) ?? (staff && staff.length > 0 ? staff[0] : null)}
+          // #15: a walk-in sale defaults to the first staff member (harmless with one
+          // staff member, silently wrong with several) — staffList + onStaffChange make
+          // that default visible and correctable via the checkout screen's "CHANGE"
+          // control instead of being locked in with no way to fix it.
+          staffList={staff ?? []}
+          onStaffChange={(member) => setSelectedAppointmentStaffId(member.id)}
+          onConfirm={async (paymentData) => {
+            try {
+              // Map payment method from PaymentMethodPage format to backend format
+              const paymentMethodMap: Record<string, 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'SPLIT' | 'MEMBERSHIP' | 'GIFT_CARD' | 'PACKAGE'> = {
+                'cash': 'CASH',
+                'card-terminal': 'CARD_TERMINAL',
+                'check': 'CHECK',
+                'split': 'SPLIT',
+                'membership': 'MEMBERSHIP',
+                'gift-card': 'GIFT_CARD',
+                'package': 'PACKAGE',
               };
-            });
 
-            // Calculate subtotal
-            const subtotal = calculateTotal();
+              // Convert basket items to sale items
+              const saleItems = basket.map(item => {
+                const rawPrice = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
+                const price = isNaN(rawPrice) ? 0 : rawPrice;
+                return {
+                  serviceId: item.serviceId,
+                  serviceName: item.name,
+                  serviceType:
+                    item.type === 'combo'
+                      ? 'COMBO'
+                      : item.type === 'membership'
+                        ? 'MEMBERSHIP'
+                        : item.type === 'gift-card'
+                          ? 'GIFT_CARD'
+                          : item.type === 'product'
+                            ? 'PRODUCT'
+                            : 'SERVICE',
+                  // A product line is priced and taken off the shelf by the server.
+                  productId: item.productId,
+                  quantity: 1,
+                  unitPrice: price,
+                  duration: item.duration,
+                  // Which benefit covers this line, when one does. Set per line so a basket
+                  // can mix a service that is free on the membership with one that is paid.
+                  // Keyed the way the checkout screen keys it (orderItems use basketId). Looking it
+                  // up by item.id found nothing, so a line marked "Free (earned)", a membership or
+                  // a package went to the server as a normal paid line: the client was charged
+                  // and the reward stayed unspent.
+                  coveredBy: paymentData.coverage?.[lineKey(item)],
+                  membershipId: item.membershipId,
+                  giftCardAmount: item.giftCardAmount,
+                  // Which booking this line is, so the receipt and the commission follow it.
+                  appointmentId: item.appointmentId,
+                };
+              });
 
-            // Get selected staff ID — prefer the appointment's staff, fall back to first in list
-            const staffId = selectedAppointmentStaffId ?? (staff && staff.length > 0 ? staff[0].id : undefined);
+              // Calculate subtotal
+              const subtotal = calculateTotal();
 
-            // Create payment confirmation request
-            const confirmationRequest: PaymentConfirmationRequest = {
-              businessId: businessId!,
-              staffId: staffId,
-              clientId: selectedClient ? Number(selectedClient.id) : undefined,
-              clientName: selectedClient ? getClientDisplayName(selectedClient) : undefined,
-              items: saleItems,
-              // #31: these were hardcoded to zero, so the recorded sale was always at
-              // full price even when the screen showed a discount and the customer paid
-              // the discounted total. Backend #34 had to land first — with the discount
-              // finally arriving, commissions would otherwise have been paid on gross.
-              discountAmount: paymentData.discountAmount,
-              discountPercent: paymentData.discountPercent,
-              tipAmount: paymentData.tip,
-              tipPercent: paymentData.tipPercent,
-              paymentMethod: paymentMethodMap[paymentData.paymentMethod] || 'CASH',
-              // The tenders, when the checkout screen collected more than one.
-              payments: paymentData.payments,
-              paymentAmount: paymentData.amount,
-              giftCardCode: paymentData.giftCardCode,
-              splitCashAmount: paymentData.splitCashAmount,
-              splitCardAmount: paymentData.splitCardAmount,
-              // One visit, one sale: every booking on the ticket settles with it.
-              appointmentIds: ticketApptIds.length > 0 ? ticketApptIds : undefined,
-              appointmentId: ticketApptIds.length > 0 ? undefined : selectedAppointmentId || undefined,
-              promoCode: bookedPromo?.code,
-              notes: ticketNote.trim() || undefined,
-            };
+              // Get selected staff ID — prefer the appointment's staff, fall back to first in list
+              const staffId = selectedAppointmentStaffId ?? (staff && staff.length > 0 ? staff[0].id : undefined);
 
-            // Confirm payment (creates sale, calculates commissions, updates appointment)
-            const response = await paymentConfirmationService.confirmPayment(confirmationRequest);
+              // Create payment confirmation request
+              const confirmationRequest: PaymentConfirmationRequest = {
+                businessId: businessId!,
+                staffId: staffId,
+                clientId: selectedClient ? Number(selectedClient.id) : undefined,
+                clientName: selectedClient ? getClientDisplayName(selectedClient) : undefined,
+                items: saleItems,
+                // #31: these were hardcoded to zero, so the recorded sale was always at
+                // full price even when the screen showed a discount and the customer paid
+                // the discounted total. Backend #34 had to land first — with the discount
+                // finally arriving, commissions would otherwise have been paid on gross.
+                discountAmount: paymentData.discountAmount,
+                discountPercent: paymentData.discountPercent,
+                tipAmount: paymentData.tip,
+                tipPercent: paymentData.tipPercent,
+                paymentMethod: paymentMethodMap[paymentData.paymentMethod] || 'CASH',
+                // The tenders, when the checkout screen collected more than one.
+                payments: paymentData.payments,
+                paymentAmount: paymentData.amount,
+                giftCardCode: paymentData.giftCardCode,
+                splitCashAmount: paymentData.splitCashAmount,
+                splitCardAmount: paymentData.splitCardAmount,
+                // One visit, one sale: every booking on the ticket settles with it.
+                appointmentIds: ticketApptIds.length > 0 ? ticketApptIds : undefined,
+                appointmentId: ticketApptIds.length > 0 ? undefined : selectedAppointmentId || undefined,
+                promoCode: bookedPromo?.code,
+                notes: ticketNote.trim() || undefined,
+              };
 
-            // Success
-            toast.success(tr("sales.paymentProcessedSuccessfully"));
-            setLastSale({
-              saleId: response.saleId,
-              total: Number(response.totalAmount ?? paymentData.amount),
-              change: paymentData.paymentMethod === "cash" ? Math.max(0, paymentData.change) : 0,
-              method: paymentData.paymentMethod,
-              client: selectedClient ? getClientDisplayName(selectedClient) : null,
-              lines: basket.map((item) => {
-                const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
-                return { name: item.name, price: isNaN(raw) ? 0 : raw };
-              }),
-              at: new Date(),
-            });
-            // The shelf just changed; show what is left, not what was there before the sale.
-            if (businessId) productService.list(businessId).then(setProducts).catch(() => {});
+              // Confirm payment (creates sale, calculates commissions, updates appointment)
+              const response = await paymentConfirmationService.confirmPayment(confirmationRequest);
+
+              // Success
+              toast.success(tr("sales.paymentProcessedSuccessfully"));
+              setLastSale({
+                saleId: response.saleId,
+                total: Number(response.totalAmount ?? paymentData.amount),
+                change: paymentData.paymentMethod === "cash" ? Math.max(0, paymentData.change) : 0,
+                method: paymentData.paymentMethod,
+                client: selectedClient ? getClientDisplayName(selectedClient) : null,
+                lines: basket.map((item) => {
+                  const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
+                  return { name: item.name, price: isNaN(raw) ? 0 : raw };
+                }),
+                at: new Date(),
+              });
+              // The shelf just changed; show what is left, not what was there before the sale.
+              if (businessId) productService.list(businessId).then(setProducts).catch(() => {});
+              setShowPaymentMethod(false);
+              setBasket([]);
+              setSelectedClient(null);
+              setSelectedAppointmentId(null);
+              setSelectedAppointmentStaffId(null);
+              setTicketNote("");
+            } catch (error) {
+              console.error('Failed to process payment:', error);
+              toast.error((error instanceof Error && error.message) || tr("sales.failedToProcessPaymentPlease"));
+            }
+          }}
+          onCancel={() => setShowPaymentMethod(false)}
+          onDiscard={() => {
             setShowPaymentMethod(false);
-            setBasket([]);
-            setSelectedClient(null);
+            clearBasket();
             setSelectedAppointmentId(null);
             setSelectedAppointmentStaffId(null);
             setTicketNote("");
-          } catch (error) {
-            console.error('Failed to process payment:', error);
-            toast.error((error instanceof Error && error.message) || tr("sales.failedToProcessPaymentPlease"));
-          }
-        }}
-        onCancel={() => setShowPaymentMethod(false)}
-        onDiscard={() => {
-          setShowPaymentMethod(false);
-          clearBasket();
-          setSelectedAppointmentId(null);
-          setSelectedAppointmentStaffId(null);
-          setTicketNote("");
-        }}
-      />
+          }}
+        />
+      </Suspense>
     );
   }
 

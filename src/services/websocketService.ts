@@ -1,12 +1,37 @@
 import { WS_BASE_URL } from '@/config/api';
 import { Appointment } from './appointmentService';
 import { Sale } from './saleService';
-import SockJS from 'sockjs-client';
-import Stomp, { Client, Subscription } from 'stompjs';
+import type { Client, Subscription } from 'stompjs';
 import { TimeOff } from './timeOffService';
 import { t } from "@/i18n";
 
 type MessageHandler<T> = (data: T) => void;
+
+/*
+ * SockJS + STOMP (~20 KB gzipped) used to sit on the critical path of every panel screen.
+ * They are fetched on the first connect, after the first paint and an idle moment: live
+ * updates start a second or two later, while the page's own data is already fresh.
+ */
+let realtimeLibs: Promise<{ SockJS: typeof import('sockjs-client'); Stomp: typeof import('stompjs') }> | null = null;
+function loadRealtimeLibs() {
+  if (!realtimeLibs) {
+    realtimeLibs = new Promise<void>((resolve) => {
+      const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
+        .requestIdleCallback;
+      requestAnimationFrame(() => (idle ? idle(() => resolve(), { timeout: 2000 }) : setTimeout(resolve, 500)));
+    })
+      .then(() => Promise.all([import('sockjs-client'), import('stompjs')]))
+      .then(([sockjs, stomp]) => {
+        // CommonJS packages: the value is on .default once bundled, on the module itself otherwise.
+        const pick = <T,>(m: unknown): T => ((m as { default?: T }).default ?? m) as T;
+        return { SockJS: pick<typeof import('sockjs-client')>(sockjs), Stomp: pick<typeof import('stompjs')>(stomp) };
+      });
+    realtimeLibs.catch(() => {
+      realtimeLibs = null; // a later connect may try again
+    });
+  }
+  return realtimeLibs;
+}
 
 class WebSocketService {
   private socket: WebSocket | null = null;
@@ -48,6 +73,13 @@ class WebSocketService {
     }
 
     this.isConnecting = true;
+    let SockJS: typeof import('sockjs-client') | undefined;
+    let Stomp: typeof import('stompjs') | undefined;
+    try {
+      ({ SockJS, Stomp } = await loadRealtimeLibs());
+    } catch {
+      /* handled below as "libraries not loaded" */
+    }
     return new Promise((resolve, reject) => {
       try {
         // Clean up existing connection if any (without triggering reconnection)

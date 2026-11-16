@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -27,7 +27,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { AppointmentBlock, StaffAvatar, type Appointment, type Staff } from "@/components/calendar/AppointmentBlock";
-import { AppointmentModal } from "@/components/calendar/AppointmentModal";
+// The visit sheet (~700 lines plus refund dialog and client picker) is only needed once a
+// visit is opened: its own chunk, fetched on idle after the calendar has painted.
+const loadAppointmentModal = () => import("@/components/calendar/AppointmentModal");
+const AppointmentModal = lazy(() => loadAppointmentModal().then((m) => ({ default: m.AppointmentModal })));
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -634,6 +637,19 @@ export default function CalendarPage() {
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Mounted from the first open on (so its close animation still plays); prefetched on idle.
+  const [modalMounted, setModalMounted] = useState(false);
+  useEffect(() => {
+    if (isModalOpen) setModalMounted(true);
+  }, [isModalOpen]);
+  useEffect(() => {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    const warm = () => void loadAppointmentModal().catch(() => undefined);
+    const id = idle ? idle(warm) : window.setTimeout(warm, 2000);
+    return () => {
+      if (!idle) window.clearTimeout(id);
+    };
+  }, []);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [monthViewDate, setMonthViewDate] = useState(new Date());
   const [weekViewDate, setWeekViewDate] = useState(new Date());
@@ -2631,15 +2647,19 @@ export default function CalendarPage() {
           {/* New booking: the top bar button (desktop) and the tab bar's "+" (phone). */}
 
       {/* Appointment Modal */}
-      <AppointmentModal
-        appointment={selectedAppointment}
-        staff={selectedStaff}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onEdit={handleEditAppointment}
-        onDelete={handleDeleteAppointment}
-        onCancelled={() => { handleCloseModal(); }}
-      />
+      {(modalMounted || isModalOpen) && (
+        <Suspense fallback={null}>
+          <AppointmentModal
+            appointment={selectedAppointment}
+            staff={selectedStaff}
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onEdit={handleEditAppointment}
+            onDelete={handleDeleteAppointment}
+            onCancelled={() => { handleCloseModal(); }}
+          />
+        </Suspense>
+      )}
 
       {/* Day Appointments Popup */}
       <Sheet open={isDayPopupOpen} onOpenChange={setIsDayPopupOpen}>
