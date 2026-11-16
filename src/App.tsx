@@ -73,6 +73,8 @@ if (typeof window !== "undefined") {
   const [first = "", second = ""] = window.location.pathname.replace(/^\/manage\/?/, "").split("/");
   if (/^\d+$/.test(first)) {
     prefetchAuthChecks(first, second);
+    // The platform flags (one cached request per tab) gate parts of every screen.
+    void import("./services/platformService").then((m) => m.platformSettings()).catch(() => undefined);
     void import("./components/ProtectedRoute");
     void import("./components/BusinessOwnerRoute");
     void FIRST_PAGE[second]?.().catch(() => undefined);
