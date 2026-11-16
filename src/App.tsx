@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom
 import LoadingView from "@/components/ui/loading-view";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { BookingConflictDialog } from "@/components/calendar/BookingConflictDialog";
+import { prefetchAuthChecks } from "@/lib/authPrefetch";
 
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -70,6 +71,7 @@ const FIRST_PAGE: Record<string, () => Promise<unknown>> = {
 if (typeof window !== "undefined") {
   const [first = "", second = ""] = window.location.pathname.replace(/^\/manage\/?/, "").split("/");
   if (/^\d+$/.test(first)) {
+    prefetchAuthChecks();
     void import("./components/ProtectedRoute");
     void import("./components/BusinessOwnerRoute");
     void FIRST_PAGE[second]?.().catch(() => undefined);

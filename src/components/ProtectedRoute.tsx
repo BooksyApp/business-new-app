@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { clearAuthData, getAccessToken } from "@/utils/authUtils";
 import { refreshSession } from "@/config/api";
 import { authService } from "@/services/authService";
+import { takeValidation } from "@/lib/authPrefetch";
 import { t } from "@/i18n";
 
 interface ProtectedRouteProps {
@@ -28,7 +29,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
 
       try {
-        let validationResult = await authService.validateToken(accessToken);
+        // The startup check (lib/authPrefetch) answers the first time; later checks ask anew.
+        let validationResult = (await takeValidation(accessToken)) ?? (await authService.validateToken(accessToken));
         // Expired after a day: renew with the refresh token instead of signing out.
         if (!validationResult.valid) {
           const renewed = await refreshSession();

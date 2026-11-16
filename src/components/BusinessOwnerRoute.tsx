@@ -5,6 +5,7 @@ import { getAccessToken } from "@/utils/authUtils";
 import { businessService } from "@/services/businessService";
 import { toast } from "sonner";
 import { t } from "@/i18n";
+import { takeOwnedBusinesses } from "@/lib/authPrefetch";
 
 interface BusinessOwnerRouteProps {
   children: React.ReactNode;
@@ -54,7 +55,10 @@ const BusinessOwnerRoute = ({ children }: BusinessOwnerRouteProps) => {
         }
 
         // Fetch businesses owned by the user
-        const businesses = await businessService.getBusinessesByOwner(user.id, accessToken);
+        // Started at startup in parallel with the token check (lib/authPrefetch); else ask now.
+        const businesses =
+          (await takeOwnedBusinesses(user.id, accessToken)) ??
+          (await businessService.getBusinessesByOwner(user.id, accessToken));
         
         // Check if the businessId in the URL belongs to the user
         const businessIdNum = parseInt(businessId, 10);
