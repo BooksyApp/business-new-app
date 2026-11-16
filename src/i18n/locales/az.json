@@ -1466,6 +1466,7 @@
   },
   "marketing": {
     "campaignSent": "Göndərildi",
+    "campaignSending": "Göndərilir: {{sent}}/{{total}}, qalanı sabah",
     "campaignCancelled": "Ləğv edildi",
     "useCount": "{count, plural, one {# istifadə} other {# istifadə}}",
     "aCodeAndANon": "Kod və mənfi olmayan dəyər lazımdır",

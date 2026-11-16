@@ -65,7 +65,7 @@ const promoStatus = (p: PromoCode): Lifecycle =>
 const campaignStatus = (c: Campaign): Lifecycle =>
   c.status === "DRAFT" ? "draft" : c.status === "QUEUED" ? "queued" : c.status === "FAILED" ? "failed" : c.status === "SENT" ? "active" : "ended";
 
-const campaignLabel = (c: Campaign) => (c.status === "SENT" ? tr("marketing.campaignSent") : c.status === "CANCELLED" ? tr("marketing.campaignCancelled") : undefined);
+const campaignLabel = (c: Campaign) => (c.status === "QUEUED" && (c.sentCount ?? 0) > 0 && (c.queuedCount ?? 0) > 0 ? tr("marketing.campaignSending", { sent: c.sentCount, total: c.recipientCount }) : c.status === "SENT" ? tr("marketing.campaignSent") : c.status === "CANCELLED" ? tr("marketing.campaignCancelled") : undefined);
 
 const valueLabel = (type: string, value: number | string) =>
   type === "PERCENT" ? `${Number(value) || 0}% off` : `${money(value, currencySymbol())} off`;

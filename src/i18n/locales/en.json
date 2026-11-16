@@ -1466,6 +1466,7 @@
   },
   "marketing": {
     "campaignSent": "Sent",
+    "campaignSending": "Sending: {{sent}}/{{total}}, the rest tomorrow",
     "campaignCancelled": "Cancelled",
     "useCount": "{count, plural, one {# use} other {# uses}}",
     "aCodeAndANon": "A code and a non-negative value are required",

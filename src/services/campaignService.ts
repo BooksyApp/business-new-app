@@ -14,6 +14,9 @@ export interface Campaign {
   body: string;
   status: "DRAFT" | "QUEUED" | "SENT" | "FAILED" | "CANCELLED";
   recipientCount: number;
+  /** Recipients already sent / still waiting: a big campaign is spread over days by daily email limits. */
+  sentCount?: number;
+  queuedCount?: number;
   createdAt: string | null;
 }
 

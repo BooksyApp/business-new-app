@@ -1466,6 +1466,7 @@
   },
   "marketing": {
     "campaignSent": "Отправлена",
+    "campaignSending": "Отправляется: {{sent}}/{{total}}, остальное завтра",
     "campaignCancelled": "Отменена",
     "useCount": "{count, plural, one {# использование} few {# использования} many {# использований} other {# использования}}",
     "aCodeAndANon": "Нужны код и неотрицательное значение",
