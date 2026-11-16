@@ -129,7 +129,8 @@ export function BenefitsPanel() {
 interface AuthShellProps {
   children: ReactNode;
   /** The pill in the header row: "Sign up" on sign-in, "Log in" on sign-up. */
-  headerLink: { label: string; to: string };
+  /** Omitted once the person is signed in (the welcome screen after sign-up). */
+  headerLink?: { label: string; to: string };
   /** Right-hand panel on a desktop. Defaults to the benefits. */
   aside?: ReactNode;
   /** Card width; sign-up's question screens want a little more than sign-in. */
@@ -173,12 +174,14 @@ export function AuthShell({ children, headerLink, aside, cardClassName, footer =
         </a>
         <div className="flex items-center gap-5">
           <span className="hidden text-sm text-[rgb(var(--reg-ink)/0.75)] sm:inline">{t("auth.forBusiness")}</span>
+          {headerLink && (
           <Link
             to={headerLink.to}
             className="inline-flex h-11 items-center rounded-full bg-white/80 px-5 text-sm font-semibold text-[rgb(var(--reg-ink))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_8px_24px_-8px_rgb(var(--reg-ink)/0.1)] ring-1 ring-[rgb(var(--reg-ink)/0.06)] backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
           >
             {headerLink.label}
           </Link>
+          )}
         </div>
       </header>
 

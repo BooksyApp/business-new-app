@@ -663,7 +663,7 @@ const RegistrationPage = () => {
 
   if (registered) {
     return (
-      <AuthShell headerLink={{ label: tr("registration.logIn"), to: "/login" }} aside={preview} footer={false}>
+      <AuthShell aside={preview} footer={false}>
         <div className="py-4 text-center md:py-6">
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))] text-[rgb(var(--reg-ink))] animate-in zoom-in-75 duration-500 motion-reduce:animate-none">
             <Check className="h-8 w-8" aria-hidden />
