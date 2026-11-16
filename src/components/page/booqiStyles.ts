@@ -14,4 +14,4 @@ export const sheetSecondary =
   "h-[52px] min-w-0 flex-1 whitespace-normal px-4 leading-tight rounded-full border border-[rgb(var(--reg-line))] bg-white text-base font-semibold text-[rgb(var(--reg-ink))] hover:bg-[rgb(var(--reg-canvas))]";
 
 export const sheetPrimary =
-  "h-[52px] min-w-0 flex-[1.6] whitespace-normal px-4 leading-tight rounded-full text-base font-semibold text-white bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110 disabled:opacity-60";
+  "h-[52px] min-w-0 flex-1 sm:flex-[1.6] whitespace-normal px-4 leading-tight rounded-full text-base font-semibold text-white bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110 disabled:opacity-60";
