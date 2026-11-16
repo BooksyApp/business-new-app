@@ -72,7 +72,7 @@ const FIRST_PAGE: Record<string, () => Promise<unknown>> = {
 if (typeof window !== "undefined") {
   const [first = "", second = ""] = window.location.pathname.replace(/^\/manage\/?/, "").split("/");
   if (/^\d+$/.test(first)) {
-    prefetchAuthChecks();
+    prefetchAuthChecks(first, second);
     void import("./components/ProtectedRoute");
     void import("./components/BusinessOwnerRoute");
     void FIRST_PAGE[second]?.().catch(() => undefined);

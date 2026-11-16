@@ -45,6 +45,7 @@ export const getCurrentBusinessId = (): number => {
 export const DEFAULT_BUSINESS_ID = 1;
 
 import { getAccessToken, isTokenValid, clearAuthData } from '@/utils/authUtils';
+import { takeEarly } from '@/lib/authPrefetch';
 import { t } from "@/i18n";
 
 // Helper function to clear auth data and redirect to login
@@ -117,6 +118,14 @@ class ApiClient {
       console.warn('No access token found, redirecting to login');
       clearAuthAndRedirect();
       throw new Error(t("utils.noAuthenticationToken"));
+    }
+
+    // The first screen's data may already be on its way (lib/authPrefetch, started with the
+    // auth checks at startup). Used once; on any miss the request goes out as usual.
+    if (requireAuth && !retried && (!options.method || options.method === 'GET')) {
+      const earlyAnswer = takeEarly(endpoint, accessToken);
+      const text = earlyAnswer ? await earlyAnswer : null;
+      if (text !== null) return (text ? JSON.parse(text) : null) as T;
     }
 
     // A file upload (FormData) needs the browser's own multipart Content-Type with its boundary.

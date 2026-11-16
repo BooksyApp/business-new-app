@@ -34,13 +34,80 @@ const get = <T,>(path: string, token: string, init?: RequestInit): Promise<T | n
     .then((r) => (r.ok ? (r.json() as Promise<T>) : null))
     .catch(() => null);
 
-export function prefetchAuthChecks(): void {
+/*
+ * The first screen's own GETs, started together with the checks above. Without this the
+ * page could only ask for its data once its chunk had downloaded and rendered — on a phone
+ * a second after the checks were done. apiClient.get takes a matching answer once, within
+ * EARLY_TTL_MS; anything else (another URL, a 403, an error, too late) is asked normally.
+ * URLs mirror exactly what the pages request (checked against a network waterfall).
+ */
+const EARLY_TTL_MS = 15_000;
+const early = new Map<string, { token: string; at: number; answer: Promise<string | null> }>();
+const FIRST_SCREEN: Record<string, (b: string, day: string) => string[]> = {
+  calendar: (b, day) => [
+    `/businesses/${b}`,
+    `/businesses/${b}/readiness`,
+    `/bookings/business/${b}?startDate=${day}&endDate=${day}`,
+    `/staff/business/${b}`,
+    `/services/business/${b}`,
+    `/time-off/business/${b}`,
+    `/business-hours/business/${b}`,
+    `/services/business/${b}/discounts`,
+    `/waitlist/business/${b}`,
+    `/clients/business/${b}`,
+  ],
+  sales: (b, day) => [
+    `/businesses/${b}`,
+    `/services/business/${b}`,
+    `/addons/business/${b}`,
+    `/staff/business/${b}`,
+    `/services/business/${b}/discounts`,
+    `/bookings/business/${b}/clients?limit=1000&offset=0`,
+    `/businesses/${b}/memberships?activeOnly=true`,
+    `/quick-sale/business/${b}`,
+    `/bookings/business/${b}?startDate=${day}&endDate=${day}`,
+  ],
+  clients: (b) => [
+    `/businesses/${b}`,
+    `/services/business/${b}`,
+    `/staff/business/${b}`,
+    `/bookings/business/${b}/clients?limit=1000&offset=0`,
+    `/invitations/business/${b}`,
+  ],
+};
+FIRST_SCREEN[""] = FIRST_SCREEN.calendar;
+FIRST_SCREEN.contacts = FIRST_SCREEN.clients;
+FIRST_SCREEN.shopping = FIRST_SCREEN.sales;
+
+function localDay(d = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** An early answer for this GET (raw body text), once; null when there is none to use. */
+export function takeEarly(endpoint: string, token: string | null): Promise<string | null> | null {
+  const e = early.get(endpoint);
+  if (!e) return null;
+  early.delete(endpoint);
+  if (e.token !== token || Date.now() - e.at > EARLY_TTL_MS) return null;
+  return e.answer;
+}
+
+/** `businessId` / `page`: the first two path segments under /manage, when on a business page. */
+export function prefetchAuthChecks(businessId?: string, page?: string): void {
   try {
     const token = getAccessToken();
     if (!token || !unexpired(token)) return;
     validation = { token, answer: get<Validation>("/auth/validate", token, { method: "POST" }) };
     const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
     if (user?.id) owned = { token, userId: user.id, answer: get<Owned>(`/businesses/owner/${user.id}`, token) };
+    const urls = businessId ? FIRST_SCREEN[page ?? ""]?.(businessId, localDay()) : undefined;
+    for (const url of urls ?? []) {
+      const answer = fetch(`${API_BASE_URL}${url}`, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok && r.status !== 204 ? r.text() : null))
+        .catch(() => null);
+      early.set(url, { token, at: Date.now(), answer });
+    }
   } catch {
     /* no storage / bad JSON: the guards do their own checks */
   }
