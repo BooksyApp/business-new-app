@@ -971,6 +971,8 @@
     "fullDay2": "(Bütün gün)",
     "reason3": "Səbəb:",
     "createAnyway": "Yenə də yarat",
+    "visitCreated": "1 vizit ({count} xidmət) yaradıldı",
+    "visitNotCreated": "Vizit yaradılmadı — heç nə yazılmadı. {reason}",
     "appointmentsCreated": "{count, plural, one {# rezerv yaradıldı} other {# rezerv yaradıldı}}",
     "viewDay": "Gün",
     "viewWeek": "Həftə",

@@ -971,6 +971,8 @@
     "fullDay2": "(Весь день)",
     "reason3": "Причина:",
     "createAnyway": "Всё равно создать",
+    "visitCreated": "{count, plural, one {Создан 1 визит (# услуга)} few {Создан 1 визит (# услуги)} many {Создан 1 визит (# услуг)} other {Создан 1 визит (# услуги)}}",
+    "visitNotCreated": "Визит не создан — ничего не записано. {reason}",
     "appointmentsCreated": "{count, plural, one {Создана # запись} few {Создано # записи} many {Создано # записей} other {Создано # записи}}",
     "viewDay": "День",
     "viewWeek": "Неделя",

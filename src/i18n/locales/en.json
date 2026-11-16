@@ -971,6 +971,8 @@
     "fullDay2": "(Full Day)",
     "reason3": "Reason:",
     "createAnyway": "Create Anyway",
+    "visitCreated": "{count, plural, one {1 visit (# service) created} other {1 visit (# services) created}}",
+    "visitNotCreated": "Visit not created — nothing was booked. {reason}",
     "appointmentsCreated": "{count, plural, one {# appointment} other {# appointments}} created",
     "viewDay": "Day",
     "viewWeek": "Week",

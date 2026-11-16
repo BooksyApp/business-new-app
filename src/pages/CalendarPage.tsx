@@ -50,7 +50,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { useFeatureFlags } from "@/services/platformService";
-import { appointmentService } from "@/services/appointmentService";
+import { appointmentService, BookingConflictDeclined } from "@/services/appointmentService";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -130,6 +130,14 @@ function getTimeOffsForStaffAndDate(timeOffs: TimeOff[], staffId: string, date: 
     const currentDate = parse(dateStr, "yyyy-MM-dd", new Date());
     return currentDate >= startDate && currentDate <= endDate;
   });
+}
+
+/** LR-01: a valid ?date=YYYY-MM-DD from a query string, else null. */
+function dateFromQuery(search: string): Date | null {
+  const raw = new URLSearchParams(search).get("date");
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const d = parse(raw, "yyyy-MM-dd", new Date());
+  return isNaN(d.getTime()) ? null : d;
 }
 
 function parseTime(time: string): number {
@@ -467,7 +475,8 @@ function groupConflictingAppointments(appointments: Appointment[]): Appointment[
 
 export default function CalendarPage() {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // LR-01: the salon email's "Open in calendar" link lands on ?date=YYYY-MM-DD — open that day.
+  const [currentDate, setCurrentDate] = useState(() => dateFromQuery(window.location.search) ?? new Date());
   const businessId = useBusinessId();
   
   const { getPath } = useNavigation();
@@ -649,6 +658,16 @@ export default function CalendarPage() {
     setIsNewAppointmentOpen(true);
     const next = new URLSearchParams(searchParams);
     ["new", "clientId", "clientName", "clientPhone", "clientEmail"].forEach((k) => next.delete(k));
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+  // A ?date= link followed while the calendar is already open: jump there, then drop the
+  // param so later day navigation is not pulled back to it.
+  useEffect(() => {
+    if (!searchParams.has("date")) return;
+    const d = dateFromQuery(`?${searchParams.toString()}`);
+    if (d) setCurrentDate(d);
+    const next = new URLSearchParams(searchParams);
+    next.delete("date");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
   useBrandFont();
@@ -1027,17 +1046,58 @@ export default function CalendarPage() {
     setIsBatchSubmitting(true);
     let created = 0;
     let skipped = 0;
-    for (const r of reqs) {
-      try {
-        await createAppointmentAPI(r, { silent: true });
-        created++;
-      } catch {
+    let visitsCreated = 0;
+    const failedVisits: string[] = [];
+    // H-01: the services of one visit stand or fall together (as a web cart does). Requests of
+    // one visit are consecutive; if one fails, the ones already saved are removed again.
+    for (let i = 0; i < reqs.length; ) {
+      const visitId = reqs[i].visitId;
+      let j = i + 1;
+      while (visitId && j < reqs.length && reqs[j].visitId === visitId) j++;
+      const group = reqs.slice(i, j);
+      i = j;
+      const savedIds: string[] = [];
+      let failure: unknown = null;
+      for (const r of group) {
+        try {
+          const saved = await createAppointmentAPI(r, { silent: true });
+          if (saved?.apiId) savedIds.push(saved.apiId);
+        } catch (err) {
+          failure = err;
+          break;
+        }
+      }
+      if (failure === null) {
+        created += group.length;
+        if (visitId) visitsCreated++;
+        continue;
+      }
+      if (!visitId) {
         skipped++;
+        continue;
+      }
+      // Undo silently (DELETE = soft cancel without a customer email), so no half visit stays.
+      for (const id of savedIds) {
+        try {
+          await appointmentService.deleteAppointment(id);
+        } catch {
+          /* best effort; the calendar refresh below shows anything left */
+        }
+      }
+      skipped += group.length;
+      if (!(failure instanceof BookingConflictDeclined)) {
+        failedVisits.push((failure instanceof Error && failure.message) || "");
       }
     }
     setIsBatchSubmitting(false);
+    if (failedVisits.length > 0 || skipped > 0) refreshAppointments();
 
-    if (created > 0 && skipped === 0) {
+    if (failedVisits.length > 0) {
+      const reason = failedVisits.find((m) => m) ?? "";
+      toast.error(tr("calendar.visitNotCreated", { reason }));
+    } else if (created > 0 && skipped === 0 && visitsCreated === 1 && created === reqs.length && bookingMode !== "recurring") {
+      toast.success(tr("calendar.visitCreated", { count: created }));
+    } else if (created > 0 && skipped === 0) {
       toast.success(tr("calendar.appointmentsCreated", { count: created }));
     } else if (created > 0) {
       toast.info(tr("calendar.createdSkippedSlotAlreadyTaken", { created, skipped }));
