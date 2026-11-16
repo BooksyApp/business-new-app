@@ -2,6 +2,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import type { Plugin } from "vite";
 import type { OutputBundle, OutputChunk } from "rollup";
@@ -66,12 +67,27 @@ function firstScreenPreload(): Plugin {
         const c = chunkOf(`src/i18n/locales/${l}.json`);
         if (c) dicts[l] = c.fileName;
       }
+      const templates = JSON.parse(fs.readFileSync(path.resolve(__dirname, "src/lib/firstScreen.json"), "utf8"));
       const code =
         `(function(){try{var R=${JSON.stringify(routes)},D=${JSON.stringify(dicts)},B="/manage/";` +
         `var p=location.pathname.replace(/^\\/manage\\/?/,"").split("/"),l;` +
         `try{l=localStorage.getItem("booqi.hub.locale")}catch(e){}if(!D[l])l="az";` +
         `var f=(/^\\d+$/.test(p[0]||"")?R[p[1]||""]||[]:[]).concat(D[l]?[D[l]]:[]);` +
-        `f.forEach(function(x){var k=document.createElement("link");k.rel="modulepreload";k.crossOrigin="";k.href=B+x;document.head.appendChild(k)})}catch(e){}})();`;
+        `f.forEach(function(x){var k=document.createElement("link");k.rel="modulepreload";k.crossOrigin="";k.href=B+x;document.head.appendChild(k)})}catch(e){}})();` +
+        // The same first-screen GETs lib/authPrefetch starts, begun here a second earlier and
+        // handed over through window.__booqiEarly (adopted only with the same token).
+        `(function(){try{var T=${JSON.stringify(templates)},A={"":"calendar",contacts:"clients",shopping:"sales"};` +
+        `var p=location.pathname.replace(/^\\/manage\\/?/,"").split("/");if(!/^\\d+$/.test(p[0]||""))return;` +
+        `var t=localStorage.getItem("accessToken");if(!t)return;` +
+        `var q=t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");while(q.length%4)q+="=";` +
+        `var x=JSON.parse(atob(q)).exp;if(!x||Date.now()>x*1e3-3e4)return;` +
+        `var E=window.__booqiEarly={},n=Date.now(),d=new Date(),z=function(v){return(v<10?"0":"")+v},` +
+        `day=d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate());` +
+        `var go=function(u,m){E[u]={token:t,at:n,answer:fetch("/api"+u,{method:m||"GET",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t}})` +
+        `.then(function(r){return r.ok&&r.status!==204?r.text():null})["catch"](function(){return null})}};` +
+        `go("/auth/validate","POST");var us=null;try{us=JSON.parse(localStorage.getItem("user")||"null")}catch(e){}` +
+        `if(us&&us.id)go("/businesses/owner/"+us.id);` +
+        `(T[A[p[1]||""]||p[1]]||[]).forEach(function(u){go(u.replace(/\\{b\\}/g,p[0]).replace(/\\{day\\}/g,day))})}catch(e){}})();`;
       const fileName = `assets/js/boot-${Buffer.from(code).toString("base64url").slice(-10)}.js`;
       this.emitFile({ type: "asset", fileName, source: code });
       html.source = String(html.source).replace(

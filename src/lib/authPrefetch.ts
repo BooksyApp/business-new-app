@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "@/config/api";
 import { getAccessToken } from "@/utils/authUtils";
+import firstScreen from "./firstScreen.json";
 
 /**
  * Opening the panel on a business page ran two checks one after the other: the token
@@ -43,41 +44,11 @@ const get = <T,>(path: string, token: string, init?: RequestInit): Promise<T | n
  */
 const EARLY_TTL_MS = 15_000;
 const early = new Map<string, { token: string; at: number; answer: Promise<string | null> }>();
-const FIRST_SCREEN: Record<string, (b: string, day: string) => string[]> = {
-  calendar: (b, day) => [
-    `/businesses/${b}`,
-    `/businesses/${b}/readiness`,
-    `/bookings/business/${b}?startDate=${day}&endDate=${day}`,
-    `/staff/business/${b}`,
-    `/services/business/${b}`,
-    `/time-off/business/${b}`,
-    `/business-hours/business/${b}`,
-    `/services/business/${b}/discounts`,
-    `/waitlist/business/${b}`,
-    `/clients/business/${b}`,
-  ],
-  sales: (b, day) => [
-    `/businesses/${b}`,
-    `/services/business/${b}`,
-    `/addons/business/${b}`,
-    `/staff/business/${b}`,
-    `/services/business/${b}/discounts`,
-    `/bookings/business/${b}/clients?limit=1000&offset=0`,
-    `/businesses/${b}/memberships?activeOnly=true`,
-    `/quick-sale/business/${b}`,
-    `/bookings/business/${b}?startDate=${day}&endDate=${day}`,
-  ],
-  clients: (b) => [
-    `/businesses/${b}`,
-    `/services/business/${b}`,
-    `/staff/business/${b}`,
-    `/bookings/business/${b}/clients?limit=1000&offset=0`,
-    `/invitations/business/${b}`,
-  ],
-};
-FIRST_SCREEN[""] = FIRST_SCREEN.calendar;
-FIRST_SCREEN.contacts = FIRST_SCREEN.clients;
-FIRST_SCREEN.shopping = FIRST_SCREEN.sales;
+// One list for this module and the HTML boot script (vite.config.ts), so they cannot drift.
+const TEMPLATES = firstScreen as Record<string, string[]>;
+const ALIAS: Record<string, string> = { "": "calendar", contacts: "clients", shopping: "sales" };
+const firstScreenUrls = (page: string, b: string, day: string): string[] | undefined =>
+  TEMPLATES[ALIAS[page] ?? page]?.map((u) => u.replace(/\{b\}/g, b).replace(/\{day\}/g, day));
 
 function localDay(d = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -98,11 +69,33 @@ export function prefetchAuthChecks(businessId?: string, page?: string): void {
   try {
     const token = getAccessToken();
     if (!token || !unexpired(token)) return;
-    validation = { token, answer: get<Validation>("/auth/validate", token, { method: "POST" }) };
+    // The HTML boot script (vite.config.ts) may have started these already, before this
+    // bundle had even downloaded: adopt its in-flight requests when they carry this token.
+    const boot = (window as Window & { __booqiEarly?: Record<string, { token: string; at: number; answer: Promise<string | null> }> })
+      .__booqiEarly;
+    const fromBoot = (url: string) => {
+      const e = boot?.[url];
+      return e && e.token === token ? e : undefined;
+    };
+    for (const [url, e] of Object.entries(boot ?? {})) if (e.token === token) early.set(url, e);
+    const parsed = <T,>(e: { answer: Promise<string | null> }): Promise<T | null> =>
+      e.answer.then((text) => (text ? (JSON.parse(text) as T) : null)).catch(() => null);
+    const bootValidation = fromBoot("/auth/validate");
+    early.delete("/auth/validate");
+    validation = {
+      token,
+      answer: bootValidation ? parsed<Validation>(bootValidation) : get<Validation>("/auth/validate", token, { method: "POST" }),
+    };
     const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
-    if (user?.id) owned = { token, userId: user.id, answer: get<Owned>(`/businesses/owner/${user.id}`, token) };
-    const urls = businessId ? FIRST_SCREEN[page ?? ""]?.(businessId, localDay()) : undefined;
+    if (user?.id) {
+      const ownedUrl = `/businesses/owner/${user.id}`;
+      const bootOwned = fromBoot(ownedUrl);
+      early.delete(ownedUrl);
+      owned = { token, userId: user.id, answer: bootOwned ? parsed<Owned>(bootOwned) : get<Owned>(ownedUrl, token) };
+    }
+    const urls = businessId ? firstScreenUrls(page ?? "", businessId, localDay()) : undefined;
     for (const url of urls ?? []) {
+      if (early.has(url)) continue; // already started by the HTML boot script
       const answer = fetch(`${API_BASE_URL}${url}`, { headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } })
         .then((r) => (r.ok && r.status !== 204 ? r.text() : null))
         .catch(() => null);
