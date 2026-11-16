@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { webUrl } from "./authStyles";
 import "./auth-tokens.css";
 import { t } from "@/i18n";
+import { useSupportHref } from "@/services/platformService";
 
 /**
  * The frame of the panel's sign-in and sign-up — a sibling of booqi-web's /signin, which the
@@ -142,6 +143,7 @@ interface AuthShellProps {
 }
 
 export function AuthShell({ children, headerLink, aside, cardClassName, footer = true, mobileBarSpace = false }: AuthShellProps) {
+  const supportHref = useSupportHref(`${webUrl}/support`);
   // The hub ships Inter only; its doors wear the brand face, as on booqi-web. If the font
   // cannot load, the stack falls back to Inter — nothing breaks.
   useEffect(() => {
@@ -197,7 +199,7 @@ export function AuthShell({ children, headerLink, aside, cardClassName, footer =
             {footer && (
               <div className="mt-8 border-t border-[rgb(var(--reg-line)/0.7)] pt-6 text-center text-sm text-[rgb(var(--reg-muted))]">
                 <p className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-                  <a href="mailto:support@booqi.app?subject=booqi%20for%20business" className="hover:text-[rgb(var(--reg-ink))]">{t("auth.support")}</a>
+                  <a href={supportHref} className="hover:text-[rgb(var(--reg-ink))]">{t("auth.support")}</a>
                   <a href={`${webUrl}/legal/terms`} className="hover:text-[rgb(var(--reg-ink))]">{t("auth.terms")}</a>
                   <a href={`${webUrl}/legal/privacy`} className="hover:text-[rgb(var(--reg-ink))]">{t("auth.privacy")}</a>
                 </p>

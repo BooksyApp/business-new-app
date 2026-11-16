@@ -35,6 +35,7 @@ import "@/components/auth/auth-tokens.css";
 
 import { useVisibleNavGroups, type NavGroup } from "./navigation";
 import { t } from "@/i18n";
+import { useSupportHref } from "@/services/platformService";
 
 /**
  * The panel's navigation, in the booqi look of the new auth and calendar pages: a light
@@ -228,6 +229,7 @@ const itemOn = "bg-[rgb(var(--reg-brand)/0.1)] text-[rgb(var(--reg-ink))]";
 
 export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const m = useNavModel();
+  const supportHref = useSupportHref("https://getbooqi.tech/support"); // A-06
   const [selectedLanguage, setSelectedLanguage] = useHubLocale();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   useBrandFont();
@@ -389,7 +391,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             </MaybeTip>
           )}
           <MaybeTip show={collapsed} label={t("layout.help")}>
-            <a href="mailto:support@booqi.app?subject=booqi%20for%20business" className={cn(itemBase, itemIdle, collapsed && "justify-center px-0")}>
+            <a href={supportHref} className={cn(itemBase, itemIdle, collapsed && "justify-center px-0")}>
               <LifeBuoy size={20} strokeWidth={1.6} className="shrink-0 text-[rgb(var(--reg-ink)/0.55)]" />
               {!collapsed && t("layout.help")}
             </a>
@@ -502,6 +504,7 @@ export function MobileTopBar() {
 }
 
 export function MobileTabBar() {
+  const supportHref = useSupportHref("https://getbooqi.tech/support"); // A-06
   const m = useNavModel();
   const [moreOpen, setMoreOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useHubLocale();
@@ -623,7 +626,7 @@ export function MobileTabBar() {
                   </NavLink>
                 </li>
                 <li className="border-b border-[rgb(var(--reg-line)/0.6)]">
-                  <a href="mailto:support@booqi.app?subject=booqi%20for%20business" className="flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold">
+                  <a href={supportHref} className="flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold">
                     <LifeBuoy size={18} strokeWidth={1.75} />{" "}{t("layout.help")}
                   </a>
                 </li>

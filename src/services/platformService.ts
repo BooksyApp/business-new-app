@@ -26,6 +26,8 @@ export interface PlatformSettings {
   onlinePayments?: boolean;
   /** Support WhatsApp number; absent until the platform configures one. */
   supportWhatsapp?: string;
+  /** A-06: support address ops set in the admin; absent/empty until configured. */
+  supportEmail?: string;
   /** Which features the platform has switched on for this panel. */
   flags: Record<string, boolean>;
 }
@@ -92,6 +94,25 @@ export function useFeatureFlags(): Record<string, boolean> {
     };
   }, []);
   return flags;
+}
+
+/**
+ * A-06: where "Support" goes. The admin's support address as a mailto, or the public support
+ * page until one is configured — never a hard-coded address.
+ */
+export function useSupportHref(fallback: string): string {
+  const [href, setHref] = useState(fallback);
+  useEffect(() => {
+    let live = true;
+    platformSettings().then((s) => {
+      const email = String(s.supportEmail ?? '').trim();
+      if (live && email) setHref(`mailto:${email}?subject=booqi%20for%20business`);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return href;
 }
 
 /** Where the panel is being used: dial code and map centre come from the country row. */
