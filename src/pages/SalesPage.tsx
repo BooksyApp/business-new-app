@@ -307,6 +307,8 @@ export default function SalesPage() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [appointmentsError, setAppointmentsError] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
+  // False until today's bookings are first known: the till lays out once, so nothing jumps (CLS).
+  const [appointmentsSettled, setAppointmentsSettled] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   // Arriving from the calendar's "Take payment": open on the settle list with this
   // booking already picked, instead of making the cashier find it again.
@@ -563,6 +565,7 @@ export default function SalesPage() {
         setTodayAppointments([]);
       } finally {
         setLoadingAppointments(false);
+        setAppointmentsSettled(true);
       }
     };
 
@@ -1402,7 +1405,7 @@ export default function SalesPage() {
             {/* ── catalogue ── */}
             <div className="min-w-0 flex-1 space-y-5 px-4 pb-40 pt-4 md:overflow-y-auto md:px-6 md:pb-6 md:pt-5">
               {/* Today's bookings still to be paid — the most common sale, so it leads. */}
-              {(loadingAppointments || appointmentsError || todayAppointments.length > 0) && (
+              {appointmentsSettled && (loadingAppointments || appointmentsError || todayAppointments.length > 0) && (
                 <section aria-label={tr("sales.todaySAppointmentsToCheck")}>
                   <div className="mb-2 flex items-baseline justify-between gap-2">
                     <h2 className="text-base font-extrabold">{tr("sales.toCheckOutToday")}</h2>
@@ -1464,6 +1467,15 @@ export default function SalesPage() {
                 </section>
               )}
 
+              {!appointmentsSettled ? (
+                <div className="space-y-3" aria-busy>
+                  <div className="h-12 animate-pulse rounded-full bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />
+                  <div className="h-10 w-3/4 animate-pulse rounded-full bg-[rgb(var(--reg-ink)/0.05)]" />
+                  <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
+                    {[0, 1, 2, 3].map((i) => <li key={i} className="h-[107px] animate-pulse rounded-[18px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />)}
+                  </ul>
+                </div>
+              ) : (
               <section aria-label={tr("sales.catalogue")} className="space-y-3">
                 <div className="relative">
                   <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
@@ -1542,7 +1554,7 @@ export default function SalesPage() {
                       {action && <div className="mt-4">{action}</div>}
                     </div>
                   );
-                  const loadingBox = <div className="h-40 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />;
+                  const loadingBox = grid([0, 1, 2, 3].map((i) => <li key={i} className="h-[107px] animate-pulse rounded-[18px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />));
 
                   if (activeCategory === "quick-sale") {
                     if (servicesLoading) return loadingBox;
@@ -1665,6 +1677,7 @@ export default function SalesPage() {
                   return null;
                 })()}
               </section>
+              )}
             </div>
 
             {/* ── ticket: a column on desktop, a sheet behind a summary bar on a phone ── */}
