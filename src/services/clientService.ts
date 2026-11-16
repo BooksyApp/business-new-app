@@ -1,4 +1,5 @@
-import { apiClient } from "@/config/api";
+import { API_BASE_URL, apiClient, refreshSession } from "@/config/api";
+import { getAccessToken, isTokenValid } from "@/utils/authUtils";
 
 export interface ClientWithStats {
   id: number;
@@ -102,6 +103,30 @@ class ClientService {
     return apiClient.get<ClientAppointmentRow[]>(
       `/businesses/${businessId}/clients/${clientId}/appointments`
     );
+  }
+
+  /**
+   * R02 G3: the salon's client list as a CSV file (owner, or a role with "Run marketing").
+   * Plain fetch: apiClient parses every answer as JSON. The server writes each export to
+   * the audit log.
+   */
+  async downloadClientsCsv(businessId: number): Promise<void> {
+    let token = getAccessToken();
+    if (token && !isTokenValid(token)) token = await refreshSession();
+    const res = await fetch(`${API_BASE_URL}/clients/business/${businessId}/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error(String(res.status));
+    const blob = await res.blob();
+    const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "clients.csv";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   /**

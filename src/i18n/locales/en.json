@@ -1139,7 +1139,10 @@
     "booqiAccount": "booqi account",
     "invitation": "Invitation",
     "densityCompact": "Compact",
-    "densityDetailed": "Detailed"
+    "densityDetailed": "Detailed",
+    "r02Lapsed60": "60+ days away",
+    "r02ExportCsv": "Export CSV",
+    "r02ExportFailed": "Couldn't export the client list. Try again."
   },
   "createBusiness": {
     "enterYourBusinessName": "Enter your business name",
@@ -1221,7 +1224,16 @@
     "selectBusiness": "Select Business",
     "chooseABusinessToManage": "Choose a business to manage",
     "manageBusiness": "Manage Business",
-    "addABusiness": "Add a business"
+    "addABusiness": "Add a business",
+    "r02BooqiBroughtTitle": "New clients from booqi: {count}",
+    "r02BooqiBroughtTitleLoading": "What booqi brought you",
+    "r02BooqiBroughtSub": "New clients who found you on booqi, shown apart from your own clients who book online through your link or QR code.",
+    "r02FromBooqi": "New from booqi",
+    "r02FromBooqiHint": "Their first booking came from booqi search.",
+    "r02YourOwn": "Your own, online",
+    "r02YourOwnHint": "Booked through your link or QR code.",
+    "r02Last30Days": "last 30 days",
+    "r02AllTime": "all time: {count}"
   },
   "hooks": {
     "failedToLoadAddons": "Failed to load addons",
@@ -1565,7 +1577,12 @@
     "theirInbox": "their inbox",
     "segmentLapsed": "Not seen in 90 days",
     "segmentTopSpenders": "Top spenders",
-    "recipientCount": "· {count, plural, one {# recipient} other {# recipients}}"
+    "recipientCount": "· {count, plural, one {# recipient} other {# recipients}}",
+    "r02Lapsed60": "60+ days",
+    "r02Lapsed60Hint": "Not seen in 60 days",
+    "r02SegmentLapsed60": "Not seen in 60 days",
+    "r02Lapsed60Subject": "It's been a while",
+    "r02Lapsed60Body": "It's been a while since your last visit. There are good times free this week, and booking online takes a minute."
   },
   "media": {
     "thePhotoCouldNotBe": "The photo could not be uploaded.",

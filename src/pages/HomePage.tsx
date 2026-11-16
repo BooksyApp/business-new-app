@@ -12,6 +12,7 @@ import { getUserBusinesses, isBusinessOwner } from "@/utils/businessUtils";
 import { businessService, type Business } from "@/services/businessService";
 import { toast } from "sonner";
 import { analysisService, type AnalyticsOverview } from "@/services/analysisService";
+import { BooqiBroughtCard } from "@/components/home/BooqiBroughtCard";
 import { appointmentService, type Appointment } from "@/services/appointmentService";
 import { format } from "@/i18n/dateFns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -247,6 +248,9 @@ export default function HomePage() {
             );
           })}
         </div>
+
+        {/* R02: what booqi brought vs the salon's own online clients. */}
+        {numericBusinessId ? <BooqiBroughtCard businessId={numericBusinessId} /> : null}
 
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-2">

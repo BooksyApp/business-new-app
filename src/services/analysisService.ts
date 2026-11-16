@@ -1,5 +1,15 @@
 import { apiClient } from '@/config/api';
 
+/** R02: clients booqi brought (marketplace) vs the salon's own clients booking online (link, QR). */
+export interface ClientSourceCounts {
+  booqiClients: number;
+  ownOnlineClients: number;
+}
+export interface ClientSources {
+  last30Days: ClientSourceCounts;
+  allTime: ClientSourceCounts;
+}
+
 export interface DailyRevenue {
   date: string;
   revenue: number;
@@ -297,6 +307,10 @@ export const analysisService = {
     const url = `/analytics/business/${businessId}/overview${queryString ? `?${queryString}` : ''}`;
     
     return apiClient.get<AnalyticsOverview>(url);
+  },
+
+  getClientSources(businessId: number | string): Promise<ClientSources> {
+    return apiClient.get<ClientSources>(`/analytics/business/${businessId}/client-sources`);
   },
   
   async getRevenueAnalytics(

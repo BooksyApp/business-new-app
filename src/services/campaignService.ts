@@ -9,7 +9,7 @@ export interface Campaign {
   businessId: number;
   name: string;
   channel: "EMAIL" | "SMS";
-  segment: "LAPSED_90D" | "TOP_SPENDERS";
+  segment: "LAPSED_60D" | "LAPSED_90D" | "TOP_SPENDERS";
   subject: string | null;
   body: string;
   status: "DRAFT" | "QUEUED" | "SENT" | "FAILED" | "CANCELLED";
