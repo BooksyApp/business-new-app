@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/config/api";
-import { getAccessToken, isTokenValid } from "@/utils/authUtils";
+import { getAccessToken } from "@/utils/authUtils";
 
 /**
  * Opening the panel on a business page ran two checks one after the other: the token
@@ -15,6 +15,17 @@ import { getAccessToken, isTokenValid } from "@/utils/authUtils";
 type Validation = { valid: boolean; message: string; user?: unknown };
 type Owned = { id: number }[];
 
+/** Unexpired by its own clock. JWTs are base64url; plain atob() rejects "-" and "_". */
+function unexpired(token: string): boolean {
+  try {
+    const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(part.padEnd(part.length + ((4 - (part.length % 4)) % 4), "="))) as { exp?: number };
+    return typeof payload.exp === "number" && Date.now() < payload.exp * 1000 - 30_000;
+  } catch {
+    return false;
+  }
+}
+
 let validation: { token: string; answer: Promise<Validation | null> } | null = null;
 let owned: { token: string; userId: number; answer: Promise<Owned | null> } | null = null;
 
@@ -26,9 +37,9 @@ const get = <T,>(path: string, token: string, init?: RequestInit): Promise<T | n
 export function prefetchAuthChecks(): void {
   try {
     const token = getAccessToken();
-    const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
-    if (!token || !isTokenValid(token)) return;
+    if (!token || !unexpired(token)) return;
     validation = { token, answer: get<Validation>("/auth/validate", token, { method: "POST" }) };
+    const user = JSON.parse(localStorage.getItem("user") ?? "null") as { id?: number } | null;
     if (user?.id) owned = { token, userId: user.id, answer: get<Owned>(`/businesses/owner/${user.id}`, token) };
   } catch {
     /* no storage / bad JSON: the guards do their own checks */

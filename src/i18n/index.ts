@@ -26,7 +26,7 @@ export type TParams = Record<string, string | number | boolean | null | undefine
 // Every language is its own chunk (~45 KB gzipped each). main.tsx loads the panel's
 // language before the first render, so only that one is downloaded up front: az and en used
 // to sit in the main bundle together, two thirds of it, on every phone's first load. en,
-// the fallback for a missing key, follows on idle (az and ru are kept complete by
+// the fallback for a missing key, follows a few seconds later (az and ru are kept complete by
 // i18n:check, so nothing waits for it). A switch loads the new language (I18nProvider).
 const DICTS: Partial<Record<HubLocale, Tree>> = {};
 const LAZY: Partial<Record<HubLocale, () => Promise<{ default: unknown }>>> = {
@@ -55,8 +55,8 @@ export async function loadHubLocale(locale: HubLocale): Promise<void> {
   if (locale !== "en" && !DICTS.en && typeof window !== "undefined") {
     const later = () => void loadHubLocale("en");
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
-    if (idle) idle(later);
-    else setTimeout(later, 3000);
+    // Well after the first screen: an early "idle" slot is often the app waiting on data.
+    setTimeout(() => (idle ? idle(later) : later()), 8000);
   }
 }
 

@@ -40,7 +40,7 @@ let sdk: Promise<typeof import("@sentry/react")> | null = null;
 /*
  * The SDK chunk is ~160 KB gzipped. Requested at startup it shared a phone's bandwidth with
  * the first screen's own chunks and data and pushed the first paint back by ~1 s on 4G, so
- * it now loads once the page has finished loading and the browser is idle. An error caught
+ * it now loads a few seconds after the page has loaded, when the browser is idle. An error caught
  * by an error boundary before then loads it at once and is still reported (reportError
  * waits for it); uncaught errors in those first seconds are not — a deliberate trade.
  */
@@ -49,8 +49,9 @@ export function initSentry() {
   const start = () => {
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
       .requestIdleCallback;
-    if (idle) idle(() => void load(), { timeout: 5000 });
-    else setTimeout(() => void load(), 1500);
+    // Not on the first idle moment: a panel waiting on the network is "idle" while its
+    // first screen is still loading. Eight seconds after load, then the next idle slot.
+    setTimeout(() => (idle ? idle(() => void load(), { timeout: 5000 }) : void load()), 8000);
   };
   if (document.readyState === "complete") start();
   else window.addEventListener("load", start, { once: true });
