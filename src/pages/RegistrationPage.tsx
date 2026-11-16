@@ -398,6 +398,8 @@ const RegistrationPage = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   // Set after a successful sign-up: a calm "welcome" screen, then the calendar (still "/").
   const [registered, setRegistered] = useState(false);
+  // LR-02: the welcome button goes to the overview (readiness checklist), not an empty calendar.
+  const [registeredBusinessId, setRegisteredBusinessId] = useState<number | null>(null);
 
   const handleCompleteRegistration = async () => {
     setIsRegistering(true);
@@ -566,6 +568,7 @@ const RegistrationPage = () => {
 
 
       // The welcome screen's button goes on to the portal (home page).
+      setRegisteredBusinessId(business.id);
       setRegistered(true);
       window.scrollTo({ top: 0 });
     } catch (error) {
@@ -669,8 +672,8 @@ const RegistrationPage = () => {
           <p className="mx-auto mt-3 max-w-sm text-base leading-relaxed text-[rgb(var(--reg-muted))]">
             {tr("registration.isSetUpOpenYour", { value: formData.businessName || tr("common.yourSalon") })}
           </p>
-          <button type="button" onClick={() => navigate("/")} className={cn(brandCta, "mt-8 w-full")}>
-            {tr("registration.openMyCalendar")}
+          <button type="button" onClick={() => navigate(registeredBusinessId ? `/${registeredBusinessId}/tasks` : "/")} className={cn(brandCta, "mt-8 w-full")}>
+            {tr("registration.prepareMySalon")}
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
         </div>

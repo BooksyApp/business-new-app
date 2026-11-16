@@ -2125,8 +2125,9 @@
     "signIn": "Войти",
     "optional": "(необязательно)",
     "welcomeToBooqi": "Добро пожаловать в booqi{value}",
-    "isSetUpOpenYour": "{value} готов. Откройте календарь, добавьте фото и услуги и готовьтесь к первой записи.",
+    "isSetUpOpenYour": "{value} готов. Осталось несколько шагов — завершите их, и клиенты смогут записываться онлайн.",
     "openMyCalendar": "Открыть календарь",
+    "prepareMySalon": "Подготовить салон",
     "of": "{currentStep} из {count}",
     "signUpProgress": "Ход регистрации",
     "planSelected": "Выбран тариф {selectedPlan}",
@@ -3002,7 +3003,9 @@
     "missing_suspended": "Салон приостановлен booqi, свяжитесь с поддержкой",
     "alsoHelps": "Также поможет:",
     "rec_photos": "добавьте фото",
-    "rec_verification": "проверка booqi"
+    "rec_verification": "проверка booqi",
+    "liveTitle": "Ваш салон в сети — клиенты могут записываться",
+    "liveBody": "Поделитесь ссылкой для записи в Instagram, WhatsApp или в био:"
   },
   "support": {
     "title": "Поддержка",

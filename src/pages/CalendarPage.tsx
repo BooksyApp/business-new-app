@@ -40,6 +40,7 @@ import { useServices } from "@/hooks/useServices";
 import { useTimeOff } from "@/hooks/useTimeOff";
 import type { TimeOff } from "@/services/timeOffService";
 import { useBusinessId } from "@/hooks/useBusinessId";
+import { VisibilityBanner } from "@/components/VisibilityBanner";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { categoryTint, type CategoryTint } from "@/lib/serviceCategoryColor";
@@ -1320,6 +1321,9 @@ export default function CalendarPage() {
               salon looking at a gap in today's calendar had no idea somebody was waiting
               for exactly that. Clicking one opens the booking form with them filled in;
               the salon then picks the slot, which is the part only they can decide. */}
+          {/* LR-02: what still stops clients booking, with a link to each fix (not-bookable only). */}
+          {businessId ? <VisibilityBanner businessId={businessId} showLive={false} className="mx-3 mt-3 md:mx-6" /> : null}
+
           {/* Loading State */}
           {loading && (
             <div className="flex-1 flex items-center justify-center">

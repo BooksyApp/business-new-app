@@ -2125,8 +2125,9 @@
     "signIn": "Daxil ol",
     "optional": "(istəyə bağlı)",
     "welcomeToBooqi": "booqi-yə xoş gəldiniz{value}",
-    "isSetUpOpenYour": "{value} hazırdır. Şəkil və xidmət əlavə etmək üçün təqviminizi açın və ilk rezervə hazırlaşın.",
+    "isSetUpOpenYour": "{value} hazırdır. Bir neçə addım qalıb — tamamlayın, müştərilər sizə onlayn yazıla bilsin.",
     "openMyCalendar": "Təqvimimi aç",
+    "prepareMySalon": "Salonumu hazırla",
     "of": "{currentStep} / {count}",
     "signUpProgress": "Qeydiyyatın gedişi",
     "planSelected": "{selectedPlan} tarifi seçildi",
@@ -3002,7 +3003,9 @@
     "missing_suspended": "Salonunuz booqi tərəfindən dayandırılıb, dəstəyə yazın",
     "alsoHelps": "Həmçinin kömək edər:",
     "rec_photos": "şəkil əlavə edin",
-    "rec_verification": "booqi təsdiqi"
+    "rec_verification": "booqi təsdiqi",
+    "liveTitle": "Salonunuz canlıdır — müştərilər yazıla bilər",
+    "liveBody": "Rezerv linkinizi Instagram-da, WhatsApp-da və ya bio-da paylaşın:"
   },
   "support": {
     "title": "Dəstək",

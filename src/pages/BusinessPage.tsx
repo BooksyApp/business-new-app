@@ -249,7 +249,9 @@ export default function BusinessPage() {
 
   const completenessChecks = useMemo(() => getCompletenessChecks(business, services), [business, services]);
   const completedCount = completenessChecks.filter((check) => check.ok).length;
-  const completionPercent = Math.round((completedCount / completenessChecks.length) * 100);
+  // LR-02: a salon without a single service cannot be booked, so it is never "Advanced"
+  // (it said "80% Advanced" next to the "add a service" banner): at most 60%, "Growing".
+  const completionPercent = Math.min(services.length === 0 ? 60 : 100, Math.round((completedCount / completenessChecks.length) * 100));
   const completionTier = t(completionPercent >= 80 ? "business.tierAdvanced" : completionPercent >= 50 ? "business.tierGrowing" : "business.tierNovice");
   const hasCoords = typeof business?.latitude === "number" && typeof business?.longitude === "number";
   const locationLabel =

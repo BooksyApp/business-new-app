@@ -2125,8 +2125,9 @@
     "signIn": "Sign in",
     "optional": "(optional)",
     "welcomeToBooqi": "Welcome to booqi{value}",
-    "isSetUpOpenYour": "{value} is set up. Open your calendar to add photos and services, and get ready for your first booking.",
+    "isSetUpOpenYour": "{value} is set up. A few steps are left — finish them and clients can book you online.",
     "openMyCalendar": "Open my calendar",
+    "prepareMySalon": "Get my salon ready",
     "of": "{currentStep} of {count}",
     "signUpProgress": "Sign-up progress",
     "planSelected": "{selectedPlan} plan selected",
@@ -3002,7 +3003,9 @@
     "missing_suspended": "Your salon is paused by booqi, contact support",
     "alsoHelps": "Also helps:",
     "rec_photos": "add photos",
-    "rec_verification": "booqi verification"
+    "rec_verification": "booqi verification",
+    "liveTitle": "Your salon is live — clients can book you",
+    "liveBody": "Share your booking link on Instagram, WhatsApp or in your bio:"
   },
   "support": {
     "title": "Support",
