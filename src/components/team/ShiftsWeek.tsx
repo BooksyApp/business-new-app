@@ -1,3 +1,4 @@
+import { salonToday } from "@/lib/salonClock";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addDays, parseISO, startOfWeek } from "date-fns";
 import { format } from "@/i18n/dateFns";
@@ -57,7 +58,7 @@ export function ShiftsWeek({
   useEffect(load, [load]);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
-  const today = iso(new Date());
+  const today = salonToday(); // LR-09
   const shiftCount = (rota?.staff ?? []).reduce((n, r) => n + r.days.filter((d) => d.state === "SHIFT").length, 0);
   const pending = timeOffs.filter((t) => !t.isApproved);
 

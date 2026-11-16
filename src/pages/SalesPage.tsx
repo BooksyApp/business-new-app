@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { salonNow } from "@/lib/salonClock";
+import { salonNow, salonToday } from "@/lib/salonClock";
 import { currencySymbol } from "@/lib/currency";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -38,7 +38,7 @@ import { t as tr, tOpt, fmtDate as formatLocaleDate, getLocale, formatMinutes } 
 // Open and not yet paid, on any day. The settle list adds "today"; "Take payment" from the
 // calendar can be for any day.
 /** Today's date (yyyy-MM-dd) on the salon's own clock; the market's (Asia/Baku) when none is set — never the browser's. */
-const todayIn = (timeZone?: string | null): string => format(salonNow(timeZone), "yyyy-MM-dd");
+const todayIn = (timeZone?: string | null): string => salonToday(timeZone);
 /** A local Date on that calendar day (noon, so formatting it back never slips a day). */
 const dayDate = (ymd: string, addDays = 0): Date => {
   const d = new Date(`${ymd}T12:00:00`);

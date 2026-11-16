@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { salonToday } from "@/lib/salonClock";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { useNavigate } from "react-router-dom";
 import { CalendarClock, CalendarRange, Pencil, Percent, Plus, Scissors, Tag, TrendingDown, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -16,7 +18,8 @@ import { useNavigation } from "@/utils/navigationUtils";
 import { discountService, type ServiceDiscount } from "@/services/discountService";
 import { t as tr } from "@/i18n";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// LR-09: the salon's day (toISOString was UTC).
+const today = () => salonToday();
 
 /** The offer on a service, where it sits today (or null when it has none). */
 const offerStatus = (row: ServiceDiscount): Lifecycle | null => {
@@ -39,6 +42,7 @@ type Target = { kind: "all" } | { kind: "one"; row: ServiceDiscount };
  */
 export default function OffersPage() {
   const businessId = getCurrentBusinessId();
+  useSalonTimeZone(Number(businessId) || 0);
   const navigate = useNavigate();
   const { getPath } = useNavigation();
   const [rows, setRows] = useState<ServiceDiscount[] | null>(null);

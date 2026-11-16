@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { salonNow, salonToday } from "@/lib/salonClock";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { CalendarOff, Copy, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -33,7 +35,8 @@ interface DayState { enabled: boolean; startTime: string; endTime: string }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : "");
 const fmtDay = (d: string) => formatLocaleDate(new Date(d + "T12:00:00"), { weekday: "short", day: "numeric", month: "short" });
-const today = () => new Date().toISOString().slice(0, 10);
+// LR-09: the salon's day, not the browser's (or UTC's — toISOString is UTC).
+const today = () => salonToday();
 const EMPTY_EXC = { startDate: "", endDate: "", closed: "closed" as "closed" | "special", openTime: "10:00", closeTime: "16:00", notes: "" };
 
 /**
@@ -42,6 +45,7 @@ const EMPTY_EXC = { startDate: "", endDate: "", closed: "closed" as "closed" | "
  */
 export default function BusinessHoursPage() {
   const businessId = useBusinessId();
+  useSalonTimeZone(businessId);
   const { businessHours, loading, updateBusinessHours } = useBusinessHours();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<Record<string, DayState> | null>(null);
@@ -161,7 +165,7 @@ export default function BusinessHoursPage() {
 
   const upcoming = (exceptions ?? []).filter((x) => x.endDate >= today()).sort((a, b) => a.startDate.localeCompare(b.startDate));
   const past = (exceptions ?? []).filter((x) => x.endDate < today());
-  const todayKey = DAYS[(new Date().getDay() + 6) % 7].key;
+  const todayKey = DAYS[(salonNow().getDay() + 6) % 7].key;
 
   return (
     <AppLayout>

@@ -1,3 +1,4 @@
+import { salonToday } from "@/lib/salonClock";
 import { t, fmtDate as formatLocaleDate } from "@/i18n";
 /** Non-component helpers for ./kit.tsx (kept apart for fast refresh). */
 
@@ -6,7 +7,7 @@ export type Lifecycle = "active" | "scheduled" | "ended" | "draft" | "queued" | 
 /** Where a dated thing sits today. Dates are YYYY-MM-DD or ISO date-times. */
 export function lifecycleOf(opts: { active?: boolean; from?: string | null; to?: string | null; exhausted?: boolean }): Lifecycle {
   if (opts.active === false || opts.exhausted) return "ended";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = salonToday(); // LR-09: the salon's day; toISOString was UTC
   if (opts.to && opts.to.slice(0, 10) < today) return "ended";
   if (opts.from && opts.from.slice(0, 10) > today) return "scheduled";
   return "active";

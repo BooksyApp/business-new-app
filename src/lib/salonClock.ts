@@ -9,6 +9,16 @@
  */
 export const MARKET_TIME_ZONE = "Asia/Baku";
 
+/**
+ * The open salon's zone, set by useSalonTimeZone once the salon is loaded. The panel shows
+ * one salon at a time, so helpers that are not hooks (date utilities, list filters) can use
+ * it without every caller passing the zone through.
+ */
+let currentZone: string | null = null;
+export function setCurrentSalonZone(tz: string | null | undefined): void {
+  currentZone = tz || null;
+}
+
 function validZone(tz?: string | null): string | null {
   if (!tz) return null;
   try {
@@ -21,7 +31,7 @@ function validZone(tz?: string | null): string | null {
 
 /** Now (or `at`) as the salon sees it, as a local-field Date. */
 export function salonNow(tz?: string | null, at: Date = new Date()): Date {
-  const zone = validZone(tz) ?? MARKET_TIME_ZONE;
+  const zone = validZone(tz) ?? validZone(currentZone) ?? MARKET_TIME_ZONE;
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: zone,
     hourCycle: "h23",
@@ -34,6 +44,13 @@ export function salonNow(tz?: string | null, at: Date = new Date()): Date {
   }).formatToParts(at);
   const n = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   return new Date(n("year"), n("month") - 1, n("day"), n("hour") % 24, n("minute"), n("second"));
+}
+
+/** The salon's today as YYYY-MM-DD (the open salon's zone when `tz` is not given). */
+export function salonToday(tz?: string | null): string {
+  const d = salonNow(tz);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 /** True when `day` is the salon's today. */

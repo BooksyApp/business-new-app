@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { salonNow } from "@/lib/salonClock";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { resourceTypeService, type ResourceType } from "@/services/resourceTypeService";
 import { timeOffService } from "@/services/timeOffService";
 import { currencySymbol } from "@/lib/currency";
@@ -107,11 +109,12 @@ export default function StaffPage() {
   const [servicesSearchQuery, setServicesSearchQuery] = useState("");
   const [selectedServicesForStaff, setSelectedServicesForStaff] = useState<number[]>([]);
   const [workingHoursForm, setWorkingHoursForm] = useState<Record<string, { start: string; end: string; isClosed: boolean }>>({});
-  const [selectedDate, setSelectedDate] = useState(new Date()); // Today
+  const [selectedDate, setSelectedDate] = useState(() => salonNow()); // The salon's today (LR-09)
   const [selectedStaffer, setSelectedStaffer] = useState("All");
 
   // Fetch data from API
   const businessId = useBusinessId();
+  useSalonTimeZone(businessId);
   const { getPath } = useNavigation();
   const { staff: apiStaff, loading: staffLoading, updateStaff, setStaffRole, refresh: refreshStaff } = useStaff(businessId);
 

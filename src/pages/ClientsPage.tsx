@@ -1,4 +1,6 @@
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { salonToday } from "@/lib/salonClock";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import type { ClientAppointmentRow } from "@/services/clientService";
@@ -167,12 +169,13 @@ export default function ClientsPage() {
   const [invitationForm, setInvitationForm] = useState({
     serviceId: "",
     staffId: "",
-    appointmentDate: format(new Date(), "yyyy-MM-dd"),
+    appointmentDate: salonToday(),
     startTime: "",
     endTime: "",
     notes: "",
   });
   const businessId = useBusinessId();
+  useSalonTimeZone(businessId);
   useBrandFont();
 
 
@@ -901,7 +904,7 @@ export default function ClientsPage() {
                   setInvitationForm({
                     serviceId: "",
                     staffId: "",
-                    appointmentDate: format(new Date(), "yyyy-MM-dd"),
+                    appointmentDate: salonToday(),
                     startTime: "",
                     endTime: "",
                     notes: "",
@@ -960,7 +963,7 @@ export default function ClientsPage() {
                     setInvitationForm({
                       serviceId: "",
                       staffId: "",
-                      appointmentDate: format(new Date(), "yyyy-MM-dd"),
+                      appointmentDate: salonToday(),
                       startTime: "",
                       endTime: "",
                       notes: "",
