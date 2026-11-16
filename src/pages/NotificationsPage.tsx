@@ -118,6 +118,12 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
                   </>
                 ))}
 
+                {showEmail && card(t("notifications.toYourSalon"), (
+                  row(t("notifications.salonAlerts"), t("notifications.salonAlertsHint"), (
+                    <Switch id="n-salon-alerts" className={sw} checked={settings.salonAlerts !== false} onCheckedChange={(v) => set("salonAlerts", v)} />
+                  ), "n-salon-alerts")
+                ))}
+
                 {showEmail && <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
                   <h2 className="mb-3 text-base font-extrabold">{t("notifications.sender")}</h2>
                   <div className="grid gap-4 md:grid-cols-2">

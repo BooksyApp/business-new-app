@@ -13,6 +13,8 @@ export interface NotificationSettings {
   emailReschedule: boolean;
   emailWaitlist: boolean;
   emailReviewRequest: boolean;
+  /** LR-01: email the salon when a customer books, cancels or moves a booking online. */
+  salonAlerts?: boolean;
   reminderHoursBefore: number;
   smsEnabled: boolean;
   pushEnabled: boolean;
