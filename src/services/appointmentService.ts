@@ -137,7 +137,30 @@ export interface CreateAppointmentRequest {
   visitPending?: boolean;
 }
 
+/** FG-W1-01: one row of the WhatsApp reminder list. */
+export interface WhatsAppReminderRow {
+  id: Id;
+  clientName?: string;
+  phone?: string | null;
+  serviceName?: string;
+  staffName?: string;
+  startTime: string;
+  text: string;
+  waUrl?: string | null;
+  sentAt?: string | null;
+}
+
 export const appointmentService = {
+  /** FG-W1-01: tomorrow's (or `date`'s) bookings with ready wa.me reminder links. */
+  async getWhatsAppReminders(businessId: Id, date?: string): Promise<{ date: string; rows: WhatsAppReminderRow[] }> {
+    const q = date ? `?date=${encodeURIComponent(date)}` : "";
+    return apiClient.get(`/businesses/${businessId}/whatsapp-reminders${q}`);
+  },
+
+  async markWhatsAppReminder(businessId: Id, appointmentId: Id, sent: boolean): Promise<void> {
+    await apiClient.put(`/businesses/${businessId}/whatsapp-reminders/${appointmentId}`, { sent });
+  },
+
   async getAppointmentById(id: string): Promise<Appointment> {
     return apiClient.get<Appointment>(`/bookings/${id}`);
   },

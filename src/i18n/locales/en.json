@@ -3328,5 +3328,17 @@
       "FEES": "Fees",
       "OTHER": "Other"
     }
+  },
+  "reminders": {
+    "open": "WhatsApp reminders",
+    "title": "Tomorrow's clients",
+    "subtitle": "Send each client a ready WhatsApp reminder — in their language, with a cancel link.",
+    "loading": "Loading…",
+    "empty": "No bookings tomorrow.",
+    "error": "Couldn't load the list. Try again.",
+    "send": "Send",
+    "noPhone": "No phone",
+    "sent": "Sent",
+    "markSent": "Mark as sent"
   }
 }

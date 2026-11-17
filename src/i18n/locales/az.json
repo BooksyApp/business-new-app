@@ -3328,5 +3328,17 @@
       "FEES": "Komissiya və rüsumlar",
       "OTHER": "Digər"
     }
+  },
+  "reminders": {
+    "open": "WhatsApp xatırlatmaları",
+    "title": "Sabahkı müştərilər",
+    "subtitle": "Hər müştəriyə WhatsApp-da hazır xatırlatma göndərin — mətn onun dilində, ləğv linki ilə.",
+    "loading": "Yüklənir…",
+    "empty": "Sabah rezerv yoxdur.",
+    "error": "Siyahı yüklənmədi. Yenidən cəhd edin.",
+    "send": "Göndər",
+    "noPhone": "Telefon yoxdur",
+    "sent": "Göndərildi",
+    "markSent": "Göndərildi işarələ"
   }
 }

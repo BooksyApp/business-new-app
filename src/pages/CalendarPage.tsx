@@ -42,6 +42,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAppointments, type Appointment as AppointmentType } from "@/hooks/useAppointments";
 import { useServices } from "@/hooks/useServices";
 import { useTimeOff } from "@/hooks/useTimeOff";
+import { WhatsAppReminders } from "@/components/calendar/WhatsAppReminders";
 import type { TimeOff } from "@/services/timeOffService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
@@ -1622,6 +1623,7 @@ export default function CalendarPage() {
                 >
                   <Search size={18} strokeWidth={1.75} />
                 </Button>
+          {businessId && <WhatsAppReminders businessId={businessId} />}
           <Popover>
             <PopoverTrigger asChild>
               <Button aria-label={tr("calendar.needsAttention")} variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white hover:text-[rgb(var(--reg-ink))]">
