@@ -207,6 +207,9 @@
     "pinOutsideCountry": "Метка за пределами страны салона, поэтому она не сохранена. Поставьте её там, где находится салон."
   },
   "addService": {
+    "groupClass": "Групповое занятие",
+    "groupClassHint": "Несколько клиентов записываются на один сеанс",
+    "maxParticipants": "Мест",
     "forClient": "ДЛЯ КЛИЕНТА",
     "businessIdIsMissingPlease": "Не найден ID салона. Откройте эту страницу из панели салона.",
     "serviceCreationIsNotAvailable": "Создание услуги сейчас недоступно",

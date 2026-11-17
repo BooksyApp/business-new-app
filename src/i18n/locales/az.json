@@ -207,6 +207,9 @@
     "pinOutsideCountry": "Pin ölkədən kənardadır — salonun yeri onun ölkəsində olmalıdır. Pini xəritədə düzgün yerə qoyun."
   },
   "addService": {
+    "groupClass": "Qrup dərsi",
+    "groupClassHint": "Bir neçə müştəri eyni seansa yazılır",
+    "maxParticipants": "Yer sayı",
     "forClient": "MÜŞTƏRİ ÜÇÜN",
     "businessIdIsMissingPlease": "Salon ID-si tapılmadı. Bu səhifəni salonunuzun panelindən açın.",
     "serviceCreationIsNotAvailable": "Xidmət yaratmaq hazırda mümkün deyil",

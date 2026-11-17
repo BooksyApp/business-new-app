@@ -207,6 +207,9 @@
     "pinOutsideCountry": "That pin is outside your salon's country, so it was not saved. Place it where the salon is."
   },
   "addService": {
+    "groupClass": "Group class",
+    "groupClassHint": "Several clients book the same session",
+    "maxParticipants": "Seats",
     "forClient": "FOR CLIENT",
     "businessIdIsMissingPlease": "Business ID is missing. Please ensure you are accessing this page from a business context.",
     "serviceCreationIsNotAvailable": "Service creation is not available",

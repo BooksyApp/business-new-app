@@ -43,6 +43,9 @@ export interface Appointment {
   categoryId?: Id;
   categoryName?: string;
   visitId?: string | null;
+  /** FG-W1-12: one block for a class session; the names of everyone booked into it. */
+  isClass?: boolean;
+  participants?: string[];
   /**
    * Every appointment of the same multi-service visit (this one included), earliest
    * first. Empty/absent for a single-service booking.
@@ -153,7 +156,9 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
       }}
       onMouseDown={stop}
       onMouseUp={stop}
-      title={`${s.label}${appointment.categoryName ? ` · ${appointment.categoryName}` : ""}`}
+      title={appointment.participants && appointment.participants.length > 1
+        ? appointment.participants.join("\n")
+        : `${s.label}${appointment.categoryName ? ` · ${appointment.categoryName}` : ""}`}
       style={{
         backgroundColor: tint.fill,
         color: tint.ink,

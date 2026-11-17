@@ -72,6 +72,8 @@ export default function AddServicePage() {
   const [selectedStaff, setSelectedStaff] = useState<Id[]>([]);
   const [settingsData, setSettingsData] = useState({
     allowSelfBooking: true,
+    isClass: false,          // FG-W1-12: a group class — several clients book the same session
+    maxParticipants: "10",
     mobileService: false,
     virtualAppointments: false,
     bookingIntervalHours: "0",
@@ -158,6 +160,8 @@ export default function AddServicePage() {
         setSettingsData((prev) => ({
           ...prev,
           allowSelfBooking: service.isVisible ?? true,
+          isClass: !!service.isClass,
+          maxParticipants: String(service.maxParticipants ?? 10),
           mobileService: service.mobileService ?? false,
           virtualAppointments: service.virtualAppointment ?? false,
           bookingIntervalHours: bi.hours,
@@ -202,6 +206,8 @@ export default function AddServicePage() {
       paddingAfter: granularAfter > 0 ? granularAfter : ruleAfter,
       processingDuring: toMinutes(settingsData.processingTimeDuringHours, settingsData.processingTimeDuringMinutes),
       processingAfter: toMinutes(settingsData.processingTimeAfterHours, settingsData.processingTimeAfterMinutes),
+      isClass: settingsData.isClass,
+      maxParticipants: settingsData.isClass ? Math.max(2, parseInt(settingsData.maxParticipants, 10) || 2) : undefined,
     };
   };
 
@@ -671,6 +677,29 @@ export default function AddServicePage() {
                       }
                      
                     />
+                  </div>
+                  <div className="flex items-center justify-between gap-3 py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
+                    <div className="flex flex-col">
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">{tr("addService.groupClass")}</Label>
+                      <span className="text-xs text-[rgb(var(--reg-muted))]">{tr("addService.groupClassHint")}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {settingsData.isClass && (
+                        <Input
+                          type="number"
+                          min={2}
+                          aria-label={tr("addService.maxParticipants")}
+                          title={tr("addService.maxParticipants")}
+                          className="h-9 w-20"
+                          value={settingsData.maxParticipants}
+                          onChange={(e) => setSettingsData((prev) => ({ ...prev, maxParticipants: e.target.value }))}
+                        />
+                      )}
+                      <Switch
+                        checked={settingsData.isClass}
+                        onCheckedChange={(checked) => setSettingsData((prev) => ({ ...prev, isClass: checked }))}
+                      />
+                    </div>
                   </div>
 
                   {/* Mobile Service */}

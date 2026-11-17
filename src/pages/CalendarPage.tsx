@@ -95,6 +95,7 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     price: apt.price,
     serviceId: apt.serviceId,
     visitId: apt.visitId,
+    isClass: (apt as { isClass?: boolean }).isClass,
     answers: apt.answers,
     cancelledBy: apt.cancelledBy,
     cancellationNote: apt.cancellationNote,
@@ -123,6 +124,29 @@ const generateTimeSlots = () => {
     };
   });
 };
+
+/**
+ * FG-W1-12: a group class is one block in the calendar — every booking of the same class
+ * session (service + start) folds into the first one, which carries the participant list.
+ */
+function groupClassSessions<T extends { isClass?: boolean; serviceId?: unknown; startTime: string; clientName: string; status?: string; participants?: string[] }>(list: T[]): T[] {
+  const out: T[] = [];
+  const sessions = new Map<string, T>();
+  for (const apt of list) {
+    if (!apt.isClass || apt.status === "CANCELLED") { out.push(apt); continue; }
+    const key = `${String(apt.serviceId)}@${apt.startTime}`;
+    const head = sessions.get(key);
+    if (!head) {
+      const first = { ...apt, participants: [apt.clientName] };
+      sessions.set(key, first);
+      out.push(first);
+    } else {
+      head.participants = [...(head.participants ?? []), apt.clientName];
+      head.clientName = `${head.participants[0]} +${head.participants.length - 1}`;
+    }
+  }
+  return out;
+}
 
 function getAppointmentsForStaff(appointments: Appointment[], staffId: string): Appointment[] {
   return appointments.filter((apt) => apt.staffId === staffId);
@@ -1217,9 +1241,9 @@ export default function CalendarPage() {
 
   // Get appointments for a specific date and staff
   const getAppointmentsForDateAndStaff = (date: Date, staffId: string): AppointmentWithDate[] => {
-    return appointments.filter(
+    return groupClassSessions(appointments.filter(
       apt => isSameDay(apt.date, date) && apt.staffId === staffId && matchesSearch(apt)
-    );
+    ));
   };
 
   // Get week days (Monday to Sunday)

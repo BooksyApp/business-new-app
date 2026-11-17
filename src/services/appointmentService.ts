@@ -16,6 +16,8 @@ export interface Appointment {
   serviceName?: string;
   /** Set when the customer booked several services in one visit: one appointment each, same id here. */
   visitId?: string | null;
+  /** FG-W1-12: a group-class booking (several clients share the session). */
+  isClass?: boolean;
   /** Who cancelled it and what they said, when it is cancelled. */
   cancelledBy?: string | null;
   cancellationNote?: string | null;

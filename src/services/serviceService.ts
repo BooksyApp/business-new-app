@@ -33,6 +33,8 @@ export interface Service {
   /** Percent VAT; null/absent = the business's own rate. */
   taxRate?: number | null;
   resourceTypeId?: Id | null; // #282: a shared room/equipment this service needs
+  isClass?: boolean;          // FG-W1-12: group class
+  maxParticipants?: number | null;
 }
 
 export interface CreateServiceRequest {
@@ -55,6 +57,8 @@ export interface CreateServiceRequest {
   paddingAfter?: number;
   processingDuring?: number;
   processingAfter?: number;
+  isClass?: boolean;
+  maxParticipants?: number;
   questions?: { text: string; required?: boolean }[];
   messageToClient?: string;
   parallelClients?: number;
@@ -83,6 +87,8 @@ export interface UpdateServiceRequest {
   paddingAfter?: number;
   processingDuring?: number;
   processingAfter?: number;
+  isClass?: boolean;
+  maxParticipants?: number;
   questions?: { text: string; required?: boolean }[];
   messageToClient?: string;
   parallelClients?: number;
