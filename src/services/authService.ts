@@ -162,13 +162,35 @@ class AuthService {
   }
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    // Backend AuthController: /api/public/auth/login expects { emailOrPhone, password }
+    try {
+      return await this.loginOnce(data);
+    } catch (error) {
+      // Role isolation: a customer or booqi-team account is told why, not "wrong password".
+      // The API answers application/problem+json, which request() keeps as raw text, so the
+      // code is looked for in whatever came back.
+      const e = error as Error & { status?: number; response?: unknown };
+      const raw = e?.status === 403 ? `${JSON.stringify(e.response ?? '')} ${e.message ?? ''}` : '';
+      const code = ['ACCOUNT_IS_CUSTOMER', 'ACCOUNT_IS_ADMIN'].find((c) => raw.includes(c));
+      if (code === 'ACCOUNT_IS_CUSTOMER') {
+        throw Object.assign(new Error(t("auth.wrongAccountCustomer")), { status: 403 });
+      }
+      if (code === 'ACCOUNT_IS_ADMIN') {
+        throw Object.assign(new Error(t("auth.wrongAccountStaff")), { status: 403 });
+      }
+      throw error;
+    }
+  }
+
+  private async loginOnce(data: LoginRequest): Promise<AuthResponse> {
+    // Backend AuthController: /api/public/auth/login expects { emailOrPhone, password }.
+    // `app: 'hub'`: the panel signs in salon owners and their team only (role isolation).
     try {
       return await this.request<AuthResponse>('/public/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           emailOrPhone: data.email,
           password: data.password,
+          app: 'hub',
         }),
       });
     } catch (primaryError) {
@@ -185,6 +207,7 @@ class AuthService {
         body: JSON.stringify({
           emailOrPhone: data.email,
           password: data.password,
+          app: 'hub',
         }),
       });
     }

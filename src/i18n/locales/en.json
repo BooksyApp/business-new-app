@@ -563,7 +563,9 @@
     "openToday": "Open today",
     "closedToday": "Closed today",
     "more": "+{value} more",
-    "teamMemberCount": "{count, plural, one {# team member} other {# team members}}"
+    "teamMemberCount": "{count, plural, one {# team member} other {# team members}}",
+    "wrongAccountCustomer": "This is a customer account — it can't sign in to the salon panel. To book, use the booqi website; to manage a salon, create a separate business account.",
+    "wrongAccountStaff": "This is a booqi team account — open a salon's panel only through “Open as owner” in the admin panel."
   },
   "bookingRules": {
     "couldNotLoadYourBooking": "Could not load your booking settings",

@@ -563,7 +563,9 @@
     "openToday": "Bu gün açıqdır",
     "closedToday": "Bu gün bağlıdır",
     "more": "+{value} daha",
-    "teamMemberCount": "{count, plural, one {# usta} other {# usta}}"
+    "teamMemberCount": "{count, plural, one {# usta} other {# usta}}",
+    "wrongAccountCustomer": "Bu müştəri hesabıdır — onunla salon panelinə daxil olmaq olmur. Rezerv etmək üçün booqi saytından istifadə edin; salonu idarə etmək üçün ayrıca biznes hesabı yaradın.",
+    "wrongAccountStaff": "Bu booqi komanda hesabıdır — salon panelinə yalnız admin paneldəki “Sahib kimi aç” ilə daxil olmaq olar."
   },
   "bookingRules": {
     "couldNotLoadYourBooking": "Rezerv ayarlarını yükləmək alınmadı",
