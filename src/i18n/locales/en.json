@@ -2731,7 +2731,9 @@
     "requirementCover": "At least 1200 × 500 px, landscape. JPEG or PNG, up to 8 MB.",
     "requirementPhoto": "At least 800 × 600 px. JPEG or PNG, up to 8 MB each.",
     "requirementAvatar": "At least 256 × 256 px, roughly square. JPEG or PNG.",
-    "requirementLogo": "At least 256 × 256 px, roughly square. JPEG or PNG, up to 8 MB."
+    "requirementLogo": "At least 256 × 256 px, roughly square. JPEG or PNG, up to 8 MB.",
+    "aPortfolioPhotoMustBe": "A portfolio photo must be at least 400 × 400 px.",
+    "requirementPortfolio": "At least 400 × 400 px. JPEG or PNG, up to 8 MB each."
   },
   "setup": {
     "whoYouAreAndWhere": "Who you are and where clients find you",
@@ -3400,5 +3402,28 @@
     "noPhone": "No phone",
     "sent": "Sent",
     "markSent": "Mark as sent"
+  },
+  "staffPortfolio": {
+    "title": "Portfolio · Works",
+    "hint": "Photos of this specialist's work. Clients see them on your salon page and choose a specialist by them. Changes save at once.",
+    "count": "{count} / {max}",
+    "loading": "Loading",
+    "empty": "No works yet — add the first photo.",
+    "add": "Add photo",
+    "caption": "Caption",
+    "captionPlaceholder": "Caption (optional)",
+    "service": "Service",
+    "noService": "No service",
+    "photoAlt": "Work photo",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "delete": "Delete photo",
+    "deleteConfirm": "Delete this photo from the portfolio?",
+    "limitReached": "A portfolio holds up to {max} photos. Remove one to add another.",
+    "loadFailed": "Could not load the portfolio.",
+    "uploadFailed": "The photo could not be added.",
+    "saveFailed": "The change could not be saved.",
+    "deleteFailed": "The photo could not be deleted.",
+    "reorderFailed": "The new order could not be saved."
   }
 }

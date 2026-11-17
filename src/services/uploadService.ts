@@ -7,6 +7,7 @@ export type UploadPurpose =
   | "BUSINESS_LOGO"
   | "BUSINESS_COVER"
   | "BUSINESS_PHOTO"
+  | "STAFF_PORTFOLIO"
   | "CLIENT_PHOTO";
 
 export interface UploadedImage {
@@ -25,6 +26,7 @@ interface ImageRule { minW: number; minH: number; minAspect?: number; maxAspect?
 const RULES: Partial<Record<UploadPurpose, ImageRule>> = {
   BUSINESS_COVER: { minW: 1200, minH: 500, minAspect: 1.6, maxAspect: 3.2, get message() { return t("services.theCoverPhotoMustBe"); } },
   BUSINESS_PHOTO: { minW: 800, minH: 600, get message() { return t("services.aGalleryPhotoMustBe"); } },
+  STAFF_PORTFOLIO: { minW: 400, minH: 400, get message() { return t("services.aPortfolioPhotoMustBe"); } },
   STAFF_AVATAR: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, get message() { return t("services.theProfilePhotoMustBe"); } },
   BUSINESS_LOGO: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, get message() { return t("services.theLogoMustBeAt"); } },
 };
@@ -33,6 +35,7 @@ const RULES: Partial<Record<UploadPurpose, ImageRule>> = {
 export const UPLOAD_REQUIREMENT: Partial<Record<UploadPurpose, string>> = {
   get BUSINESS_COVER() { return t("services.requirementCover"); },
   get BUSINESS_PHOTO() { return t("services.requirementPhoto"); },
+  get STAFF_PORTFOLIO() { return t("services.requirementPortfolio"); },
   get STAFF_AVATAR() { return t("services.requirementAvatar"); },
   get BUSINESS_LOGO() { return t("services.requirementLogo"); },
 };

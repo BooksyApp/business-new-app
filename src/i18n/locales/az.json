@@ -2731,7 +2731,9 @@
     "requirementCover": "Ən azı 1200 × 500 px, üfüqi format. JPEG və ya PNG, 8 MB-a qədər.",
     "requirementPhoto": "Ən azı 800 × 600 px. JPEG və ya PNG, hər biri 8 MB-a qədər.",
     "requirementAvatar": "Ən azı 256 × 256 px, təxminən kvadrat. JPEG və ya PNG.",
-    "requirementLogo": "Ən azı 256 × 256 px, təxminən kvadrat. JPEG və ya PNG, 8 MB-a qədər."
+    "requirementLogo": "Ən azı 256 × 256 px, təxminən kvadrat. JPEG və ya PNG, 8 MB-a qədər.",
+    "aPortfolioPhotoMustBe": "Portfolio şəkli ən azı 400 × 400 px olmalıdır.",
+    "requirementPortfolio": "Ən azı 400 × 400 px. JPEG və ya PNG, hər biri 8 MB-a qədər."
   },
   "setup": {
     "whoYouAreAndWhere": "Siz kimsiniz və haradasınız",
@@ -3400,5 +3402,28 @@
     "noPhone": "Telefon yoxdur",
     "sent": "Göndərildi",
     "markSent": "Göndərildi işarələ"
+  },
+  "staffPortfolio": {
+    "title": "Portfolio · İşlər",
+    "hint": "Bu ustanın işlərinin şəkilləri. Müştərilər onları salon səhifənizdə görür və ustanı onlara görə seçir. Dəyişikliklər dərhal yadda saxlanılır.",
+    "count": "{count} / {max}",
+    "loading": "Yüklənir",
+    "empty": "Hələ iş yoxdur — ilk şəkli əlavə edin.",
+    "add": "Şəkil əlavə et",
+    "caption": "Açıqlama",
+    "captionPlaceholder": "Açıqlama (istəyə görə)",
+    "service": "Xidmət",
+    "noService": "Xidmətsiz",
+    "photoAlt": "İş şəkli",
+    "moveUp": "Yuxarı",
+    "moveDown": "Aşağı",
+    "delete": "Şəkli sil",
+    "deleteConfirm": "Bu şəkil portfoliodan silinsin?",
+    "limitReached": "Portfolioda ən çox {max} şəkil ola bilər. Yenisini əlavə etmək üçün birini silin.",
+    "loadFailed": "Portfolio yüklənmədi.",
+    "uploadFailed": "Şəkil əlavə olunmadı.",
+    "saveFailed": "Dəyişiklik yadda saxlanılmadı.",
+    "deleteFailed": "Şəkil silinmədi.",
+    "reorderFailed": "Yeni sıra yadda saxlanılmadı."
   }
 }

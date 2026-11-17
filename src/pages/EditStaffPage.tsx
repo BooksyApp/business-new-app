@@ -38,6 +38,7 @@ import { serviceService } from "@/services/serviceService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useNavigation } from "@/utils/navigationUtils";
 import { WorkingHoursEditor } from "@/components/staff/WorkingHoursEditor";
+import { StaffPortfolioSection } from "@/components/staff/StaffPortfolioSection";
 import {
   DEFAULT_WEEK,
   scheduleToPayload,
@@ -439,6 +440,9 @@ export default function EditStaffPage() {
               </p>
               <WorkingHoursEditor value={schedule} onChange={setSchedule} />
             </div>
+
+            {/* FG-W2-29: the specialist's "Works" gallery on the public salon page. */}
+            {id && businessId && <StaffPortfolioSection businessId={businessId} staffId={id} services={services} />}
     </RouteSheet>
   );
 }
