@@ -6,7 +6,8 @@ import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import type { ClientAppointmentRow } from "@/services/clientService";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
-import { CalendarCheck, Coins, Download, Star, UserPlus, Users } from "lucide-react";
+import { MomentLine } from "@/components/moments/Moments";
+import { CalendarCheck, Check, Coins, Download, Star, UserPlus, Users } from "lucide-react";
 import { loyaltyService } from "@/services/growthService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -632,10 +633,12 @@ export default function ClientsPage() {
             </div>
           ) : allClientsWithPending.length === 0 ? (
             <div className="mx-auto max-w-sm py-16 text-center">
-              <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))]">
-                <Users className="h-7 w-7" strokeWidth={1.75} />
-              </span>
-              <h2 className="mt-5 text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.noClientsYet")}</h2>
+              {/* What will land here: two small "moments" instead of an empty icon. */}
+              <div aria-hidden className="relative mx-auto h-[118px] w-[280px]">
+                <MomentLine icon={Users} tone="glow" title={tr("auth.mNewClientsTitle")} body={tr("auth.mNewClientsBody")} className="absolute left-0 top-0 w-[260px] -rotate-[2deg]" />
+                <MomentLine icon={Check} tone="brand" title={tr("auth.mConfirmTitle")} body={tr("auth.mConfirmBody")} className="absolute bottom-0 right-0 w-[250px] rotate-[1.5deg]" />
+              </div>
+              <h2 className="mt-6 text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.noClientsYet")}</h2>
               <p className="mt-2 text-[rgb(var(--reg-muted))]">{tr("clients.anyoneWhoBooksLandsHere")}</p>
               <button type="button" onClick={() => setAddClientDialogOpen(true)} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-6 font-semibold text-white">
                 <Plus size={18} />{" "}{tr("clients.addClient")}

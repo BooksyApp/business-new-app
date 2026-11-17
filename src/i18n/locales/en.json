@@ -540,6 +540,16 @@
     "strongestMonthOnly": "{bestMonth} is your strongest month. Staff and stock for it."
   },
   "auth": {
+    "mWeek": "This week",
+    "mWeekValue": "86% booked",
+    "mPaidTitle": "Payment received · 45 ₼",
+    "mPaidBody": "Haircut · cash",
+    "mReviewName": "Lala",
+    "mReviewQuote": "Loved it — I'll definitely be back.",
+    "mNewClientsTitle": "+3 new clients",
+    "mNewClientsBody": "They came via the QR code on your desk",
+    "mConfirmTitle": "Confirmed",
+    "mConfirmBody": "Tomorrow, 14:30 · Gel manicure",
     "bookedOnlineDayAndNight": "Booked online, day and night",
     "clientsFindYourSalonOn": "Clients find your salon on booqi and pick a free time themselves — no calls.",
     "calendarAndTeamInOne": "Calendar and team in one place",

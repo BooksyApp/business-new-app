@@ -540,6 +540,16 @@
     "strongestMonthOnly": "Ən güclü ay: {bestMonth}. Həmin ay üçün ustaları və materialı hazırlayın."
   },
   "auth": {
+    "mWeek": "Bu həftə",
+    "mWeekValue": "86% dolu",
+    "mPaidTitle": "Ödəniş alındı · 45 ₼",
+    "mPaidBody": "Saç kəsimi · nağd",
+    "mReviewName": "Lala",
+    "mReviewQuote": "Çox razı qaldım, mütləq yenə gələcəm.",
+    "mNewClientsTitle": "+3 yeni müştəri",
+    "mNewClientsBody": "Masadakı QR kod ilə gəldilər",
+    "mConfirmTitle": "Təsdiqləndi",
+    "mConfirmBody": "Sabah, 14:30 · Gel manikür",
     "bookedOnlineDayAndNight": "Gecə-gündüz onlayn rezerv",
     "clientsFindYourSalonOn": "Müştərilər salonunuzu booqi-də tapır və boş vaxtı özləri seçir — zəngsiz.",
     "calendarAndTeamInOne": "Təqvim və komanda bir yerdə",

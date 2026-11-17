@@ -1,4 +1,5 @@
-import { Clock, MapPin, Sparkles } from "lucide-react";
+import { Check, Clock, MapPin, Sparkles } from "lucide-react";
+import { MomentLine } from "@/components/moments/Moments";
 import { cn } from "@/lib/utils";
 import { GlassChip, MeshPanel } from "./AuthShell";
 import { t, formatMinutes } from "@/i18n";
@@ -140,6 +141,8 @@ export function SalonPreview({ data, done = false }: { data: SalonPreviewData; d
           </div>
         </div>
       </article>
+      {/* What happens once it's live: the first booking lands. */}
+      <MomentLine icon={Check} tone="brand" title={t("auth.mConfirmTitle")} body={t("auth.mConfirmBody")} className="-mt-12 mr-[-8px] w-[270px] self-end" />
     </MeshPanel>
   );
 }

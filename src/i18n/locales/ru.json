@@ -540,6 +540,16 @@
     "strongestMonthOnly": "Самый сильный месяц — {bestMonth}. Усильте команду и запасы к этому месяцу."
   },
   "auth": {
+    "mWeek": "Эта неделя",
+    "mWeekValue": "Занято 86%",
+    "mPaidTitle": "Оплата получена · 45 ₼",
+    "mPaidBody": "Стрижка · наличные",
+    "mReviewName": "Лала",
+    "mReviewQuote": "Очень довольна, обязательно приду ещё.",
+    "mNewClientsTitle": "+3 новых клиента",
+    "mNewClientsBody": "Пришли по QR-коду на стойке",
+    "mConfirmTitle": "Подтверждено",
+    "mConfirmBody": "Завтра, 14:30 · Гель-маникюр",
     "bookedOnlineDayAndNight": "Онлайн-запись днём и ночью",
     "clientsFindYourSalonOn": "Клиенты находят ваш салон в booqi и сами выбирают свободное время — без звонков.",
     "calendarAndTeamInOne": "Календарь и команда в одном месте",

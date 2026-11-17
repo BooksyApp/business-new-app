@@ -1,11 +1,12 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Check, Globe2, Sparkles } from "lucide-react";
+import { Check, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { webUrl } from "./authStyles";
 import "./auth-tokens.css";
 import { t } from "@/i18n";
 import { useSupportHref } from "@/services/platformService";
+import { MomentLine, MomentOccupancy } from "@/components/moments/Moments";
 
 /**
  * The frame of the panel's sign-in and sign-up — a sibling of booqi-web's /signin, which the
@@ -72,56 +73,31 @@ export function GlassChip({ children }: { children: ReactNode }) {
   );
 }
 
-const benefits = [
-  {
-    icon: Globe2,
-    get title() { return t("auth.bookedOnlineDayAndNight"); },
-    get body() { return t("auth.clientsFindYourSalonOn"); },
-  },
-  {
-    icon: CalendarDays,
-    get title() { return t("auth.calendarAndTeamInOne"); },
-    get body() { return t("auth.everyAppointmentWorkingHourAnd"); },
-  },
-  {
-    icon: Sparkles,
-    get title() { return t("auth.startForFree"); },
-    get body() { return t("auth.setUpYourProfileAnd"); },
-  },
-];
+const ARCH_RADIUS = "999px 999px 30px 30px";
 
-/** Sign-in's aside: the same composition as the web's, told for a salon owner. */
+/**
+ * Sign-in's aside: a real salon moment in booqi's arch, with the product on its edges — the same
+ * "moments" as booqi-web's for-business page (a booking lands, the week fills up, a payment comes in).
+ * Desktop only (the aside is hidden on phones); the photo is lazy, so it never slows the sign-in.
+ */
 export function BenefitsPanel() {
   return (
-    <MeshPanel className="min-h-[620px] justify-between">
+    <MeshPanel className="min-h-[620px]">
       <div>
         <GlassChip>{t("auth.booqiForBusiness")}</GlassChip>
         <h2 className="mt-6 max-w-md text-[44px] font-extrabold !leading-[1] tracking-[-0.03em] text-[rgb(var(--reg-ink))] [text-wrap:balance]">
           {t("auth.yourSalonBookedOnline")}
         </h2>
       </div>
-      <ul className="mt-10 space-y-3">
-        {benefits.map(({ icon: Icon, title, body }) => (
-          <li key={title} className="flex gap-4 rounded-2xl bg-white/60 p-4 ring-1 ring-white/70 backdrop-blur">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[rgb(var(--reg-brand))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_8px_24px_-8px_rgb(var(--reg-ink)/0.1)]">
-              <Icon className="h-5 w-5" aria-hidden />
-            </span>
-            <span>
-              <span className="block font-semibold text-[rgb(var(--reg-ink))]">{title}</span>
-              <span className="mt-0.5 block text-sm leading-relaxed text-[rgb(var(--reg-ink)/0.7)]">{body}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
-      {/* The product itself, as on the web's panel: what lands in the calendar. */}
-      <div className="mt-8 flex items-center gap-3 self-end rounded-2xl bg-white/90 p-3.5 pr-5 shadow-[0_2px_6px_rgb(var(--reg-ink)/0.05),0_18px_40px_-12px_rgb(var(--reg-ink)/0.16)] ring-1 ring-[rgb(var(--reg-ink)/0.05)] motion-safe:animate-[auth-float_6s_ease-in-out_infinite]">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))] text-[rgb(var(--reg-ink))]">
-          <Check className="h-5 w-5" aria-hidden />
-        </span>
-        <span>
-          <span className="block text-sm font-bold text-[rgb(var(--reg-ink))]">{t("common.newBooking")}</span>
-          <span className="block text-xs text-[rgb(var(--reg-muted))]">{t("auth.tomorrowAtAddedToYour")}</span>
-        </span>
+      <div aria-hidden className="relative mt-10 min-h-[400px] flex-1">
+        {/* the mirror's lit edge, offset up-right behind the photo */}
+        <span className="absolute right-0 top-0 h-[380px] w-[280px] border-[1.5px] border-[rgb(233_162_127/0.7)]" style={{ borderRadius: ARCH_RADIUS, transform: "translate(12px,-12px)" }} />
+        <div className="absolute right-0 top-0 h-[380px] w-[280px] overflow-hidden bg-[rgb(251_231_220)] shadow-[0_40px_70px_-40px_rgb(160_80_50/0.45)]" style={{ borderRadius: ARCH_RADIUS }}>
+          <img src={`${import.meta.env.BASE_URL}auth/arch.webp`} alt="" width={560} height={700} loading="lazy" decoding="async" className="h-full w-full object-cover object-[58%_26%]" />
+        </div>
+        <MomentLine icon={Check} tone="brand" title={t("common.newBooking")} body={t("auth.tomorrowAtAddedToYour")} className="absolute left-0 top-12 w-[260px]" />
+        <MomentOccupancy label={t("auth.mWeek")} value={t("auth.mWeekValue")} className="absolute bottom-10 left-0 w-[230px]" />
+        <MomentLine icon={Wallet} tone="peach" title={t("auth.mPaidTitle")} body={t("auth.mPaidBody")} className="absolute -right-2 bottom-0 w-[240px]" />
       </div>
     </MeshPanel>
   );
