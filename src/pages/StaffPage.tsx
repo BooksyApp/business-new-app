@@ -25,7 +25,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { useCommissions, useCommissionRules } from "@/hooks/useCommissions";
 import { usePayments } from "@/hooks/usePayments";
-import { CommissionCategory, CommissionType, type CommissionRule } from "@/services/commissionService";
+import { CommissionCategory, CommissionStatus, CommissionType, type CommissionRule } from "@/services/commissionService";
 import type { Staff } from "@/services/staffService";
 import { PaymentMethod } from "@/services/paymentService";
 import { Dialog } from "@/components/ui/dialog";
@@ -395,7 +395,8 @@ export default function StaffPage() {
 
   // ── commissions: this month's numbers ──
   const monthKey = format(new Date(), "yyyy-MM");
-  const monthEarned = commissions.filter((c) => (c.commissionDate || "").startsWith(monthKey)).reduce((n, c) => n + (c.commissionAmount ?? 0), 0);
+  // Same rule as the pay run (FG-W1-06): a cancelled commission is not earned.
+  const monthEarned = commissions.filter((c) => c.status !== CommissionStatus.CANCELLED && (c.commissionDate || "").startsWith(monthKey)).reduce((n, c) => n + (c.commissionAmount ?? 0), 0);
   const monthPaid = payments.filter((p) => (p.paymentDate || "").startsWith(monthKey)).reduce((n, p) => n + (p.amount ?? 0), 0);
 
   // ── the member sheet: Profile / Services / Hours / Access ──
