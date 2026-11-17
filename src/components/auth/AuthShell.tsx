@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Check, Wallet } from "lucide-react";
+import { Check, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { webUrl } from "./authStyles";
 import "./auth-tokens.css";
@@ -103,6 +103,33 @@ export function BenefitsPanel() {
   );
 }
 
+/**
+ * Phones and tablets (the desktop aside is hidden there): booqi's arch with a real salon photo and
+ * two moments on its edges, above the form — the same composition as booqi-web's for-business on
+ * a phone. Small and fixed in size, so the form never jumps; the photo decodes off the main thread.
+ */
+function AuthMobileHero({ variant }: { variant: "signin" | "signup" }) {
+  return (
+    <div aria-hidden className="relative mb-9 mt-2 h-[208px] lg:hidden">
+      <span className="absolute inset-y-0 left-6 right-4 border-[1.5px] border-[rgb(233_162_127/0.7)]" style={{ borderRadius: "46% 46% 26px 26px / 62% 62% 26px 26px", transform: "translate(10px,-10px)" }} />
+      <div className="absolute inset-y-0 left-6 right-4 overflow-hidden bg-[rgb(251_231_220)] shadow-[0_34px_60px_-36px_rgb(160_80_50/0.5)]" style={{ borderRadius: "46% 46% 26px 26px / 62% 62% 26px 26px" }}>
+        <img src={`${import.meta.env.BASE_URL}auth/arch.webp`} alt="" width={560} height={700} decoding="async" className="h-full w-full object-cover object-[58%_30%]" />
+      </div>
+      {variant === "signin" ? (
+        <>
+          <MomentLine icon={Check} tone="brand" title={t("common.newBooking")} body={t("auth.tomorrowAtAddedToYour")} className="absolute -top-3 right-0 w-[min(250px,72%)]" />
+          <MomentOccupancy label={t("auth.mWeek")} value={t("auth.mWeekValue")} className="absolute -bottom-5 left-0 w-[min(200px,56%)] !p-3" />
+        </>
+      ) : (
+        <>
+          <MomentLine icon={Users} tone="glow" title={t("auth.mNewClientsTitle")} body={t("auth.mNewClientsBody")} className="absolute -top-3 right-0 w-[min(260px,76%)]" />
+          <MomentLine icon={Check} tone="brand" title={t("auth.mConfirmTitle")} body={t("auth.mConfirmBody")} className="absolute -bottom-5 left-0 w-[min(250px,72%)]" />
+        </>
+      )}
+    </div>
+  );
+}
+
 interface AuthShellProps {
   children: ReactNode;
   /** The pill in the header row: "Sign up" on sign-in, "Log in" on sign-up. */
@@ -116,9 +143,13 @@ interface AuthShellProps {
   footer?: boolean;
   /** Room at the bottom of a phone for a sticky action bar. */
   mobileBarSpace?: boolean;
+  /** Phones/tablets only: the arch photo with two moments above the card. Defaults to the
+   *  sign-in set when the page has no aside of its own; pass "signup" or false explicitly. */
+  mobileHero?: "signin" | "signup" | false;
 }
 
-export function AuthShell({ children, headerLink, aside, cardClassName, footer = true, mobileBarSpace = false }: AuthShellProps) {
+export function AuthShell({ children, headerLink, aside, cardClassName, footer = true, mobileBarSpace = false, mobileHero }: AuthShellProps) {
+  const hero = mobileHero ?? (aside ? false : "signin");
   const supportHref = useSupportHref(`${webUrl}/support`);
   // The hub ships Inter only; its doors wear the brand face, as on booqi-web. If the font
   // cannot load, the stack falls back to Inter — nothing breaks.
@@ -170,6 +201,7 @@ export function AuthShell({ children, headerLink, aside, cardClassName, footer =
         )}
       >
         <main className={cn("mx-auto w-full min-w-0 max-w-[460px] animate-in fade-in-0 slide-in-from-bottom-2 duration-500 motion-reduce:animate-none", cardClassName)}>
+          {hero && <AuthMobileHero variant={hero} />}
           <div className="md:rounded-[32px] md:bg-white/85 md:p-9 md:shadow-[0_2px_4px_rgb(var(--reg-ink)/0.04),0_24px_48px_-16px_rgb(var(--reg-brand-strong)/0.22)] md:ring-1 md:ring-[rgb(var(--reg-ink)/0.05)] md:backdrop-blur-xl">
             {children}
             {footer && (

@@ -701,6 +701,7 @@ const RegistrationPage = () => {
         aside={preview}
         cardClassName="md:max-w-[520px]"
         mobileBarSpace
+        mobileHero={currentStep === 1 ? "signup" : false}
       >
         {/* Progress: one thin bar and a plain count, so six-plus screens never feel long. */}
         <div className="mb-7">
