@@ -31,6 +31,7 @@ import { getPlatformSettings } from "@/services/platformService";
 import { TERMS_VERSION } from "@/config/legal";
 import { t as tr, tOpt } from "@/i18n";
 import { salonPath } from "@/lib/salonKey";
+import { referralService } from "@/services/referralService";
 
 interface RegistrationData {
   firstName: string;
@@ -105,6 +106,8 @@ const RegistrationPage = () => {
   const prefillEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam) ? emailParam : "";
   const prefillBusiness = (searchParams.get("business") ?? "").trim().slice(0, 120);
   const planParam = (searchParams.get("plan") ?? "").trim();
+  // Salon → salon invite: ?ref=<code> from another salon's invite link (via web /for-business).
+  const refParam = (searchParams.get("ref") ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
   const selectedPlan = /^[a-z0-9-]{1,24}$/i.test(planParam)
     ? planParam.charAt(0).toUpperCase() + planParam.slice(1).toLowerCase()
     : null;
@@ -571,6 +574,11 @@ const RegistrationPage = () => {
         }
       }
 
+
+      // Who invited this salon. Never blocks sign-up: an unknown or stale code is ignored.
+      if (refParam) {
+        await referralService.claimSalonInvite(business.id, refParam).catch(() => undefined);
+      }
 
       // The welcome screen's button goes on to the portal (home page).
       setRegisteredBusinessId(business.id);

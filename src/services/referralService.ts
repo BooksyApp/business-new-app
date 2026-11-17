@@ -74,7 +74,30 @@ export interface PlatformReferral {
   invites: { name: string; status: string; reward_points: number }[];
 }
 
+/** The salon's own "invite a salon" code (salon → salon, BUSINESS_REFERRAL) and what it earned. */
+export interface SalonInvite {
+  id: Id;
+  code: string;
+  rewardTier: string | null;
+  invited: number;
+  qualified: number;
+  /** Free months earned; applied to the subscription once paid plans start. */
+  monthsEarned: number;
+  monthsApplied: number;
+  paidPlansStarted: boolean;
+}
+
 class ReferralService {
+  /** This salon's invite-a-salon code (created on first ask). */
+  async getSalonInvite(businessId: Id): Promise<SalonInvite> {
+    return apiClient.get<SalonInvite>(`/referrals/salon/business/${businessId}`);
+  }
+
+  /** A newly registered salon records the salon that invited it (?ref= on the register link). */
+  async claimSalonInvite(businessId: Id, code: string): Promise<void> {
+    await apiClient.post(`/referrals/salon/business/${businessId}/claim`, { code });
+  }
+
   /**
    * The signed-in account's own booqi code. Every registered person has one — this is the
    * platform programme, not the salon's, so it needs no businessId and works for an owner

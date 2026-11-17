@@ -2094,7 +2094,7 @@
     "theFriendGets": "The friend gets",
     "nothingYet": "Nothing yet",
     "yourClientGets": "Your client gets",
-    "worksForClientsAndFor": "{value} · works for clients and for other businesses",
+    "worksForClientsAndFor": "{value} · for your clients",
     "share": "Share",
     "theInvite": "the invite",
     "friendsReferred": "Friends referred",
@@ -2117,7 +2117,15 @@
     "pointsEarned": " · {pointsEarned} points earned",
     "stepSignUp": "A friend signs up with the code",
     "stepFirstVisit": "They come for their first visit",
-    "stepReward": "Both get their reward"
+    "stepReward": "Both get their reward",
+    "salonInviteTitle": "Invite a salon",
+    "salonInviteBody": "Invite a salon you know to booqi. When it completes its first real appointment, you get 1 free month of the Salon plan.",
+    "salonInviteStats": "{invited} salons invited · {qualified} up and running",
+    "salonInviteCredit": "{months} free month(s) — applied when paid plans start",
+    "salonInviteShareText": "Set up your salon on booqi — online booking, calendar, till. My invite link: {link}",
+    "copyLink": "Copy link",
+    "clientProgrammeTitle": "Client referral programme",
+    "clientProgrammeBody": "For your clients: they bring friends to your salon, and both get a reward after the first visit."
   },
   "registration": {
     "createYourBusinessAccount": "Create your business account",

@@ -12,7 +12,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { clientService } from "@/services/clientService";
-import { referralService, type PlatformReferral, type ReferralAnalytics, type ReferralCode, type ReferralUsage } from "@/services/referralService";
+import { referralService, type ReferralAnalytics, type SalonInvite, type ReferralCode, type ReferralUsage } from "@/services/referralService";
 import { t, fmtDate as formatLocaleDate } from "@/i18n";
 
 const USAGE_STATUS: Record<ReferralUsage["status"], { status: Lifecycle; label: string }> = {
@@ -35,7 +35,7 @@ function rewardText(amount?: number | null, points?: number | null): string | nu
 export default function ReferralProgramPage() {
   const businessId = useBusinessId();
   const [serviceUnavailable, setServiceUnavailable] = useState(false);
-  const [myCode, setMyCode] = useState<PlatformReferral | null>(null);
+  const [salonInvite, setSalonInvite] = useState<SalonInvite | null>(null);
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState<ReferralCode | null>(null);
   const [analytics, setAnalytics] = useState<ReferralAnalytics | null>(null);
@@ -45,9 +45,9 @@ export default function ReferralProgramPage() {
 
   useEffect(() => {
     void loadData();
-    // Independent of the salon's programme: the account's own code exists either way, so
-    // a business with no scheme still sees something to share.
-    referralService.getMyPlatformCode().then(setMyCode).catch(() => setMyCode(null));
+    // Salon → salon: the owner's code in the hub. (A person's own booqi code lives on the
+    // web /rewards page, not here.)
+    referralService.getSalonInvite(businessId).then(setSalonInvite).catch(() => setSalonInvite(null));
     // Usages carry client ids only; the names make the list readable.
     clientService
       .getClientsByBusiness(businessId)
@@ -95,6 +95,24 @@ export default function ReferralProgramPage() {
     }
   };
 
+  /** Where an invited salon signs up: the web for-business page (it forwards ?ref= to the hub). */
+  const salonInviteLink = (code: string) => {
+    const { protocol, hostname, origin } = window.location;
+    const web = hostname.startsWith("business.") ? `${protocol}//${hostname.slice("business.".length)}` : null;
+    const ref = encodeURIComponent(code);
+    return web ? `${web}/for-business?ref=${ref}` : `${origin}/register?ref=${ref}`;
+  };
+
+  const shareSalonInvite = (code: string) => {
+    const link = salonInviteLink(code);
+    const text = t("referralProgram.salonInviteShareText", { link });
+    if (navigator.share) {
+      void navigator.share({ text }).catch(() => undefined);
+    } else {
+      copy(text);
+    }
+  };
+
   const friendGets = referralCode ? rewardText(referralCode.newUserReward, referralCode.newUserPoints) : null;
   const sharerGets = referralCode ? rewardText(referralCode.rewardAmount, referralCode.rewardPoints) : null;
   const pending = usages.filter((u) => u.status === "PENDING").length;
@@ -110,10 +128,6 @@ export default function ReferralProgramPage() {
             referralCode ? (
               <Button className={primaryBtn} onClick={() => share(referralCode.code)}>
                 <Share2 size={16} />{" "}{t("referralProgram.shareCode")}
-              </Button>
-            ) : myCode ? (
-              <Button className={primaryBtn} onClick={() => copy(myCode.code)}>
-                <Copy size={16} />{" "}{t("referralProgram.copyMyCode")}
               </Button>
             ) : undefined
           }
@@ -141,6 +155,13 @@ export default function ReferralProgramPage() {
                   body={t("referralProgram.yourSalonSCodeIs")}
                   action={<Button variant="outline" className={secondaryBtn} onClick={() => void loadData()}><RefreshCw size={16} />{" "}{t("referralProgram.refresh")}</Button>}
                 />
+              )}
+
+              {referralCode && (
+                <div>
+                  <SectionTitle>{t("referralProgram.clientProgrammeTitle")}</SectionTitle>
+                  <p className="-mt-2 mb-3 text-sm text-[rgb(var(--reg-muted))]">{t("referralProgram.clientProgrammeBody")}</p>
+                </div>
               )}
 
               {referralCode && (
@@ -248,20 +269,26 @@ export default function ReferralProgramPage() {
                 </section>
               )}
 
-              {/* The account's own code: every registered person has one, including an
-                  owner who runs no scheme of their own. */}
-              {myCode && (
-                <section className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
+              {/* Salon → salon: invite another business; a free month once it is up and running. */}
+              {salonInvite && (
+                <section className="grid gap-4 rounded-[24px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:grid-cols-[1fr_auto] md:items-center md:p-6">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{t("referralProgram.yourPersonalBooqiCode")}</p>
-                    <p className="font-mono text-xl font-bold tracking-[0.12em]">{myCode.code}</p>
-                    <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">
-                      {t("referralProgram.bookedInvited", { qualified: myCode.qualified, pending: myCode.pending, value: myCode.pointsEarned > 0 ? t("referralProgram.pointsEarned", { pointsEarned: myCode.pointsEarned }) : "" })}
+                    <SectionTitle>{t("referralProgram.salonInviteTitle")}</SectionTitle>
+                    <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{t("referralProgram.salonInviteBody")}</p>
+                    <p className="mt-3 font-mono text-xl font-bold tracking-[0.12em]">{salonInvite.code}</p>
+                    <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">
+                      {t("referralProgram.salonInviteStats", { invited: salonInvite.invited, qualified: salonInvite.qualified })}
+                      {salonInvite.monthsEarned > 0 && !salonInvite.paidPlansStarted ? ` · ${t("referralProgram.salonInviteCredit", { months: salonInvite.monthsEarned })}` : ""}
                     </p>
                   </div>
-                  <Button variant="outline" className={secondaryBtn} onClick={() => copy(myCode.code)}>
-                    <Copy size={16} />{" "}{t("common.copy")}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button className={primaryBtn} onClick={() => shareSalonInvite(salonInvite.code)}>
+                      <Share2 size={16} />{" "}{t("referralProgram.share")}
+                    </Button>
+                    <Button variant="outline" className={secondaryBtn} onClick={() => copy(salonInviteLink(salonInvite.code))}>
+                      <Copy size={16} />{" "}{t("referralProgram.copyLink")}
+                    </Button>
+                  </div>
                 </section>
               )}
             </>

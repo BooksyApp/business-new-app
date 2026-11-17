@@ -2094,7 +2094,7 @@
     "theFriendGets": "Dost alır",
     "nothingYet": "Hələ heç nə",
     "yourClientGets": "Müştəriniz alır",
-    "worksForClientsAndFor": "{value} · müştərilər və digər bizneslər üçün keçərlidir",
+    "worksForClientsAndFor": "{value} · müştəriləriniz üçün",
     "share": "Paylaş",
     "theInvite": "dəvət",
     "friendsReferred": "Dəvət olunan dostlar",
@@ -2117,7 +2117,15 @@
     "pointsEarned": " · {pointsEarned} bonus qazanılıb",
     "stepSignUp": "Dost kodla qeydiyyatdan keçir",
     "stepFirstVisit": "İlk dəfə salona gəlir",
-    "stepReward": "Hər ikisi bonus alır"
+    "stepReward": "Hər ikisi bonus alır",
+    "salonInviteTitle": "Salon dəvət et",
+    "salonInviteBody": "Tanıdığınız salonu booqi-yə dəvət edin. O salon ilk real görüşünü tamamlayanda siz 1 ay pulsuz Salon planı qazanırsınız.",
+    "salonInviteStats": "{invited} salon dəvət olunub · {qualified} işə başlayıb",
+    "salonInviteCredit": "{months} ay pulsuz — ödənişli planlar başlayanda tətbiq olunacaq",
+    "salonInviteShareText": "booqi-də salonunu qur — onlayn rezerv, təqvim, kassa. Mənim dəvət linkim: {link}",
+    "copyLink": "Linki kopyala",
+    "clientProgrammeTitle": "Müştəri dəvət proqramı",
+    "clientProgrammeBody": "Müştəriləriniz üçün: onlar dostlarını salonunuza gətirir, ilk gəlişdən sonra hər ikisi bonus alır."
   },
   "registration": {
     "createYourBusinessAccount": "Biznes hesabınızı yaradın",

@@ -2094,7 +2094,7 @@
     "theFriendGets": "Друг получает",
     "nothingYet": "Пока ничего",
     "yourClientGets": "Ваш клиент получает",
-    "worksForClientsAndFor": "{value} · работает для клиентов и для других салонов",
+    "worksForClientsAndFor": "{value} · для ваших клиентов",
     "share": "Поделиться",
     "theInvite": "приглашение",
     "friendsReferred": "Приглашено друзей",
@@ -2117,7 +2117,15 @@
     "pointsEarned": " · бонусов: {pointsEarned}",
     "stepSignUp": "Друг регистрируется с кодом",
     "stepFirstVisit": "Приходит на первый визит",
-    "stepReward": "Оба получают бонусы"
+    "stepReward": "Оба получают бонусы",
+    "salonInviteTitle": "Пригласить салон",
+    "salonInviteBody": "Пригласите знакомый салон в booqi. Когда он проведёт первую настоящую запись, вы получите 1 бесплатный месяц тарифа Salon.",
+    "salonInviteStats": "Приглашено салонов: {invited} · начали работу: {qualified}",
+    "salonInviteCredit": "Бесплатных месяцев: {months} — применятся, когда начнутся платные тарифы",
+    "salonInviteShareText": "Откройте свой салон в booqi — онлайн-запись, календарь, касса. Моя ссылка-приглашение: {link}",
+    "copyLink": "Скопировать ссылку",
+    "clientProgrammeTitle": "Программа приглашений для клиентов",
+    "clientProgrammeBody": "Для ваших клиентов: они приводят друзей в ваш салон, и после первого визита оба получают бонус."
   },
   "registration": {
     "createYourBusinessAccount": "Создайте бизнес-аккаунт",
