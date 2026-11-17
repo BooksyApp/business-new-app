@@ -3135,6 +3135,7 @@
     "writeSupport": "Write to support",
     "myRequests": "My requests",
     "whatsapp": "Chat on WhatsApp",
+    "priority": "Priority support · First 100",
     "a1": {
       "q": "Why can't customers see my salon?",
       "a": "A salon shows up for customers once it has at least one service, one team member and opening hours. Check all three: a service is added, the team member performs it, and opening hours are set. The Overview page lists the steps you have not finished yet. A few minutes after they are done, the salon appears in search.",

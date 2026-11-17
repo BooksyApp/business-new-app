@@ -9,7 +9,7 @@ import { fieldCls } from "@/components/page/kitStyles";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
-import { platformSettings } from "@/services/platformService";
+import { platformSettings, getSalonSupport } from "@/services/platformService";
 
 type Article = "a1" | "a2" | "a3" | "a4" | "a5" | "a6" | "a7" | "a8";
 
@@ -34,6 +34,7 @@ export default function HelpPage() {
   const { salonKey: businessId } = useParams<{ salonKey?: string }>();
   const [query, setQuery] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [priority, setPriority] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -42,6 +43,18 @@ export default function HelpPage() {
     });
     return () => { live = false; };
   }, []);
+
+  // FG-W1-03: İlk 100 salons get priority support; the salon's own number wins over the global one.
+  useEffect(() => {
+    if (!businessId) return;
+    let live = true;
+    getSalonSupport(businessId).then((s) => {
+      if (!live || !s) return;
+      setPriority(!!s.priority);
+      if (s.whatsapp) setWhatsapp(s.whatsapp);
+    });
+    return () => { live = false; };
+  }, [businessId]);
 
   const needle = query.trim().toLocaleLowerCase();
   const shown = useMemo(
@@ -95,6 +108,11 @@ export default function HelpPage() {
               </div>
             </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              {priority && (
+                <span className="inline-flex items-center justify-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                  {t("help.priority")}
+                </span>
+              )}
               <Link to={`/${businessId}/support`} className={cn(primaryBtn, "inline-flex items-center justify-center")}>{t("help.writeSupport")}</Link>
               {whatsapp && (
                 <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className={cn(secondaryBtn, "inline-flex items-center justify-center gap-2")}>

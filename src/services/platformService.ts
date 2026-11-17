@@ -191,3 +191,19 @@ export function useOnlinePayments(): boolean {
   }, []);
   return on;
 }
+
+/** FG-W1-03: this salon's support channel (admin-set WhatsApp/e-mail) and İlk 100 priority. */
+export interface SalonSupport {
+  whatsapp: string;
+  email: string;
+  priority: boolean;
+}
+
+export async function getSalonSupport(businessId: string): Promise<SalonSupport | null> {
+  try {
+    const { apiClient } = await import("@/config/api");
+    return await apiClient.get<SalonSupport>(`/businesses/${businessId}/support`);
+  } catch {
+    return null;
+  }
+}
