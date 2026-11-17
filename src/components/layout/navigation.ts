@@ -1,5 +1,8 @@
 import type React from "react";
 import {
+  Clock,
+  Receipt,
+  Wallet,
   Users,
   ShieldCheck,
   Package,
@@ -83,6 +86,8 @@ export const navGroups: NavGroup[] = [
       { icon: TaskIcon, get label() { return t("common.till"); }, path: "/sales", get description() { return t("layout.ringUpAVisitTake"); } },
       { icon: AnalyticsIcon, get label() { return t("layout.analytics"); }, path: "/analytics", get description() { return t("layout.revenueBookingsAndClientTrends"); } },
       { icon: Landmark, get label() { return t("common.money"); }, path: "/money", get description() { return t("layout.payoutsTipsTheCashDrawer"); } },
+      { icon: Wallet, get label() { return t("payroll.title"); }, path: "/payroll", get description() { return t("payroll.navHint"); } },
+      { icon: Receipt, get label() { return t("expenses.title"); }, path: "/expenses", get description() { return t("expenses.navHint"); } },
       { icon: Rocket, get label() { return t("layout.promotion"); }, path: "/promotion", get description() { return t("layout.payToAppearAtThe"); } },
     ],
   },
@@ -126,6 +131,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { icon: Users, get label() { return t("layout.teamMembers"); }, path: "/staff", get description() { return t("layout.whoWorksHereTheirServices"); } },
       { icon: ShieldCheck, get label() { return t("layout.roles"); }, path: "/roles", get description() { return t("layout.whatEachRoleCanSee"); } },
+      { icon: Clock, get label() { return t("timesheet.title"); }, path: "/timesheet", get description() { return t("timesheet.navHint"); } },
     ],
   },
   {
@@ -195,6 +201,8 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/sales": ["TILL", "SALES_VIEW"],
   "/analytics": ["ANALYTICS"],
   "/money": ["MONEY"],
+  "/payroll": ["MONEY"],
+  "/expenses": ["MONEY"],
   "/promotion": null,
   "/clients": ["CLIENTS_VIEW"],
   "/referral-program": ["MARKETING"],
