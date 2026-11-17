@@ -7,7 +7,7 @@ import { currencySymbol } from "@/lib/currency";
 import type { ClientAppointmentRow } from "@/services/clientService";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
 import { MomentLine } from "@/components/moments/Moments";
-import { CalendarCheck, Check, Coins, Download, Star, UserPlus, Users } from "lucide-react";
+import { CalendarCheck, Check, Coins, Download, Star, Upload, UserPlus, Users } from "lucide-react";
 import { loyaltyService } from "@/services/growthService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -51,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t as tr } from "@/i18n";
+import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
 import { salonPath } from "@/lib/salonKey";
 
 /** An invitation row shown as a client before it is accepted (no client row yet). */
@@ -183,6 +184,7 @@ export default function ClientsPage() {
     notes: "",
   });
   const businessId = useBusinessId();
+  const [importOpen, setImportOpen] = useState(false);
   useSalonTimeZone(businessId);
   useBrandFont();
 
@@ -577,6 +579,15 @@ export default function ClientsPage() {
                 {tr("clients.r02ExportCsv")}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] transition hover:bg-[rgb(var(--reg-brand-soft))]"
+            >
+              <Upload size={16} strokeWidth={2} />
+              {tr("clients.importButton")}
+            </button>
+            <ClientImportDialog businessId={businessId} open={importOpen} onOpenChange={setImportOpen} onImported={() => loadClients()} />
             <button
               type="button"
               onClick={() => setAddClientDialogOpen(true)}
