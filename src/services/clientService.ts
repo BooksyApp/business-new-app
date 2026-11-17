@@ -159,7 +159,11 @@ class ClientService {
    * Get all clients for a business (for dropdown selection)
    */
   async getClientsByBusiness(businessId: Id): Promise<Client[]> {
-    return apiClient.get<Client[]>(`/clients/business/${businessId}`);
+    const rows = await apiClient.get<Client[]>(`/clients/business/${businessId}`);
+    // R02 G4: the list also carries customers who booked but have no client row yet (only a
+    // clientKey, no id). Every caller of this list picks a client BY ID (calendar picker,
+    // "change client", referral names); an id-less row crashed the calendar on id.toString().
+    return (rows || []).filter((c) => c != null && c.id != null);
   }
 
   /**
