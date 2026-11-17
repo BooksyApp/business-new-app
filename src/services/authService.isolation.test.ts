@@ -10,7 +10,9 @@ function answer(status: number, body: unknown) {
 }
 
 describe("authService.login — role isolation", () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it("sends app: 'hub'", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
