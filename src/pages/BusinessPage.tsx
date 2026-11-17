@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SalonQrCard } from "@/components/SalonQrCard";
+import { ShareKitCard } from "@/components/ShareKitCard";
 import { subscriptionService, type SubscriptionStatus } from "@/services/subscriptionService";
 import { Check, Copy, ExternalLink, Eye, MapPin, Pencil, Share2 } from "lucide-react";
 import { BooqiScope, FormSheet, PageHeader } from "@/components/page/booqi";
@@ -346,6 +347,7 @@ export default function BusinessPage() {
               </button>
 
               <SalonQrCard salonUrl={publicUrl} salonName={business?.slug ?? business?.name} />
+              <ShareKitCard salonUrl={publicUrl} salonName={business?.name ?? ""} businessId={String(business?.id ?? "")} />
 
               <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
                 <SectionTitle>{t("business.about")}</SectionTitle>
