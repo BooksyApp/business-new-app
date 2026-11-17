@@ -366,7 +366,7 @@ function groupConflictingItems(
 ): ConflictItem[][] {
   const groups: ConflictItem[][] = [];
   const processedApts = new Set<string>();
-  const processedTimeOffs = new Set<number>();
+  const processedTimeOffs = new Set<Id>();
   
   // Process appointments first
   appointments.forEach((apt) => {
@@ -747,7 +747,7 @@ export default function CalendarPage() {
   useEffect(reloadWaitlist, [reloadWaitlist]);
 
   /** Which waiting client this booking is for, so the card leaves the column when it is booked. */
-  const [placingEntryId, setPlacingEntryId] = useState<number | null>(null);
+  const [placingEntryId, setPlacingEntryId] = useState<Id | null>(null);
   const [calendarSearch, setCalendarSearch] = useState("");
 
   /**
