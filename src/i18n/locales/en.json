@@ -1182,7 +1182,17 @@
     "importConsentNote": "Imported clients are not treated as having agreed to marketing messages.",
     "importReadFailed": "Could not read the file",
     "importXlsOld": "The old .xls format is not supported — save the file as .xlsx or CSV",
-    "importFailed": "Import failed, please try again"
+    "importFailed": "Import failed, please try again",
+    "photoAdd": "Add photo",
+    "photoCaption": "Caption (optional)",
+    "photoNoVisit": "Not linked to a visit",
+    "photoDelete": "Delete photo",
+    "photoDeleteConfirm": "Delete this photo?",
+    "photoDeleteFailed": "Could not delete the photo",
+    "photoUploadFailed": "Could not upload the photo",
+    "photoReadFailed": "Could not read the image",
+    "photoTooLarge": "The file is too large (over 25 MB)",
+    "photoPrivate": "Photos are visible to the salon team only."
   },
   "createBusiness": {
     "enterYourBusinessName": "Enter your business name",

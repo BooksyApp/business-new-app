@@ -51,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t as tr } from "@/i18n";
+import { ClientPhotosSection } from "@/components/clients/ClientPhotosSection";
 import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
 import { salonPath } from "@/lib/salonKey";
 
@@ -1481,18 +1482,14 @@ export default function ClientsPage() {
                                 </ul>
                               )}
                             </section>
-                            {record.photos.length > 0 && (
-                              <section>
-                                <p className={cn(label, "mb-2")}>{tr("clients.photos", { count: record.photos.length })}</p>
-                                <div className="grid grid-cols-3 gap-2">
-                                  {record.photos.map((ph) => (
-                                    <figure key={ph.id} className="overflow-hidden rounded-xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
-                                      <img src={ph.url} alt={ph.caption || `${ph.kind.toLowerCase()} photo`} className="aspect-square w-full object-cover" />
-                                      <figcaption className="px-2 py-1 text-[11px] font-semibold">{ph.kind === "BEFORE" ? tr("clients.before") : tr("clients.after")} · {shortDate(ph.taken_on)}</figcaption>
-                                    </figure>
-                                  ))}
-                                </div>
-                              </section>
+                            {detailClient && (
+                              <ClientPhotosSection
+                                businessId={businessId}
+                                clientId={detailClient.id}
+                                record={record}
+                                labelClass={label}
+                                onChanged={() => salonDayService.getClientRecord(businessId, detailClient.id).then(setRecord).catch(() => undefined)}
+                              />
                             )}
                           </>
                         )}

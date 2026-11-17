@@ -1182,7 +1182,17 @@
     "importConsentNote": "Импортированные клиенты не считаются давшими согласие на маркетинговые сообщения.",
     "importReadFailed": "Не удалось прочитать файл",
     "importXlsOld": "Старый формат .xls не поддерживается — сохраните файл как .xlsx или CSV",
-    "importFailed": "Импорт не удался, попробуйте ещё раз"
+    "importFailed": "Импорт не удался, попробуйте ещё раз",
+    "photoAdd": "Добавить фото",
+    "photoCaption": "Подпись (необязательно)",
+    "photoNoVisit": "Без привязки к визиту",
+    "photoDelete": "Удалить фото",
+    "photoDeleteConfirm": "Удалить это фото?",
+    "photoDeleteFailed": "Не удалось удалить фото",
+    "photoUploadFailed": "Не удалось загрузить фото",
+    "photoReadFailed": "Не удалось прочитать изображение",
+    "photoTooLarge": "Файл слишком большой (больше 25 МБ)",
+    "photoPrivate": "Фото видит только команда салона."
   },
   "createBusiness": {
     "enterYourBusinessName": "Введите название салона",

@@ -1182,7 +1182,17 @@
     "importConsentNote": "İdxal olunan müştərilər marketinq mesajlarına razılıq vermiş sayılmır.",
     "importReadFailed": "Faylı oxumaq olmadı",
     "importXlsOld": "Köhnə .xls formatı dəstəklənmir — faylı .xlsx və ya CSV kimi saxlayın",
-    "importFailed": "İdxal alınmadı, yenidən cəhd edin"
+    "importFailed": "İdxal alınmadı, yenidən cəhd edin",
+    "photoAdd": "Foto əlavə et",
+    "photoCaption": "Başlıq (istəyə görə)",
+    "photoNoVisit": "Vizitə bağlama",
+    "photoDelete": "Fotonu sil",
+    "photoDeleteConfirm": "Foto silinsin?",
+    "photoDeleteFailed": "Foto silinmədi",
+    "photoUploadFailed": "Foto yüklənmədi",
+    "photoReadFailed": "Şəkli oxumaq olmadı",
+    "photoTooLarge": "Fayl çox böyükdür (25 MB-dan çox)",
+    "photoPrivate": "Fotolar yalnız salon komandasına görünür."
   },
   "createBusiness": {
     "enterYourBusinessName": "Salonun adını yazın",
