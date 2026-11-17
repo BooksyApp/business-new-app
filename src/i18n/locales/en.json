@@ -1505,6 +1505,9 @@
     "servicesInCategories": "{services, plural, one {# service} other {# services}} in {categories, plural, one {# category} other {# categories}}"
   },
   "layout": {
+    "installApp": "Install app",
+    "installAppHint": "Add booqi Business to your home screen — open it with one tap",
+    "installAppLater": "Not now",
     "language": "Language",
     "chooseTheLanguageOfThe": "Choose the language of the panel",
     "grow": "Grow",

@@ -1,5 +1,6 @@
 import { ReactNode, useState } from "react";
 import { MobileTabBar, MobileTopBar, Sidebar } from "./Sidebar";
+import { InstallAppBanner } from "./InstallAppBanner";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -32,6 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />
+        <InstallAppBanner />
         {/* On a phone the floating tab bar sits over the bottom; keep content clear of it. */}
         <main className="min-h-0 flex-1 overflow-auto bg-[#fafafa] pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-0">
           {children}

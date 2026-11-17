@@ -9,7 +9,15 @@
          this covers agents that fetch the page anyway. -->
     <meta name="robots" content="noindex,nofollow" />
     <meta name="description" content="Salon business management: calendar, clients, staff, services and point of sale." />
-    <meta name="theme-color" content="#3b82f6" />
+    <!-- FG-W2-130: installable to the home screen (manifest + public/sw.js). theme-color is the
+         mobile top bar's colour (--reg-canvas), so the status bar runs into it. -->
+    <meta name="theme-color" content="#FBF7F2" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="booqi Biz" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div id="root"></div>

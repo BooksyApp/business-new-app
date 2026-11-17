@@ -106,6 +106,53 @@ function firstScreenPreload(): Plugin {
   };
 }
 
+/**
+ * FG-W2-130: stamps the built public/sw.js (copied to the out dir by Vite) with this build's
+ * version and its app shell. The version is a hash of the build, so each deploy is a new
+ * worker with a new cache name (its activate step deletes the old caches); the shell is the
+ * entry chunk, what it statically imports, their CSS, the boot script and the offline page.
+ */
+function serviceWorkerStamp(): Plugin {
+  let outDir = "dist";
+  return {
+    name: "booqi-sw-stamp",
+    apply: "build",
+    enforce: "post",
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    writeBundle(_options, bundle: OutputBundle) {
+      const file = path.join(outDir, "sw.js");
+      if (!fs.existsSync(file)) return;
+      const chunks = Object.values(bundle).filter((c): c is OutputChunk => c.type === "chunk");
+      const byFile = new Map(chunks.map((c) => [c.fileName, c]));
+      const statics = ["/offline.html", "/manifest.webmanifest", "/icons/icon-192.png"];
+      const shell = new Set<string>(statics);
+      const walk = (c: OutputChunk | undefined) => {
+        if (!c || shell.has(`/${c.fileName}`)) return;
+        shell.add(`/${c.fileName}`);
+        c.viteMetadata?.importedCss.forEach((css) => shell.add(`/${css}`));
+        c.imports.forEach((f) => walk(byFile.get(f)));
+      };
+      walk(chunks.find((c) => c.isEntry));
+      Object.keys(bundle).filter((f) => f.startsWith("assets/js/boot-")).forEach((f) => shell.add(`/${f}`));
+      const src = fs.readFileSync(file, "utf8");
+      const hash = createHash("sha256").update(src).update(Object.keys(bundle).sort().join("\n"));
+      const html = bundle["index.html"];
+      if (html?.type === "asset") hash.update(String(html.source));
+      for (const s of statics) {
+        const p = path.join(outDir, s);
+        if (fs.existsSync(p)) hash.update(fs.readFileSync(p));
+      }
+      const stamped = src
+        .replace('"__BOOQI_SW_BUILD__"', JSON.stringify(hash.digest("hex").slice(0, 12)))
+        .replace("[/*__BOOQI_SW_SHELL__*/]", JSON.stringify([...shell]));
+      if (stamped === src) this.error("public/sw.js placeholders not found");
+      fs.writeFileSync(file, stamped);
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 // The panel has its own host (business.getbooqi.tech) and lives at its root; the old
 // getbooqi.tech/manage/* addresses are 301'd there by Caddy.
@@ -136,6 +183,7 @@ export default defineConfig(({ mode }) => ({
     }),
     mode === "development" && componentTagger(),
     firstScreenPreload(),
+    serviceWorkerStamp(),
   ].filter(Boolean),
   resolve: {
     alias: {

@@ -1505,6 +1505,9 @@
     "servicesInCategories": "{services, plural, one {# xidmət} other {# xidmət}}, {categories, plural, one {# kateqoriya} other {# kateqoriya}}"
   },
   "layout": {
+    "installApp": "Tətbiqi quraşdır",
+    "installAppHint": "booqi Business-i ana ekrana əlavə edin — bir toxunuşla açılsın",
+    "installAppLater": "İndi yox",
     "language": "Dil",
     "chooseTheLanguageOfThe": "Panelin dilini seçin",
     "grow": "İnkişaf",

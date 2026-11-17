@@ -1505,6 +1505,9 @@
     "servicesInCategories": "{services, plural, one {# услуга} few {# услуги} many {# услуг} other {# услуги}} в {categories, plural, one {# категории} few {# категориях} many {# категориях} other {# категории}}"
   },
   "layout": {
+    "installApp": "Установить приложение",
+    "installAppHint": "Добавьте booqi Business на главный экран — открывайте одним касанием",
+    "installAppLater": "Не сейчас",
     "language": "Язык",
     "chooseTheLanguageOfThe": "Выберите язык панели",
     "grow": "Развитие",

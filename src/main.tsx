@@ -11,8 +11,11 @@ import { getHubLocale } from "@/lib/hubLocale";
 import { initSentry, reportError } from "@/lib/sentry";
 import { ImpersonationBanner, ImpersonationError } from "@/components/ImpersonationBanner";
 import { handleImpersonationLanding } from "@/lib/impersonation";
+import { captureInstallPrompt, registerServiceWorker } from "@/lib/pwa";
 
 initSentry();
+captureInstallPrompt();
+registerServiceWorker();
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
