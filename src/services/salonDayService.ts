@@ -185,6 +185,17 @@ export interface Supplier {
   is_active: boolean;
 }
 
+/** The save body is camelCase: the server reads contactName and accountNumber from it. */
+export interface SupplierInput {
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  accountNumber?: string;
+  notes?: string;
+  isActive?: boolean;
+}
+
 export interface PurchaseOrderLine {
   id: Id;
   product_id: Id;
@@ -365,9 +376,9 @@ export const salonDayService = {
   // suppliers and orders
   getSuppliers: (businessId: Id) =>
     apiClient.get<Supplier[]>(`${base(businessId)}/suppliers`),
-  createSupplier: (businessId: Id, body: Partial<Supplier>) =>
+  createSupplier: (businessId: Id, body: SupplierInput) =>
     apiClient.post<Supplier>(`${base(businessId)}/suppliers`, body),
-  updateSupplier: (businessId: Id, supplierId: Id, body: Partial<Supplier>) =>
+  updateSupplier: (businessId: Id, supplierId: Id, body: Partial<SupplierInput>) =>
     apiClient.put<Supplier>(`${base(businessId)}/suppliers/${supplierId}`, body),
   getOrders: (businessId: Id, status?: string) =>
     apiClient.get<PurchaseOrder[]>(`${base(businessId)}/purchase-orders${status ? `?status=${status}` : ''}`),

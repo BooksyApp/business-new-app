@@ -31,6 +31,7 @@ const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 // live behind that label keeps its own route so nothing is lost.
 const AddonsPage = lazy(() => import("./pages/AddonsPage"));
 const InventoryPage = lazy(() => import("./pages/InventoryPage"));
+const SuppliersOrdersPage = lazy(() => import("./pages/SuppliersOrdersPage"));
 const PayrollPage = lazy(() => import("./pages/PayrollPage"));
 const TimesheetPage = lazy(() => import("./pages/TimesheetPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
@@ -238,6 +239,7 @@ const App = () => (
               <Route path="tasks" element={<Suspense fallback={<PageLoader />}><HomePage /></Suspense>} />
               <Route path="clients" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
               <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
+              <Route path="inventory/suppliers" element={<Suspense fallback={<PageLoader />}><SuppliersOrdersPage /></Suspense>} />
               <Route path="addons" element={<Suspense fallback={<PageLoader />}><AddonsPage /></Suspense>} />
               <Route path="shopping" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />

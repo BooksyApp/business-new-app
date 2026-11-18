@@ -1,6 +1,7 @@
 import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Boxes, Coins, Minus, Package, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { AlertTriangle, Boxes, Coins, Minus, Package, Pencil, Plus, Search, Trash2, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -133,9 +134,16 @@ export default function InventoryPage() {
           title={t("inventory.inventory")}
           subtitle={t("inventory.whatYouBuyCountAnd")}
           actions={
-            <Button className={primaryBtn} onClick={() => open()}>
-              <Plus size={16} />{" "}{t("inventory.addProduct")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className={sheetSecondary} asChild>
+                <Link to="suppliers">
+                  <Truck size={16} />{" "}{t("inventory.suppliersAndOrders")}
+                </Link>
+              </Button>
+              <Button className={primaryBtn} onClick={() => open()}>
+                <Plus size={16} />{" "}{t("inventory.addProduct")}
+              </Button>
+            </div>
           }
         />
 
