@@ -14,6 +14,7 @@ import { businessService, type Business } from "@/services/businessService";
 import { getCurrentBusinessId } from "@/config/api";
 import { getPlatformSettings } from "@/services/platformService";
 import { BackToSettings, SaveBar } from "@/components/page/SettingsChrome";
+import { SlotOffersCard } from "@/components/bookings/SlotOffersCard";
 import { t } from "@/i18n";
 
 /** One Setup row each; without a section the page shows all four (the old /booking-rules). */
@@ -249,6 +250,7 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
                   </>
                 ), "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}
 
+                {show("online") && <SlotOffersCard businessId={businessId} />}
                 {show("currency-tax") && section_(Receipt, t("bookingRules.currencyAndTax"), (
                   <div className="grid gap-4 sm:grid-cols-2">
                     {/* Read-only: the currency follows the salon's country, which comes from its
