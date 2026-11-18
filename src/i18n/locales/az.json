@@ -3303,6 +3303,20 @@
     "guideShare": "Linki paylaş",
     "guideDone": "{done}/{total} hazırdır"
   },
+  "myDay": {
+    "title": "Mənim günüm",
+    "subtitle": "Bu günkü qəbullarınız və qazancınız",
+    "navHint": "Bu günkü qəbullar və qazancınız",
+    "today": "Bu gün",
+    "prevDay": "Əvvəlki gün",
+    "nextDay": "Növbəti gün",
+    "earnings": "Qazancım",
+    "salesCount": "{value} satış",
+    "bookings": "Qəbullar",
+    "nobodyBooked": "Bu gün üçün qəbul yoxdur",
+    "emptyBody": "Yeni rezervasiyalar burada görünəcək.",
+    "loadFailed": "Günü yükləmək olmadı"
+  },
   "timesheet": {
     "title": "Tabel",
     "subtitle": "Kim nə vaxt gəlib-gedib, həftəlik saatlar",

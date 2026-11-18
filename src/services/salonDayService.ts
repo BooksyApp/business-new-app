@@ -299,6 +299,10 @@ export const salonDayService = {
   removeBlock: (businessId: Id, blockId: Id) =>
     apiClient.delete<void>(`${base(businessId)}/rota/blocks/${blockId}`),
 
+  // my day (FG-W2-10): the signed-in team member's own commissions for one day
+  getMyEarnings: (businessId: Id, date: string) =>
+    apiClient.get<{ date: string; total: number; count: number }>(`${base(businessId)}/my-day/earnings?date=${date}`),
+
   // timesheets
   getTimesheets: (businessId: Id, from: string, to: string) =>
     apiClient.get<{ byStaff: TimesheetRow[]; entries: TimeEntry[] }>(

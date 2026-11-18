@@ -3303,6 +3303,20 @@
     "guideShare": "Share your link",
     "guideDone": "{done}/{total} done"
   },
+  "myDay": {
+    "title": "My day",
+    "subtitle": "Your bookings and earnings for the day",
+    "navHint": "Today's bookings and your earnings",
+    "today": "Today",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "earnings": "Earnings",
+    "salesCount": "{value} sales",
+    "bookings": "Bookings",
+    "nobodyBooked": "No bookings for this day",
+    "emptyBody": "New bookings will appear here.",
+    "loadFailed": "Couldn't load your day"
+  },
   "timesheet": {
     "title": "Timesheet",
     "subtitle": "Who came in when, and the week's hours",

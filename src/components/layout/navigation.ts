@@ -1,4 +1,5 @@
 import type React from "react";
+import type { Id } from "@/types/id";
 import {
   Clock,
   Receipt,
@@ -51,6 +52,8 @@ export interface NavItem {
    * empty screen — and switching it back on should not need a release.
    */
   flag?: string;
+  /** Only a team member has this page: hidden from an owner with no team record here. */
+  staffOnly?: boolean;
 }
 
 /**
@@ -132,6 +135,7 @@ export const navGroups: NavGroup[] = [
       { icon: Users, get label() { return t("layout.teamMembers"); }, path: "/staff", get description() { return t("layout.whoWorksHereTheirServices"); } },
       { icon: ShieldCheck, get label() { return t("layout.roles"); }, path: "/roles", get description() { return t("layout.whatEachRoleCanSee"); } },
       { icon: Clock, get label() { return t("timesheet.title"); }, path: "/timesheet", get description() { return t("timesheet.navHint"); } },
+      { icon: CalendarIcon, get label() { return t("myDay.title"); }, path: "/my-day", get description() { return t("myDay.navHint"); }, staffOnly: true },
     ],
   },
   {
@@ -162,7 +166,7 @@ export function useVisibleNavGroups(): NavGroup[] {
   return navGroups
     .filter((group) => group.items || allowed(group.path))
     .map((group) =>
-      group.items ? { ...group, items: group.items.filter((item) => on(item.flag) && allowed(item.path)) } : group
+      group.items ? { ...group, items: group.items.filter((item) => on(item.flag) && allowed(item.path) && (!item.staffOnly || myStaffRecord() !== undefined)) } : group
     )
     .filter((group) => !group.items || group.items.length > 0);
 }
@@ -187,6 +191,16 @@ export function myAccess(): MyAccess {
     return { isOwner: false, roleName: b.myRole || "Staff", permissions: b.myPermissions };
   } catch {
     return { isOwner: true, roleName: "Owner", permissions: [] };
+  }
+}
+
+/** The team-member record this person has in the open salon, if any (an owner usually has none). */
+export function myStaffRecord(): Id | undefined {
+  try {
+    const b = JSON.parse(localStorage.getItem("currentBusiness") || "{}") as { myStaffId?: Id };
+    return b.myStaffId || undefined;
+  } catch {
+    return undefined;
   }
 }
 
