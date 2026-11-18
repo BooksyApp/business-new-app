@@ -53,6 +53,7 @@ import {
 import { t as tr } from "@/i18n";
 import { ClientPhotosSection } from "@/components/clients/ClientPhotosSection";
 import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
+import { BookingImportDialog } from "@/components/bookings/BookingImportDialog";
 import { ClientTagsSection } from "@/components/clients/ClientTagsSection";
 import { salonPath } from "@/lib/salonKey";
 
@@ -187,7 +188,8 @@ export default function ClientsPage() {
   });
   const businessId = useBusinessId();
   const [importOpen, setImportOpen] = useState(false);
-  useSalonTimeZone(businessId);
+  const [bookingImportOpen, setBookingImportOpen] = useState(false);
+  const bookingImportTz = useSalonTimeZone(businessId);
   useBrandFont();
 
 
@@ -590,6 +592,15 @@ export default function ClientsPage() {
               {tr("clients.importButton")}
             </button>
             <ClientImportDialog businessId={businessId} open={importOpen} onOpenChange={setImportOpen} onImported={() => loadClients()} />
+            <button
+              type="button"
+              onClick={() => setBookingImportOpen(true)}
+              className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] transition hover:bg-[rgb(var(--reg-brand-soft))]"
+            >
+              <Upload size={16} strokeWidth={2} />
+              {tr("bookingImport.button")}
+            </button>
+            <BookingImportDialog businessId={businessId} timeZone={bookingImportTz} open={bookingImportOpen} onOpenChange={setBookingImportOpen} onImported={() => undefined} />
             <button
               type="button"
               onClick={() => setAddClientDialogOpen(true)}
