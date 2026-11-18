@@ -96,6 +96,8 @@ export default function AddServicePage() {
     setRecipeDraft({ productId: "", quantity: "" });
   };
   const [selectedStaff, setSelectedStaff] = useState<Id[]>([]);
+  // Per-staff own price / duration (strings from the inputs; empty = the service's own).
+  const [staffOverrides, setStaffOverrides] = useState<Record<string, { price: string; duration: string }>>({});
   const [settingsData, setSettingsData] = useState({
     allowSelfBooking: true,
     isClass: false,          // FG-W1-12: a group class — several clients book the same session
@@ -177,6 +179,10 @@ export default function AddServicePage() {
         } else {
           setSelectedStaff([]);
         }
+        setStaffOverrides(Object.fromEntries((service.staffOverrides ?? []).map((o) => [
+          String(o.staffId),
+          { price: o.price != null ? String(o.price) : "", duration: o.durationMinutes != null ? String(o.durationMinutes) : "" },
+        ])));
         // Re-populate the SETTINGS toggles from the stored flags
         const bi = splitMinutes(service.bookingInterval);
         const pb = splitMinutes(service.paddingBefore);
@@ -272,6 +278,7 @@ export default function AddServicePage() {
         color: formData.color || undefined,
         categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
         staffIds: selectedStaff, // Always send staffIds array (even if empty) so backend can update relationships
+        staffOverrides: buildStaffOverrides(),
         isVisible: settingsData.allowSelfBooking, // "Allow self-booking" gates visibility in the customer app
         mobileService: settingsData.mobileService,
         virtualAppointment: settingsData.virtualAppointments,
@@ -318,6 +325,7 @@ export default function AddServicePage() {
         color: formData.color || undefined,
         categoryId: formData.categoryId && formData.categoryId !== "none" ? formData.categoryId : undefined,
         staffIds: selectedStaff, // Always send staffIds array (even if empty) so backend can update relationships
+        staffOverrides: buildStaffOverrides(),
         isVisible: settingsData.allowSelfBooking,
         mobileService: settingsData.mobileService,
         virtualAppointment: settingsData.virtualAppointments,
@@ -354,6 +362,27 @@ export default function AddServicePage() {
       setSelectedStaff([]);
     }
   };
+
+  const setStaffOverride = (staffId: Id, field: "price" | "duration", value: string) => {
+    setStaffOverrides((prev) => ({
+      ...prev,
+      [String(staffId)]: { price: "", duration: "", ...prev[String(staffId)], [field]: value },
+    }));
+  };
+
+  // Only for staff still assigned; an empty field means "use the service's own".
+  const buildStaffOverrides = () =>
+    selectedStaff.flatMap((staffId) => {
+      const o = staffOverrides[String(staffId)];
+      const price = o?.price?.trim() ? parseFloat(o.price) : NaN;
+      const minutes = o?.duration?.trim() ? parseInt(o.duration, 10) : NaN;
+      if (Number.isNaN(price) && Number.isNaN(minutes)) return [];
+      return [{
+        staffId,
+        price: Number.isNaN(price) ? null : price,
+        durationMinutes: Number.isNaN(minutes) || minutes <= 0 ? null : minutes,
+      }];
+    });
 
   const handleStaffToggle = (staffId: Id) => {
     setSelectedStaff((prev) =>
@@ -674,6 +703,34 @@ export default function AddServicePage() {
                             <Label className="text-sm font-medium text-[rgb(var(--reg-ink))] cursor-pointer flex-1">
                               {staffMember.name}
                             </Label>
+                            {isSelected && (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  inputMode="decimal"
+                                  className="h-9 w-40"
+                                  aria-label={tr("addService.staffOwnPrice")}
+                                  title={tr("addService.staffOwnPriceHint")}
+                                  placeholder={formData.price || tr("addService.staffOwnPrice")}
+                                  value={staffOverrides[String(staffMember.id)]?.price ?? ""}
+                                  onChange={(e) => setStaffOverride(staffMember.id, "price", e.target.value)}
+                                />
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  inputMode="numeric"
+                                  className="h-9 w-40"
+                                  aria-label={tr("addService.staffOwnDuration")}
+                                  title={tr("addService.staffOwnDurationHint")}
+                                  placeholder={tr("addService.staffOwnDuration")}
+                                  value={staffOverrides[String(staffMember.id)]?.duration ?? ""}
+                                  onChange={(e) => setStaffOverride(staffMember.id, "duration", e.target.value)}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })

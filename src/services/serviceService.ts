@@ -2,6 +2,12 @@ import type { Id } from "@/types/id";
 import { apiClient } from '@/config/api';
 import { t } from "@/i18n";
 
+export interface StaffServiceOverride {
+  staffId: Id;
+  price?: number | null;
+  durationMinutes?: number | null;
+}
+
 export interface Service {
   id: Id;
   businessId: Id;
@@ -17,6 +23,8 @@ export interface Service {
   isActive: boolean;
   isVisible: boolean;
   staffIds?: Id[];
+  /** Per-staff own price / duration; a staff member not listed uses the service's. */
+  staffOverrides?: StaffServiceOverride[];
   mobileService?: boolean;
   virtualAppointment?: boolean;
   bookingInterval?: number; // minutes between offered start times; 0 = step by duration
@@ -49,6 +57,8 @@ export interface CreateServiceRequest {
   comboServiceIds?: Id[];
   timeBetweenMinutes?: number[];
   staffIds?: Id[];
+  /** Per-staff own price / duration; a staff member not listed uses the service's. */
+  staffOverrides?: StaffServiceOverride[];
   isVisible?: boolean;
   mobileService?: boolean;
   virtualAppointment?: boolean;
@@ -80,6 +90,8 @@ export interface UpdateServiceRequest {
   comboServiceIds?: Id[];
   timeBetweenMinutes?: number[];
   staffIds?: Id[];
+  /** Per-staff own price / duration; a staff member not listed uses the service's. */
+  staffOverrides?: StaffServiceOverride[];
   mobileService?: boolean;
   virtualAppointment?: boolean;
   bookingInterval?: number;
