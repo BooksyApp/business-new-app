@@ -662,6 +662,10 @@
     "depositPct": "Depozit %"
   },
   "branding": {
+    "widgetTitle": "Saytda rezervasiya vidjeti",
+    "widgetHint": "Bu kodu saytınızda rezerv düyməsinin görünməsini istədiyiniz yerə yapışdırın.",
+    "widgetCopy": "Kodu kopyala",
+    "widgetCopied": "Kod kopyalandı",
     "couldNotLoadYourBranding": "Brendinqi yükləmək alınmadı",
     "brandingSaved": "Brendinq saxlanıldı",
     "couldNotSaveYourBranding": "Brendinqi saxlamaq alınmadı",

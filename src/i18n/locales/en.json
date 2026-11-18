@@ -662,6 +662,10 @@
     "depositPct": "Deposit %"
   },
   "branding": {
+    "widgetTitle": "Website booking widget",
+    "widgetHint": "Paste this code into your website where the booking button should appear.",
+    "widgetCopy": "Copy code",
+    "widgetCopied": "Code copied",
     "couldNotLoadYourBranding": "Could not load your branding",
     "brandingSaved": "Branding saved",
     "couldNotSaveYourBranding": "Could not save your branding",

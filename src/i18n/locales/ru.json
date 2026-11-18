@@ -662,6 +662,10 @@
     "depositPct": "Предоплата, %"
   },
   "branding": {
+    "widgetTitle": "Виджет записи на сайте",
+    "widgetHint": "Вставьте этот код на свой сайт там, где должна появиться кнопка записи.",
+    "widgetCopy": "Скопировать код",
+    "widgetCopied": "Код скопирован",
     "couldNotLoadYourBranding": "Не удалось загрузить брендинг",
     "brandingSaved": "Брендинг сохранён",
     "couldNotSaveYourBranding": "Не удалось сохранить брендинг",

@@ -23,6 +23,8 @@ import { t, fmtDate as formatLocaleDate } from "@/i18n";
  */
 export default function BrandingPage() {
   const businessId = getCurrentBusinessId();
+  // The widget is one script tag on the salon's own site; it draws the booking button in an iframe.
+  const widgetCode = `<script src="https://getbooqi.tech/embed.js" data-salon="${businessId ?? ""}" async></script>`;
   const { getPath } = useNavigation();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +149,24 @@ export default function BrandingPage() {
                   </div>
                   <Button variant="outline" className={secondaryBtn} asChild>
                     <Link to={getPath("photos")}>{t("branding.managePhotos")}</Link>
+                  </Button>
+                </section>
+                <section className="rounded-2xl bg-white p-5 space-y-3">
+                  <div>
+                    <p className="text-sm font-bold">{t("branding.widgetTitle")}</p>
+                    <p className="text-xs text-[rgb(var(--reg-muted))]">{t("branding.widgetHint")}</p>
+                  </div>
+                  <textarea readOnly rows={5} className={cn(fieldCls, "font-mono text-xs")} value={widgetCode} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={secondaryBtn}
+                    onClick={() => {
+                      navigator.clipboard?.writeText(widgetCode);
+                      toast.success(t("branding.widgetCopied"));
+                    }}
+                  >
+                    {t("branding.widgetCopy")}
                   </Button>
                 </section>
               </div>
