@@ -662,6 +662,13 @@
     "depositPct": "Deposit %"
   },
   "branding": {
+    "healthTitle": "Health and safety",
+    "healthHint": "Tick what you do. Customers see it on your profile.",
+    "healthSterilization": "Sterilised tools",
+    "healthDisposable": "Disposable tools",
+    "healthLinen": "Single-use linen",
+    "healthHands": "Hand hygiene before every client",
+    "healthNote": "Other practices (optional)",
     "widgetTitle": "Website booking widget",
     "widgetHint": "Paste this code into your website where the booking button should appear.",
     "widgetCopy": "Copy code",

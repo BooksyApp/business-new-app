@@ -22,6 +22,9 @@ export interface BusinessRequest {
   logoUrl?: string;
   brandColor?: string;
   receiptFooter?: string;
+  /** Health and safety: comma-separated codes (STERILIZATION, DISPOSABLE_TOOLS, ...), and a note. */
+  healthSafety?: string;
+  healthSafetyNote?: string;
   /** Booking policy — see booksy-backend V81. Each changes real behaviour. */
   onlineBookingEnabled?: boolean;
   minBookingNoticeMinutes?: number;
@@ -94,6 +97,8 @@ export interface Business {
   acceptedPaymentMethods?: string;
   brandColor?: string;
   receiptFooter?: string;
+  healthSafety?: string[];
+  healthSafetyNote?: string | null;
   timezone?: string;
   /** From the account's salon list: what the signed-in person is here. */
   myRole?: string;

@@ -662,6 +662,13 @@
     "depositPct": "Depozit %"
   },
   "branding": {
+    "healthTitle": "Sağlamlıq və təhlükəsizlik",
+    "healthHint": "Etdiklərinizi işarələyin. Müştərilər bunu profilinizdə görür.",
+    "healthSterilization": "Sterilizasiya olunmuş alətlər",
+    "healthDisposable": "Birdəfəlik alətlər",
+    "healthLinen": "Birdəfəlik parça və örtüklər",
+    "healthHands": "Hər müştəridən əvvəl əl gigiyenası",
+    "healthNote": "Digər qaydalar (istəyə bağlı)",
     "widgetTitle": "Saytda rezervasiya vidjeti",
     "widgetHint": "Bu kodu saytınızda rezerv düyməsinin görünməsini istədiyiniz yerə yapışdırın.",
     "widgetCopy": "Kodu kopyala",

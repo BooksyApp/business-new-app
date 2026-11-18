@@ -31,7 +31,7 @@ export default function BrandingPage() {
   const [saving, setSaving] = useState(false);
   // Cover and logo moved to the Photos page, which saves them as they change. They are not
   // in this form, so saving the colour here can never put back an older photo.
-  const [form, setForm] = useState({ brandColor: "", receiptFooter: "" });
+  const [form, setForm] = useState({ brandColor: "", receiptFooter: "", healthSafety: "", healthSafetyNote: "" });
 
   useEffect(() => {
     if (!businessId) { setLoading(false); return; }
@@ -42,6 +42,8 @@ export default function BrandingPage() {
         setForm({
           brandColor: b.brandColor ?? "",
           receiptFooter: b.receiptFooter ?? "",
+          healthSafety: (b.healthSafety ?? []).join(","),
+          healthSafetyNote: b.healthSafetyNote ?? "",
         });
       })
       .catch(() => toast.error(t("branding.couldNotLoadYourBranding")))
@@ -60,6 +62,18 @@ export default function BrandingPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const healthCodes = form.healthSafety ? form.healthSafety.split(",") : [];
+  const healthLabels: [string, string][] = [
+    ["STERILIZATION", t("branding.healthSterilization")],
+    ["DISPOSABLE_TOOLS", t("branding.healthDisposable")],
+    ["SINGLE_USE_LINEN", t("branding.healthLinen")],
+    ["HAND_HYGIENE", t("branding.healthHands")],
+  ];
+  const toggleHealth = (code: string) => {
+    const next = healthCodes.includes(code) ? healthCodes.filter(c => c !== code) : [...healthCodes, code];
+    setForm({ ...form, healthSafety: next.join(",") });
   };
 
   const validColor = /^#[0-9a-fA-F]{6}$/.test(form.brandColor);
@@ -150,6 +164,25 @@ export default function BrandingPage() {
                   <Button variant="outline" className={secondaryBtn} asChild>
                     <Link to={getPath("photos")}>{t("branding.managePhotos")}</Link>
                   </Button>
+                </section>
+                <section className="rounded-2xl bg-white p-5 space-y-3">
+                  <div>
+                    <p className="text-sm font-bold">{t("branding.healthTitle")}</p>
+                    <p className="text-xs text-[rgb(var(--reg-muted))]">{t("branding.healthHint")}</p>
+                  </div>
+                  {healthLabels.map(([code, label]) => (
+                    <label key={code} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={healthCodes.includes(code)} onChange={() => toggleHealth(code)} />
+                      {label}
+                    </label>
+                  ))}
+                  <Textarea
+                    rows={2}
+                    maxLength={2000}
+                    placeholder={t("branding.healthNote")}
+                    value={form.healthSafetyNote}
+                    onChange={(e) => setForm({ ...form, healthSafetyNote: e.target.value })}
+                  />
                 </section>
                 <section className="rounded-2xl bg-white p-5 space-y-3">
                   <div>
