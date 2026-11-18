@@ -26,6 +26,11 @@ export interface NotificationSettings {
   pushAvailable: boolean;
 }
 
+/** FG-W3-11: one salon paragraph per booking email kind and language; "" means none. */
+export type NotificationTextKind = "CONFIRMATION" | "REMINDER" | "CANCELLATION";
+export type NotificationTextLocale = "az" | "en" | "ru";
+export type NotificationTexts = Record<NotificationTextKind, Record<NotificationTextLocale, string>>;
+
 class NotificationSettingsService {
   async get(businessId: Id): Promise<NotificationSettings> {
     return apiClient.get<NotificationSettings>(`/businesses/${businessId}/notification-settings`);
@@ -33,6 +38,14 @@ class NotificationSettingsService {
 
   async save(businessId: Id, settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
     return apiClient.put<NotificationSettings>(`/businesses/${businessId}/notification-settings`, settings);
+  }
+
+  async getTexts(businessId: Id): Promise<NotificationTexts> {
+    return apiClient.get<NotificationTexts>(`/businesses/${businessId}/settings/notification-texts`);
+  }
+
+  async saveTexts(businessId: Id, texts: NotificationTexts): Promise<NotificationTexts> {
+    return apiClient.put<NotificationTexts>(`/businesses/${businessId}/settings/notification-texts`, texts);
   }
 }
 

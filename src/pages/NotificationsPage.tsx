@@ -15,6 +15,7 @@ import {
 } from "@/services/notificationSettingsService";
 import { getCurrentBusinessId } from "@/config/api";
 import { BackToSettings, SaveBar } from "@/components/page/SettingsChrome";
+import { NotificationTextsCard } from "@/components/page/NotificationTextsCard";
 import { t } from "@/i18n";
 
 const EMAIL_ROWS: Array<{ key: keyof NotificationSettings; label: string; hint: string }> = [
@@ -135,6 +136,8 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
                     </Field>
                   </div>
                 </section>}
+
+                {showEmail && <NotificationTextsCard businessId={businessId} />}
 
                 {/* Said plainly rather than shown as a switch that would do nothing: these
                     channels exist in the backend but need a provider configured. */}
