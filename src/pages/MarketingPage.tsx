@@ -42,19 +42,22 @@ import { useNavigation } from "@/utils/navigationUtils";
 import { promoService, type PromoCode } from "@/services/promoService";
 import { useFeatureFlags } from "@/services/platformService";
 import { campaignService, type Campaign, type AudiencePreview } from "@/services/campaignService";
-import { t as tr, fmtDate as formatLocaleDate } from "@/i18n";
+import { t as tr, fmtDate as formatLocaleDate, getLocale } from "@/i18n";
+import { CAMPAIGN_TEMPLATES, type CampaignTemplate } from "@/lib/campaignTemplates";
 
 // #46: the campaign list here was hardcoded — invented names, invented open rates,
 // invented revenue. Everything on this page comes from the API.
 
 type PromoType = "PERCENT" | "FIXED";
 type Channel = "EMAIL" | "SMS";
-type Segment = "LAPSED_60D" | "LAPSED_90D" | "TOP_SPENDERS";
+type Segment = "LAPSED_60D" | "LAPSED_90D" | "TOP_SPENDERS" | "BIRTHDAY_THIS_MONTH" | "ALL_CLIENTS";
 
 const SEGMENT_LABEL: Record<Segment, string> = {
   get LAPSED_60D() { return tr("marketing.r02SegmentLapsed60"); },
   get LAPSED_90D() { return tr("marketing.segmentLapsed"); },
   get TOP_SPENDERS() { return tr("marketing.segmentTopSpenders"); },
+  get BIRTHDAY_THIS_MONTH() { return tr("marketing.segmentBirthdayThisMonth"); },
+  get ALL_CLIENTS() { return tr("marketing.segmentAllClients"); },
 };
 
 const EMPTY_PROMO = { code: "", type: "PERCENT" as PromoType, value: "", maxUses: "", from: "", to: "" };
@@ -241,6 +244,12 @@ export default function MarketingPage() {
     } finally {
       setCampaignBusy(false);
     }
+  };
+
+  /** W2-51: fills the form from a template and pre-selects its segment; the text stays editable. */
+  const applyCampaignTemplate = (tpl: CampaignTemplate) => {
+    const loc = getLocale();
+    setCampaignForm((f) => ({ ...f, name: f.name || tpl.name[loc], segment: tpl.segment, subject: tpl.subject[loc], body: tpl.body[loc] }));
   };
 
   const duplicateCampaign = (c: Campaign) => {
@@ -457,6 +466,16 @@ export default function MarketingPage() {
         >
           <CampaignPreview form={campaignForm} />
 
+          <Field label={tr("marketing.startFromTemplate")}>
+            <div className="flex flex-wrap gap-2">
+              {CAMPAIGN_TEMPLATES.map((tpl) => (
+                <Button key={tpl.id} type="button" variant="outline" className={secondaryBtn} onClick={() => applyCampaignTemplate(tpl)}>
+                  {tpl.name[getLocale()]}
+                </Button>
+              ))}
+            </div>
+          </Field>
+
           <Field label={tr("common.name")} htmlFor="cmp-name" hint={tr("marketing.onlyYouSeeThis")}>
             <input id="cmp-name" className={fieldCls} value={campaignForm.name} placeholder={tr("marketing.winBackNovember")}
               onChange={(e) => setCampaignForm((f) => ({ ...f, name: e.target.value }))} />
@@ -496,6 +515,8 @@ export default function MarketingPage() {
                 { value: "LAPSED_60D", label: tr("marketing.r02Lapsed60"), hint: tr("marketing.r02Lapsed60Hint") },
                 { value: "LAPSED_90D", label: tr("marketing.lapsed"), hint: tr("marketing.notSeenInDays") },
                 { value: "TOP_SPENDERS", label: tr("marketing.topSpenders"), hint: tr("marketing.yourBestClients") },
+                { value: "BIRTHDAY_THIS_MONTH", label: tr("marketing.segmentBirthdayThisMonth"), hint: tr("marketing.segmentBirthdayThisMonthHint") },
+                { value: "ALL_CLIENTS", label: tr("marketing.segmentAllClients"), hint: tr("marketing.segmentAllClientsHint") },
               ]}
             />
           </Field>

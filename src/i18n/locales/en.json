@@ -1716,7 +1716,12 @@
     "r02Lapsed60Hint": "Not seen in 60 days",
     "r02SegmentLapsed60": "Not seen in 60 days",
     "r02Lapsed60Subject": "It's been a while",
-    "r02Lapsed60Body": "It's been a while since your last visit. There are good times free this week, and booking online takes a minute."
+    "r02Lapsed60Body": "It's been a while since your last visit. There are good times free this week, and booking online takes a minute.",
+    "startFromTemplate": "Start from a template",
+    "segmentBirthdayThisMonth": "Birthday this month",
+    "segmentAllClients": "All clients",
+    "segmentBirthdayThisMonthHint": "Birthday falls this month",
+    "segmentAllClientsHint": "Everyone who agreed"
   },
   "media": {
     "thePhotoCouldNotBe": "The photo could not be uploaded.",

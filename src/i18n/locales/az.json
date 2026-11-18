@@ -1716,7 +1716,12 @@
     "r02Lapsed60Hint": "60 gündür gəlməyib",
     "r02SegmentLapsed60": "60 gündür gəlməyib",
     "r02Lapsed60Subject": "Çoxdandır görüşmürük",
-    "r02Lapsed60Body": "Son gəlişinizdən xeyli vaxt keçib. Bu həftə rahat saatlar boşdur, onlayn yazılmaq bir dəqiqə çəkir."
+    "r02Lapsed60Body": "Son gəlişinizdən xeyli vaxt keçib. Bu həftə rahat saatlar boşdur, onlayn yazılmaq bir dəqiqə çəkir.",
+    "startFromTemplate": "Şablondan başla",
+    "segmentBirthdayThisMonth": "Bu ay ad günü olanlar",
+    "segmentAllClients": "Bütün müştərilər",
+    "segmentBirthdayThisMonthHint": "Ad günü bu ayda",
+    "segmentAllClientsHint": "Razılıq verənlərin hamısı"
   },
   "media": {
     "thePhotoCouldNotBe": "Şəkli yükləmək alınmadı.",
