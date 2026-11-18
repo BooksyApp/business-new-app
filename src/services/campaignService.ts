@@ -56,3 +56,22 @@ class CampaignService {
 }
 
 export const campaignService = new CampaignService();
+
+/** FG-W2-08: automatic birthday / win-back messages. */
+export interface MarketingAutomation {
+  birthdayEnabled: boolean;
+  birthdayDaysBefore: number;
+  birthdaySubject: string | null;
+  birthdayBody: string | null;
+  winbackEnabled: boolean;
+  winbackDaysAfter: number;
+  winbackSubject: string | null;
+  winbackBody: string | null;
+  sentLast30Days: number;
+}
+
+export const marketingAutomationService = {
+  get: (businessId: Id) => apiClient.get<MarketingAutomation>(`/businesses/${businessId}/marketing-automation`),
+  save: (businessId: Id, body: Omit<MarketingAutomation, "sentLast30Days">) =>
+    apiClient.put<MarketingAutomation>(`/businesses/${businessId}/marketing-automation`, body),
+};
