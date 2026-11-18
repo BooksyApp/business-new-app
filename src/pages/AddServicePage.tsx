@@ -36,12 +36,15 @@ import { useStaff } from "@/hooks/useStaff";
 import { useNavigation } from "@/utils/navigationUtils";
 import { toast } from "sonner";
 import { t as tr, formatMinutes } from "@/i18n";
+import { salonDayService, type RecipeLine } from "@/services/salonDayService";
+import { productService, type Product } from "@/services/productService";
 
 const sidebarItems = [
   { id: "general", get label() { return tr("addService.tabGeneral"); }, active: true },
   { id: "staff", get label() { return tr("addService.tabStaff"); } },
   { id: "settings", get label() { return tr("addService.tabSettings"); } },
   { id: "for-client", get label() { return tr("addService.forClient"); } },
+  { id: "materials", get label() { return tr("addService.tabMaterials"); } },
 ];
 
 // Scheduling fields in the SETTINGS tab are split into hours + minutes selects;
@@ -69,6 +72,29 @@ export default function AddServicePage() {
     }
   }, [businessId]);
   const [activeSidebarItem, setActiveSidebarItem] = useState("general");
+  const [recipe, setRecipe] = useState<RecipeLine[]>([]);
+  const [recipeDraft, setRecipeDraft] = useState({ productId: "", quantity: "" });
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+    if (!isEditMode || !businessId || !id) return;
+    salonDayService.getRecipe(businessId, id).then(setRecipe).catch(() => setRecipe([]));
+    productService.list(businessId).then(setProducts).catch(() => setProducts([]));
+  }, [isEditMode, businessId, id]);
+  const saveRecipeLine = async (productId: Id, quantity: number) => {
+    if (!businessId || !id) return;
+    try {
+      await salonDayService.setRecipeLine(businessId, id, productId, quantity);
+      setRecipe(await salonDayService.getRecipe(businessId, id));
+    } catch {
+      toast.error(tr("addService.materialsFailed"));
+    }
+  };
+  const addRecipeDraft = async () => {
+    const quantity = parseFloat(recipeDraft.quantity.replace(",", "."));
+    if (!recipeDraft.productId || !(quantity > 0)) return;
+    await saveRecipeLine(recipeDraft.productId, quantity);
+    setRecipeDraft({ productId: "", quantity: "" });
+  };
   const [selectedStaff, setSelectedStaff] = useState<Id[]>([]);
   const [settingsData, setSettingsData] = useState({
     allowSelfBooking: true,
@@ -354,7 +380,7 @@ export default function AddServicePage() {
           label={tr("addService.serviceSections")}
           value={activeSidebarItem}
           onChange={setActiveSidebarItem}
-          items={sidebarItems.map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
+          items={sidebarItems.filter((i) => i.id !== "materials" || isEditMode).map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
         />
       }
       footer={
@@ -1135,6 +1161,69 @@ export default function AddServicePage() {
                         ))}
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            ) : activeSidebarItem === "materials" ? (
+              <div className="max-w-3xl bg-white rounded-2xl shadow-sm">
+                <div className="p-6 space-y-4">
+                  <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.materialsHint")}</p>
+                  {recipe.length === 0 && (
+                    <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("addService.materialsEmpty")}</p>
+                  )}
+                  {recipe.map((line) => (
+                    <div key={`${line.product_id}-${line.quantity}`} className="flex items-center gap-3">
+                      <span className="flex-1 text-sm text-[rgb(var(--reg-ink))]">{line.name}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        inputMode="decimal"
+                        className="w-28"
+                        aria-label={tr("addService.materialsQuantity")}
+                        defaultValue={line.quantity}
+                        onBlur={(e) => {
+                          const quantity = parseFloat(e.target.value.replace(",", "."));
+                          if (quantity > 0 && quantity !== line.quantity) void saveRecipeLine(line.product_id, quantity);
+                        }}
+                      />
+                      <Button variant="ghost" aria-label={tr("addService.materialsRemove")} onClick={() => void saveRecipeLine(line.product_id, 0)}>
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-3 pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
+                    <Select value={recipeDraft.productId} onValueChange={(v) => setRecipeDraft({ ...recipeDraft, productId: v })}>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder={tr("addService.materialsPick")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products
+                          .filter((p) => p.isActive && !recipe.some((r) => r.product_id === p.id))
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="any"
+                      inputMode="decimal"
+                      className="w-28"
+                      placeholder={tr("addService.materialsQuantity")}
+                      aria-label={tr("addService.materialsQuantity")}
+                      value={recipeDraft.quantity}
+                      onChange={(e) => setRecipeDraft({ ...recipeDraft, quantity: e.target.value })}
+                    />
+                    <Button
+                      variant="outline"
+                      className={sheetSecondary}
+                      disabled={!recipeDraft.productId || !(parseFloat(recipeDraft.quantity.replace(",", ".")) > 0)}
+                      onClick={() => void addRecipeDraft()}
+                    >
+                      {tr("addService.materialsAdd")}
+                    </Button>
                   </div>
                 </div>
               </div>
