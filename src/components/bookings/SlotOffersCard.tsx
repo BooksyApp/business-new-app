@@ -16,6 +16,7 @@ interface Row {
 }
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7];
+const DAY_KEYS = ["slotOffers.day1", "slotOffers.day2", "slotOffers.day3", "slotOffers.day4", "slotOffers.day5", "slotOffers.day6", "slotOffers.day7"] as const;
 
 const toRow = (o: SlotOffer): Row => ({
   weekday: o.weekday != null ? String(o.weekday) : "1",
@@ -103,7 +104,7 @@ export function SlotOffersCard({ businessId }: { businessId: Id }) {
             <label className="text-sm">
               {t("slotOffers.weekday")}
               <select className={fieldCls} value={r.weekday} onChange={(e) => setRow(i, { weekday: e.target.value })}>
-                {WEEKDAYS.map((d) => <option key={d} value={d}>{t(`slotOffers.day${d}`)}</option>)}
+                {WEEKDAYS.map((d, i) => <option key={d} value={d}>{t(DAY_KEYS[i])}</option>)}
               </select>
             </label>
             <label className="text-sm">
