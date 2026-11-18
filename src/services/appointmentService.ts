@@ -152,6 +152,12 @@ export interface WhatsAppReminderRow {
   sentAt?: string | null;
 }
 
+export interface AppointmentHistoryEntry {
+  method: string;
+  actorName?: string | null;
+  createdAt: string | number;
+}
+
 export const appointmentService = {
   /** FG-W1-01: tomorrow's (or `date`'s) bookings with ready wa.me reminder links. */
   async getWhatsAppReminders(businessId: Id, date?: string): Promise<{ date: string; rows: WhatsAppReminderRow[] }> {
@@ -165,6 +171,11 @@ export const appointmentService = {
 
   async getAppointmentById(id: string): Promise<Appointment> {
     return apiClient.get<Appointment>(`/bookings/${id}`);
+  },
+
+  async getAppointmentHistory(businessId: Id, appointmentId: string): Promise<AppointmentHistoryEntry[]> {
+    const params = new URLSearchParams({ entityId: appointmentId, limit: '50' });
+    return apiClient.get<AppointmentHistoryEntry[]>(`/businesses/${businessId}/audit-log?${params.toString()}`);
   },
 
   async getAppointmentsByBusiness(businessId: Id, date?: Date): Promise<Appointment[]> {

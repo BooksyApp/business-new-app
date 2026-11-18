@@ -17,7 +17,7 @@ import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
 import type { Appointment, Staff } from "./AppointmentBlock";
-import { appointmentService, type Appointment as ApiAppointment } from "@/services/appointmentService";
+import { appointmentService, type Appointment as ApiAppointment, type AppointmentHistoryEntry } from "@/services/appointmentService";
 import { clientService, type Client } from "@/services/clientService";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -79,6 +79,14 @@ export function AppointmentModal({
       .catch(() => setClients([]));
   }, [isOpen, appointment?.apiId, fullAppointment?.businessId]);
   const salonTz = useSalonTimeZone(fullAppointment?.businessId);
+  const [history, setHistory] = useState<AppointmentHistoryEntry[]>([]);
+  useEffect(() => {
+    if (!isOpen || !appointment?.apiId || !fullAppointment?.businessId) return;
+    appointmentService
+      .getAppointmentHistory(fullAppointment.businessId, appointment.apiId)
+      .then(setHistory)
+      .catch(() => setHistory([]));
+  }, [isOpen, appointment?.apiId, fullAppointment?.businessId]);
 
   const reassignClient = async (client: Client) => {
     if (!appointment?.apiId || !fullAppointment) return;
@@ -520,6 +528,16 @@ export function AppointmentModal({
             </div>
           )}
 
+          {history.length > 0 && (
+            <div className="space-y-1 rounded-md bg-muted/50 px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground">{tr("calendar.historyTitle")}</p>
+              {history.map((h, i) => (
+                <p key={i} className="text-xs text-muted-foreground">
+                  {format(new Date(h.createdAt), "dd.MM.yyyy HH:mm")} · {h.actorName || tr("calendar.historyUnknownUser")} · {h.method === "POST" ? tr("calendar.historyCreated") : h.method === "DELETE" ? tr("calendar.historyDeleted") : tr("calendar.historyChanged")}
+                </p>
+              ))}
+            </div>
+          )}
           {settled ? (
             paid ? (
               // "Nothing left to change" was not true — a customer who was charged twice, or
