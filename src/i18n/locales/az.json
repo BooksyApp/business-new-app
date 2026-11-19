@@ -3406,6 +3406,13 @@
     "guideDone": "{done}/{total} hazırdır"
   },
   "myDay": {
+    "calendarFeedTitle": "Təqvimə əlavə et",
+    "calendarFeedHint": "Təqvimin tətbiqində bu ünvanı abunə kimi əlavə edin. Yalnız sizin gələcək rezervləriniz görünür; müştərilərin yalnız adı göstərilir.",
+    "calendarFeedCopy": "Ünvanı kopyala",
+    "calendarFeedCopied": "Ünvan kopyalandı",
+    "calendarFeedRegenerated": "Yeni ünvan yaradıldı, köhnə ünvan işləmir",
+    "calendarFeedError": "Xəta baş verdi",
+    "calendarFeedRegenerate": "Yenilə (köhnə ünvanı ləğv et)",
     "title": "Mənim günüm",
     "subtitle": "Bu günkü qəbullarınız və qazancınız",
     "navHint": "Bu günkü qəbullar və qazancınız",

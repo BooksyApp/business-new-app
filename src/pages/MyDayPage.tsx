@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { appointmentService, type Appointment } from "@/services/appointmentService";
+import { calendarFeedService } from "@/services/calendarFeedService";
 import { salonDayService } from "@/services/salonDayService";
 import { t } from "@/i18n";
 
@@ -26,6 +27,61 @@ function shiftDay(iso: string, n: number): string {
  * FG-W2-10: the signed-in team member's own day. Their bookings for one day and the
  * commission they earned on it. Both calls are scoped by the server to their own staff record.
  */
+/** "Təqvimə əlavə et": the private feed URL for the staff member's own calendar app. */
+function CalendarFeedCard({ staffId }: { staffId: NonNullable<ReturnType<typeof myStaffRecord>> }) {
+  const [feedPath, setFeedPath] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const url = feedPath ? `${window.location.origin}${feedPath}` : "";
+
+  useEffect(() => {
+    calendarFeedService.getFeedPath(staffId).then(setFeedPath).catch(() => setFeedPath(null));
+  }, [staffId]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t("myDay.calendarFeedCopied"));
+    } catch {
+      toast.error(t("myDay.calendarFeedError"));
+    }
+  };
+
+  const regenerate = async () => {
+    setBusy(true);
+    try {
+      setFeedPath(await calendarFeedService.regenerateFeedPath(staffId));
+      toast.success(t("myDay.calendarFeedRegenerated"));
+    } catch {
+      toast.error(t("myDay.calendarFeedError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 rounded-xl border border-[rgb(var(--reg-line)/0.8)] bg-white p-4">
+      <div>
+        <div className="font-semibold">{t("myDay.calendarFeedTitle")}</div>
+        <p className="text-sm text-[rgb(var(--reg-muted))]">{t("myDay.calendarFeedHint")}</p>
+      </div>
+      <div className="flex gap-2">
+        <input
+          readOnly
+          value={url}
+          onFocus={(e) => e.currentTarget.select()}
+          className="min-w-0 flex-1 rounded-md border border-[rgb(var(--reg-line)/0.8)] px-3 py-2 text-xs"
+        />
+        <Button variant="outline" size="sm" onClick={copy} disabled={!url}>
+          {t("myDay.calendarFeedCopy")}
+        </Button>
+      </div>
+      <Button variant="ghost" size="sm" onClick={regenerate} disabled={busy}>
+        {t("myDay.calendarFeedRegenerate")}
+      </Button>
+    </div>
+  );
+}
+
 export default function MyDayPage() {
   const businessId = useBusinessId();
   const sym = currencySymbol();
@@ -98,6 +154,7 @@ export default function MyDayPage() {
             <StatCard icon={Wallet} label={t("myDay.earnings")} value={money(earnings.total, sym)} tone="emerald" />
             <StatCard icon={Clock} label={t("myDay.bookings")} value={bookings.length} tone="sky" />
           </div>
+          {staffId && <CalendarFeedCard staffId={staffId} />}
           <p className="text-sm text-[rgb(var(--reg-muted))]">{t("myDay.salesCount", { value: earnings.count })}</p>
 
           {bookings.length === 0 ? (

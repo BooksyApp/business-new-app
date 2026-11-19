@@ -3406,6 +3406,13 @@
     "guideDone": "{done}/{total} done"
   },
   "myDay": {
+    "calendarFeedTitle": "Add to calendar",
+    "calendarFeedHint": "Subscribe to this address in your calendar app. It shows only your upcoming bookings, with clients' first names.",
+    "calendarFeedCopy": "Copy link",
+    "calendarFeedCopied": "Link copied",
+    "calendarFeedRegenerated": "New link created, the old one no longer works",
+    "calendarFeedError": "Something went wrong",
+    "calendarFeedRegenerate": "Regenerate (revoke old link)",
     "title": "My day",
     "subtitle": "Your bookings and earnings for the day",
     "navHint": "Today's bookings and your earnings",
