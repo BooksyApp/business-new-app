@@ -1,5 +1,6 @@
 import type { Id } from "@/types/id";
 import { apiClient } from "@/config/api";
+import { salonPath } from "@/lib/salonKey";
 
 /**
  * #42: the Stripe subscription module shipped complete — status, checkout session,
@@ -29,7 +30,11 @@ class SubscriptionService {
     const origin = window.location.origin;
     const res = await apiClient.post<{ checkoutUrl: string }>(
       `/businesses/${businessId}/subscription/checkout`,
-      { planKey, successUrl: `${origin}/business?subscribed=1`, cancelUrl: `${origin}/business` }
+      {
+        planKey,
+        successUrl: `${origin}${salonPath(businessId, "business")}?subscribed=1`,
+        cancelUrl: `${origin}${salonPath(businessId, "business")}?subscribed=0`,
+      }
     );
     return res.checkoutUrl;
   }

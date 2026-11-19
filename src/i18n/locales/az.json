@@ -1,4 +1,14 @@
 {
+  "paymentReturn": {
+    "receivedTitle": "Ödəniş qəbul edildi",
+    "receivedBody": "Təşəkkür edirik. Ödəniş sistemi ilə təsdiq edirik; bu səhifə özü yenilənir, adətən bir dəqiqə ərzində.",
+    "processingTitle": "Ödəniş emal olunur",
+    "processingBody": "Ödənişiniz təsdiqlənir. Yenidən ödəməyə ehtiyac yoxdur. Bir azdan səhifəni yeniləyin.",
+    "confirmedPromotion": "Təsdiqləndi: təbliğatınız aktivdir.",
+    "confirmedSubscription": "Təsdiqləndi: abunəliyiniz aktivdir.",
+    "cancelledTitle": "Ödəniş ləğv edildi",
+    "cancelledBody": "Heç bir məbləğ çıxılmadı. İstədiyiniz vaxt yenidən cəhd edə bilərsiniz."
+  },
   "cp": {
     "title": "Mərkəzi xidmət və qiymət siyahısı",
     "hint": "Bu salondakı xidmətləri digər salonlarınıza göndərin. Əvvəlcə baxın.",

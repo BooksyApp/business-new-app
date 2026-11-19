@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, Megaphone, MousePointerClick, Pause, Play } from "lucide-react";
 
@@ -7,6 +8,8 @@ import { BooqiScope, PageHeader, Card, CardContent, CardHeader, CardTitle } from
 import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { Button } from "@/components/ui/button";
 import { getCurrentBusinessId } from "@/config/api";
+import { salonPath } from "@/lib/salonKey";
+import { PaymentReturnBanner } from "@/components/page/PaymentReturnBanner";
 import { formatPrice } from "@/lib/currency";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +41,8 @@ export default function PromotionPage() {
   const [liveBudget, setLiveBudget] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
+  const returnFlag = searchParams.get("paid");
 
   const load = useCallback(async () => {
     try {
@@ -54,6 +59,19 @@ export default function PromotionPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Back from Stripe: the webhook, not the redirect, activates the campaign, and it can land a
+  // few seconds later. Re-read a handful of times instead of showing a stale PENDING row.
+  const activated = history.some((r) => r.status === "ACTIVE" || r.status === "PAUSED");
+  useEffect(() => {
+    if (returnFlag !== "1" || activated) return;
+    let tries = 0;
+    const id = setInterval(() => {
+      if (++tries > 12) clearInterval(id);
+      else void load();
+    }, 2500);
+    return () => clearInterval(id);
+  }, [returnFlag, activated, load]);
 
   // Re-quoted as the numbers change, debounced: the forecast is the product here, and one
   // that only appears after committing is not a forecast.
@@ -82,8 +100,8 @@ export default function PromotionPage() {
       const { checkoutUrl } = await promotionService.checkout(
         businessId,
         reserved.id,
-        `${window.location.origin}/promotion`,
-        `${window.location.origin}/promotion`
+        `${window.location.origin}${salonPath(businessId, "promotion")}?paid=1`,
+        `${window.location.origin}${salonPath(businessId, "promotion")}?paid=0`
       );
       window.location.href = checkoutUrl;
     } catch (e) {
@@ -126,6 +144,7 @@ export default function PromotionPage() {
         subtitle={t("promotion.reachCustomersBrowsingBooqiSet")}
       />
       <div className={pageBody}>
+        <PaymentReturnBanner kind="promotion" flag={returnFlag} confirmed={activated} />
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         {quote && !quote.enabled ? (
@@ -155,8 +174,8 @@ export default function PromotionPage() {
                       const { checkoutUrl } = await promotionService.checkout(
                         businessId,
                         pending.id,
-                        `${window.location.origin}/promotion`,
-                        `${window.location.origin}/promotion`
+                        `${window.location.origin}${salonPath(businessId, "promotion")}?paid=1`,
+                        `${window.location.origin}${salonPath(businessId, "promotion")}?paid=0`
                       );
                       window.location.href = checkoutUrl;
                     }, t("promotion.openingPayment"))

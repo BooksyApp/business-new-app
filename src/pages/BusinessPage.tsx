@@ -13,7 +13,8 @@ import { categoryService, type BusinessCategory } from "@/services/categoryServi
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { businessService, type Business } from "@/services/businessService";
 import { serviceService, type Service } from "@/services/serviceService";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { PaymentReturnBanner } from "@/components/page/PaymentReturnBanner";
 import { useNavigation } from "@/utils/navigationUtils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +61,8 @@ function getCompletenessChecks(business: Business | null, services: Service[]) {
 
 export default function BusinessPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const subscribedFlag = searchParams.get("subscribed");
   const { getPath } = useNavigation();
   const [copied, setCopied] = useState(false);
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
@@ -109,6 +112,21 @@ export default function BusinessPage() {
     subscriptionService.getStatus(id).then(setSubscription).catch(() => setSubscription(null));
     subscriptionService.getPlans().then((p) => setPlans(p || [])).catch(() => setPlans([]));
   }, []);
+
+  // Back from Stripe: the billing webhook activates the plan, which can trail the redirect by
+  // a few seconds. Re-read the status a handful of times; never trust the redirect itself.
+  const subscriptionActive = ["ACTIVE", "TRIALING"].includes((subscription?.status ?? "").toUpperCase());
+  useEffect(() => {
+    if (subscribedFlag !== "1" || subscriptionActive) return;
+    const id = getCurrentBusinessId();
+    if (!id) return;
+    let tries = 0;
+    const timer = setInterval(() => {
+      if (++tries > 12) clearInterval(timer);
+      else subscriptionService.getStatus(id).then(setSubscription).catch(() => undefined);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [subscribedFlag, subscriptionActive]);
 
   const startCheckout = async (planKey: string) => {
     const id = getCurrentBusinessId();
@@ -321,6 +339,7 @@ export default function BusinessPage() {
         />
 
         <div className={pageBody}>
+          <PaymentReturnBanner kind="subscription" flag={subscribedFlag} confirmed={subscriptionActive} />
           {error ? (
             <div className="rounded-[20px] bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-inset ring-rose-200">{error}</div>
           ) : null}

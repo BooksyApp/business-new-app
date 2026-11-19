@@ -1,4 +1,14 @@
 {
+  "paymentReturn": {
+    "receivedTitle": "Payment received",
+    "receivedBody": "Thank you. We are confirming it with the payment provider; this page updates by itself, usually within a minute.",
+    "processingTitle": "Payment processing",
+    "processingBody": "Your payment is being confirmed. You do not need to pay again. Refresh this page in a moment.",
+    "confirmedPromotion": "Confirmed: your promotion is active.",
+    "confirmedSubscription": "Confirmed: your subscription is active.",
+    "cancelledTitle": "Payment cancelled",
+    "cancelledBody": "No money was taken. You can try again whenever you like."
+  },
   "cp": {
     "title": "Central service and price list",
     "hint": "Push services from this salon to your other salons. Preview first.",
