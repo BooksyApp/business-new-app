@@ -24,9 +24,10 @@ describe("FG-W1 money helpers", () => {
   it("payroll CSV quotes names and keeps every line", () => {
     const csv = payrollCsv({
       id: "r", period_start: "2026-11-01", period_end: "2026-11-15", status: "DRAFT", total_amount: 10, approved_at: null,
-      lines: [{ id: "l", staff_id: "s", staff_name: 'Aysel "A"', hours: 8, base_pay: 5, commission: 3, tips: 2, adjustment: 0, total: 10, note: null }],
+      lines: [{ id: "l", staff_id: "s", staff_name: 'Aysel "A"', hours: 8, base_pay: 5, commission: 3, tips: 2, adjustment: 0, advances: 4, total: 6, note: null }],
     });
     expect(csv.split("\n")).toHaveLength(2);
     expect(csv).toContain('"Aysel ""A"""');
+    expect(csv.split("\n")[0]).toContain("advances");
   });
 });

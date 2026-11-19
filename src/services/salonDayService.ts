@@ -88,6 +88,8 @@ export interface PayrollLine {
   commission: number;
   tips: number;
   adjustment: number;
+  /** Advances taken off in this run (FG-W1-06). */
+  advances?: number;
   total: number;
   note: string | null;
 }
@@ -99,7 +101,20 @@ export interface PayrollRun {
   status: 'DRAFT' | 'APPROVED' | 'PAID';
   total_amount: number;
   approved_at: string | null;
+  paid_at?: string | null;
+  paid_method?: string | null;
   lines?: PayrollLine[];
+}
+
+export interface StaffAdvance {
+  id: Id;
+  staff_id: Id;
+  staff_name: string | null;
+  amount: number;
+  repaid: number;
+  outstanding: number;
+  given_on: string;
+  note: string | null;
 }
 
 // ---------------------------------------------------------------- client record
@@ -361,8 +376,13 @@ export const salonDayService = {
     apiClient.put<PayrollRun>(`${base(businessId)}/payroll/${runId}/lines/${lineId}`, { amount, note }),
   approvePayroll: (businessId: Id, runId: Id) =>
     apiClient.post<PayrollRun>(`${base(businessId)}/payroll/${runId}/approve`, {}),
-  markPayrollPaid: (businessId: Id, runId: Id) =>
-    apiClient.post<PayrollRun>(`${base(businessId)}/payroll/${runId}/paid`, {}),
+  markPayrollPaid: (businessId: Id, runId: Id, paidOn?: string, method?: string) =>
+    apiClient.post<PayrollRun>(`${base(businessId)}/payroll/${runId}/paid`, { paidOn, method }),
+  getAdvances: (businessId: Id) => apiClient.get<StaffAdvance[]>(`${base(businessId)}/payroll/advances`),
+  addAdvance: (businessId: Id, a: { staffId: Id; amount: number; givenOn?: string; note?: string }) =>
+    apiClient.post<StaffAdvance>(`${base(businessId)}/payroll/advances`, a),
+  deleteAdvance: (businessId: Id, advanceId: Id) =>
+    apiClient.delete<void>(`${base(businessId)}/payroll/advances/${advanceId}`),
 
   // client record
   getClientRecord: (businessId: Id, clientId: Id) =>

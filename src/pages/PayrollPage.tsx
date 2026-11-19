@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { salonDayService, type PayrollLine, type PayrollRun } from "@/services/salonDayService";
+import { PayrollAdvances } from "@/components/payroll/PayrollAdvances";
 import { t } from "@/i18n";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -19,9 +20,9 @@ const monthStart = () => `${today().slice(0, 7)}-01`;
 /** CSV of a pay run's lines (Excel-friendly: BOM, semicolons would break AZ decimals — use commas + quotes). */
 export function payrollCsv(run: PayrollRun): string {
   const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["staff", "hours", "base_pay", "commission", "tips", "adjustment", "total", "note"];
+  const head = ["staff", "hours", "base_pay", "commission", "tips", "adjustment", "advances", "total", "note"];
   const rows = (run.lines ?? []).map((l) =>
-    [l.staff_name, l.hours, l.base_pay, l.commission, l.tips, l.adjustment, l.total, l.note].map(q).join(","),
+    [l.staff_name, l.hours, l.base_pay, l.commission, l.tips, l.adjustment, l.advances ?? 0, l.total, l.note].map(q).join(","),
   );
   return "﻿" + [head.join(","), ...rows].join("\n");
 }
@@ -41,6 +42,9 @@ export default function PayrollPage() {
   const [busy, setBusy] = useState(false);
   const [line, setLine] = useState<PayrollLine | null>(null);
   const [adj, setAdj] = useState({ amount: "0", note: "" });
+  const [month, setMonth] = useState(() => today().slice(0, 7));
+  const [payOpen, setPayOpen] = useState(false);
+  const [pay, setPay] = useState({ paidOn: today(), method: "CASH" });
 
   const loadRuns = useCallback(async () => {
     if (!businessId) return;
@@ -78,6 +82,21 @@ export default function PayrollPage() {
     }
   };
 
+  /** A calendar month for the whole team: first to last day. */
+  const pickMonth = (m: string) => {
+    setMonth(m);
+    if (!/^\d{4}-\d{2}$/.test(m)) return;
+    const last = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate();
+    setFrom(`${m}-01`);
+    setTo(`${m}-${String(last).padStart(2, "0")}`);
+  };
+
+  const confirmPaid = async () => {
+    if (!businessId || !run) return;
+    await act(() => salonDayService.markPayrollPaid(businessId, run.id, pay.paidOn || undefined, pay.method), t("payroll.paidToast"));
+    setPayOpen(false);
+  };
+
   const calculate = () => {
     if (!businessId || !from || !to || from > to) return toast.error(t("payroll.badPeriod"));
     void act(() => salonDayService.buildPayroll(businessId, from, to), t("payroll.calculated"));
@@ -113,6 +132,9 @@ export default function PayrollPage() {
         <PageHeader title={t("payroll.title")} subtitle={t("payroll.subtitle")} />
         <div className={pageBody}>
           <section className="flex flex-wrap items-end gap-3 rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+            <Field label={t("payroll.month")} htmlFor="pr-month">
+              <input id="pr-month" type="month" className={fieldCls} value={month} onChange={(e) => pickMonth(e.target.value)} />
+            </Field>
             <Field label={t("payroll.from")} htmlFor="pr-from">
               <input id="pr-from" type="date" className={fieldCls} value={from} onChange={(e) => setFrom(e.target.value)} />
             </Field>
@@ -123,6 +145,8 @@ export default function PayrollPage() {
               <Calculator size={16} />{" "}{t("payroll.calculate")}
             </Button>
           </section>
+
+          <PayrollAdvances businessId={businessId} />
 
           {runs.length === 0 ? (
             <EmptyState icon={Wallet} title={t("payroll.emptyTitle")} body={t("payroll.emptyBody")} />
@@ -155,7 +179,7 @@ export default function PayrollPage() {
                   </Button>
                 ) : null}
                 {run.status === "APPROVED" ? (
-                  <Button className={primaryBtn} disabled={busy} onClick={() => void act(() => salonDayService.markPayrollPaid(businessId, run.id), t("payroll.paidToast"))}>
+                  <Button className={primaryBtn} disabled={busy} onClick={() => setPayOpen(true)}>
                     {t("payroll.markPaid")}
                   </Button>
                 ) : null}
@@ -173,6 +197,7 @@ export default function PayrollPage() {
                       <th className="px-4 py-3">{t("payroll.commission")}</th>
                       <th className="px-4 py-3">{t("payroll.tips")}</th>
                       <th className="px-4 py-3">{t("payroll.adjustment")}</th>
+                      <th className="px-4 py-3">{t("payroll.advances")}</th>
                       <th className="px-4 py-3">{t("payroll.total")}</th>
                       <th className="px-4 py-3" />
                     </tr>
@@ -189,6 +214,7 @@ export default function PayrollPage() {
                           {money(Number(l.adjustment || 0), sym)}
                           {l.note ? <span className="block text-xs text-[rgb(var(--reg-muted))]">{l.note}</span> : null}
                         </td>
+                        <td className="px-4 py-2">{Number(l.advances || 0) > 0 ? `−${money(Number(l.advances), sym)}` : "—"}</td>
                         <td className="px-4 py-2 font-semibold">{money(Number(l.total || 0), sym)}</td>
                         <td className="px-4 py-2 text-right">
                           {draft ? (
@@ -206,6 +232,32 @@ export default function PayrollPage() {
             </>
           ) : null}
         </div>
+
+        <FormSheet
+          open={payOpen}
+          onOpenChange={setPayOpen}
+          title={t("payroll.payTitle")}
+          description={t("payroll.payHint")}
+          footer={
+            <>
+              <Button className={sheetSecondary} variant="outline" onClick={() => setPayOpen(false)}>{t("common.cancel")}</Button>
+              <Button className={sheetPrimary} disabled={busy} onClick={() => void confirmPaid()}>{t("payroll.markPaid")}</Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <Field label={t("payroll.payDate")} htmlFor="pr-paid-on">
+              <input id="pr-paid-on" type="date" className={fieldCls} value={pay.paidOn} onChange={(e) => setPay({ ...pay, paidOn: e.target.value })} />
+            </Field>
+            <Field label={t("payroll.payMethod")} htmlFor="pr-paid-method">
+              <select id="pr-paid-method" className={fieldCls} value={pay.method} onChange={(e) => setPay({ ...pay, method: e.target.value })}>
+                <option value="CASH">{t("payroll.methodCash")}</option>
+                <option value="CARD">{t("payroll.methodCard")}</option>
+                <option value="TRANSFER">{t("payroll.methodTransfer")}</option>
+              </select>
+            </Field>
+          </div>
+        </FormSheet>
 
         <FormSheet
           open={!!line}
