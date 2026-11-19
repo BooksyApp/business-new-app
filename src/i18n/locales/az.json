@@ -4346,5 +4346,29 @@
     "verify": "İmzanı yoxlayın (Node.js)",
     "errors": "Xətalar",
     "errorsBody": "401 açar yoxdur və ya ləğv edilib · 403 səlahiyyət yoxdur · 404 naməlum id · 409 vaxt əlçatan deyil · 422 rezerv etmək olmur · 429 limit aşılıb."
+  },
+  "pos": {
+    "walkIn": "Yazılmadan gələn müştəri",
+    "edit": "Dəyiş",
+    "due": "Ödəniləcək",
+    "other": "Digər",
+    "wallet": "Balans",
+    "received": "Alınan məbləğ",
+    "change": "Qaytarılacaq: {value}",
+    "short": "Çatmır: {value}",
+    "addTip": "Çaypulu əlavə et",
+    "extras": "Endirim / bölünmüş ödəniş / borc",
+    "pay": "Ödəniş al · {value}",
+    "undo": "Ləğv et",
+    "splitSummary": "Nağd {value} + kart {value2}",
+    "walletAll": "Balansdan {value} çıxılacaq",
+    "walletRest": "Balansdan {value}, qalan {value2} — {method}",
+    "debtSummary": "{value} müştərinin borcu kimi qalacaq",
+    "discountAmount": "Endirim (məbləğ və ya %)",
+    "apply": "Tətbiq et",
+    "splitCash": "Bölünmüş ödəniş: nağd hissə",
+    "splitHint": "Kartla: {value}",
+    "paidNow": "Borc: indi alınan",
+    "debtHint": "Müştərinin balansına yazılacaq: {value}"
   }
 }

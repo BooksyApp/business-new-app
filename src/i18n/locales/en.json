@@ -4346,5 +4346,29 @@
     "verify": "Check the signature (Node.js)",
     "errors": "Errors",
     "errorsBody": "401 missing or revoked key · 403 scope missing · 404 unknown id · 409 slot not available · 422 cannot be booked · 429 rate limit."
+  },
+  "pos": {
+    "walkIn": "Walk-in client",
+    "edit": "Edit",
+    "due": "To pay",
+    "other": "Other",
+    "wallet": "Wallet",
+    "received": "Amount received",
+    "change": "Change: {value}",
+    "short": "Short by {value}",
+    "addTip": "Add a tip",
+    "extras": "Discount / split payment / owing",
+    "pay": "Take payment · {value}",
+    "undo": "Undo",
+    "splitSummary": "Cash {value} + card {value2}",
+    "walletAll": "{value} comes off the wallet",
+    "walletRest": "{value} from the wallet, the other {value2} by {method}",
+    "debtSummary": "{value} stays owing on the client's balance",
+    "discountAmount": "Discount (amount or %)",
+    "apply": "Apply",
+    "splitCash": "Split payment: cash part",
+    "splitHint": "By card: {value}",
+    "paidNow": "Owing: paid now",
+    "debtHint": "Left on the client's balance: {value}"
   }
 }
