@@ -8,7 +8,7 @@ export interface CentralPlanRow {
   serviceName: string;
   action: "CREATE" | "UPDATE" | "UNCHANGED" | "BLOCKED";
   reason?: string | null;
-  priceAction: "SET" | "KEEP_LOCAL";
+  priceAction: "SET" | "KEEP_LOCAL" | "OVERRIDE";
   overridden: boolean;
   currentPrice: number | string | null;
   newPrice: number | string | null;
@@ -21,6 +21,8 @@ export interface CentralPushInput {
   serviceIds: Id[];
   targetBusinessIds: Id[];
   lockPrice: boolean;
+  /** A price for one service in one salon, instead of the source price (not with lockPrice). */
+  overrides?: { serviceId: Id; targetBusinessId: Id; price: number }[];
 }
 
 export const centralCatalogService = {

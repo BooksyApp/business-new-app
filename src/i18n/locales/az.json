@@ -10,6 +10,8 @@
     "cancelledBody": "Heç bir məbləğ çıxılmadı. İstədiyiniz vaxt yenidən cəhd edə bilərsiniz."
   },
   "cp": {
+    "overridePrice": "Bu salonda qiymət",
+    "previewAgain": "Qiymətlər dəyişdi: tətbiq etməzdən əvvəl yenidən Önizləmə basın.",
     "title": "Mərkəzi xidmət və qiymət siyahısı",
     "hint": "Bu salondakı xidmətləri digər salonlarınıza göndərin. Əvvəlcə baxın.",
     "servicesToPush": "Göndəriləcək xidmətlər",
@@ -2088,6 +2090,7 @@
   "marketing": {
     "campaignSent": "Göndərildi",
     "campaignResults": "Göndərildikdən sonra 14 gündə {bookings} rezerv · gəlir {revenue}",
+    "campaignClicks": "{clicked} nəfər linkə kliklədi ({clicks} klik)",
     "campaignSending": "Göndərilir: {{sent}}/{{total}}, qalanı sabah",
     "campaignCancelled": "Ləğv edildi",
     "useCount": "{count, plural, one {# istifadə} other {# istifadə}}",

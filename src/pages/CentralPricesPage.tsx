@@ -31,6 +31,9 @@ export default function CentralPricesPage() {
   const [lock, setLock] = useState(false);
   const [plan, setPlan] = useState<CentralPlanRow[] | null>(null);
   const [busy, setBusy] = useState(false);
+  // A price typed for one service in one salon ("serviceId|salonId" -> text); the plan must be re-previewed after a change.
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [stale, setStale] = useState(false);
 
   useEffect(() => {
     serviceService
@@ -61,6 +64,15 @@ export default function CentralPricesPage() {
     serviceIds: Array.from(picked),
     targetBusinessIds: Array.from(targets),
     lockPrice: lock,
+    overrides: lock
+      ? undefined
+      : Object.entries(overrides)
+          .map(([k, v]) => ({ k, n: Number(v.replace(",", ".")) }))
+          .filter((o) => o.k && Number.isFinite(o.n) && o.n >= 0 && overrides[o.k].trim() !== "")
+          .map((o) => {
+            const [serviceId, targetBusinessId] = o.k.split("|");
+            return { serviceId, targetBusinessId, price: o.n };
+          }),
   });
   const canRun = picked.size > 0 && targets.size > 0 && !busy;
 
@@ -68,7 +80,10 @@ export default function CentralPricesPage() {
     setBusy(true);
     centralCatalogService
       .preview(sourceId, input())
-      .then(setPlan)
+      .then((rows) => {
+        setPlan(rows);
+        setStale(false);
+      })
       .catch(() => toast.error(t("cp.couldNotPreview")))
       .finally(() => setBusy(false));
   };
@@ -148,11 +163,12 @@ export default function CentralPricesPage() {
           {salons && salons.length > 0 && services && (
             <div className="mt-4 flex flex-wrap gap-2">
               <Button variant="outline" className={sheetSecondary} disabled={!canRun} onClick={runPreview}>{t("cp.preview")}</Button>
-              <Button className={primaryBtn} disabled={!plan || busy || plan.length === 0} onClick={apply}>{t("cp.apply")}</Button>
+              <Button className={primaryBtn} disabled={!plan || stale || busy || plan.length === 0} onClick={apply}>{t("cp.apply")}</Button>
               <Button variant="ghost" onClick={() => navigate("../locations")}>{t("cp.backToLocations")}</Button>
             </div>
           )}
 
+          {plan && stale && <p className="mt-3 text-sm text-amber-900">{t("cp.previewAgain")}</p>}
           {plan && (
             <div className="mt-4 overflow-x-auto rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
               <table className="w-full min-w-[640px] text-sm">
@@ -177,6 +193,20 @@ export default function CentralPricesPage() {
                       <td className="px-3 py-2 text-right tabular-nums">
                         {r.currentPrice !== null && r.currentPrice !== undefined ? `${formatPrice(r.currentPrice)} → ` : ""}
                         {formatPrice(r.newPrice ?? 0)}
+                        {!lock && r.action !== "BLOCKED" && (
+                          <input
+                            inputMode="decimal"
+                            aria-label={t("cp.overridePrice")}
+                            placeholder={t("cp.overridePrice")}
+                            value={overrides[`${r.serviceId}|${r.targetBusinessId}`] ?? ""}
+                            onChange={(e) => {
+                              const key = `${r.serviceId}|${r.targetBusinessId}`;
+                              setOverrides((prev) => ({ ...prev, [key]: e.target.value }));
+                              setStale(true);
+                            }}
+                            className="ml-3 h-8 w-24 rounded-lg border px-2 text-right text-xs"
+                          />
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -10,6 +10,8 @@
     "cancelledBody": "No money was taken. You can try again whenever you like."
   },
   "cp": {
+    "overridePrice": "Price in this salon",
+    "previewAgain": "Prices changed: press Preview again before applying.",
     "title": "Central service and price list",
     "hint": "Push services from this salon to your other salons. Preview first.",
     "servicesToPush": "Services to push",
@@ -2088,6 +2090,7 @@
   "marketing": {
     "campaignSent": "Sent",
     "campaignResults": "{bookings} bookings in 14 days after sending · revenue {revenue}",
+    "campaignClicks": "{clicked} clicked the link ({clicks} clicks)",
     "campaignSending": "Sending: {{sent}}/{{total}}, the rest tomorrow",
     "campaignCancelled": "Cancelled",
     "useCount": "{count, plural, one {# use} other {# uses}}",
