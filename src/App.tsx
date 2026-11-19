@@ -49,6 +49,7 @@ const SectionPage = lazy(() => import("./pages/SectionPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const BranchComparisonPage = lazy(() => import("./pages/BranchComparisonPage"));
+const InboxPage = lazy(() => import("./pages/InboxPage"));
 const CentralPricesPage = lazy(() => import("./pages/CentralPricesPage"));
 const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
 const ConsentFormsPage = lazy(() => import("./pages/ConsentFormsPage"));
@@ -299,6 +300,7 @@ const App = () => (
               <Route path="support" element={<Suspense fallback={<PageLoader />}><SupportPage /></Suspense>} />
               <Route path="help" element={<Suspense fallback={<PageLoader />}><HelpPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense>} />
+              <Route path="inbox" element={<Suspense fallback={<PageLoader />}><InboxPage /></Suspense>} />
               <Route path="payment-method" element={<Suspense fallback={<PageLoader />}><PaymentMethodPage /></Suspense>} />
             </Route>
             

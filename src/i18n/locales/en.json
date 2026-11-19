@@ -3904,5 +3904,28 @@
     "settlement": "Paid off",
     "leaveRest": "Leave the rest as balance",
     "leaveRestHint": "{value} {value2} will be added to what the client owes"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "subtitle": "Messages from your clients. Replies go to the client by email when they are not online.",
+    "navLabel": "Inbox",
+    "navDescription": "Messages from clients",
+    "empty": "No conversations yet. When a client writes to you from booqi, it appears here.",
+    "selectPrompt": "Choose a conversation to read it.",
+    "unread": "{count} unread",
+    "placeholder": "Write a reply (plain text)",
+    "charCount": "{count}/{max}",
+    "send": "Send",
+    "sendError": "The message could not be sent.",
+    "openClients": "Find in clients",
+    "report": "Report",
+    "reportPlaceholder": "What is wrong? (optional)",
+    "reportSend": "Send report",
+    "reportCancel": "Cancel",
+    "reportSent": "The report has been sent to booqi.",
+    "reportError": "The report could not be sent.",
+    "you": "You",
+    "client": "Client",
+    "blockHint": "To stop a client messaging you, block them from their client card."
   }
 }

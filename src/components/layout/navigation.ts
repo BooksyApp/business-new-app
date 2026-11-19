@@ -14,6 +14,7 @@ import {
   Megaphone,
   Image as ImageIcon,
   MessageSquareText,
+  Inbox,
   Stamp,
   Rocket,
   History,
@@ -103,6 +104,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { icon: Users, get label() { return t("layout.allClients"); }, path: "/clients", get description() { return t("layout.everyoneWhoHasBookedWith"); } },
       { icon: MessageSquareText, get label() { return t("common.reviews"); }, path: "/reviews", get description() { return t("layout.readFeedbackReplyToIt"); } },
+      { icon: Inbox, get label() { return t("inbox.navLabel"); }, path: "/inbox", get description() { return t("inbox.navDescription"); } },
     ],
   },
   {

@@ -3904,5 +3904,28 @@
     "settlement": "Borc ödənildi",
     "leaveRest": "Qalanını borc kimi saxla",
     "leaveRestHint": "{value} {value2} müştərinin borcuna əlavə olunacaq"
+  },
+  "inbox": {
+    "title": "Mesajlar",
+    "subtitle": "Müştərilərinizdən gələn mesajlar. Müştəri onlayn deyilsə, cavab e-poçtla çatır.",
+    "navLabel": "Mesajlar",
+    "navDescription": "Müştərilərdən mesajlar",
+    "empty": "Hələ söhbət yoxdur. Müştəri booqi-dən yazanda mesaj burada görünəcək.",
+    "selectPrompt": "Oxumaq üçün söhbət seçin.",
+    "unread": "{count} oxunmamış",
+    "placeholder": "Cavab yazın (yalnız mətn)",
+    "charCount": "{count}/{max}",
+    "send": "Göndər",
+    "sendError": "Mesaj göndərilmədi.",
+    "openClients": "Müştərilərdə tap",
+    "report": "Şikayət et",
+    "reportPlaceholder": "Nə problemdir? (istəyə bağlı)",
+    "reportSend": "Şikayəti göndər",
+    "reportCancel": "Ləğv et",
+    "reportSent": "Şikayət booqi-yə göndərildi.",
+    "reportError": "Şikayət göndərilmədi.",
+    "you": "Siz",
+    "client": "Müştəri",
+    "blockHint": "Müştərinin sizə yazmasının qarşısını almaq üçün onu müştəri kartından bloklayın."
   }
 }
