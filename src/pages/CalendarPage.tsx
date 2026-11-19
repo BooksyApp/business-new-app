@@ -62,7 +62,7 @@ import { appointmentService, BookingConflictDeclined } from "@/services/appointm
 import { serviceService, type ServicePackage } from "@/services/serviceService";
 import { PackageBookingPanel } from "@/components/calendar/PackageBookingPanel";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
-import { WaitingBlock, WaitingPill } from "@/components/calendar/WaitingBlock";
+import { WaitingBlock } from "@/components/calendar/WaitingBlock";
 import { isFreed, placeWaiting, toHHmm, toMinutes, type BusyRange, type WaitingPlacement } from "@/lib/waitlistCalendar";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -1493,7 +1493,27 @@ export default function CalendarPage() {
     setShowWaitingState(on);
     try { localStorage.setItem("calendar.showWaiting", on ? "1" : "0"); } catch { /* per-viewer convenience only */ }
   };
-  const waitingEnabled = flags.waitlist !== false && showWaiting && viewType === "Day";
+  const waitingVisible = flags.waitlist !== false && showWaiting;
+  const waitingEnabled = waitingVisible && viewType === "Day";
+  /** Masters (in calendar order) who do this waiter's service; all of them when the service lists none. */
+  const mastersForService = (w: WaitlistEntry, from: Staff[]): Staff[] => {
+    const doing = services.find(x => w.serviceId && x.id.toString() === String(w.serviceId))?.staffIds;
+    return from.filter(st => !doing || doing.length === 0 || doing.map(String).includes(String(st.id)));
+  };
+  /** Week view: compact chips per master and day; a click opens that day, where the full block lives. */
+  const waitingChipsFor = (day: Date, staffId: string): WaitlistEntry[] => {
+    if (!waitingVisible || viewType !== "Weekly") return [];
+    const key = format(day, "yyyy-MM-dd");
+    return waitlist.filter(w => {
+      if (w.preferredDate !== key) return false;
+      const owner = w.staffId
+        ? String(w.staffId)
+        : isFreed(w) && w.freedStaffId
+          ? String(w.freedStaffId)
+          : mastersForService(w, staff)[0]?.id;
+      return owner !== undefined && String(owner) === String(staffId);
+    });
+  };
   const dayKey = format(currentDate, "yyyy-MM-dd");
   const waitingForDay = useMemo(
     () =>
@@ -1502,11 +1522,16 @@ export default function CalendarPage() {
             .filter(w => !w.preferredDate || w.preferredDate === dayKey)
             .map(w => {
               const dur = w.serviceId ? serviceDuration(String(w.serviceId)) : 30;
-              return { entry: w, durationMin: dur, placement: placeWaiting(w, dur) };
+              const hours = getBusinessHoursForDate(currentDate);
+              const working = mastersForService(w, visibleStaff).filter(
+                st => !!st.workingHours && !getTimeOffsForStaffAndDate(timeOffs, st.id, currentDate).some(to => to.isFullDay),
+              );
+              const ctx = { masters: working.map(st => st.id), openMin: (hours.isEnabled ? hours.startHour : 9) * 60 };
+              return { entry: w, durationMin: dur, placement: placeWaiting(w, dur, ctx) };
             })
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps -- serviceDuration reads `services`, listed
-    [waitingEnabled, waitlist, dayKey, services],
+    [waitingEnabled, waitlist, dayKey, services, apiStaff, timeOffs, isMobile, hiddenStaffIds],
   );
   // What is really booked (appointments and time off) that day, per master. Waiting blocks are
   // deliberately not in here: a waiting client does not occupy the chair.
@@ -1525,10 +1550,7 @@ export default function CalendarPage() {
   }, [waitingEnabled, appointments, timeOffs, currentDate, apiStaff]);
   const waitingProps = (w: { entry: WaitlistEntry; durationMin: number; placement: WaitingPlacement }) => {
     const { startHour, endHour } = getBusinessHoursForDate(currentDate);
-    const doing = services.find(x => w.entry.serviceId && x.id.toString() === String(w.entry.serviceId))?.staffIds;
-    const masters = staff
-      .filter(st => !doing || doing.length === 0 || doing.map(String).includes(String(st.id)))
-      .map(st => ({ id: st.id, name: st.name }));
+    const masters = mastersForService(w.entry, staff).map(st => ({ id: st.id, name: st.name }));
     const now = salonNow(salonTz);
     return {
       entry: w.entry,
@@ -1545,7 +1567,6 @@ export default function CalendarPage() {
       onChanged: reloadWaitlist,
     };
   };
-  const waitingStrip = waitingForDay.filter(w => !(w.placement.staffId && w.placement.start));
 
   return (
     <AppLayout>
@@ -1566,19 +1587,6 @@ export default function CalendarPage() {
               the salon then picks the slot, which is the part only they can decide. */}
           {/* LR-02: what still stops clients booking, with a link to each fix (not-bookable only). */}
           {businessId ? <VisibilityBanner businessId={businessId} showLive={false} className="mx-3 mt-3 md:mx-6" /> : null}
-
-          {/* Waiting clients with no time on the grid (any master, or only a date). A slim strip of
-              chips, not a column: it takes one row and disappears when nobody is waiting. */}
-          {waitingStrip.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto border-b border-[rgb(var(--reg-line)/0.7)] bg-white px-3 py-2 md:px-6" aria-label={tr("waitlistCal.stripLabel")}>
-              <span className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--reg-muted))]">
-                <Clock size={13} aria-hidden /> {tr("waitlistCal.stripLabel")} · {waitingStrip.length}
-              </span>
-              {waitingStrip.map(w => (
-                <WaitingPill key={w.entry.id} {...waitingProps(w)} freed={isFreed(w.entry)} />
-              ))}
-            </div>
-          )}
 
           {/* Loading State */}
           {loading && (
@@ -1930,7 +1938,7 @@ export default function CalendarPage() {
                 </Popover>
               )}
 
-              {viewType === "Day" && flags.waitlist !== false && (
+              {(viewType === "Day" || viewType === "Weekly") && flags.waitlist !== false && (
                 <button
                   type="button"
                   role="switch"
@@ -2729,6 +2737,7 @@ export default function CalendarPage() {
                       <div className="divide-y divide-gray-200">
                         {staff.map((staff) => {
                           const staffAppointments = getAppointmentsForDateAndStaff(day, staff.id);
+                          const waitChips = waitingChipsFor(day, staff.id);
                           // All rows should have the same height to fit 3 blocks + "+X more" row
                           // Height: 3 blocks (~180px with spacing) + "+X more" row (~40px) + padding (~16px) = ~250px
                           const rowHeight = "h-[250px]";
@@ -2738,6 +2747,26 @@ export default function CalendarPage() {
                               key={staff.id}
                               className={`${rowHeight} p-2 flex flex-col border-b border-gray-200`}
                             >
+                              {waitChips.length > 0 && (
+                                <div className="mb-1 flex flex-wrap gap-1">
+                                  {waitChips.map(w => (
+                                    <button
+                                      key={w.id}
+                                      type="button"
+                                      onClick={() => { setCurrentDate(day); setViewType("Day"); }}
+                                      title={`${tr("waitlistCal.waiting")}: ${w.clientName || w.clientEmail || ""}`}
+                                      className={`inline-flex h-6 max-w-full items-center gap-1 rounded-full border border-dashed px-2 text-[10px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
+                                        isFreed(w)
+                                          ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                                          : "border-[rgb(var(--reg-brand)/0.6)] bg-white text-[rgb(var(--reg-brand-strong))]"
+                                      }`}
+                                    >
+                                      <Clock size={11} aria-hidden />
+                                      <span className="truncate">{w.clientName || w.clientEmail || tr("common.client")}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                               {staffAppointments.length > 0 ? (
                                 <div className="flex flex-col h-full justify-between">
                                   {/* Appointment Blocks - Maximum 3 */}
@@ -2788,7 +2817,7 @@ export default function CalendarPage() {
                                 </div>
                               ) : (
                                 <div className="h-full flex items-center justify-center">
-                                  <span className="text-xs text-muted-foreground/50">{tr("calendar.noAppointments")}</span>
+                                  <span className={`text-xs text-muted-foreground/50 ${waitChips.length > 0 ? "sr-only" : ""}`}>{tr("calendar.noAppointments")}</span>
                                 </div>
                               )}
                             </div>

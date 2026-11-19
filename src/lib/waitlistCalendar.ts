@@ -18,13 +18,21 @@ export const toHHmm = (minutes: number): string =>
 export const hhmm = (t?: string | null): string | null => (t ? t.slice(0, 5) : null);
 
 export interface WaitingPlacement {
-  /** Column to draw in; null = no specific master (goes to the slim strip). */
+  /** Column to draw in. Null only when the salon has no master who could take them. */
   staffId: string | null;
-  /** Drawn block when we know a time; null = compact pill in the strip. */
   start: string | null;
   end: string | null;
   /** A cancellation freed a matching slot recently. */
   freed: boolean;
+  /** The client did not choose a master: drawn on the first suitable one, marked "any master". */
+  anyMaster: boolean;
+}
+
+export interface PlaceContext {
+  /** Masters, in calendar order, who do this service and work that day. */
+  masters: string[];
+  /** Salon opening time that day, in minutes: the last-resort start. */
+  openMin: number;
 }
 
 export function isFreed(w: WaitlistEntry, now: Date = new Date()): boolean {
@@ -34,26 +42,37 @@ export function isFreed(w: WaitlistEntry, now: Date = new Date()): boolean {
 }
 
 /**
- * Where a waiting client belongs on the day grid.
- * - slot freed: the master and time that opened up (so the salon sees it where it happened);
- * - time window: at the window start, as tall as the window (capped, never shorter than the service);
- * - otherwise: no block; a pill in the strip (or on the master's column header if one is wanted).
+ * Where a waiting client belongs on the day grid. EVERY waiter is a block in a master's column:
+ * - master: the one they chose; else the master whose slot freed; else the first master (calendar
+ *   order) who does the service and works that day, marked "any master";
+ * - start: the freed slot, else their window start, else the time they tried to book, else the
+ *   salon's opening time that day;
+ * - length: their window (capped, never shorter than the service), else the service duration.
  */
-export function placeWaiting(w: WaitlistEntry, durationMin: number, now: Date = new Date()): WaitingPlacement {
+export function placeWaiting(w: WaitlistEntry, durationMin: number, ctx: PlaceContext, now: Date = new Date()): WaitingPlacement {
   const freed = isFreed(w, now);
-  const staffId = w.staffId ? String(w.staffId) : freed && w.freedStaffId ? String(w.freedStaffId) : null;
+  const anyMaster = !w.staffId;
+  const staffId = w.staffId
+    ? String(w.staffId)
+    : freed && w.freedStaffId
+      ? String(w.freedStaffId)
+      : ctx.masters[0] ?? null;
   const dur = Math.max(durationMin, 15);
+  if (!staffId) return { staffId: null, start: null, end: null, freed, anyMaster };
   const freedStart = hhmm(w.freedStartTime);
-  if (freed && freedStart && staffId) {
-    return { staffId, start: freedStart, end: toHHmm(toMinutes(freedStart) + dur), freed };
+  if (freed && freedStart) {
+    return { staffId, start: freedStart, end: toHHmm(toMinutes(freedStart) + dur), freed, anyMaster };
   }
   const ws = hhmm(w.preferredStartTime);
   const we = hhmm(w.preferredEndTime);
-  if (ws && we && toMinutes(we) > toMinutes(ws) && staffId) {
+  if (ws && we && toMinutes(we) > toMinutes(ws)) {
     const len = Math.min(Math.max(toMinutes(we) - toMinutes(ws), dur), MAX_WINDOW_MINUTES);
-    return { staffId, start: ws, end: toHHmm(toMinutes(ws) + len), freed };
+    return { staffId, start: ws, end: toHHmm(toMinutes(ws) + len), freed, anyMaster };
   }
-  return { staffId, start: null, end: null, freed };
+  const tried = hhmm(w.preferredTime);
+  const startMin = tried ? toMinutes(tried) : ctx.openMin;
+  const endMin = Math.min(startMin + dur, 24 * 60 - 1);
+  return { staffId, start: toHHmm(startMin), end: toHHmm(endMin), freed, anyMaster };
 }
 
 export interface BusyRange {

@@ -24,6 +24,8 @@ export interface WaitlistEntry {
   /** HH:mm[:ss] window the client can come in; null = any time that day. */
   preferredStartTime?: string | null;
   preferredEndTime?: string | null;
+  /** The exact time the client tried to book when they joined. */
+  preferredTime?: string | null;
   /** Salon switch: message this client automatically when a matching slot frees up. */
   autoNotify?: boolean;
   /** A matching slot freed up (cancellation): when, with whom, at what time. */

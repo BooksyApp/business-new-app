@@ -73,33 +73,14 @@ export function WaitingBlock({ height, freed, ...rest }: CommonProps & { height:
           <span className="truncate text-[11px] leading-tight text-[rgb(var(--reg-muted))]">{entry.serviceName}</span>
         )}
         {!compact && placement.start && placement.end && (
-          <span className="mt-auto text-[10px] tabular-nums text-[rgb(var(--reg-muted))]">
+          <span className="mt-auto truncate text-[10px] tabular-nums text-[rgb(var(--reg-muted))]">
+            {placement.anyMaster ? `${tr("waitlistCal.anyMaster")} · ` : ""}
             {placement.start}–{placement.end}
           </span>
         )}
-      </button>
-    </WaitlistPopover>
-  );
-}
-
-/** Slim chip for waiters with no drawn time (any master, or date only). Sits in a strip, not a column. */
-export function WaitingPill({ freed, ...rest }: CommonProps & { freed: boolean }) {
-  const { entry } = rest;
-  return (
-    <WaitlistPopover {...rest}>
-      <button
-        type="button"
-        className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-dashed px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
-          freed
-            ? "border-emerald-600 bg-emerald-50 text-emerald-800 motion-safe:animate-pulse"
-            : "border-[rgb(var(--reg-brand)/0.6)] bg-white text-[rgb(var(--reg-brand-strong))] hover:bg-[rgb(var(--reg-brand-soft)/0.6)]"
-        }`}
-      >
-        {freed ? <Sparkles size={13} aria-hidden /> : <Clock size={13} aria-hidden />}
-        <span className="max-w-[140px] truncate">{waitingName(entry)}</span>
-        <span className="max-w-[120px] truncate font-normal text-[rgb(var(--reg-muted))]">
-          {entry.staffName ? tr("waitlistCal.withMaster", { name: entry.staffName }) : tr("waitlistCal.anyMaster")}
-        </span>
+        {compact && placement.anyMaster && (
+          <span className="truncate text-[10px] leading-tight text-[rgb(var(--reg-muted))]">{tr("waitlistCal.anyMaster")}</span>
+        )}
       </button>
     </WaitlistPopover>
   );

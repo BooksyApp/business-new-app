@@ -8,29 +8,41 @@ const base = (over: Partial<WaitlistEntry>): WaitlistEntry => ({
   staffName: "Leyla", createdAt: null, ...over,
 });
 
+const ctx = { masters: ["s1", "s2"], openMin: 600 };
+
 describe("placeWaiting", () => {
   it("draws a window at its start, capped at two hours", () => {
-    const p = placeWaiting(base({ preferredStartTime: "10:00:00", preferredEndTime: "18:00:00" }), 45);
-    expect(p).toMatchObject({ staffId: "s1", start: "10:00", end: "12:00", freed: false });
+    const p = placeWaiting(base({ preferredStartTime: "10:00:00", preferredEndTime: "18:00:00" }), 45, ctx);
+    expect(p).toMatchObject({ staffId: "s1", start: "10:00", end: "12:00", freed: false, anyMaster: false });
   });
   it("never draws a window shorter than the service", () => {
-    const p = placeWaiting(base({ preferredStartTime: "10:00", preferredEndTime: "10:30" }), 60);
-    expect(p.end).toBe("11:00");
+    expect(placeWaiting(base({ preferredStartTime: "10:00", preferredEndTime: "10:30" }), 60, ctx).end).toBe("11:00");
   });
   it("puts a freed slot where it opened, even for any-master waiters", () => {
     const now = new Date("2026-11-20T10:00:00Z");
     const p = placeWaiting(
-      base({ staffId: null, slotFreedAt: "2026-11-20T09:00:00Z", freedStaffId: "s2", freedStartTime: "14:00:00" }), 30, now);
-    expect(p).toMatchObject({ staffId: "s2", start: "14:00", end: "14:30", freed: true });
+      base({ staffId: null, slotFreedAt: "2026-11-20T09:00:00Z", freedStaffId: "s2", freedStartTime: "14:00:00" }), 30, ctx, now);
+    expect(p).toMatchObject({ staffId: "s2", start: "14:00", end: "14:30", freed: true, anyMaster: true });
   });
-  it("forgets an old freed highlight", () => {
+  it("forgets an old freed highlight and falls back", () => {
     const now = new Date("2026-11-21T10:00:00Z");
-    const p = placeWaiting(base({ slotFreedAt: "2026-11-20T09:00:00Z", freedStaffId: "s1", freedStartTime: "14:00" }), 30, now);
+    const p = placeWaiting(base({ slotFreedAt: "2026-11-20T09:00:00Z", freedStaffId: "s1", freedStartTime: "14:00" }), 30, ctx, now);
     expect(p.freed).toBe(false);
-    expect(p.start).toBeNull();
+    expect(p.start).toBe("10:00");
   });
-  it("date-only has no block", () => {
-    expect(placeWaiting(base({}), 30).start).toBeNull();
+  it("any master goes to the first suitable master, marked", () => {
+    const p = placeWaiting(base({ staffId: null }), 30, ctx);
+    expect(p).toMatchObject({ staffId: "s1", anyMaster: true });
+  });
+  it("uses the time the client tried to book when there is no window", () => {
+    const p = placeWaiting(base({ preferredTime: "15:30:00" }), 45, ctx);
+    expect(p).toMatchObject({ start: "15:30", end: "16:15" });
+  });
+  it("last resort: opening time, service-long", () => {
+    expect(placeWaiting(base({}), 30, ctx)).toMatchObject({ start: "10:00", end: "10:30" });
+  });
+  it("no master available means no block", () => {
+    expect(placeWaiting(base({ staffId: null }), 30, { masters: [], openMin: 600 }).staffId).toBeNull();
   });
 });
 
