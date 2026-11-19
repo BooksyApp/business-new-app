@@ -19,7 +19,6 @@ import {
   Inbox,
   KeyRound,
   Landmark,
-  LifeBuoy,
   Mail,
   MapPin,
   Megaphone,
@@ -79,17 +78,17 @@ export interface NavItem {
   labelKey?: TKey;
 }
 
-/** A rail entry: one page (`path`) or a collapsible group of pages (`items`). */
-export interface NavGroup {
-  icon: React.ElementType;
-  label: string;
+/** A rail link. With `tabs`, it is a page family: the rail shows one link, the pages show tabs. */
+export interface NavEntry extends NavItem {
   slug: string;
-  /** Groups with one destination navigate straight there. */
-  path?: string;
-  items?: NavItem[];
-  /** Only a team member has this page (single-page entries). */
-  staffOnly?: boolean;
-  labelKey?: TKey;
+  tabs?: NavItem[];
+}
+
+/** A block of the rail, optionally under a small label. */
+export interface NavSection {
+  slug: string;
+  key?: TKey;
+  entries: NavEntry[];
 }
 
 // Labels are getters, read at render time: the menu is built once at import, before the
@@ -105,82 +104,74 @@ function item(icon: React.ElementType, label: TKey, path: string, hint?: TKey, e
     get description() { return hint ? t(hint) : undefined; },
   };
 }
-function group(icon: React.ElementType, label: TKey, slug: string, rest: Omit<NavGroup, "icon" | "label" | "slug">): NavGroup {
-  return { icon, slug, labelKey: label, ...rest, get label() { return t(label); } };
+function entry(slug: string, base: NavItem, tabs?: NavItem[]): NavEntry {
+  const e = base as NavEntry;
+  e.slug = slug;
+  if (tabs) e.tabs = tabs;
+  return e;
 }
 
 /**
- * The rail, top to bottom. The phone drawer and the section pages read the same list, so a
- * page cannot be in one and missing from the other.
+ * The rail, v2 (2026-11-19, business/product/hub-ia-2026-11-19.md). Every link is visible
+ * at once — no accordions — and the whole rail fits a laptop screen: a page family
+ * (Marketing, Team, Inventory, Branches, Clients) is one link here and tabs on the page.
  */
-export const navGroups: NavGroup[] = [
-  // Every day: the diary and the conversation with clients.
-  group(CalendarDays, "nav.calendar", "calendar", { path: "/calendar" }),
-  group(CalendarCheck, "nav.myDay", "my-day", { path: "/my-day", staffOnly: true }),
-  group(Inbox, "nav.inbox", "inbox", { path: "/inbox" }),
-  group(Wallet, "nav.g.sales", "sales", {
-    items: [
-      item(Receipt, "nav.till", "/sales", "layout.ringUpAVisitTake"),
-      item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"),
-      item(ShoppingBag, "nav.shopOrders", "/shop-orders", "onlineSales.navOrdersHint"),
-      item(Gift, "nav.giftCards", "/gift-cards", "onlineSales.navGiftCardsHint"),
-      item(PiggyBank, "expenses.title", "/expenses", "expenses.navHint"),
+export const NAV: NavSection[] = [
+  {
+    slug: "today",
+    entries: [
+      entry("calendar", item(CalendarDays, "nav.calendar", "/calendar")),
+      entry("my-day", item(CalendarCheck, "nav.myDay", "/my-day", "myDay.navHint", { staffOnly: true })),
+      entry("inbox", item(Inbox, "nav.inbox", "/inbox", "inbox.navDescription")),
+      entry("clients", item(Users, "nav.g.clients", "/clients", "layout.everyoneWhoHasBookedWith"), [
+        item(Users, "nav.allClients", "/clients", "layout.everyoneWhoHasBookedWith"),
+        item(ClipboardList, "nav.forms", "/setup/consent-forms", "consentForms.hint"),
+      ]),
     ],
-  }),
-  group(Users, "nav.g.clients", "clients", {
-    items: [
-      item(Users, "nav.allClients", "/clients", "layout.everyoneWhoHasBookedWith"),
-      item(ClipboardList, "nav.forms", "/setup/consent-forms", "consentForms.hint"),
+  },
+  {
+    slug: "sales",
+    key: "nav.g.sales",
+    entries: [
+      entry("sales", item(Receipt, "nav.till", "/sales", "layout.ringUpAVisitTake")),
+      entry("shop-orders", item(ShoppingBag, "nav.shopOrders", "/shop-orders", "onlineSales.navOrdersHint")),
+      entry("gift-cards", item(Gift, "nav.giftCards", "/gift-cards", "onlineSales.navGiftCardsHint")),
+      entry("money", item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"), [
+        item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"),
+        item(PiggyBank, "expenses.title", "/expenses", "expenses.navHint"),
+      ]),
     ],
-  }),
-  // Getting more clients, apart from the clients themselves.
-  group(Megaphone, "nav.g.marketing", "marketing", {
-    items: [
-      item(Megaphone, "nav.campaigns", "/marketing", "layout.messagesToClientsAndPromo"),
-      item(Percent, "nav.offers", "/offers", "layout.cutAPriceItShows"),
-      item(Stamp, "nav.loyalty", "/loyalty", "layout.comeNTimesOneService", {flag: "loyalty_cards"}),
-      item(Gift, "nav.referrals", "/referral-program", "layout.yourCodeAndTheClients", {flag: "platform_referral"}),
-      item(Star, "nav.reviews", "/reviews", "layout.readFeedbackReplyToIt"),
-      item(Rocket, "nav.promotion", "/promotion", "layout.payToAppearAtThe"),
+  },
+  {
+    slug: "business",
+    key: "common.business",
+    entries: [
+      entry("marketing", item(Megaphone, "nav.g.marketing", "/marketing", "layout.messagesToClientsAndPromo"), [
+        item(Megaphone, "nav.campaigns", "/marketing", "layout.messagesToClientsAndPromo"),
+        item(Percent, "nav.offers", "/offers", "layout.cutAPriceItShows"),
+        item(Stamp, "nav.loyalty", "/loyalty", "layout.comeNTimesOneService", { flag: "loyalty_cards" }),
+        item(Gift, "nav.referrals", "/referral-program", "layout.yourCodeAndTheClients", { flag: "platform_referral" }),
+        item(Star, "nav.reviews", "/reviews", "layout.readFeedbackReplyToIt"),
+        item(Rocket, "nav.promotion", "/promotion", "layout.payToAppearAtThe"),
+      ]),
+      entry("team", item(UsersRound, "nav.g.team", "/staff", "layout.whoWorksHereTheirServices"), [
+        item(UsersRound, "layout.teamMembers", "/staff", "layout.whoWorksHereTheirServices"),
+        item(Clock, "timesheet.title", "/timesheet", "timesheet.navHint"),
+        item(Coins, "payroll.title", "/payroll", "payroll.navHint"),
+        item(Target, "nav.targets", "/staff-targets", "layout.staffTargetsHint"),
+      ]),
+      entry("inventory", item(Boxes, "nav.g.inventory", "/inventory", "layout.stockLevelsAndReorderPoints"), [
+        item(Package, "nav.products", "/inventory", "layout.stockLevelsAndReorderPoints"),
+        item(ClipboardCheck, "nav.stockCount", "/inventory/count", "nav.hint.stockCount"),
+        item(Truck, "inventory.suppliersAndOrders", "/inventory/suppliers", "nav.hint.suppliers"),
+      ]),
+      entry("reports", item(BarChart3, "nav.reports", "/analytics", "layout.revenueBookingsAndClientTrends")),
+      entry("branches", item(Network, "nav.g.branches", "/locations", "nav.hint.locations"), [
+        item(MapPin, "nav.allLocations", "/locations", "nav.hint.locations"),
+        item(GitCompare, "nav.compare", "/branch-comparison", "nav.hint.compare"),
+      ]),
     ],
-  }),
-  // Running the business.
-  group(Scissors, "nav.g.catalogue", "catalogue", {
-    items: [
-      item(Scissors, "nav.services", "/items-category", "layout.whatYouSellHowLong"),
-      item(Sparkles, "nav.addons", "/addons", "layout.extrasYouAddToA"),
-    ],
-  }),
-  group(Boxes, "nav.g.inventory", "inventory", {
-    items: [
-      item(Package, "nav.products", "/inventory", "layout.stockLevelsAndReorderPoints"),
-      item(ClipboardCheck, "nav.stockCount", "/inventory/count", "nav.hint.stockCount"),
-      item(Truck, "inventory.suppliersAndOrders", "/inventory/suppliers", "nav.hint.suppliers"),
-    ],
-  }),
-  group(UsersRound, "nav.g.team", "team", {
-    items: [
-      item(UsersRound, "layout.teamMembers", "/staff", "layout.whoWorksHereTheirServices"),
-      item(Clock, "timesheet.title", "/timesheet", "timesheet.navHint"),
-      item(Coins, "payroll.title", "/payroll", "payroll.navHint"),
-      item(Target, "nav.targets", "/staff-targets", "layout.staffTargetsHint"),
-    ],
-  }),
-  group(BarChart3, "nav.reports", "reports", { path: "/analytics" }),
-  group(Network, "nav.g.branches", "branches", {
-    items: [
-      item(MapPin, "nav.allLocations", "/locations", "nav.hint.locations"),
-      item(GitCompare, "nav.compare", "/branch-comparison", "nav.hint.compare"),
-      item(Tags, "nav.centralPrices", "/central-prices", "nav.hint.centralPrices"),
-    ],
-  }),
-];
-
-/** How the rail is sectioned (headings on a desktop). Settings sits at the foot, not here. */
-export const NAV_SECTIONS: { key: TKey; slugs: string[] }[] = [
-  { key: "common.daily", slugs: ["calendar", "my-day", "inbox", "sales", "clients"] },
-  { key: "layout.grow", slugs: ["marketing"] },
-  { key: "nav.sec.manage", slugs: ["catalogue", "inventory", "team", "reports", "branches"] },
+  },
 ];
 
 /* ── settings: one hub, its own sub-nav ─────────────────────────────────── */
@@ -208,75 +199,46 @@ const R = (label: TKey, hint: TKey, path: string, icon: React.ElementType): Sett
   path,
   icon,
 });
+function S(id: string, title: TKey, description: TKey, icon: React.ElementType, rows: SettingRow[]): SettingsSection {
+  return { id, icon, rows, get title() { return t(title); }, get description() { return t(description); } };
+}
 
 /**
- * Every setting, once. A row is a screen that changes how the salon behaves; the daily
- * work (calendar, till, catalogue, team) lives in the rail.
+ * Every setting, once, in seven groups. The sub-nav lists the groups; a group's pages are
+ * tabs on its pages. Daily work (calendar, till, clients, team) stays in the rail.
  */
 export const SETTINGS_SECTIONS: SettingsSection[] = [
-  {
-    id: "business",
-    get title() { return t("nav.set.salon"); },
-    get description() { return t("setup.whoYouAreAndWhere"); },
-    icon: Store,
-    rows: [
-      R("common.businessProfile", "setup.nameCategoryDescriptionContact", "/business", Store),
-      R("common.photos", "setup.coverLogoAndGallery", "/photos", ImageIcon),
-      R("common.openingHours", "setup.weeklyHoursClosedDays", "/business-hours", Clock),
-      R("setup.brandColourReceiptFooter", "setup.yourColourTheLineUnder", "/branding", Palette),
-    ],
-  },
-  {
-    id: "booking",
-    get title() { return t("setup.onlineBooking"); },
-    get description() { return t("setup.howAndWhenClientsCan"); },
-    icon: CalendarClock,
-    rows: [
-      R("nav.set.bookingRules", "setup.onOrOffNoticeHow", "/setup/online-booking", CalendarClock),
-      R("nav.set.cancellation", "setup.howLateAClientCan", "/setup/cancellation", Shield),
-    ],
-  },
-  {
-    id: "money",
-    get title() { return t("nav.set.payments"); },
-    get description() { return t("setup.clientsPayWhenTheyVisit"); },
-    icon: CreditCard,
-    rows: [
-      R("bookingRules.paymentMethods", "setup.paymentMethodsHint", "/setup/payment-methods", CreditCard),
-      R("setup.currencyTax", "setup.whatYourPricesAreIn", "/setup/currency-tax", Receipt),
-      R("nav.set.onlineSales", "onlineSales.navSettingsHint", "/setup/online-sales", Gift),
-    ],
-  },
-  {
-    id: "notifications",
-    get title() { return t("setup.notifications"); },
-    get description() { return t("setup.whatClientsHearFromYou"); },
-    icon: Bell,
-    rows: [
-      R("setup.emailReminders", "setup.confirmationsAndReminderTiming", "/setup/email", Mail),
-      R("setup.smsPush", "setup.textsAndAppNotifications", "/setup/sms-push", Smartphone),
-    ],
-  },
-  {
-    id: "access",
-    get title() { return t("nav.set.access"); },
-    get description() { return t("nav.set.accessHint"); },
-    icon: ShieldCheck,
-    rows: [
-      R("setup.rolesPermissions", "setup.whatEachRoleCanDo", "/roles", ShieldCheck),
-      R("auditLog.title", "layout.auditLogHint", "/audit-log", History),
-    ],
-  },
-  {
-    id: "account",
-    get title() { return t("setup.account"); },
-    get description() { return t("setup.yourOwnSignIn"); },
-    icon: KeyRound,
-    rows: [
-      R("setup.passwordSecurity", "setup.changeYourPassword", "/security", KeyRound),
-      R("setup.support", "setup.supportHint", "/support", LifeBuoy),
-    ],
-  },
+  S("business", "common.business", "setup.whoYouAreAndWhere", Store, [
+    R("common.businessProfile", "setup.nameCategoryDescriptionContact", "/business", Store),
+    R("common.photos", "setup.coverLogoAndGallery", "/photos", ImageIcon),
+    R("common.openingHours", "setup.weeklyHoursClosedDays", "/business-hours", Clock),
+    R("nav.set.branding", "setup.yourColourTheLineUnder", "/branding", Palette),
+  ]),
+  S("booking", "nav.set.bookingGroup", "setup.howAndWhenClientsCan", CalendarClock, [
+    R("setup.onlineBooking", "setup.onOrOffNoticeHow", "/setup/online-booking", CalendarClock),
+    R("nav.set.cancellation", "setup.howLateAClientCan", "/setup/cancellation", Shield),
+  ]),
+  S("catalogue", "nav.set.catalogue", "layout.whatYouSellHowLong", Scissors, [
+    R("nav.services", "layout.whatYouSellHowLong", "/items-category", Scissors),
+    R("nav.addons", "layout.extrasYouAddToA", "/addons", Sparkles),
+    R("nav.centralPrices", "nav.hint.centralPrices", "/central-prices", Tags),
+  ]),
+  S("money", "nav.set.paymentsGroup", "setup.clientsPayWhenTheyVisit", CreditCard, [
+    R("bookingRules.paymentMethods", "setup.paymentMethodsHint", "/setup/payment-methods", CreditCard),
+    R("setup.currencyTax", "setup.whatYourPricesAreIn", "/setup/currency-tax", Receipt),
+    R("nav.set.onlineSales", "onlineSales.navSettingsHint", "/setup/online-sales", Gift),
+  ]),
+  S("notifications", "setup.notifications", "setup.whatClientsHearFromYou", Bell, [
+    R("setup.emailReminders", "setup.confirmationsAndReminderTiming", "/setup/email", Mail),
+    R("setup.smsPush", "setup.textsAndAppNotifications", "/setup/sms-push", Smartphone),
+  ]),
+  S("team", "nav.set.teamRoles", "setup.whatEachRoleCanDo", ShieldCheck, [
+    R("setup.rolesPermissions", "setup.whatEachRoleCanDo", "/roles", ShieldCheck),
+  ]),
+  S("security", "nav.set.securityAudit", "nav.set.securityHint", KeyRound, [
+    R("setup.passwordSecurity", "setup.changeYourPassword", "/security", KeyRound),
+    R("auditLog.title", "layout.auditLogHint", "/audit-log", History),
+  ]),
 ];
 
 /** The settings icon, for the rail foot and search. */
@@ -290,7 +252,7 @@ export function useVisibleSettings(): SettingsSection[] {
 
 /** True when this salon-relative path ("/setup/email") belongs to Settings. */
 export function isSettingsPath(path: string): boolean {
-  return path === "/setup" || SETTINGS_SECTIONS.some((s) => s.rows.some((r) => r.path === path)) || path === "/notifications" || path === "/booking-rules";
+  return path === "/setup" || SETTINGS_SECTIONS.some((s) => s.rows.some((r) => r.path === path));
 }
 
 /* ── quick search: things that live inside a page ───────────────────────── */
@@ -340,25 +302,40 @@ export function openQuickSearch(): void {
 }
 
 /**
- * The nav with the switched-off features removed.
- *
- * Both the rail and the section pages read this rather than `navGroups` directly, so a
- * page the platform has turned off cannot be reachable from one and missing from the
- * other — which is exactly how half these screens became unreachable the first time.
+ * The rail with switched-off features and pages the role leaves out removed. A family whose
+ * first tab is closed to this person opens on the first tab they can see.
  */
-export function useVisibleNavGroups(): NavGroup[] {
+export function useVisibleNav(): NavSection[] {
   const flags = useFeatureFlags();
   const access = myAccess();
-  const on = (flag?: string) => !flag || flags[flag] !== false;
-  const allowed = (path?: string) => pageAllowed(access, path);
-  const mine = (staffOnly?: boolean) => !staffOnly || myStaffRecord() !== undefined;
-  return navGroups
-    .filter((group) => group.items || (allowed(group.path) && mine(group.staffOnly)))
-    .map((group) =>
-      group.items ? { ...group, items: group.items.filter((item) => on(item.flag) && allowed(item.path) && mine(item.staffOnly)) } : group
-    )
-    .filter((group) => !group.items || group.items.length > 0);
+  const ok = (i: NavItem) =>
+    (!i.flag || flags[i.flag] !== false) && pageAllowed(access, i.path) && (!i.staffOnly || myStaffRecord() !== undefined);
+  return NAV.map((sec) => ({
+    ...sec,
+    entries: sec.entries
+      .map((e): NavEntry | null => {
+        if (!e.tabs) return ok(e) ? e : null;
+        const tabs = e.tabs.filter(ok);
+        if (!tabs.length) return null;
+        return { ...e, label: e.label, description: e.description, path: tabs[0].path, tabs } as NavEntry;
+      })
+      .filter((e): e is NavEntry => e !== null),
+  })).filter((sec) => sec.entries.length);
 }
+
+/** Old section slugs (/section/<slug>) → where they live now. */
+export const SECTION_REDIRECTS: Record<string, string> = {
+  calendar: "/calendar",
+  sales: "/sales",
+  clients: "/clients",
+  marketing: "/marketing",
+  catalogue: "/items-category",
+  inventory: "/inventory",
+  team: "/staff",
+  reports: "/analytics",
+  branches: "/locations",
+  business: "/setup",
+};
 
 export interface MyAccess {
   isOwner: boolean;

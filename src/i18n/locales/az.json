@@ -4039,7 +4039,14 @@
       "accessHint": "Kim nəyi görür və kim nəyi dəyişib",
       "allSettings": "Bütün ayarlar",
       "subtitle": "Salonun necə işlədiyini dəyişən hər şey bir yerdə",
-      "onlineSales": "Onlayn satışlar"
+      "onlineSales": "Onlayn satışlar",
+      "branding": "Brend və çek",
+      "bookingGroup": "Rezerv qaydaları",
+      "catalogue": "Xidmətlər və paketlər",
+      "paymentsGroup": "Ödənişlər",
+      "teamRoles": "Komanda və rollar",
+      "securityAudit": "Təhlükəsizlik və audit",
+      "securityHint": "Şifrəniz və kim nəyi dəyişib"
     },
     "search": {
       "open": "Axtarış",
@@ -4085,7 +4092,8 @@
       "wallet": "Müştəri balansı"
     },
     "giftCards": "Hədiyyə kartları",
-    "shopOrders": "Onlayn sifarişlər"
+    "shopOrders": "Onlayn sifarişlər",
+    "pageTabs": "Bölmənin səhifələri"
   },
   "onlineSales": {
     "title": "Onlayn satışlar",

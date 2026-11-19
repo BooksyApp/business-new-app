@@ -291,7 +291,8 @@ const App = () => (
               <Route path="locations" element={<Suspense fallback={<PageLoader />}><LocationsPage /></Suspense>} />
               <Route path="branch-comparison" element={<Suspense fallback={<PageLoader />}><BranchComparisonPage /></Suspense>} />
               <Route path="central-prices" element={<Suspense fallback={<PageLoader />}><CentralPricesPage /></Suspense>} />
-              <Route path="booking-rules" element={<Suspense fallback={<PageLoader />}><BookingRulesPage /></Suspense>} />
+              {/* The all-in-one pages duplicated the settings sub-pages: one home each now. */}
+              <Route path="booking-rules" element={<Navigate to="../setup/online-booking" replace />} />
               {/* One Setup row, one page: each shows only its own section. */}
               <Route path="setup/online-booking" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="online" section="online" /></Suspense>} />
               <Route path="setup/consent-forms" element={<Suspense fallback={<PageLoader />}><ConsentFormsPage /></Suspense>} />
@@ -302,7 +303,7 @@ const App = () => (
               <Route path="setup/sms-push" element={<Suspense fallback={<PageLoader />}><NotificationsPage key="sms-push" section="sms-push" /></Suspense>} />
               <Route path="security" element={<Suspense fallback={<PageLoader />}><SecurityPage /></Suspense>} />
               <Route path="audit-log" element={<Suspense fallback={<PageLoader />}><AuditLogPage /></Suspense>} />
-              <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
+              <Route path="notifications" element={<Navigate to="../setup/email" replace />} />
               <Route path="branding" element={<Suspense fallback={<PageLoader />}><BrandingPage /></Suspense>} />
               <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
               <Route path="support" element={<Suspense fallback={<PageLoader />}><SupportPage /></Suspense>} />

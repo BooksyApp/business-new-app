@@ -1,24 +1,16 @@
-import { Link } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { cn } from "@/lib/utils";
-import { useNavigation } from "@/utils/navigationUtils";
 import { t } from "@/i18n";
 
-/** "‹ Settings" above a settings sub-page, so every row of Setup has a way back. */
+/**
+ * Was "‹ Settings" above a settings sub-page. The way back now lives in the layout for every
+ * settings screen (the settings sub-nav on a desktop, the tabs bar's "‹ Settings" on a
+ * phone), so pages that still render this get nothing rather than a second back link.
+ */
 export function BackToSettings() {
-  const { getPath } = useNavigation();
-  return (
-    <Link
-      to={getPath("setup")}
-      className="inline-flex items-center gap-1 rounded-full text-sm font-semibold text-[rgb(var(--reg-muted))] transition hover:text-[rgb(var(--reg-ink))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]"
-    >
-      <ChevronLeft size={16} aria-hidden />
-      {t("setup.backToSettings")}
-    </Link>
-  );
+  return null;
 }
 
 /**

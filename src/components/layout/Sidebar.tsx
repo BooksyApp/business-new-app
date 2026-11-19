@@ -3,7 +3,6 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Check,
-  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
@@ -37,7 +36,7 @@ import { assetUrl } from "@/config/api";
 import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
 import "@/components/auth/auth-tokens.css";
 
-import { NAV_SECTIONS, SettingsIcon, isSettingsPath, openQuickSearch, useVisibleNavGroups, useVisibleSettings, type NavGroup } from "./navigation";
+import { SettingsIcon, isSettingsPath, openQuickSearch, useVisibleNav, useVisibleSettings, type NavEntry } from "./navigation";
 import { t } from "@/i18n";
 import { useSupportHref } from "@/services/platformService";
 import { keyForId, salonPath } from "@/lib/salonKey";
@@ -47,37 +46,12 @@ import { keyForId, salonPath } from "@/lib/salonKey";
  * sidebar on a desktop (collapsible to icons), and on a phone a slim top bar plus the web's
  * floating bottom tab bar, with "More" opening everything else.
  *
- * What is shown is exactly useVisibleNavGroups() — the same role, permission and feature
+ * What is shown is exactly useVisibleNav() — the same role, permission and feature
  * flag rules as before; this file only changes how it looks.
  */
 
 /** ⌘K on a Mac, Ctrl+K elsewhere — shown on the search button. */
 const MOD_KEY = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
-
-const OPEN_KEY = "booqi.nav.open";
-/** Which groups the person has opened, remembered per browser (storage may be blocked). */
-function useOpenGroups(): [Set<string>, (slug: string) => void] {
-  const [open, setOpen] = useState<Set<string>>(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || "[]") as string[]);
-    } catch {
-      return new Set();
-    }
-  });
-  const toggle = (slug: string) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      try {
-        localStorage.setItem(OPEN_KEY, JSON.stringify([...next]));
-      } catch {
-        /* per-browser convenience only */
-      }
-      return next;
-    });
-  return [open, toggle];
-}
 
 /* ── shared helpers ─────────────────────────────────────────────────────── */
 
@@ -142,19 +116,19 @@ function useNavModel() {
   const location = useLocation();
   const navigate = useNavigate();
   const businessId = useBusinessId();
-  const groups = useVisibleNavGroups();
+  const sections = useVisibleNav();
 
   // Prepend the business id inside a business, as the old rail did.
   // /<slug>_<publicId><path> (lib/salonKey) — never the numeric id in the address.
   const salonKey = keyForId(businessId);
   const getPath = (path: string): string => (salonKey && path !== "/" ? `/${salonKey}${path}` : path);
-  const groupHref = (g: NavGroup) => (g.path ? getPath(g.path) : getPath(`/section/${g.slug}`));
   const matches = (full: string) =>
     location.pathname === full ||
     location.pathname.startsWith(full + "/") ||
     (full === getPath("/business") && location.pathname === `/${salonKey}`);
-  const groupActive = (g: NavGroup) =>
-    (g.items ? [...g.items.map((i) => getPath(i.path)), getPath(`/section/${g.slug}`)] : [getPath(g.path!)]).some(matches);
+  // A family is active on any of its tabs.
+  const entryActive = (e: NavEntry) => [e.path, ...(e.tabs ?? []).map((x) => x.path)].some((p) => matches(getPath(p)));
+  const findEntry = (slug: string) => sections.flatMap((sec) => sec.entries).find((e) => e.slug === slug);
   // The salon-relative path ("/setup/email"), for the Settings entry.
   const relPath = salonKey && location.pathname.startsWith(`/${salonKey}`) ? location.pathname.slice(salonKey.length + 1) || "/" : location.pathname;
   const settingsActive = isSettingsPath(relPath) && relPath !== "/support";
@@ -198,7 +172,7 @@ function useNavModel() {
   const addSalon = () => navigate("/create-business");
 
   return {
-    groups, getPath, groupHref, matches, groupActive, navigate, location, settingsActive, hasSettings,
+    sections, findEntry, getPath, matches, entryActive, navigate, location, settingsActive, hasSettings,
     currentUser, initials, businessName, businessMark, businessLogo: business.logoUrl, handleLogout, switchTo, addSalon, businessId,
   };
 }
@@ -253,12 +227,11 @@ function MaybeTip({ show, label, children }: { show: boolean; label: string; chi
   );
 }
 
+// One row height (32px) and one icon size (18) across the rail, so it fits a laptop screen.
 const itemBase =
-  "group flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]";
+  "group relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]";
 const itemIdle = "text-[rgb(var(--reg-ink)/0.72)] hover:bg-[rgb(var(--reg-ink)/0.04)] hover:text-[rgb(var(--reg-ink))]";
-const itemOn = "bg-[rgb(var(--reg-brand)/0.1)] text-[rgb(var(--reg-ink))]";
-// The group that holds the current page: named in ink, the page itself carries the tint.
-const itemGroupOn = "text-[rgb(var(--reg-ink))]";
+const itemOn = "bg-[rgb(var(--reg-brand)/0.1)] text-[rgb(var(--reg-brand-strong))] before:absolute before:-left-3 before:top-1.5 before:h-5 before:w-[3px] before:rounded-r-full before:bg-[rgb(var(--reg-brand))]";
 
 /* ── desktop sidebar ────────────────────────────────────────────────────── */
 
@@ -271,17 +244,6 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   const [salonMenuOpen, setSalonMenuOpen] = useState(false);
   const businesses = useMyBusinesses(salonMenuOpen);
 
-  const [openGroups, toggleGroup] = useOpenGroups();
-
-  const sections = NAV_SECTIONS.map((sec) => ({
-    title: t(sec.key),
-    groups: sec.slugs.map((slug) => m.groups.find((g) => g.slug === slug)).filter(Boolean) as NavGroup[],
-  }));
-  // Any group not placed in a section still shows (never lose a destination).
-  const placed = new Set(NAV_SECTIONS.flatMap((sec) => sec.slugs));
-  const rest = m.groups.filter((g) => !placed.has(g.slug));
-  if (rest.length) sections.push({ title: t("common.more"), groups: rest });
-
   return (
     <>
       <aside
@@ -292,15 +254,32 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         )}
       >
         {/* Logo + collapse */}
-        <div className={cn("flex h-16 items-center", collapsed ? "justify-center" : "justify-between px-5")}>
+        <div className={cn("flex h-12 shrink-0 items-center", collapsed ? "justify-center" : "justify-between pl-4 pr-2")}>
           {collapsed ? (
             <span className="text-2xl font-extrabold tracking-[-0.04em]" aria-label="booqi">
               {t("layout.b")}
             </span>
           ) : (
-            <BooqiMark className="h-7 w-auto" />
+            <BooqiMark className="h-6 w-auto" />
           )}
           {!collapsed && (
+            <span className="flex items-center gap-0.5">
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={openQuickSearch}
+                  aria-label={t("nav.search.open")}
+                  aria-keyshortcuts="Meta+K Control+K"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[rgb(var(--reg-ink)/0.6)] hover:bg-[rgb(var(--reg-ink)/0.05)] hover:text-[rgb(var(--reg-ink))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]"
+                >
+                  <Search size={17} strokeWidth={1.9} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="rounded-lg border-none bg-[rgb(var(--reg-ink))] px-2.5 py-1.5 text-xs font-semibold text-white">
+                {t("nav.search.open")} · {MOD_KEY}
+              </TooltipContent>
+            </Tooltip>
             <button
               type="button"
               onClick={onToggle}
@@ -309,28 +288,28 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             >
               <ChevronsLeft size={18} strokeWidth={1.75} />
             </button>
+            </span>
           )}
         </div>
 
         {/* Salon switcher */}
-        <div className={cn("pb-3", collapsed ? "px-3" : "px-3")}>
+        <div className="px-3 pb-2">
           <DropdownMenu open={salonMenuOpen} onOpenChange={setSalonMenuOpen}>
             <MaybeTip show={collapsed} label={m.businessName}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl bg-white p-2 text-left shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04)] ring-1 ring-[rgb(var(--reg-line))] transition hover:ring-[rgb(var(--reg-brand)/0.35)]",
+                    "flex w-full items-center gap-2.5 rounded-xl bg-white p-1.5 text-left shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04)] ring-1 ring-[rgb(var(--reg-line))] transition hover:ring-[rgb(var(--reg-brand)/0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
                     collapsed && "justify-center p-1.5",
                   )}
                   aria-label={t("layout.salonYourSalons", { businessName: m.businessName })}
                 >
-                  <SalonMark logo={m.businessLogo} mark={m.businessMark} className="h-9 w-9" />
+                  <SalonMark logo={m.businessLogo} mark={m.businessMark} className="h-8 w-8 rounded-lg" />
                   {!collapsed && (
                     <>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-bold">{m.businessName}</span>
-                        <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{t("common.yourSalon")}</span>
                       </span>
                       <ChevronsUpDown size={16} className="shrink-0 text-[rgb(var(--reg-muted))]" />
                     </>
@@ -351,7 +330,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
         </div>
 
         {/* Quick search (⌘K / Ctrl+K) */}
-        <div className="px-3 pb-2">
+        {collapsed && <div className="px-3 pb-1">
           <MaybeTip show={collapsed} label={t("nav.search.open")}>
             <button
               type="button"
@@ -359,11 +338,11 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               aria-label={t("nav.search.open")}
               aria-keyshortcuts="Meta+K Control+K"
               className={cn(
-                "flex h-10 w-full items-center gap-2.5 rounded-xl bg-[rgb(var(--reg-ink)/0.04)] px-3 text-sm text-[rgb(var(--reg-muted))] transition-colors hover:bg-[rgb(var(--reg-ink)/0.07)] hover:text-[rgb(var(--reg-ink))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
+                "flex h-9 w-full items-center gap-2.5 rounded-lg bg-[rgb(var(--reg-ink)/0.04)] px-2.5 text-[13px] text-[rgb(var(--reg-muted))] transition-colors hover:bg-[rgb(var(--reg-ink)/0.07)] hover:text-[rgb(var(--reg-ink))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
                 collapsed && "justify-center px-0",
               )}
             >
-              <Search size={17} strokeWidth={1.9} className="shrink-0" aria-hidden />
+              <Search size={16} strokeWidth={1.9} className="shrink-0" aria-hidden />
               {!collapsed && (
                 <>
                   <span className="flex-1 truncate text-left">{t("nav.search.open")}</span>
@@ -372,100 +351,45 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               )}
             </button>
           </MaybeTip>
-        </div>
+        </div>}
 
-        {/* Navigation */}
-        <nav aria-label={t("layout.main")} className="flex-1 overflow-y-auto px-3 pb-3">
-          {sections.map((section) =>
-            section.groups.length ? (
-              <div key={section.title} className="mt-4 first:mt-1">
-                {!collapsed ? (
-                  <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted)/0.8)]">
-                    {section.title}
-                  </p>
+        {/* Navigation: every link visible; a family's pages are tabs on the page. */}
+        <nav aria-label={t("layout.main")} className="flex-1 overflow-y-auto px-3 pb-2">
+          {m.sections.map((sec) => (
+            <div key={sec.slug} className="pt-2">
+              {sec.key &&
+                (collapsed ? (
+                  <div className="mx-2 mb-1.5 mt-1 h-px bg-[rgb(var(--reg-line))]" aria-hidden />
                 ) : (
-                  <div className="mx-3 mb-2 h-px bg-[rgb(var(--reg-line))] first:hidden" aria-hidden />
-                )}
-                <ul className="space-y-0.5">
-                  {section.groups.map((g) => {
-                    const active = m.groupActive(g);
-                    const Icon = g.icon;
-                    const iconCls = cn(
-                      "shrink-0",
-                      active ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.55)] group-hover:text-[rgb(var(--reg-ink)/0.8)]",
-                    );
-                    // A page, or the collapsed rail (a group then opens its section page).
-                    if (!g.items || collapsed) {
-                      return (
-                        <li key={g.slug}>
-                          <MaybeTip show={collapsed} label={g.label}>
-                            <NavLink
-                              to={m.groupHref(g)}
-                              aria-label={collapsed ? g.label : undefined}
-                              aria-current={active ? "page" : undefined}
-                              className={cn(itemBase, active && !g.items ? itemOn : active ? itemGroupOn : itemIdle, collapsed && "justify-center px-0")}
-                            >
-                              <Icon size={20} strokeWidth={1.75} className={iconCls} />
-                              {!collapsed && <span className="truncate">{g.label}</span>}
-                            </NavLink>
-                          </MaybeTip>
-                        </li>
-                      );
-                    }
-                    // A group: opens in place. The group holding the current page stays open.
-                    const expanded = active || openGroups.has(g.slug);
-                    const listId = `nav-group-${g.slug}`;
-                    return (
-                      <li key={g.slug}>
-                        <button
-                          type="button"
-                          onClick={() => !active && toggleGroup(g.slug)}
-                          aria-expanded={expanded}
-                          aria-controls={listId}
-                          className={cn(itemBase, "w-full", active ? itemGroupOn : itemIdle)}
+                  <p className="px-2.5 pb-0.5 pt-2 text-[10.5px] font-bold uppercase tracking-[0.09em] text-[rgb(var(--reg-muted)/0.85)]">{t(sec.key)}</p>
+                ))}
+              <ul className="space-y-px">
+                {sec.entries.map((e) => {
+                  const active = m.entryActive(e);
+                  const Icon = e.icon;
+                  return (
+                    <li key={e.slug}>
+                      <MaybeTip show={collapsed} label={e.label}>
+                        <NavLink
+                          to={m.getPath(e.path)}
+                          aria-label={collapsed ? e.label : undefined}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(itemBase, active ? itemOn : itemIdle, collapsed && "justify-center px-0")}
                         >
-                          <Icon size={20} strokeWidth={1.75} className={iconCls} />
-                          <span className="flex-1 truncate text-left">{g.label}</span>
-                          <ChevronDown
-                            size={16}
-                            aria-hidden
-                            className={cn("shrink-0 text-[rgb(var(--reg-muted))] transition-transform duration-200 motion-reduce:transition-none", expanded && "rotate-180", active && "opacity-0")}
-                          />
-                        </button>
-                        {expanded && (
-                          <ul id={listId} className="mb-1.5 ml-[21px] mt-0.5 space-y-0.5 border-l border-[rgb(var(--reg-line))] pl-3">
-                            {g.items.map((item) => {
-                              const on = m.matches(m.getPath(item.path));
-                              return (
-                                <li key={item.path}>
-                                  <NavLink
-                                    to={m.getPath(item.path)}
-                                    aria-current={on ? "page" : undefined}
-                                    className={cn(
-                                      "block truncate rounded-lg px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
-                                      on
-                                        ? "bg-[rgb(var(--reg-brand)/0.1)] font-semibold text-[rgb(var(--reg-brand-strong))]"
-                                        : "text-[rgb(var(--reg-ink)/0.68)] hover:bg-[rgb(var(--reg-ink)/0.04)] hover:text-[rgb(var(--reg-ink))]",
-                                    )}
-                                  >
-                                    {item.label}
-                                  </NavLink>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ) : null,
-          )}
+                          <Icon size={18} strokeWidth={1.75} className={cn("shrink-0", active ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.5)] group-hover:text-[rgb(var(--reg-ink)/0.75)]")} />
+                          {!collapsed && <span className="truncate">{e.label}</span>}
+                        </NavLink>
+                      </MaybeTip>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
         </nav>
 
-        {/* Bottom: help, language, profile */}
-        <div className="space-y-0.5 border-t border-[rgb(var(--reg-line)/0.8)] px-3 py-3">
+        {/* Foot: settings, then the account (help, support, password, sign out) and language. */}
+        <div className="shrink-0 space-y-px border-t border-[rgb(var(--reg-line)/0.8)] px-3 py-2">
           {m.hasSettings && (
             <MaybeTip show={collapsed} label={t("nav.settings")}>
               <NavLink
@@ -473,7 +397,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                 aria-current={m.settingsActive ? "page" : undefined}
                 className={cn(itemBase, m.settingsActive ? itemOn : itemIdle, collapsed && "justify-center px-0")}
               >
-                <SettingsIcon size={20} strokeWidth={1.6} className={cn("shrink-0", m.settingsActive ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.55)]")} />
+                <SettingsIcon size={18} strokeWidth={1.75} className={cn("shrink-0", m.settingsActive ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.5)] group-hover:text-[rgb(var(--reg-ink)/0.75)]")} />
                 {!collapsed && t("nav.settings")}
               </NavLink>
             </MaybeTip>
@@ -485,62 +409,61 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               </button>
             </MaybeTip>
           )}
-          <MaybeTip show={collapsed} label={t("layout.support")}>
-            <NavLink
-              to={m.getPath("/support")}
-              aria-current={m.matches(m.getPath("/support")) ? "page" : undefined}
-              className={cn(itemBase, m.matches(m.getPath("/support")) ? itemOn : itemIdle, collapsed && "justify-center px-0")}
-            >
-              <MessagesSquare size={20} strokeWidth={1.6} className="shrink-0 text-[rgb(var(--reg-ink)/0.55)]" />
-              {!collapsed && t("layout.support")}
-            </NavLink>
-          </MaybeTip>
-          <MaybeTip show={collapsed} label={t("layout.language")}>
-            <button type="button" onClick={() => setIsLanguageModalOpen(true)} className={cn(itemBase, itemIdle, "w-full", collapsed && "justify-center px-0")}>
-              <Globe size={20} strokeWidth={1.6} className="shrink-0 text-[rgb(var(--reg-ink)/0.55)]" />
-              {!collapsed && t("layout.language")}
-            </button>
-          </MaybeTip>
-
-          <DropdownMenu>
-            <MaybeTip show={collapsed} label={m.currentUser?.fullName || m.currentUser?.email || t("layout.account")}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t("layout.account")}
-                  className={cn("mt-1 flex w-full items-center gap-3 rounded-xl p-1.5 text-left hover:bg-[rgb(var(--reg-ink)/0.04)]", collapsed && "justify-center")}
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-ink))] text-xs font-bold text-white">
-                    {m.initials}
-                  </span>
-                  {!collapsed && (
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{m.currentUser?.fullName || t("layout.signedIn")}</span>
-                      <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{m.currentUser?.email}</span>
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
+          <div className={cn("flex items-center gap-1 pt-1", collapsed && "flex-col")}>
+            <DropdownMenu>
+              <MaybeTip show={collapsed} label={m.currentUser?.fullName || m.currentUser?.email || t("layout.account")}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t("layout.account")}
+                    className={cn("flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 text-left hover:bg-[rgb(var(--reg-ink)/0.04)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]", collapsed && "flex-none justify-center")}
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-ink))] text-[11px] font-bold text-white">{m.initials}</span>
+                    {!collapsed && (
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-semibold">{m.currentUser?.fullName || t("layout.signedIn")}</span>
+                        <span className="block truncate text-[11px] text-[rgb(var(--reg-muted))]">{m.currentUser?.email}</span>
+                      </span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+              </MaybeTip>
+              <DropdownMenuContent side="top" align="start" className="w-60 rounded-2xl p-1.5" style={{ fontFamily: BRAND_FONT }}>
+                <DropdownMenuItem asChild className="h-10 gap-2 rounded-xl">
+                  <NavLink to={m.getPath("/support")}>
+                    <MessagesSquare size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
+                    {t("layout.support")}
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="h-10 gap-2 rounded-xl">
+                  <a href={supportHref}>
+                    <LifeBuoy size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
+                    {t("layout.help")}
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="h-10 gap-2 rounded-xl">
+                  <NavLink to={m.getPath("/security")}>
+                    <KeyRound size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
+                    {t("setup.passwordSecurity")}
+                  </NavLink>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={m.handleLogout} className="h-10 gap-2 rounded-xl text-red-700 focus:text-red-700">
+                  <LogOut size={16} strokeWidth={1.75} />{" "}{t("layout.signOut")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <MaybeTip show label={t("layout.language")}>
+              <button
+                type="button"
+                onClick={() => setIsLanguageModalOpen(true)}
+                aria-label={t("layout.language")}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[rgb(var(--reg-ink)/0.55)] hover:bg-[rgb(var(--reg-ink)/0.05)] hover:text-[rgb(var(--reg-ink))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]"
+              >
+                <Globe size={17} strokeWidth={1.75} />
+              </button>
             </MaybeTip>
-            <DropdownMenuContent side="top" align="start" className="w-56 rounded-2xl p-1.5">
-              <DropdownMenuItem asChild className="h-11 gap-2 rounded-xl">
-                <a href={supportHref}>
-                  <LifeBuoy size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
-                  {t("layout.help")}
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="h-11 gap-2 rounded-xl">
-                <NavLink to={m.getPath("/security")}>
-                  <KeyRound size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
-                  {t("setup.passwordSecurity")}
-                </NavLink>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={m.handleLogout} className="gap-2 rounded-xl text-red-700 focus:text-red-700">
-                <LogOut size={16} strokeWidth={1.75} />{" "}{t("layout.signOut")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          </div>
         </div>
       </aside>
 
@@ -612,13 +535,9 @@ export function MobileTabBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useHubLocale();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
-  const find = (slug: string) => m.groups.find((g) => g.slug === slug);
-  const calendar = find("calendar");
-  const clients = find("clients");
-  const sales = find("sales");
-  // Clients and Sales go straight to their main page (first item), not the section list.
-  const direct = (g?: NavGroup) => (g ? (g.items?.[0] ? m.getPath(g.items[0].path) : m.groupHref(g)) : null);
-
+  const calendar = m.findEntry("calendar");
+  const clients = m.findEntry("clients");
+  const sales = m.findEntry("sales");
   const tab = (href: string | null, label: string, Icon: React.ElementType, active: boolean) =>
     href ? (
       <li className="flex flex-1 justify-center">
@@ -645,14 +564,14 @@ export function MobileTabBar() {
         className="fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-50 mx-auto max-w-md rounded-full bg-white/90 shadow-[0_2px_6px_rgb(var(--reg-ink)/0.05),0_18px_40px_-12px_rgb(var(--reg-ink)/0.2)] ring-1 ring-[rgb(var(--reg-ink)/0.06)] backdrop-blur-xl md:hidden"
       >
         <ul className="flex h-16 items-center gap-1 px-2">
-          {calendar && tab(m.groupHref(calendar), t("common.calendar"), calendar.icon, m.groupActive(calendar))}
-          {clients && tab(direct(clients), t("common.clients"), clients.icon, m.groupActive(clients))}
+          {calendar && tab(m.getPath(calendar.path), t("common.calendar"), calendar.icon, m.entryActive(calendar))}
+          {clients && tab(m.getPath(clients.path), t("common.clients"), clients.icon, m.entryActive(clients))}
           {calendar && (
             <li className="flex flex-1 justify-center">
               {/* The calendar opens its booking form on ?new=1. */}
               <button
                 type="button"
-                onClick={() => m.navigate(`${m.groupHref(calendar)}?new=1`)}
+                onClick={() => m.navigate(`${m.getPath(calendar.path)}?new=1`)}
                 aria-label={t("common.newBooking")}
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgb(var(--reg-ink))] text-white shadow-[0_8px_20px_-8px_rgb(var(--reg-ink)/0.6)] transition active:scale-95"
               >
@@ -660,7 +579,7 @@ export function MobileTabBar() {
               </button>
             </li>
           )}
-          {sales && tab(direct(sales), t("common.sales"), sales.icon, m.groupActive(sales))}
+          {sales && tab(m.getPath(sales.path), t("common.sales"), sales.icon, m.entryActive(sales))}
           <li className="flex flex-1 justify-center">
             <button
               type="button"
@@ -694,46 +613,40 @@ export function MobileTabBar() {
             <Search size={18} strokeWidth={1.9} aria-hidden /> {t("nav.search.placeholder")}
           </button>
           <div className="mt-5 space-y-5">
-            {(() => {
-              // Single pages (Calendar, Messages, Reports…) share one card; each group gets its own.
-              const singles = m.groups.filter((g) => !g.items?.length);
-              const row = (href: string, label: string, Icon: React.ElementType) => {
-                const on = m.matches(href);
-                return (
-                  <li key={href} className="border-b border-[rgb(var(--reg-line)/0.6)] last:border-0">
-                    <NavLink
-                      to={href}
-                      onClick={() => setMoreOpen(false)}
-                      aria-current={on ? "page" : undefined}
-                      className={cn("flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold", on && "text-[rgb(var(--reg-brand-strong))]")}
-                    >
-                      <Icon size={18} strokeWidth={1.75} className={on ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.5)]"} aria-hidden />
-                      {label}
-                    </NavLink>
-                  </li>
-                );
-              };
-              const card = "overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]";
-              return (
-                <>
-                  <ul className={card}>
-                    {singles.map((g) => row(m.groupHref(g), g.label, g.icon))}
-                    {m.hasSettings && row(m.getPath("/setup"), t("nav.settings"), SettingsIcon)}
-                  </ul>
-                  {m.groups.filter((g) => g.items?.length).map((g) => {
-                    const Icon = g.icon;
+            {m.sections.map((sec) => (
+              <section key={sec.slug}>
+                {sec.key && <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{t(sec.key)}</p>}
+                <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+                  {sec.entries.map((e) => {
+                    const on = m.entryActive(e);
+                    const Icon = e.icon;
                     return (
-                      <section key={g.slug}>
-                        <p className="mb-1.5 flex items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">
-                          <Icon size={14} aria-hidden /> {g.label}
-                        </p>
-                        <ul className={card}>{g.items!.map((i) => row(m.getPath(i.path), i.label, i.icon))}</ul>
-                      </section>
+                      <li key={e.slug} className="border-b border-[rgb(var(--reg-line)/0.6)] last:border-0">
+                        <NavLink
+                          to={m.getPath(e.path)}
+                          onClick={() => setMoreOpen(false)}
+                          aria-current={on ? "page" : undefined}
+                          className={cn("flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold", on && "text-[rgb(var(--reg-brand-strong))]")}
+                        >
+                          <Icon size={18} strokeWidth={1.75} className={on ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.5)]"} aria-hidden />
+                          {e.label}
+                        </NavLink>
+                      </li>
                     );
                   })}
-                </>
-              );
-            })()}
+                </ul>
+              </section>
+            ))}
+            {m.hasSettings && (
+              <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+                <li>
+                  <NavLink to={m.getPath("/setup")} onClick={() => setMoreOpen(false)} className={cn("flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold", m.settingsActive && "text-[rgb(var(--reg-brand-strong))]")}>
+                    <SettingsIcon size={18} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.5)]" aria-hidden />
+                    {t("nav.settings")}
+                  </NavLink>
+                </li>
+              </ul>
+            )}
             <section>
               <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
 

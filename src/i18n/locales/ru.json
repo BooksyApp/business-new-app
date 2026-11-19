@@ -4039,7 +4039,14 @@
       "accessHint": "Кто что видит и кто что менял",
       "allSettings": "Все настройки",
       "subtitle": "Всё, что меняет работу салона, в одном месте",
-      "onlineSales": "Онлайн-продажи"
+      "onlineSales": "Онлайн-продажи",
+      "branding": "Бренд и чек",
+      "bookingGroup": "Правила записи",
+      "catalogue": "Услуги и пакеты",
+      "paymentsGroup": "Оплата",
+      "teamRoles": "Команда и роли",
+      "securityAudit": "Безопасность и аудит",
+      "securityHint": "Ваш пароль и кто что менял"
     },
     "search": {
       "open": "Поиск",
@@ -4085,7 +4092,8 @@
       "wallet": "Баланс клиента"
     },
     "giftCards": "Подарочные карты",
-    "shopOrders": "Онлайн-заказы"
+    "shopOrders": "Онлайн-заказы",
+    "pageTabs": "Страницы раздела"
   },
   "onlineSales": {
     "title": "Онлайн-продажи",

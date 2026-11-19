@@ -4039,7 +4039,14 @@
       "accessHint": "Who can see what, and who changed what",
       "allSettings": "All settings",
       "subtitle": "Everything that changes how your salon works, in one place",
-      "onlineSales": "Online sales"
+      "onlineSales": "Online sales",
+      "branding": "Branding & receipt",
+      "bookingGroup": "Booking rules",
+      "catalogue": "Services & packages",
+      "paymentsGroup": "Payments",
+      "teamRoles": "Team & roles",
+      "securityAudit": "Security & audit",
+      "securityHint": "Your password, and who changed what"
     },
     "search": {
       "open": "Search",
@@ -4085,7 +4092,8 @@
       "wallet": "Client wallet"
     },
     "giftCards": "Gift cards",
-    "shopOrders": "Online orders"
+    "shopOrders": "Online orders",
+    "pageTabs": "Pages in this section"
   },
   "onlineSales": {
     "title": "Online sales",

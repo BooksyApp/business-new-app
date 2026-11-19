@@ -14,7 +14,7 @@ import {
   SettingsIcon,
   myAccess,
   pageAllowed,
-  useVisibleNavGroups,
+  useVisibleNav,
   useVisibleSettings,
 } from "./navigation";
 
@@ -58,7 +58,7 @@ export function QuickSearch() {
   const [loadedTick, setLoadedTick] = useState(0);
   const navigate = useNavigate();
   const businessId = useBusinessId();
-  const groups = useVisibleNavGroups();
+  const navSections = useVisibleNav();
   const settings = useVisibleSettings();
 
   useEffect(() => {
@@ -98,26 +98,25 @@ export function QuickSearch() {
     const out: Entry[] = [];
     const pageLabel = new Map<string, string>();
 
-    for (const g of groups) {
-      if (g.path) {
-        const names = g.labelKey ? allNames(g.labelKey) : [norm(g.label)];
-        out.push({ id: `p:${g.path}`, kind: "page", label: g.label, icon: g.icon, href: href(g.path), names, hay: names.join(" ") });
-        pageLabel.set(g.path, g.label);
-      }
-      for (const i of g.items ?? []) {
-        const names = i.labelKey ? allNames(i.labelKey) : [norm(i.label)];
-        const groupNames = g.labelKey ? allNames(g.labelKey) : [];
-        out.push({
-          id: `p:${i.path}`,
-          kind: "page",
-          label: i.label,
-          hint: g.label,
-          icon: i.icon,
-          href: href(i.path),
-          names,
-          hay: [...names, ...groupNames, norm(i.description ?? "")].join(" "),
-        });
-        pageLabel.set(i.path, i.label);
+    for (const sec of navSections) {
+      for (const e of sec.entries) {
+        const famNames = e.labelKey ? allNames(e.labelKey) : [norm(e.label)];
+        // A family: each tab is its own result, hinted with the family ("Team").
+        for (const i of e.tabs ?? [e]) {
+          if (pageLabel.has(i.path)) continue;
+          const names = i.labelKey ? allNames(i.labelKey) : [norm(i.label)];
+          out.push({
+            id: `p:${i.path}`,
+            kind: "page",
+            label: i.label,
+            hint: e.tabs ? e.label : sec.key ? t(sec.key) : undefined,
+            icon: i.icon,
+            href: href(i.path),
+            names,
+            hay: [...names, ...famNames, norm(i.description ?? "")].join(" "),
+          });
+          pageLabel.set(i.path, i.label);
+        }
       }
     }
     for (const s of settings) {
@@ -161,7 +160,7 @@ export function QuickSearch() {
     return out;
     // loadedTick: rebuild once the other languages arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, groups.length, settings.length, businessId, loadedTick]);
+  }, [open, navSections.length, settings.length, businessId, loadedTick]);
 
   const q = norm(query.trim());
   const results = useMemo(() => {

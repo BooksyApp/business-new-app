@@ -4,6 +4,7 @@ import { MobileTabBar, MobileTopBar, Sidebar } from "./Sidebar";
 import { InstallAppBanner } from "./InstallAppBanner";
 import { QuickSearch } from "./QuickSearch";
 import { SettingsNav } from "./SettingsNav";
+import { SectionTabs } from "./SectionTabs";
 import { isSettingsPath } from "./navigation";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { keyForId } from "@/lib/salonKey";
@@ -46,6 +47,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />
         <InstallAppBanner />
+        {base && <SectionTabs base={base} current={rel} />}
         {/* On a phone the floating tab bar sits over the bottom; keep content clear of it. */}
         <main className="min-h-0 flex-1 overflow-auto bg-[#fafafa] pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-0">
           {children}
