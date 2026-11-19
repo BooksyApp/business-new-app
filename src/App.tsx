@@ -32,6 +32,7 @@ const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 const AddonsPage = lazy(() => import("./pages/AddonsPage"));
 const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const SuppliersOrdersPage = lazy(() => import("./pages/SuppliersOrdersPage"));
+const StockCountPage = lazy(() => import("./pages/StockCountPage"));
 const PayrollPage = lazy(() => import("./pages/PayrollPage"));
 const TimesheetPage = lazy(() => import("./pages/TimesheetPage"));
 const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
@@ -243,6 +244,7 @@ const App = () => (
               <Route path="clients" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
               <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
               <Route path="inventory/suppliers" element={<Suspense fallback={<PageLoader />}><SuppliersOrdersPage /></Suspense>} />
+              <Route path="inventory/count" element={<Suspense fallback={<PageLoader />}><StockCountPage /></Suspense>} />
               <Route path="addons" element={<Suspense fallback={<PageLoader />}><AddonsPage /></Suspense>} />
               <Route path="shopping" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
