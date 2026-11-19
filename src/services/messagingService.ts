@@ -15,6 +15,8 @@ export interface InboxMessage {
   fromSalon: boolean;
   body: string;
   sentAt: string;
+  /** Client-only: a reply not yet confirmed by the server, or one that failed. */
+  status?: "sending" | "failed";
 }
 
 export interface InboxThread {

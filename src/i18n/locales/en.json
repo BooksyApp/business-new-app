@@ -3917,6 +3917,8 @@
     "charCount": "{count}/{max}",
     "send": "Send",
     "sendError": "The message could not be sent.",
+    "failed": "Failed to send",
+    "retry": "Retry",
     "openClients": "Find in clients",
     "report": "Report",
     "reportPlaceholder": "What is wrong? (optional)",

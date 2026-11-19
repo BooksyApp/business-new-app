@@ -10,9 +10,11 @@ import { getCurrentBusinessId } from "@/config/api";
 import { format } from "@/i18n/dateFns";
 import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { messagingService, type InboxSummary, type InboxThread } from "@/services/messagingService";
+import { applyIncoming, localMessage, markStatus, mergeServer, resolveSent } from "@/lib/messageThread";
+import { messagingService, type InboxMessage, type InboxSummary, type InboxThread } from "@/services/messagingService";
+import { websocketService, type InboxMessageEvent } from "@/services/websocketService";
 
-/** Refresh interval for the inbox and the open thread. Polling, not a socket, on purpose. */
+/** Fallback refresh for the inbox and the open thread, used only while the live socket is down. */
 const POLL_MS = 20000;
 const MAX_BODY = 1000;
 
@@ -29,10 +31,13 @@ export default function InboxPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [thread, setThread] = useState<InboxThread | null>(null);
   const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reportText, setReportText] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const selectedRef = useRef<string | null>(null);
+  const localSeq = useRef(0);
+  selectedRef.current = selected;
 
   const loadList = useCallback(
     () => messagingService.list(businessId).then(setList).catch(() => undefined).finally(() => setLoaded(true)),
@@ -45,46 +50,113 @@ export default function InboxPage() {
       messagingService
         .get(businessId, id)
         .then((th) => {
-          setThread(th);
+          if (selectedRef.current !== id) return;
+          setThread((cur) =>
+            cur && cur.conversationId === th.conversationId
+              ? { ...th, messages: mergeServer(cur.messages, th.messages) }
+              : th,
+          );
           void loadList();
         })
         .catch(() => undefined),
     [businessId, loadList],
   );
 
+  // Live: a pushed message lands in the open thread, bumps its row to the top and counts as unread
+  // unless that thread is open (opening it marks it read on the server).
+  const onPush = useCallback(
+    (ev: InboxMessageEvent) => {
+      const open = selectedRef.current === ev.conversationId;
+      if (open) {
+        setThread((cur) =>
+          cur && cur.conversationId === ev.conversationId
+            ? { ...cur, messages: applyIncoming(cur.messages, ev.message) }
+            : cur,
+        );
+        if (!ev.message.fromSalon) void messagingService.get(businessId, ev.conversationId).catch(() => undefined);
+      }
+      setList((cur) => {
+        const row = cur.find((c) => c.conversationId === ev.conversationId);
+        if (!row) {
+          void loadList(); // a first message from someone new: the row needs the server's name
+          return cur;
+        }
+        const unread = open || ev.message.fromSalon ? row.unread : row.unread + 1;
+        const next = { ...row, unread: open ? 0 : unread, lastMessageAt: ev.message.sentAt };
+        return [next, ...cur.filter((c) => c.conversationId !== ev.conversationId)];
+      });
+    },
+    [businessId, loadList],
+  );
+
+  useEffect(() => {
+    const stop = websocketService.subscribeToMessages(businessId, onPush, (up) => {
+      setLive(up);
+      if (up) {
+        void loadList(); // catch up on anything sent while the socket was down
+        if (selectedRef.current) void loadThread(selectedRef.current);
+      }
+    });
+    return () => {
+      stop();
+      setLive(false);
+    };
+  }, [businessId, onPush, loadList, loadThread]);
+
   useEffect(() => {
     void loadList();
+    if (live) return;
     const timer = window.setInterval(() => void loadList(), POLL_MS);
     return () => window.clearInterval(timer);
-  }, [loadList]);
+  }, [loadList, live]);
 
   useEffect(() => {
     if (!selected) {
       setThread(null);
       return;
     }
+    setThread(null);
     void loadThread(selected);
+    if (live) return;
     const timer = window.setInterval(() => void loadThread(selected), POLL_MS);
     return () => window.clearInterval(timer);
-  }, [selected, loadThread]);
+  }, [selected, loadThread, live]);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [thread?.messages.length]);
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [thread?.conversationId, thread?.messages.length]);
 
-  const send = async () => {
-    const body = draft.trim();
-    if (!selected || !body || sending) return;
-    setSending(true);
+  const deliver = async (conversationId: string, localId: string, body: string) => {
+    const patch = (fn: (m: InboxMessage[]) => InboxMessage[]) =>
+      setThread((cur) => (cur && cur.conversationId === conversationId ? { ...cur, messages: fn(cur.messages) } : cur));
+    patch((m) => markStatus(m, localId, "sending"));
     try {
-      await messagingService.reply(businessId, selected, body);
-      setDraft("");
-      await loadThread(selected);
+      const sent = await messagingService.reply(businessId, conversationId, body);
+      patch((m) => resolveSent(m, localId, sent));
+      setList((cur) => {
+        const row = cur.find((c) => c.conversationId === conversationId);
+        return row
+          ? [{ ...row, lastMessageAt: sent.sentAt }, ...cur.filter((c) => c.conversationId !== conversationId)]
+          : cur;
+      });
     } catch (e) {
+      patch((m) => markStatus(m, localId, "failed"));
       toast.error(e instanceof Error ? e.message : t("inbox.sendError"));
-    } finally {
-      setSending(false);
     }
+  };
+
+  const send = () => {
+    const body = draft.trim();
+    if (!selected || !thread || !body) return;
+    const local = localMessage<InboxMessage>(String(++localSeq.current), true, body);
+    setThread({ ...thread, messages: [...thread.messages, local] });
+    setDraft("");
+    void deliver(selected, local.messageId, body);
+  };
+
+  const retry = (m: InboxMessage) => {
+    if (selected) void deliver(selected, m.messageId, m.body);
   };
 
   const report = async () => {
@@ -180,30 +252,42 @@ export default function InboxPage() {
                       </div>
                     ) : null}
 
-                    <div className="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
+                    <div ref={scrollRef} className="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
                       {thread.messages.map((m) => (
                         <div
                           key={m.messageId}
                           className={cn(
                             "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
                             m.fromSalon ? "ml-auto bg-primary text-primary-foreground" : "bg-muted",
+                            m.status === "sending" && "opacity-70",
+                            m.status === "failed" && "ring-2 ring-destructive",
                           )}
                         >
                           <div className="mb-0.5 text-[11px] opacity-70">
                             {m.fromSalon ? t("inbox.you") : thread.customerName || t("inbox.client")}
                           </div>
                           {m.body}
-                          <div className="mt-1 text-[11px] opacity-70">{when(m.sentAt)}</div>
+                          <div className="mt-1 flex items-center gap-2 text-[11px] opacity-70">
+                            {m.status === "failed" ? (
+                              <>
+                                <span>{t("inbox.failed")}</span>
+                                <button type="button" className="underline" onClick={() => retry(m)}>
+                                  {t("inbox.retry")}
+                                </button>
+                              </>
+                            ) : (
+                              when(m.sentAt)
+                            )}
+                          </div>
                         </div>
                       ))}
-                      <div ref={endRef} />
                     </div>
 
                     <form
                       className="flex flex-col gap-2"
                       onSubmit={(e) => {
                         e.preventDefault();
-                        void send();
+                        send();
                       }}
                     >
                       <Textarea
@@ -217,7 +301,7 @@ export default function InboxPage() {
                         <span className="text-xs text-muted-foreground">
                           {t("inbox.charCount", { count: draft.length, max: MAX_BODY })}
                         </span>
-                        <Button type="submit" className={primaryBtn} disabled={sending || !draft.trim()}>
+                        <Button type="submit" className={primaryBtn} disabled={!draft.trim()}>
                           {t("inbox.send")}
                         </Button>
                       </div>

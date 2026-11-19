@@ -5,6 +5,13 @@ import { Sale } from './saleService';
 import type { Client, Subscription } from 'stompjs';
 import { TimeOff } from './timeOffService';
 import { t } from "@/i18n";
+import type { InboxMessage } from './messagingService';
+
+/** What the server pushes when a message is sent in one of this salon's conversations. */
+export interface InboxMessageEvent {
+  conversationId: string;
+  message: InboxMessage;
+}
 
 type MessageHandler<T> = (data: T) => void;
 
@@ -45,6 +52,7 @@ class WebSocketService {
   private isManualDisconnect = false; // Flag to prevent reconnection on manual disconnect
   private connectionListeners: Array<() => void> = [];
   private disconnectListeners: Array<() => void> = [];
+  private lostListeners: Array<() => void> = [];
   private heartbeatInterval: NodeJS.Timeout | null = null;
 
   async connect(): Promise<void> {
@@ -134,6 +142,7 @@ class WebSocketService {
             console.error('WebSocket connection timeout');
             this.isConnecting = false;
             this.cleanupConnection(false);
+            this.lostListeners.forEach(listener => listener());
             this.handleReconnect();
             reject(new Error(t("services.connectionTimeout")));
           }
@@ -174,6 +183,7 @@ class WebSocketService {
             this.isConnecting = false;
             console.error(`❌ WebSocket connection error to ${socketUrl}:`, error);
             console.error('Error details:', JSON.stringify(error, null, 2));
+            this.lostListeners.forEach(listener => listener());
             
             // Only reconnect if not manually disconnected
             if (!this.isManualDisconnect) {
@@ -295,6 +305,14 @@ class WebSocketService {
     this.connectionListeners.push(listener);
     return () => {
       this.connectionListeners = this.connectionListeners.filter(l => l !== listener);
+    };
+  }
+
+  /** The socket dropped or never opened (not a deliberate disconnect). */
+  onConnectionLost(listener: () => void): () => void {
+    this.lostListeners.push(listener);
+    return () => {
+      this.lostListeners = this.lostListeners.filter(l => l !== listener);
     };
   }
 
@@ -496,6 +514,67 @@ class WebSocketService {
     return () => {
       unsubscribeCalled = true;
       if (connectListener) { connectListener(); connectListener = null; }
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+        subscription = null;
+      }
+    };
+  }
+
+  /**
+   * FG-W4-04: new inbox messages for the open salon, `/topic/messages/{businessId}` (owner, or a
+   * team member with CLIENTS_VIEW). `onStatus(true)` once subscribed, `false` when the socket
+   * drops, so the caller polls only while it is not live.
+   */
+  subscribeToMessages(
+    businessId: Id,
+    handler: MessageHandler<InboxMessageEvent>,
+    onStatus?: (live: boolean) => void
+  ): () => void {
+    let subscription: Subscription | null = null;
+    let unsubscribeCalled = false;
+
+    const doSubscribe = () => {
+      if (unsubscribeCalled || !this.connected || !this.stompClient) return;
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+      }
+      try {
+        subscription = this.stompClient.subscribe(`/topic/messages/${businessId}`, (message) => {
+          if (unsubscribeCalled) return;
+          try {
+            handler(JSON.parse(message.body));
+          } catch (error) {
+            console.error('Error parsing message event:', error);
+          }
+        });
+        onStatus?.(true);
+      } catch (error) {
+        console.error('Error subscribing to messages:', error);
+      }
+    };
+
+    const offConnect = this.onConnect(() => {
+      if (!unsubscribeCalled) setTimeout(doSubscribe, 200);
+    });
+    const offLost = this.onConnectionLost(() => {
+      if (!unsubscribeCalled) onStatus?.(false);
+    });
+    const offDisconnect = this.onDisconnect(() => {
+      if (!unsubscribeCalled) onStatus?.(false);
+    });
+
+    if (this.connected && this.stompClient) {
+      doSubscribe();
+    } else if (!this.isConnecting) {
+      this.connect().catch(() => {});
+    }
+
+    return () => {
+      unsubscribeCalled = true;
+      offConnect();
+      offLost();
+      offDisconnect();
       if (subscription) {
         try { subscription.unsubscribe(); } catch { /* ignore */ }
         subscription = null;
