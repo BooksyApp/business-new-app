@@ -6,6 +6,7 @@ import {
   CalendarClock,
   ChevronRight,
   Clock,
+  ClipboardList,
   CreditCard,
   Image,
   LifeBuoy,
@@ -84,6 +85,7 @@ const SECTIONS: SettingsSection[] = [
     rows: [
       { get label() { return t("bookingRules.paymentMethods"); }, get hint() { return t("setup.paymentMethodsHint"); }, path: "setup/payment-methods", icon: CreditCard },
       { get label() { return t("setup.currencyTax"); }, get hint() { return t("setup.whatYourPricesAreIn"); }, path: "setup/currency-tax", icon: Receipt },
+      { get label() { return t("consentForms.title"); }, get hint() { return t("consentForms.hint"); }, path: "setup/consent-forms", icon: ClipboardList },
     ],
   },
   {

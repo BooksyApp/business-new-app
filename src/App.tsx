@@ -49,6 +49,7 @@ const SectionPage = lazy(() => import("./pages/SectionPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
 const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
+const ConsentFormsPage = lazy(() => import("./pages/ConsentFormsPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
@@ -280,6 +281,7 @@ const App = () => (
               <Route path="booking-rules" element={<Suspense fallback={<PageLoader />}><BookingRulesPage /></Suspense>} />
               {/* One Setup row, one page: each shows only its own section. */}
               <Route path="setup/online-booking" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="online" section="online" /></Suspense>} />
+              <Route path="setup/consent-forms" element={<Suspense fallback={<PageLoader />}><ConsentFormsPage /></Suspense>} />
               <Route path="setup/cancellation" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="cancellation" section="cancellation" /></Suspense>} />
               <Route path="setup/payment-methods" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="payment-methods" section="payment-methods" /></Suspense>} />
               <Route path="setup/currency-tax" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="currency-tax" section="currency-tax" /></Suspense>} />

@@ -236,6 +236,7 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/edit-staff": ["TEAM"],
   "/roles": null,
   "/business": ["SETTINGS"],
+  "/setup/consent-forms": ["SETTINGS"],
   "/photos": ["SETTINGS"],
   "/branding": ["SETTINGS"],
   "/business-hours": ["SETTINGS"],
