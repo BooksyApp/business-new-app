@@ -29,6 +29,8 @@ export interface BusinessRequest {
   onlineBookingEnabled?: boolean;
   minBookingNoticeMinutes?: number;
   maxBookingDaysAhead?: number;
+  /** FG-W4-13: the salon's Google review link, offered to customers who rate 4 or 5 stars. */
+  googleReviewUrl?: string | null;
   /** Comma-separated: any of CASH, CARD, ONLINE. */
   acceptedPaymentMethods?: string;
   website?: string;
@@ -93,6 +95,8 @@ export interface Business {
   onlineBookingEnabled?: boolean;
   minBookingNoticeMinutes?: number;
   maxBookingDaysAhead?: number;
+  /** FG-W4-13: the salon's Google review link, offered to customers who rate 4 or 5 stars. */
+  googleReviewUrl?: string | null;
   /** Comma-separated: any of CASH, CARD, ONLINE. */
   acceptedPaymentMethods?: string;
   brandColor?: string;
@@ -170,6 +174,11 @@ class BusinessService {
     const list = await apiClient.get<Business[]>(`/businesses/owner/${ownerId}`);
     rememberSalons(list ?? []);
     return list;
+  }
+
+  /** FG-W4-13: the salon's Google review link; a blank value clears it. */
+  async setGoogleReviewUrl(id: Id, url: string): Promise<{ googleReviewUrl: string }> {
+    return apiClient.put<{ googleReviewUrl: string }>(`/businesses/${id}/google-review-link`, { url });
   }
 
   async updateBusiness(id: Id, data: Partial<BusinessRequest>, _accessToken?: string): Promise<Business> {

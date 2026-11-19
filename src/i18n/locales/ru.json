@@ -620,6 +620,10 @@
     "day7": "Воскресенье"
   },
   "bookingRules": {
+    "googleReviewLink": "Ссылка на отзыв в Google",
+    "googleReviewLinkHint": "После отзыва на 4 или 5 звёзд клиенту могут предложить эту ссылку, чтобы оставить отзыв в Google. Это необязательно, за отзыв ничего не начисляется.",
+    "reviewLinkSaved": "Ссылка на отзыв сохранена",
+    "reviewLinkFailed": "Не удалось сохранить ссылку на отзыв",
     "couldNotLoadYourBooking": "Не удалось загрузить настройки записи",
     "bookingSettingsSaved": "Настройки записи сохранены",
     "couldNotSaveYourSettings": "Не удалось сохранить настройки",

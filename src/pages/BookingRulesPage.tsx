@@ -47,6 +47,8 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
   const [methods, setMethods] = useState<string[]>(["CASH", "CARD"]);
   /** What was loaded or last saved, to know when the save bar is needed. */
   const [savedJson, setSavedJson] = useState("");
+  const [reviewUrl, setReviewUrl] = useState("");
+  const [reviewUrlSaving, setReviewUrlSaving] = useState(false);
 
   useEffect(() => {
     if (!businessId) { setLoading(false); return; }
@@ -81,6 +83,24 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
       .then((p) => setOnlinePayments(p.onlinePayments === true))
       .catch(() => setOnlinePayments(null));
   }, []);
+
+  useEffect(() => {
+    setReviewUrl(business?.googleReviewUrl ?? "");
+  }, [business]);
+
+  const saveReviewUrl = async () => {
+    if (!businessId) return;
+    setReviewUrlSaving(true);
+    try {
+      const saved = await businessService.setGoogleReviewUrl(businessId, reviewUrl.trim());
+      setBusiness((b) => (b ? { ...b, googleReviewUrl: saved.googleReviewUrl } : b));
+      toast.success(t("bookingRules.reviewLinkSaved"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("bookingRules.reviewLinkFailed"));
+    } finally {
+      setReviewUrlSaving(false);
+    }
+  };
 
   const save = async () => {
     if (!businessId) return;
@@ -300,6 +320,28 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
             </div>
           )}
         </div>
+
+        <section className="mt-8 max-w-xl space-y-3 rounded-2xl p-4 ring-1 ring-[rgb(var(--reg-line))]">
+          <Field label={t("bookingRules.googleReviewLink")} htmlFor="br-google-review" hint={t("bookingRules.googleReviewLinkHint")}>
+            <div className="flex flex-wrap gap-2">
+              <input
+                id="br-google-review"
+                type="url"
+                className="h-10 w-full max-w-md rounded-xl border border-[rgb(var(--reg-line))] bg-transparent px-3 text-sm outline-none focus:border-[rgb(var(--reg-brand))]"
+                placeholder="https://g.page/r/..."
+                value={reviewUrl}
+                onChange={(e) => setReviewUrl(e.target.value)}
+              />
+              <Button
+                className={primaryBtn}
+                disabled={reviewUrlSaving || reviewUrl.trim() === (business?.googleReviewUrl ?? "")}
+                onClick={() => void saveReviewUrl()}
+              >
+                {t("common.save")}
+              </Button>
+            </div>
+          </Field>
+        </section>
 
         <SaveBar dirty={dirty} saving={saving} onSave={() => void save()} onDiscard={discard} />
       </BooqiScope>

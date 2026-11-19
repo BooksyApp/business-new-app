@@ -620,6 +620,10 @@
     "day7": "Sunday"
   },
   "bookingRules": {
+    "googleReviewLink": "Google review link",
+    "googleReviewLinkHint": "After a 4 or 5 star review, the customer may be offered this link to post on Google. It is optional, and nothing is given for posting.",
+    "reviewLinkSaved": "Review link saved",
+    "reviewLinkFailed": "Could not save the review link",
     "couldNotLoadYourBooking": "Could not load your booking settings",
     "bookingSettingsSaved": "Booking settings saved",
     "couldNotSaveYourSettings": "Could not save your settings",
