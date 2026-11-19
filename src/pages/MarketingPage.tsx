@@ -467,6 +467,8 @@ export default function MarketingPage() {
                                 bookings: campaignResults[String(c.id)].bookings,
                                 revenue: money(campaignResults[String(c.id)].revenue, currencySymbol()),
                               })}
+                              {campaignResults[String(c.id)].clicked !== undefined &&
+                                ` · ${tr("marketing.campaignClicks", { clicked: campaignResults[String(c.id)].clicked ?? 0, clicks: campaignResults[String(c.id)].clicks ?? 0 })}`}
                             </p>
                           )}
                         </div>

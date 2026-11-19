@@ -28,6 +28,9 @@ export interface CampaignResults {
   bookings: number;
   revenue: number;
   windowDays: number;
+  /** People who opened the message's link, and the total number of opens (absent on an older server). */
+  clicked?: number;
+  clicks?: number;
 }
 
 /**
