@@ -5,6 +5,8 @@ import { t } from "@/i18n";
 import { fmtDate } from "@/i18n";
 import { currencySymbol } from "@/lib/currency";
 import { clientBalanceService, type BalanceMethod, type ClientBalance } from "@/services/clientBalanceService";
+import { onlineSalesService, type WalletTopUp } from "@/services/onlineSalesService";
+import { useBusinessId } from "@/hooks/useBusinessId";
 import type { Id } from "@/types/id";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,14 @@ const METHODS: Array<{ value: BalanceMethod; label: () => string }> = [
 
 const methodLabel = (m: string | null) =>
   m === "CASH" ? t("common.cash") : m === "CARD_TERMINAL" ? t("common.card") : m ? m : "";
+
+const entryLabel = (kind: string) =>
+  kind === "DEBT" ? t("clientBalance.debt")
+  : kind === "SETTLEMENT" ? t("clientBalance.settlement")
+  : kind === "TOPUP" ? t("clientBalance.topup")
+  : kind === "TOPUP_REFUND" ? t("clientBalance.topupRefund")
+  : kind === "SPEND" ? t("clientBalance.spend")
+  : t("clientBalance.spendReturn");
 
 /**
  * FG-W6-07: what the client still owes this salon, the recent entries, and a way to settle.
@@ -36,10 +46,27 @@ export function ClientBalanceSection({ clientId, showEntries = true, labelClass,
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<BalanceMethod>("CASH");
   const [busy, setBusy] = useState(false);
+  const businessId = useBusinessId();
+  const [topUps, setTopUps] = useState<WalletTopUp[]>([]);
 
   const load = useCallback(() => {
     clientBalanceService.get(clientId).then(setBalance).catch(() => setBalance(null));
-  }, [clientId]);
+    if (businessId && showEntries) onlineSalesService.topUps(businessId, clientId).then(setTopUps).catch(() => setTopUps([]));
+  }, [clientId, businessId, showEntries]);
+
+  const refund = async (topUp: WalletTopUp) => {
+    if (!businessId) return;
+    setBusy(true);
+    try {
+      await onlineSalesService.refundTopUp(businessId, clientId, topUp.id);
+      toast.success(t("clientBalance.refundDone"));
+      load();
+    } catch {
+      toast.error(t("clientBalance.refundFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     setBalance(null);
@@ -47,7 +74,7 @@ export function ClientBalanceSection({ clientId, showEntries = true, labelClass,
     load();
   }, [load]);
 
-  if (!balance || (balance.outstanding <= 0 && balance.entries.length === 0)) return null;
+  if (!balance || (balance.outstanding <= 0 && (balance.credit ?? 0) <= 0 && balance.entries.length === 0)) return null;
 
   const outstanding = balance.outstanding;
   const value = parseFloat(amount);
@@ -78,6 +105,14 @@ export function ClientBalanceSection({ clientId, showEntries = true, labelClass,
             {outstanding.toFixed(2)} {currencySymbol()}
           </p>
         </div>
+        {(balance.credit ?? 0) > 0 && (
+          <div className="text-right">
+            <p className={labelClass}>{t("clientBalance.wallet")}</p>
+            <p className="text-lg font-semibold text-[rgb(var(--reg-success))]">
+              {balance.credit.toFixed(2)} {currencySymbol()}
+            </p>
+          </div>
+        )}
         {outstanding > 0 && !settling && (
           <Button
             size="sm"
@@ -124,20 +159,38 @@ export function ClientBalanceSection({ clientId, showEntries = true, labelClass,
         </div>
       )}
 
-      {showEntries && balance.entries.length > 0 && (
+      {showEntries && topUps.some((u) => u.refundable > 0) && (
         <ul className="space-y-1 text-sm">
-          {balance.entries.map((e, i) => (
-            <li key={`${e.created_at}-${i}`} className="flex items-center justify-between gap-2">
+          {topUps.filter((u) => u.refundable > 0).map((u) => (
+            <li key={u.id} className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">
-                {fmtDate(e.created_at)} · {e.kind === "DEBT" ? t("clientBalance.debt") : t("clientBalance.settlement")}
-                {e.kind === "SETTLEMENT" && methodLabel(e.method) ? ` · ${methodLabel(e.method)}` : ""}
+                {fmtDate(u.paid_at)} · {t("clientBalance.topup")} {u.amount.toFixed(2)} · {t("clientBalance.refundable", { value: `${u.refundable.toFixed(2)} ${currencySymbol()}` })}
               </span>
-              <span className={e.kind === "DEBT" ? "text-destructive" : "text-[rgb(var(--reg-success))]"}>
-                {e.kind === "DEBT" ? "+" : "-"}
-                {e.amount.toFixed(2)} {currencySymbol()}
-              </span>
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => void refund(u)}>
+                {t("clientBalance.refund")}
+              </Button>
             </li>
           ))}
+        </ul>
+      )}
+
+      {showEntries && balance.entries.length > 0 && (
+        <ul className="space-y-1 text-sm">
+          {balance.entries.map((e, i) => {
+            const debtSide = e.kind === "DEBT" || e.kind === "SPEND" || e.kind === "TOPUP_REFUND";
+            return (
+              <li key={`${e.created_at}-${i}`} className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">
+                  {fmtDate(e.created_at)} · {entryLabel(e.kind)}
+                  {e.kind === "SETTLEMENT" && methodLabel(e.method) ? ` · ${methodLabel(e.method)}` : ""}
+                </span>
+                <span className={debtSide ? "text-destructive" : "text-[rgb(var(--reg-success))]"}>
+                  {debtSide ? "+" : "-"}
+                  {e.amount.toFixed(2)} {currencySymbol()}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

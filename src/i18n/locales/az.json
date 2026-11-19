@@ -1238,7 +1238,9 @@
     "pointsToSpend": "İstifadə olunacaq bonus (100 = 1 {value})",
     "coveredByBenefits": "Bonuslarla ödənilib",
     "due": "Ödənilməli",
-    "stillToPay": "Qalıq"
+    "stillToPay": "Qalıq",
+    "fromWallet": "Balansdan",
+    "walletHas": "Balans: {value}"
   },
   "bookingImport": {
     "button": "Köhnə təqvimdən köçür",
@@ -3936,7 +3938,17 @@
     "debt": "Ödənilməyib",
     "settlement": "Borc ödənildi",
     "leaveRest": "Qalanını borc kimi saxla",
-    "leaveRestHint": "{value} {value2} müştərinin borcuna əlavə olunacaq"
+    "leaveRestHint": "{value} {value2} müştərinin borcuna əlavə olunacaq",
+    "wallet": "Balans krediti",
+    "walletTitle": "Balans",
+    "topup": "Yükləmə",
+    "topupRefund": "Yükləmənin qaytarılması",
+    "spend": "Balansdan xərclənib",
+    "spendReturn": "Balansa qaytarılıb",
+    "refund": "İstifadə olunmamışı qaytar",
+    "refundDone": "Geri qaytarıldı",
+    "refundFailed": "Geri qaytarmaq alınmadı",
+    "refundable": "İstifadə olunmamış: {value}"
   },
   "inbox": {
     "title": "Mesajlar",
@@ -4026,7 +4038,8 @@
       "access": "Komanda və giriş",
       "accessHint": "Kim nəyi görür və kim nəyi dəyişib",
       "allSettings": "Bütün ayarlar",
-      "subtitle": "Salonun necə işlədiyini dəyişən hər şey bir yerdə"
+      "subtitle": "Salonun necə işlədiyini dəyişən hər şey bir yerdə",
+      "onlineSales": "Onlayn satışlar"
     },
     "search": {
       "open": "Axtarış",
@@ -4066,7 +4079,70 @@
       "slotOffers": "Boş vaxt təklifləri",
       "googleReview": "Google rəy linki",
       "messageTexts": "Mesaj mətnləri",
-      "addSalon": "Yeni salon əlavə et"
-    }
+      "addSalon": "Yeni salon əlavə et",
+      "onlineSales": "Onlayn hədiyyə kartı satışı",
+      "shopOrders": "Onlayn mağaza sifarişləri",
+      "wallet": "Müştəri balansı"
+    },
+    "giftCards": "Hədiyyə kartları",
+    "shopOrders": "Onlayn sifarişlər"
+  },
+  "onlineSales": {
+    "title": "Onlayn satışlar",
+    "subtitle": "Müştərilərin salon səhifəsindən ala biləcəyi hədiyyə kartları və balans artımı",
+    "noStripe": "Platformada onlayn ödəniş hələ aktiv deyil, ona görə aşağıdakılar müştərilərə göstərilmir.",
+    "giftCards": "Hədiyyə kartları",
+    "giftCardsHint": "Müştəri başqası üçün hədiyyə kartı alır; kod ona e-poçtla göndərilir.",
+    "min": "Minimum məbləğ",
+    "max": "Maksimum məbləğ",
+    "presets": "Hazır məbləğlər (vergüllə)",
+    "presetsInvalid": "Hazır məbləğlər sıfırdan böyük rəqəm olmalıdır",
+    "soldCount": "İndiyə qədər onlayn satılıb: {value}",
+    "wallet": "Müştəri balansının artırılması",
+    "walletHint": "Müştərilər salonunuzda balansa pul yükləyir və ödəniş zamanı xərcləyir. Nağdlaşdırma yoxdur; istifadə olunmamış hissə müştəri kartından geri qaytarıla bilər.",
+    "shopHint": "Onlayn mağaza məhsul üzrə aktivləşir: Sifarişlər səhifəsini açın və satmaq istədiyiniz məhsullarda \"Onlayn sat\"ı yandırın.",
+    "save": "Yadda saxla",
+    "saved": "Yadda saxlanıldı",
+    "saveFailed": "Yadda saxlamaq alınmadı",
+    "loadFailed": "Yükləmək alınmadı",
+    "giftCardsTitle": "Hədiyyə kartları",
+    "giftCardsSubtitle": "Salonun bütün hədiyyə kartları; onlayn satışlarda kimin kimə aldığı görünür",
+    "noGiftCards": "Hələ hədiyyə kartı yoxdur",
+    "noGiftCardsBody": "Kassada və ya salon səhifəsində satılan kartlar burada görünür.",
+    "colDate": "Tarix",
+    "colCard": "Kart",
+    "colSource": "Satış",
+    "colFor": "Kimə",
+    "colValue": "Dəyər",
+    "colBalance": "Qalıq",
+    "colStatus": "Status",
+    "sourceOnline": "Onlayn",
+    "sourceCounter": "Kassada",
+    "boughtBy": "Alan: {value}",
+    "ordersTitle": "Onlayn sifarişlər",
+    "ordersSubtitle": "Müştərilərin onlayn ödədiyi, salondan götürüləcək məhsullar",
+    "noOrders": "Hələ onlayn sifariş yoxdur",
+    "noOrdersBody": "Aşağıda məhsul üçün \"Onlayn sat\"ı yandırın, o salon səhifəsində görünəcək.",
+    "status": {
+      "PAID": "Ödənilib",
+      "READY": "Götürməyə hazırdır",
+      "PICKED_UP": "Götürülüb",
+      "CANCELLED": "Ləğv edilib",
+      "EXPIRED": "Vaxtı bitib"
+    },
+    "markReady": "Hazırdır",
+    "markPickedUp": "Götürüldü",
+    "cancelRefund": "Ləğv et və geri qaytar",
+    "confirmCancel": "{value} nömrəli sifariş ləğv edilsin və pul müştəriyə qaytarılsın?",
+    "actionFailed": "Alınmadı",
+    "fromWallet": "Balansdan {value}",
+    "productsTitle": "Onlayn satılan məhsullar",
+    "productsHint": "Yalnız yandırdığınız məhsullar salon səhifəsində görünür. Stok ödəniş zamanı rezerv edilir, götürüləndə silinir.",
+    "noProducts": "Əvvəlcə Anbarda məhsul əlavə edin.",
+    "sellOnline": "Onlayn sat",
+    "stock": "anbarda {value}, rezervdə {value2}",
+    "navGiftCardsHint": "Bütün hədiyyə kartları, onlayn satılanlar da",
+    "navOrdersHint": "Müştərilərin onlayn ödədiyi sifarişlər",
+    "navSettingsHint": "Salon səhifəsində hədiyyə kartları və balans artımı"
   }
 }

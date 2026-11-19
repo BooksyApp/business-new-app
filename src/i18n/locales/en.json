@@ -1238,7 +1238,9 @@
     "pointsToSpend": "Points to spend (100 = 1 {value})",
     "coveredByBenefits": "Covered by benefits",
     "due": "Due",
-    "stillToPay": "Still to pay"
+    "stillToPay": "Still to pay",
+    "fromWallet": "From the wallet",
+    "walletHas": "Wallet: {value}"
   },
   "bookingImport": {
     "button": "Move from old calendar",
@@ -3936,7 +3938,17 @@
     "debt": "Left unpaid",
     "settlement": "Paid off",
     "leaveRest": "Leave the rest as balance",
-    "leaveRestHint": "{value} {value2} will be added to what the client owes"
+    "leaveRestHint": "{value} {value2} will be added to what the client owes",
+    "wallet": "Wallet credit",
+    "walletTitle": "Wallet",
+    "topup": "Top-up",
+    "topupRefund": "Top-up refund",
+    "spend": "Spent from wallet",
+    "spendReturn": "Returned to wallet",
+    "refund": "Refund unused",
+    "refundDone": "Refunded",
+    "refundFailed": "Could not refund",
+    "refundable": "Unused: {value}"
   },
   "inbox": {
     "title": "Inbox",
@@ -4026,7 +4038,8 @@
       "access": "Team & access",
       "accessHint": "Who can see what, and who changed what",
       "allSettings": "All settings",
-      "subtitle": "Everything that changes how your salon works, in one place"
+      "subtitle": "Everything that changes how your salon works, in one place",
+      "onlineSales": "Online sales"
     },
     "search": {
       "open": "Search",
@@ -4066,7 +4079,70 @@
       "slotOffers": "Last-minute slot offers",
       "googleReview": "Google review link",
       "messageTexts": "Message texts",
-      "addSalon": "Add a salon"
-    }
+      "addSalon": "Add a salon",
+      "onlineSales": "Online gift card sales",
+      "shopOrders": "Online shop orders",
+      "wallet": "Client wallet"
+    },
+    "giftCards": "Gift cards",
+    "shopOrders": "Online orders"
+  },
+  "onlineSales": {
+    "title": "Online sales",
+    "subtitle": "Gift cards and wallet top-ups customers can buy on your salon page",
+    "noStripe": "Online payments are not switched on for the platform yet, so nothing below is shown to customers.",
+    "giftCards": "Gift cards",
+    "giftCardsHint": "Customers buy a gift card for someone else; the code is emailed to them.",
+    "min": "Minimum amount",
+    "max": "Maximum amount",
+    "presets": "Preset amounts (comma separated)",
+    "presetsInvalid": "Preset amounts must be numbers above zero",
+    "soldCount": "Sold online so far: {value}",
+    "wallet": "Client wallet top-up",
+    "walletHint": "Customers add money to a balance at your salon and spend it at checkout. No cash-out; unused top-ups can be refunded from the client card.",
+    "shopHint": "The online shop is switched on per product: open Orders and turn on \"Sell online\" for the products you want to sell.",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Could not save",
+    "loadFailed": "Could not load",
+    "giftCardsTitle": "Gift cards",
+    "giftCardsSubtitle": "Every gift card of the salon; online sales show who bought them and for whom",
+    "noGiftCards": "No gift cards yet",
+    "noGiftCardsBody": "Cards sold at the till or on your salon page appear here.",
+    "colDate": "Date",
+    "colCard": "Card",
+    "colSource": "Sold",
+    "colFor": "For",
+    "colValue": "Value",
+    "colBalance": "Balance",
+    "colStatus": "Status",
+    "sourceOnline": "Online",
+    "sourceCounter": "At the till",
+    "boughtBy": "Bought by {value}",
+    "ordersTitle": "Online orders",
+    "ordersSubtitle": "Products customers paid for online, to pick up at the salon",
+    "noOrders": "No online orders yet",
+    "noOrdersBody": "Turn on \"Sell online\" for a product below and it appears on your salon page.",
+    "status": {
+      "PAID": "Paid",
+      "READY": "Ready for pick-up",
+      "PICKED_UP": "Picked up",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "markReady": "Mark ready",
+    "markPickedUp": "Picked up",
+    "cancelRefund": "Cancel and refund",
+    "confirmCancel": "Cancel order {value} and refund the customer?",
+    "actionFailed": "That did not work",
+    "fromWallet": "{value} from wallet",
+    "productsTitle": "Products sold online",
+    "productsHint": "Only products you switch on appear on your salon page. Stock is reserved when paid and taken out when picked up.",
+    "noProducts": "Add products in Inventory first.",
+    "sellOnline": "Sell online",
+    "stock": "on hand {value}, reserved {value2}",
+    "navGiftCardsHint": "Every gift card, including those sold online",
+    "navOrdersHint": "Orders customers paid for online",
+    "navSettingsHint": "Gift cards and wallet top-ups on your salon page"
   }
 }

@@ -8,6 +8,7 @@ import { ClientBalanceSection } from "@/components/clients/ClientBalanceSection"
 import { currencySymbol } from "@/lib/currency";
 import type { SalePayment } from "@/services/paymentConfirmationService";
 import { useFeatureFlags } from "@/services/platformService";
+import { clientBalanceService } from "@/services/clientBalanceService";
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
 import { useEffect, useState } from "react";
 import { t } from "@/i18n";
@@ -38,6 +39,8 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   const [coverage, setCoverage] = useState<Coverage>({});
   const [giftCode, setGiftCode] = useState("");
   const [giftAmount, setGiftAmount] = useState("");
+  const [walletCredit, setWalletCredit] = useState(0);
+  const [walletAmount, setWalletAmount] = useState("");
   const [pointsToSpend, setPointsToSpend] = useState("");
   const [cash, setCash] = useState("");
   const [card, setCard] = useState("");
@@ -55,6 +58,13 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
       .catch(() => setBenefits(null));
   }, [businessId, clientId]);
 
+  useEffect(() => {
+    setWalletCredit(0);
+    setWalletAmount("");
+    if (!clientId) return;
+    clientBalanceService.get(clientId).then((b) => setWalletCredit(b.credit ?? 0)).catch(() => setWalletCredit(0));
+  }, [clientId]);
+
   const covered = orderItems.reduce(
     (sum, item) => (coverage[item.id] ? sum + item.price * item.quantity : sum),
     0
@@ -66,8 +76,11 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   if (giftPart > 0 && giftCode.trim()) {
     payments.push({ method: "GIFT_CARD", amount: giftPart, giftCardCode: giftCode.trim().toUpperCase() });
   }
+  // FG-W6-06: wallet credit, never more than the client holds or than is still due.
+  const walletPart = Math.max(0, Math.min(parseFloat(walletAmount) || 0, walletCredit, due - giftPart));
+  if (walletPart > 0) payments.push({ method: "WALLET", amount: Number(walletPart.toFixed(2)) });
   // 100 points is one currency unit, matching LoyaltyService on the server.
-  const pointsValue = Math.max(0, Math.min((parseFloat(pointsToSpend) || 0) / 100, due - giftPart));
+  const pointsValue = Math.max(0, Math.min((parseFloat(pointsToSpend) || 0) / 100, due - giftPart - walletPart));
   if (pointsValue > 0) {
     payments.push({
       method: "POINTS",
@@ -225,7 +238,16 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
               placeholder="0"
             />
           </div>
-          <div />
+          {walletCredit > 0 ? (
+            <div>
+              <label className="text-xs text-muted-foreground">
+                {t("checkout.fromWallet")} ({t("checkout.walletHas", { value: `${walletCredit.toFixed(2)} ${currencySymbol()}` })})
+              </label>
+              <Input type="number" min={0} max={walletCredit} value={walletAmount} onChange={(e) => setWalletAmount(e.target.value)} placeholder="0" />
+            </div>
+          ) : (
+            <div />
+          )}
           <div>
             <label className="text-xs text-muted-foreground">{t("common.cash")}</label>
             <Input

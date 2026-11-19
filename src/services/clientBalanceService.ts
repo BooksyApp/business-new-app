@@ -9,7 +9,7 @@ import { apiClient } from '@/config/api';
 export type BalanceMethod = 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD';
 
 export interface BalanceEntry {
-  kind: 'DEBT' | 'SETTLEMENT';
+  kind: 'DEBT' | 'SETTLEMENT' | 'TOPUP' | 'TOPUP_REFUND' | 'SPEND' | 'SPEND_RETURN';
   amount: number;
   sale_id: Id | null;
   method: string | null;
@@ -18,7 +18,12 @@ export interface BalanceEntry {
 }
 
 export interface ClientBalance {
+  /** What the client owes, never negative. */
   outstanding: number;
+  /** FG-W6-06: wallet credit the client can spend, never negative. */
+  credit: number;
+  /** Credit minus debt: positive is credit, negative is debt. */
+  balance: number;
   /** Newest first, at most 50. */
   entries: BalanceEntry[];
 }

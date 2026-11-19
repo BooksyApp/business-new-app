@@ -4,7 +4,7 @@ import { apiClient } from '@/config/api';
 /** One tender on a bill. A bill can have several: 20 off a gift card, 80 in cash. */
 export interface SalePayment {
   // PREPAID: taken from a gift card when the booking was made (V114); never charged again.
-  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS' | 'PREPAID';
+  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS' | 'PREPAID' | 'WALLET';
   amount: number;
   /** Gift card code, when the method is GIFT_CARD. */
   giftCardCode?: string;
