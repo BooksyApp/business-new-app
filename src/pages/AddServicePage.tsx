@@ -103,6 +103,8 @@ export default function AddServicePage() {
     isClass: false,          // FG-W1-12: a group class — several clients book the same session
     maxParticipants: "10",
     mobileService: false,
+    travelFee: "",
+    serviceArea: "",
     virtualAppointments: false,
     bookingIntervalHours: "0",
     bookingIntervalMinutes: "15",
@@ -195,6 +197,8 @@ export default function AddServicePage() {
           isClass: !!service.isClass,
           maxParticipants: String(service.maxParticipants ?? 10),
           mobileService: service.mobileService ?? false,
+          travelFee: service.travelFee != null ? String(service.travelFee) : "",
+          serviceArea: service.serviceArea ?? "",
           virtualAppointments: service.virtualAppointment ?? false,
           bookingIntervalHours: bi.hours,
           bookingIntervalMinutes: bi.minutes,
@@ -281,6 +285,8 @@ export default function AddServicePage() {
         staffOverrides: buildStaffOverrides(),
         isVisible: settingsData.allowSelfBooking, // "Allow self-booking" gates visibility in the customer app
         mobileService: settingsData.mobileService,
+        travelFee: settingsData.mobileService ? Number(settingsData.travelFee || 0) : null,
+        serviceArea: settingsData.mobileService ? settingsData.serviceArea.trim() : null,
         virtualAppointment: settingsData.virtualAppointments,
         // Scheduling engine (Phase 2): booking interval, padding, processing time.
         ...buildScheduling(),
@@ -328,6 +334,8 @@ export default function AddServicePage() {
         staffOverrides: buildStaffOverrides(),
         isVisible: settingsData.allowSelfBooking,
         mobileService: settingsData.mobileService,
+        travelFee: settingsData.mobileService ? Number(settingsData.travelFee || 0) : null,
+        serviceArea: settingsData.mobileService ? settingsData.serviceArea.trim() : null,
         virtualAppointment: settingsData.virtualAppointments,
         ...buildScheduling(),
         ...buildClientSettings(),
@@ -800,6 +808,33 @@ export default function AddServicePage() {
                       }
                     />
                   </div>
+
+                  {settingsData.mobileService && (
+                    <div className="grid gap-3 py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
+                      <div className="grid gap-1.5">
+                        <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">
+                          {tr("addService.travelFee")}
+                        </Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={settingsData.travelFee}
+                          onChange={(e) => setSettingsData((prev) => ({ ...prev, travelFee: e.target.value }))}
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">
+                          {tr("addService.serviceArea")}
+                        </Label>
+                        <Input
+                          value={settingsData.serviceArea}
+                          placeholder={tr("addService.serviceAreaPlaceholder")}
+                          onChange={(e) => setSettingsData((prev) => ({ ...prev, serviceArea: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Virtual Appointments */}
                   <div className="flex items-center justify-between py-3 border-b border-[rgb(var(--reg-line)/0.8)]">

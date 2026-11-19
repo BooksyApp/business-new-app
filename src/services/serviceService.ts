@@ -26,6 +26,10 @@ export interface Service {
   /** Per-staff own price / duration; a staff member not listed uses the service's. */
   staffOverrides?: StaffServiceOverride[];
   mobileService?: boolean;
+  /** FG-W3-02: fixed travel fee in AZN, mobile services only. */
+  travelFee?: number | null;
+  /** FG-W3-02: free-text service area, mobile services only. */
+  serviceArea?: string | null;
   virtualAppointment?: boolean;
   bookingInterval?: number; // minutes between offered start times; 0 = step by duration
   paddingBefore?: number;   // buffer minutes reserved before the appointment
@@ -61,6 +65,10 @@ export interface CreateServiceRequest {
   staffOverrides?: StaffServiceOverride[];
   isVisible?: boolean;
   mobileService?: boolean;
+  /** FG-W3-02: fixed travel fee in AZN, mobile services only. */
+  travelFee?: number | null;
+  /** FG-W3-02: free-text service area, mobile services only. */
+  serviceArea?: string | null;
   virtualAppointment?: boolean;
   bookingInterval?: number;
   paddingBefore?: number;
@@ -93,6 +101,10 @@ export interface UpdateServiceRequest {
   /** Per-staff own price / duration; a staff member not listed uses the service's. */
   staffOverrides?: StaffServiceOverride[];
   mobileService?: boolean;
+  /** FG-W3-02: fixed travel fee in AZN, mobile services only. */
+  travelFee?: number | null;
+  /** FG-W3-02: free-text service area, mobile services only. */
+  serviceArea?: string | null;
   virtualAppointment?: boolean;
   bookingInterval?: number;
   paddingBefore?: number;

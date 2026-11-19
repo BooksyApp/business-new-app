@@ -188,6 +188,7 @@ export function AppointmentModal({
   const appointmentData = fullAppointment || (appointment as unknown as ApiAppointment);
   const clientPhone = appointmentData.clientPhone || "";
   const clientEmail = appointmentData.clientEmail || "";
+  const clientAddress = appointmentData.clientAddress || "";
   const notes = appointmentData.notes || "";
   const price = appointmentData.price || 0;
   /**
@@ -316,6 +317,7 @@ export function AppointmentModal({
                 <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                   {clientPhone && <p>{clientPhone}</p>}
                   {clientEmail && <p className="truncate">{clientEmail}</p>}
+                  {clientAddress && <p>{clientAddress}</p>}
                 </div>
               </div>
               <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>

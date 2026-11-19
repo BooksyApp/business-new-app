@@ -54,6 +54,8 @@ export interface Appointment {
    * visible.
    */
   cancellationFee?: number | null;
+  /** FG-W3-02: the address a mobile (at-home) service is delivered to. */
+  clientAddress?: string | null;
   color?: string;
   notes?: string;
   /** What the customer said they would pay with when booking: SALON, GIFT_CARD, WALLET. */
