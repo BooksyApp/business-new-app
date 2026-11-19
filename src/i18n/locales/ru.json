@@ -1681,7 +1681,9 @@
     "whenTheSalonIsOpen": "Когда салон открыт и выходные дни",
     "settings": "Настройки",
     "bookingRulesDepositsPaymentsNotifications": "Правила записи, предоплата, оплата, уведомления, брендинг",
-    "support": "Поддержка"
+    "support": "Поддержка",
+    "auditLog": "Журнал аудита",
+    "auditLogHint": "Кто, когда и что изменил"
   },
   "locations": {
     "couldNotAddThisLocation": "Не удалось добавить филиал",
@@ -2811,6 +2813,29 @@
   },
   "section": {
     "pagesInThisSection": "Страниц в разделе: {count}"
+  },
+  "auditLog": {
+    "title": "Журнал аудита",
+    "subtitle": "Кто, когда и что изменил — только для владельца, только чтение",
+    "from": "С даты",
+    "to": "По дату",
+    "actor": "Пользователь",
+    "actorPlaceholder": "Часть имени",
+    "search": "Искать",
+    "exportCsv": "Экспорт CSV",
+    "prev": "Назад",
+    "next": "Вперёд",
+    "colTime": "Когда",
+    "colActor": "Кто",
+    "colAction": "Что сделано",
+    "colEntity": "Объект",
+    "colStatus": "Статус",
+    "empty": "Записей нет",
+    "emptyBody": "Нет изменений, подходящих под эти даты и фильтр.",
+    "loadFailed": "Журнал аудита не загрузился",
+    "exportFailed": "CSV не экспортирован",
+    "navHint": "Кто, когда и что изменил",
+    "exportCapped": "Экспортированы только первые 500 записей — сузьте даты, чтобы получить остальные"
   },
   "security": {
     "passwordChanged": "Пароль изменён",

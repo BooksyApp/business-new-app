@@ -1681,7 +1681,9 @@
     "whenTheSalonIsOpen": "When the salon is open, and its closed days",
     "settings": "Settings",
     "bookingRulesDepositsPaymentsNotifications": "Booking rules, deposits, payments, notifications, branding",
-    "support": "Support"
+    "support": "Support",
+    "auditLog": "Audit log",
+    "auditLogHint": "Who changed what, and when"
   },
   "locations": {
     "couldNotAddThisLocation": "Could not add this location",
@@ -2811,6 +2813,29 @@
   },
   "section": {
     "pagesInThisSection": "{count} pages in this section"
+  },
+  "auditLog": {
+    "title": "Audit log",
+    "subtitle": "Who changed what, and when — owner only, read only",
+    "from": "From",
+    "to": "To",
+    "actor": "Person",
+    "actorPlaceholder": "Part of the name",
+    "search": "Search",
+    "exportCsv": "Export CSV",
+    "prev": "Previous",
+    "next": "Next",
+    "colTime": "When",
+    "colActor": "Who",
+    "colAction": "What was done",
+    "colEntity": "Item",
+    "colStatus": "Status",
+    "empty": "No entries",
+    "emptyBody": "No changes match this date range and filter.",
+    "loadFailed": "The audit log did not load",
+    "exportFailed": "The CSV was not exported",
+    "navHint": "Who changed what, and when",
+    "exportCapped": "Only the first 500 entries were exported — narrow the dates for the rest"
   },
   "security": {
     "passwordChanged": "Password changed",

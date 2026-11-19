@@ -1681,7 +1681,9 @@
     "whenTheSalonIsOpen": "Salon nə vaxt açıqdır, bağlı günlər",
     "settings": "Ayarlar",
     "bookingRulesDepositsPaymentsNotifications": "Rezerv qaydaları, depozit, ödənişlər, bildirişlər, brendinq",
-    "support": "Dəstək"
+    "support": "Dəstək",
+    "auditLog": "Audit jurnalı",
+    "auditLogHint": "Kim nəyi nə vaxt dəyişib"
   },
   "locations": {
     "couldNotAddThisLocation": "Filialı əlavə etmək alınmadı",
@@ -2811,6 +2813,29 @@
   },
   "section": {
     "pagesInThisSection": "Bu bölmədə {count} səhifə"
+  },
+  "auditLog": {
+    "title": "Audit jurnalı",
+    "subtitle": "Kim, nə vaxt, nəyi dəyişdi — yalnız sahib üçün, yalnız oxumaq üçün",
+    "from": "Tarixdən",
+    "to": "Tarixə",
+    "actor": "İstifadəçi",
+    "actorPlaceholder": "Adın bir hissəsi",
+    "search": "Axtar",
+    "exportCsv": "CSV ixrac",
+    "prev": "Əvvəlki",
+    "next": "Növbəti",
+    "colTime": "Vaxt",
+    "colActor": "Kim",
+    "colAction": "Nə edildi",
+    "colEntity": "Obyekt",
+    "colStatus": "Status",
+    "empty": "Qeyd yoxdur",
+    "emptyBody": "Seçilmiş tarix və süzgəcə uyğun dəyişiklik tapılmadı.",
+    "loadFailed": "Audit jurnalı yüklənmədi",
+    "exportFailed": "CSV ixrac olunmadı",
+    "navHint": "Kim nəyi nə vaxt dəyişib",
+    "exportCapped": "Yalnız ilk 500 qeyd ixrac olundu — qalanı üçün tarixi daraldın"
   },
   "security": {
     "passwordChanged": "Şifrə dəyişdirildi",

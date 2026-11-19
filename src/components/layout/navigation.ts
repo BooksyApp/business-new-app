@@ -16,6 +16,7 @@ import {
   MessageSquareText,
   Stamp,
   Rocket,
+  History,
 } from "lucide-react";
 import { useFeatureFlags } from "@/services/platformService";
 import {
@@ -147,6 +148,7 @@ export const navGroups: NavGroup[] = [
       { icon: ImageIcon, get label() { return t("common.photos"); }, path: "/photos", get description() { return t("layout.coverLogoAndGalleryCustomers"); } },
       { icon: ClockIcon, get label() { return t("common.openingHours"); }, path: "/business-hours", get description() { return t("layout.whenTheSalonIsOpen"); } },
       { icon: SettingsIcon, get label() { return t("layout.settings"); }, path: "/setup", get description() { return t("layout.bookingRulesDepositsPaymentsNotifications"); } },
+      { icon: History, get label() { return t("auditLog.title"); }, path: "/audit-log", get description() { return t("layout.auditLogHint"); } },
     ],
   },
 ];
@@ -235,6 +237,7 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/branding": ["SETTINGS"],
   "/business-hours": ["SETTINGS"],
   "/setup": ["SETTINGS"],
+  "/audit-log": null,
 };
 
 export function pageAllowed(access: MyAccess, path?: string): boolean {

@@ -34,6 +34,7 @@ const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const SuppliersOrdersPage = lazy(() => import("./pages/SuppliersOrdersPage"));
 const PayrollPage = lazy(() => import("./pages/PayrollPage"));
 const TimesheetPage = lazy(() => import("./pages/TimesheetPage"));
+const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 const MyDayPage = lazy(() => import("./pages/MyDayPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
@@ -281,6 +282,7 @@ const App = () => (
               <Route path="setup/email" element={<Suspense fallback={<PageLoader />}><NotificationsPage key="email" section="email" /></Suspense>} />
               <Route path="setup/sms-push" element={<Suspense fallback={<PageLoader />}><NotificationsPage key="sms-push" section="sms-push" /></Suspense>} />
               <Route path="security" element={<Suspense fallback={<PageLoader />}><SecurityPage /></Suspense>} />
+              <Route path="audit-log" element={<Suspense fallback={<PageLoader />}><AuditLogPage /></Suspense>} />
               <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
               <Route path="branding" element={<Suspense fallback={<PageLoader />}><BrandingPage /></Suspense>} />
               <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
