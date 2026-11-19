@@ -1,4 +1,21 @@
 {
+  "shc": {
+    "title": "Digər salonlarımın müştəriləri",
+    "hint": "Sahib olduğunuz salonlar arasında paylaşılır. Razılıq cavabları gizli qalır.",
+    "shareSwitch": "Müştəriləri salonlarım arasında paylaş",
+    "browse": "Bax",
+    "hide": "Gizlət",
+    "searchPlaceholder": "Ad, telefon və ya e-poçtla axtar",
+    "none": "Uyğun paylaşılan müştəri yoxdur.",
+    "noContact": "Əlaqə məlumatı yoxdur",
+    "visits": "{count} ziyarət",
+    "lastVisit": "son",
+    "addHere": "Bu salona əlavə et",
+    "alreadyHere": "Bu salonda var",
+    "added": "Müştəri bu salona əlavə edildi",
+    "couldNotAdd": "Müştərini əlavə etmək alınmadı",
+    "couldNotSave": "Paylaşım ayarını saxlamaq alınmadı"
+  },
   "cmp": {
     "compareSalons": "Salonları müqayisə et",
     "compareHint": "Salonlarınız bir dövr üzrə yan-yana. Cəm işarələdiyiniz salonları əhatə edir.",

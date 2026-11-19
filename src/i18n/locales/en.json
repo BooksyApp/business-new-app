@@ -1,4 +1,21 @@
 {
+  "shc": {
+    "title": "Clients of my other salons",
+    "hint": "Shared by you across your salons. Consent answers stay private.",
+    "shareSwitch": "Share clients across my salons",
+    "browse": "Browse",
+    "hide": "Hide",
+    "searchPlaceholder": "Search by name, phone or email",
+    "none": "No shared clients match.",
+    "noContact": "No contact details",
+    "visits": "{count} visits",
+    "lastVisit": "last",
+    "addHere": "Add to this salon",
+    "alreadyHere": "In this salon",
+    "added": "Client added to this salon",
+    "couldNotAdd": "Could not add the client",
+    "couldNotSave": "Could not save the sharing setting"
+  },
   "cmp": {
     "compareSalons": "Compare salons",
     "compareHint": "Your salons side by side for one period. Totals cover the salons you tick.",

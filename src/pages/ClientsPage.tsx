@@ -43,6 +43,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
 import { consentFormService, type ClientConsentSubmission } from "@/services/consentFormService";
 import { membershipService } from "@/services/membershipService";
+import { SharedClientsPanel } from "@/components/clients/SharedClientsPanel";
 import { salonDayService, type ClientRecord, type NoteKind } from "@/services/salonDayService";
 import { useServices } from "@/hooks/useServices";
 import { useStaff } from "@/hooks/useStaff";
@@ -685,6 +686,9 @@ export default function ClientsPage() {
           </div>
         </div>
 
+        <div className="px-4 pt-5 md:px-8">
+          <SharedClientsPanel businessId={businessId} />
+        </div>
         <div className="px-4 py-5 md:px-8 md:py-6">
           {!loading && allClientsWithPending.length > 0 && (
             <div className="mb-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-3">
