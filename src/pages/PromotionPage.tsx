@@ -19,6 +19,18 @@ import {
 } from "@/services/promotionService";
 import { t, getLocale, fmtDate as formatLocaleDate } from "@/i18n";
 
+const pct = (ctr: number | null | undefined) => (ctr == null ? "—" : `${(ctr * 100).toFixed(2)}%`);
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-lg font-semibold">{value}</p>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
+
 const packageName = (p: PromotionPackage) => {
   const l = getLocale();
   return (l === "az" ? p.nameAz : l === "ru" ? p.nameRu : p.nameEn) || p.nameEn;
@@ -151,7 +163,7 @@ export default function PromotionPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                {t("promotion.pendingPackage", { value: formatPrice(pending.amount), days: pending.days })}
+                {t("promotion.pendingPackage", { value: formatPrice(pending.amount, pending.currency), days: pending.days })}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
@@ -198,30 +210,36 @@ export default function PromotionPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Money first: what was paid, what has run, what is left (backend, pro-rated to the minute). */}
               <div className="grid gap-4 sm:grid-cols-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("promotion.seen")}</p>
-                  <p className="text-lg font-semibold">{live.impressions.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("promotion.tapped")}</p>
-                  <p className="text-lg font-semibold">{live.clicks.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("promotion.tapRate")}</p>
-                  <p className="text-lg font-semibold">
-                    {live.impressions > 0
-                      ? `${((live.clicks / live.impressions) * 100).toFixed(1)}%`
-                      : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t("promotion.runsUntil")}</p>
-                  <p className="text-lg font-semibold">
-                    {formatLocaleDate(new Date(live.endsAt), { year: "numeric", month: "numeric", day: "numeric" })}
-                  </p>
-                </div>
+                <Stat label={t("promotion.paidAmount")} value={formatPrice(live.paidAmount, live.currency)} />
+                <Stat label={t("promotion.spentAmount")} value={formatPrice(live.spentAmount, live.currency)} />
+                <Stat label={t("promotion.remainingAmount")} value={formatPrice(live.remainingAmount, live.currency)} />
+                <Stat
+                  label={t("promotion.daysLeft")}
+                  value={String(live.daysLeft)}
+                  hint={`${t("promotion.runsUntil")} ${formatLocaleDate(new Date(live.endsAt), { year: "numeric", month: "numeric", day: "numeric" })}`}
+                />
               </div>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <Stat label={t("promotion.seen")} value={live.impressions.toLocaleString()} />
+                <Stat label={t("promotion.uniqueViewers")} value={live.uniqueViewers.toLocaleString()} />
+                <Stat label={t("promotion.tapped")} value={live.clicks.toLocaleString()} />
+                <Stat label={t("promotion.tapRate")} value={pct(live.ctr)} />
+                <Stat label={t("promotion.bookingsFromAd")} value={live.bookings.toLocaleString()} />
+                <Stat
+                  label={t("promotion.costPerClick")}
+                  value={live.costPerClick == null ? "—" : formatPrice(live.costPerClick, live.currency)}
+                />
+                <Stat
+                  label={t("promotion.costPerBooking")}
+                  value={live.costPerBooking == null ? "—" : formatPrice(live.costPerBooking, live.currency)}
+                />
+                <Stat label={t("promotion.filteredInvalid")} value={live.filteredInvalid.toLocaleString()} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t("promotion.viewableNote")} {t("promotion.filteredHint")}
+              </p>
 
               {live.status === "PAUSED" ? (
                 <p className="text-sm text-muted-foreground">
@@ -287,12 +305,12 @@ export default function PromotionPage() {
                       <p className="flex items-center gap-2 text-xs">
                         <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t("billing.specialPrice")}</span>
                         {p.defaultPrice !== undefined && (
-                          <span className="text-muted-foreground line-through">{formatPrice(p.defaultPrice)}</span>
+                          <span className="text-muted-foreground line-through">{formatPrice(p.defaultPrice, p.defaultCurrency ?? p.currency)}</span>
                         )}
                       </p>
                     )}
                     <Button disabled={busy} onClick={() => void buy(p.id)}>
-                      {busy ? t("promotion.openingPayment") : t("promotion.promoteFor", { value: formatPrice(p.price) })}
+                      {busy ? t("promotion.openingPayment") : t("promotion.promoteFor", { value: formatPrice(p.price, p.currency ?? quote.currency) })}
                     </Button>
                   </div>
                 ))}
@@ -324,6 +342,8 @@ export default function PromotionPage() {
                       <th className="py-2 font-medium">{t("promotion.seen")}</th>
                       <th className="py-2 font-medium">{t("promotion.tapped")}</th>
                       <th className="py-2 font-medium">{t("promotion.rate")}</th>
+                      <th className="py-2 font-medium">{t("promotion.bookingsFromAd")}</th>
+                      <th className="py-2 font-medium">{t("promotion.filteredInvalid")}</th>
                       <th className="py-2 font-medium">{t("promotion.status")}</th>
                     </tr>
                   </thead>
@@ -331,10 +351,7 @@ export default function PromotionPage() {
                     {past.map((row) => {
                       // Guarded: a period that has just started has no impressions yet, and
                       // "NaN%" in the one column a buyer checks is worse than a dash.
-                      const rate =
-                        row.impressions > 0
-                          ? `${((row.clicks / row.impressions) * 100).toFixed(1)}%`
-                          : "—";
+                      const rate = pct(row.ctr);
                       return (
                         <tr key={row.id} className="border-b last:border-0">
                           <td className="py-2">
@@ -350,7 +367,7 @@ export default function PromotionPage() {
                                 {t("promotion.freeGrant")}
                               </span>
                             ) : (
-                              formatPrice(row.amount)
+                              formatPrice(row.amount, row.currency)
                             )}
                           </td>
                           <td className="py-2">
@@ -366,6 +383,8 @@ export default function PromotionPage() {
                             </span>
                           </td>
                           <td className="py-2">{rate}</td>
+                          <td className="py-2">{row.bookings.toLocaleString()}</td>
+                          <td className="py-2 text-muted-foreground">{row.filteredInvalid.toLocaleString()}</td>
                           <td className="py-2 text-muted-foreground">{row.status}</td>
                         </tr>
                       );

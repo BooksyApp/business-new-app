@@ -36,7 +36,10 @@ export function currencySymbol(): string {
 }
 
 /** `12.50 zł` — the format every screen was already producing by hand. */
-export function formatPrice(amount: number | string | null | undefined): string {
+export function formatPrice(amount: number | string | null | undefined, currency?: string | null): string {
   const n = typeof amount === "number" ? amount : parseFloat(String(amount ?? 0));
-  return `${(Number.isFinite(n) ? n : 0).toFixed(2)} ${currencySymbol()}`;
+  // A row that carries its own currency (a promotion bought in AZN) is shown in it, not in the cached one.
+  const code = typeof currency === "string" && currency.length === 3 ? currency.toUpperCase() : null;
+  const symbol = code ? SYMBOLS[code] ?? code : currencySymbol();
+  return `${(Number.isFinite(n) ? n : 0).toFixed(2)} ${symbol}`;
 }

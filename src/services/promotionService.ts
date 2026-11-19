@@ -65,16 +65,36 @@ export interface PromotionRow {
   source: 'PAID' | 'FREE_GRANT';
   status: 'PENDING' | 'ACTIVE' | 'PAUSED' | 'ENDED' | 'CANCELLED';
   countryCode: string | null;
+  /** Viewable impressions only: half the card in view for a second, in a visible tab. */
   impressions: number;
   clicks: number;
+  /** People (not views) who saw it. */
+  uniqueViewers: number;
+  /** Clicks that had no viewable impression behind them: counted, but marked for review. */
+  flaggedClicks: number;
+  /** Bookings credited to this promotion (the customer's last click within 7 days). */
+  bookings: number;
+  /** Bots, own team, prefetch, expired or forged events thrown away, and plain repeats. */
+  filteredInvalid: number;
+  duplicates: number;
+  /** clicks / impressions as a fraction (0.0123 = 1.23%); null before the first impression. */
+  ctr: number | null;
+  costPerClick: number | null;
+  costPerBooking: number | null;
+  /** Money, pro-rated to the minute by the backend (the salon's currency). */
+  paidAmount: number;
+  spentAmount: number;
+  remainingAmount: number;
+  daysLeft: number;
 }
 
 export interface PromotionDay {
   onDate: string;
-  /** Where it was seen: 'home', 'list' or 'search'. */
-  surface: string;
   impressions: number;
   clicks: number;
+  uniqueViewers: number;
+  bookings: number;
+  filteredInvalid: number;
 }
 
 export const promotionService = {
