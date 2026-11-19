@@ -101,15 +101,15 @@ export function QuickSearch() {
     for (const sec of navSections) {
       for (const e of sec.entries) {
         const famNames = e.labelKey ? allNames(e.labelKey) : [norm(e.label)];
-        // A family: each tab is its own result, hinted with the family ("Team").
-        for (const i of e.tabs ?? [e]) {
+        // A category: each page is its own result, hinted with the category ("Team").
+        for (const i of e.pages ?? [e]) {
           if (pageLabel.has(i.path)) continue;
           const names = i.labelKey ? allNames(i.labelKey) : [norm(i.label)];
           out.push({
             id: `p:${i.path}`,
             kind: "page",
             label: i.label,
-            hint: e.tabs ? e.label : sec.key ? t(sec.key) : undefined,
+            hint: e.pages ? e.label : sec.key ? t(sec.key) : undefined,
             icon: i.icon,
             href: href(i.path),
             names,

@@ -127,7 +127,7 @@ function useNavModel() {
     location.pathname.startsWith(full + "/") ||
     (full === getPath("/business") && location.pathname === `/${salonKey}`);
   // A family is active on any of its tabs.
-  const entryActive = (e: NavEntry) => [e.path, ...(e.tabs ?? []).map((x) => x.path)].some((p) => matches(getPath(p)));
+  const entryActive = (e: NavEntry) => [e.path, ...(e.pages ?? []).map((x) => x.path)].some((p) => matches(getPath(p)));
   const findEntry = (slug: string) => sections.flatMap((sec) => sec.entries).find((e) => e.slug === slug);
   // The salon-relative path ("/setup/email"), for the Settings entry.
   const relPath = salonKey && location.pathname.startsWith(`/${salonKey}`) ? location.pathname.slice(salonKey.length + 1) || "/" : location.pathname;
@@ -353,7 +353,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           </MaybeTip>
         </div>}
 
-        {/* Navigation: every link visible; a family's pages are tabs on the page. */}
+        {/* Navigation: every link visible; a category opens a page of cards (SectionPage). */}
         <nav aria-label={t("layout.main")} className="flex-1 overflow-y-auto px-3 pb-2">
           {m.sections.map((sec) => (
             <div key={sec.slug} className="pt-2">

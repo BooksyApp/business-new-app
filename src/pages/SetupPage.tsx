@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, Search } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Search } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useVisibleSettings } from "@/components/layout/navigation";
+import { NavCard, NavCardGrid } from "@/components/layout/NavCards";
 import { BooqiScope, PageHeader } from "@/components/page/booqi";
 import { pageBody } from "@/components/page/booqiStyles";
 import { fieldCls } from "@/components/page/kitStyles";
@@ -12,13 +13,12 @@ import { useNavigation } from "@/utils/navigationUtils";
 import { t } from "@/i18n";
 
 /**
- * The settings hub: every setting once, in grouped cards. The map itself lives in
- * components/layout/navigation.ts (SETTINGS_SECTIONS) so this page, the settings sub-nav
- * beside every settings screen and the quick search can never disagree.
+ * The settings hub: every setting once, as cards under each group (v3 — the same card page
+ * every category has). The map lives in components/layout/navigation.ts (SETTINGS_SECTIONS)
+ * so this page, the "Settings › Page" trail and the quick search can never disagree.
  */
 export default function SetupPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { getPath } = useNavigation();
   const [query, setQuery] = useState("");
   const all = useVisibleSettings();
@@ -57,51 +57,25 @@ export default function SetupPage() {
             <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{t("setup.noSettingMatches", { query })}</p>
           )}
 
-          <div className="grid items-start gap-4 xl:grid-cols-2">
-            {sections.map((s) => {
-              const Icon = s.icon;
-              return (
-                <section
-                  key={s.id}
-                  id={`setup-${s.id}`}
-                  aria-labelledby={`setup-${s.id}-title`}
-                  className={cn("scroll-mt-[140px] overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]", focusedCategory === s.id && "ring-2 ring-[rgb(var(--reg-brand)/0.6)]")}
-                >
-                  <header className="flex items-center gap-3 px-4 pb-3 pt-4 md:px-5">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]">
-                      <Icon size={18} strokeWidth={1.9} />
-                    </span>
-                    <div className="min-w-0">
-                      <h2 id={`setup-${s.id}-title`} className="text-base font-extrabold tracking-[-0.01em]">{s.title}</h2>
-                      <p className="text-sm text-[rgb(var(--reg-muted))]">{s.description}</p>
-                    </div>
-                  </header>
-                  <ul>
-                    {s.rows.map((r) => {
-                      const RowIcon = r.icon;
-                      return (
-                        <li key={r.path} className="border-t border-[rgb(var(--reg-line)/0.6)]">
-                          <button
-                            type="button"
-                            onClick={() => navigate(getPath(r.path))}
-                            className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-[rgb(var(--reg-canvas)/0.7)] focus-visible:bg-[rgb(var(--reg-canvas))] focus-visible:outline-none md:px-5"
-                          >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center text-[rgb(var(--reg-ink)/0.5)]">
-                              <RowIcon size={18} strokeWidth={1.75} aria-hidden />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-[15px] font-semibold">{r.label}</span>
-                              <span className="block text-sm text-[rgb(var(--reg-muted))]">{r.hint}</span>
-                            </span>
-                            <ChevronRight size={18} className="shrink-0 text-[rgb(var(--reg-ink)/0.35)]" aria-hidden />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              );
-            })}
+          <div className="space-y-8">
+            {sections.map((s) => (
+              <section
+                key={s.id}
+                id={`setup-${s.id}`}
+                aria-labelledby={`setup-${s.id}-title`}
+                className={cn("scroll-mt-[140px] rounded-[24px]", focusedCategory === s.id && "outline outline-2 outline-offset-8 outline-[rgb(var(--reg-brand)/0.45)]")}
+              >
+                <header className="mb-3 flex items-baseline gap-3">
+                  <h2 id={`setup-${s.id}-title`} className="text-[17px] font-extrabold tracking-[-0.01em]">{s.title}</h2>
+                  <p className="hidden truncate text-sm text-[rgb(var(--reg-muted))] sm:block">{s.description}</p>
+                </header>
+                <NavCardGrid>
+                  {s.rows.map((r) => (
+                    <NavCard key={r.path} to={getPath(r.path)} icon={r.icon} title={r.label} description={r.hint} />
+                  ))}
+                </NavCardGrid>
+              </section>
+            ))}
           </div>
         </div>
       </BooqiScope>

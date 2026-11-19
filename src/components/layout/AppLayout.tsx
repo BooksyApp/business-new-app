@@ -3,9 +3,7 @@ import { useLocation } from "react-router-dom";
 import { MobileTabBar, MobileTopBar, Sidebar } from "./Sidebar";
 import { InstallAppBanner } from "./InstallAppBanner";
 import { QuickSearch } from "./QuickSearch";
-import { SettingsNav } from "./SettingsNav";
-import { SectionTabs } from "./SectionTabs";
-import { isSettingsPath } from "./navigation";
+import { PageTrail } from "./PageTrail";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { keyForId } from "@/lib/salonKey";
 import { cn } from "@/lib/utils";
@@ -21,7 +19,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   const salonKey = keyForId(useBusinessId());
   const base = salonKey ? `/${salonKey}` : "";
   const rel = base && location.pathname.startsWith(base) ? location.pathname.slice(base.length) || "/" : location.pathname;
-  const inSettings = Boolean(base) && isSettingsPath(rel);
   // Remembered per browser; storage can be blocked (private mode), so never trust it.
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -43,11 +40,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-[100dvh] bg-[rgb(var(--reg-canvas))]">
       <Sidebar collapsed={collapsed} onToggle={toggle} />
-      {inSettings && <SettingsNav base={base} current={rel} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />
         <InstallAppBanner />
-        {base && <SectionTabs base={base} current={rel} />}
+        {base && <PageTrail base={base} current={rel} />}
         {/* On a phone the floating tab bar sits over the bottom; keep content clear of it. */}
         <main className="min-h-0 flex-1 overflow-auto bg-[#fafafa] pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-0">
           {children}

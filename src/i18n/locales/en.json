@@ -4114,7 +4114,25 @@
     "shopOrders": "Online orders",
     "pageTabs": "Pages in this section",
     "reportBuilder": "Report builder",
-    "apiDocs": "API guide"
+    "apiDocs": "API guide",
+    "overview": "Overview",
+    "trail": "You are here",
+    "cat": {
+      "clients": "Your client list, forms and consent",
+      "payments": "Payments, online orders, gift cards and expenses",
+      "marketing": "Bring clients back and win new ones",
+      "team": "Your people, their hours, pay and targets",
+      "inventory": "Products, stock, counts and suppliers",
+      "reports": "Revenue, bookings and clients in numbers",
+      "branches": "All your locations, side by side"
+    },
+    "live": {
+      "lowStock": "{count, plural, one {# product low on stock} other {# products low on stock}}",
+      "allStocked": "All in stock",
+      "rating": "{avg} ★ · {count, plural, one {# review} other {# reviews}}",
+      "people": "{count, plural, one {# person} other {# people}}",
+      "toPrepare": "{count, plural, one {# order to prepare} other {# orders to prepare}}"
+    }
   },
   "onlineSales": {
     "title": "Online sales",

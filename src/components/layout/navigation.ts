@@ -57,9 +57,9 @@ import { t, type TKey } from "@/i18n";
  * so that file exports only components (fast refresh needs that); the sidebar, the phone
  * drawer, the settings hub, the quick search and the route guard all read from here.
  *
- * IA (2026-11-19, business/product/hub-ia-2026-11-19.md): grouped by the owner's day, not
- * by the backlog. Every page has exactly one home; Settings is one hub with its own
- * sub-nav, so the rail stays short.
+ * IA (2026-11-19, business/product/hub-ia-2026-11-19.md, v3): grouped by the owner's day,
+ * not by the backlog. Every page has exactly one home; a category opens a page of cards, and
+ * Settings is one page of grouped cards, so the rail stays short.
  */
 
 export interface NavItem {
@@ -81,10 +81,13 @@ export interface NavItem {
   labelKey?: TKey;
 }
 
-/** A rail link. With `tabs`, it is a page family: the rail shows one link, the pages show tabs. */
+/**
+ * A rail link. With `pages`, it is a category: the rail shows one link that opens a page of
+ * cards (one per page, SectionPage), and each page shows "Category › Page" to go back.
+ */
 export interface NavEntry extends NavItem {
   slug: string;
-  tabs?: NavItem[];
+  pages?: NavItem[];
 }
 
 /** A block of the rail, optionally under a small label. */
@@ -107,17 +110,23 @@ function item(icon: React.ElementType, label: TKey, path: string, hint?: TKey, e
     get description() { return hint ? t(hint) : undefined; },
   };
 }
-function entry(slug: string, base: NavItem, tabs?: NavItem[]): NavEntry {
+function entry(slug: string, base: NavItem, pages?: NavItem[]): NavEntry {
   const e = base as NavEntry;
   e.slug = slug;
-  if (tabs) e.tabs = tabs;
+  if (pages) {
+    e.pages = pages;
+    e.path = categoryPath(slug);
+  }
   return e;
 }
 
+/** Where a category's card page lives. */
+export const categoryPath = (slug: string) => `/section/${slug}`;
+
 /**
- * The rail, v2 (2026-11-19, business/product/hub-ia-2026-11-19.md). Every link is visible
- * at once — no accordions — and the whole rail fits a laptop screen: a page family
- * (Marketing, Team, Inventory, Branches, Clients) is one link here and tabs on the page.
+ * The rail, v3 (2026-11-19, business/product/hub-ia-2026-11-19.md). The three things a salon
+ * does all day (calendar, messages, till) are direct links; everything else is a category
+ * that opens a page of cards — the owner sees what is inside before choosing. No tabs.
  */
 export const NAV: NavSection[] = [
   {
@@ -126,30 +135,24 @@ export const NAV: NavSection[] = [
       entry("calendar", item(CalendarDays, "nav.calendar", "/calendar")),
       entry("my-day", item(CalendarCheck, "nav.myDay", "/my-day", "myDay.navHint", { staffOnly: true })),
       entry("inbox", item(Inbox, "nav.inbox", "/inbox", "inbox.navDescription")),
-      entry("clients", item(Users, "nav.g.clients", "/clients", "layout.everyoneWhoHasBookedWith"), [
-        item(Users, "nav.allClients", "/clients", "layout.everyoneWhoHasBookedWith"),
-        item(ClipboardList, "nav.forms", "/setup/consent-forms", "consentForms.hint"),
-      ]),
-    ],
-  },
-  {
-    slug: "sales",
-    key: "nav.g.sales",
-    entries: [
       entry("sales", item(Receipt, "nav.till", "/sales", "layout.ringUpAVisitTake")),
-      entry("shop-orders", item(ShoppingBag, "nav.shopOrders", "/shop-orders", "onlineSales.navOrdersHint")),
-      entry("gift-cards", item(Gift, "nav.giftCards", "/gift-cards", "onlineSales.navGiftCardsHint")),
-      entry("money", item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"), [
-        item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"),
-        item(PiggyBank, "expenses.title", "/expenses", "expenses.navHint"),
-      ]),
     ],
   },
   {
     slug: "business",
     key: "common.business",
     entries: [
-      entry("marketing", item(Megaphone, "nav.g.marketing", "/marketing", "layout.messagesToClientsAndPromo"), [
+      entry("clients", item(Users, "nav.g.clients", "/clients", "nav.cat.clients"), [
+        item(Users, "nav.allClients", "/clients", "layout.everyoneWhoHasBookedWith"),
+        item(ClipboardList, "nav.forms", "/setup/consent-forms", "consentForms.hint"),
+      ]),
+      entry("payments", item(Landmark, "nav.g.sales", "/money", "nav.cat.payments"), [
+        item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"),
+        item(ShoppingBag, "nav.shopOrders", "/shop-orders", "onlineSales.navOrdersHint"),
+        item(Gift, "nav.giftCards", "/gift-cards", "onlineSales.navGiftCardsHint"),
+        item(PiggyBank, "expenses.title", "/expenses", "expenses.navHint"),
+      ]),
+      entry("marketing", item(Megaphone, "nav.g.marketing", "/marketing", "nav.cat.marketing"), [
         item(Megaphone, "nav.campaigns", "/marketing", "layout.messagesToClientsAndPromo"),
         item(Percent, "nav.offers", "/offers", "layout.cutAPriceItShows"),
         item(Stamp, "nav.loyalty", "/loyalty", "layout.comeNTimesOneService", { flag: "loyalty_cards" }),
@@ -157,22 +160,22 @@ export const NAV: NavSection[] = [
         item(Star, "nav.reviews", "/reviews", "layout.readFeedbackReplyToIt"),
         item(Rocket, "nav.promotion", "/promotion", "layout.payToAppearAtThe"),
       ]),
-      entry("team", item(UsersRound, "nav.g.team", "/staff", "layout.whoWorksHereTheirServices"), [
+      entry("team", item(UsersRound, "nav.g.team", "/staff", "nav.cat.team"), [
         item(UsersRound, "layout.teamMembers", "/staff", "layout.whoWorksHereTheirServices"),
         item(Clock, "timesheet.title", "/timesheet", "timesheet.navHint"),
         item(Coins, "payroll.title", "/payroll", "payroll.navHint"),
         item(Target, "nav.targets", "/staff-targets", "layout.staffTargetsHint"),
       ]),
-      entry("inventory", item(Boxes, "nav.g.inventory", "/inventory", "layout.stockLevelsAndReorderPoints"), [
+      entry("inventory", item(Boxes, "nav.g.inventory", "/inventory", "nav.cat.inventory"), [
         item(Package, "nav.products", "/inventory", "layout.stockLevelsAndReorderPoints"),
         item(ClipboardCheck, "nav.stockCount", "/inventory/count", "nav.hint.stockCount"),
         item(Truck, "inventory.suppliersAndOrders", "/inventory/suppliers", "nav.hint.suppliers"),
       ]),
-      entry("reports", item(BarChart3, "nav.reports", "/analytics", "layout.revenueBookingsAndClientTrends"), [
-        item(BarChart3, "nav.reports", "/analytics", "layout.revenueBookingsAndClientTrends"),
+      entry("reports", item(BarChart3, "nav.reports", "/analytics", "nav.cat.reports"), [
+        item(BarChart3, "nav.overview", "/analytics", "layout.revenueBookingsAndClientTrends"),
         item(Table2, "nav.reportBuilder", "/report-builder", "nav.hint.reportBuilder"),
       ]),
-      entry("branches", item(Network, "nav.g.branches", "/locations", "nav.hint.locations"), [
+      entry("branches", item(Network, "nav.g.branches", "/locations", "nav.cat.branches"), [
         item(MapPin, "nav.allLocations", "/locations", "nav.hint.locations"),
         item(GitCompare, "nav.compare", "/branch-comparison", "nav.hint.compare"),
       ]),
@@ -210,8 +213,8 @@ function S(id: string, title: TKey, description: TKey, icon: React.ElementType, 
 }
 
 /**
- * Every setting, once, in seven groups. The sub-nav lists the groups; a group's pages are
- * tabs on its pages. Daily work (calendar, till, clients, team) stays in the rail.
+ * Every setting, once, in groups. The Settings page shows each group as a block of cards;
+ * a settings page shows "Settings › Page" to go back. Daily work stays in the rail.
  */
 export const SETTINGS_SECTIONS: SettingsSection[] = [
   S("business", "common.business", "setup.whoYouAreAndWhere", Store, [
@@ -316,8 +319,9 @@ export function openQuickSearch(): void {
 }
 
 /**
- * The rail with switched-off features and pages the role leaves out removed. A family whose
- * first tab is closed to this person opens on the first tab they can see.
+ * The rail with switched-off features and pages the role leaves out removed. A category
+ * with one page left for this person links straight to that page (a card page of one card
+ * is just an extra click).
  */
 export function useVisibleNav(): NavSection[] {
   const flags = useFeatureFlags();
@@ -328,27 +332,60 @@ export function useVisibleNav(): NavSection[] {
     ...sec,
     entries: sec.entries
       .map((e): NavEntry | null => {
-        if (!e.tabs) return ok(e) ? e : null;
-        const tabs = e.tabs.filter(ok);
-        if (!tabs.length) return null;
-        return { ...e, label: e.label, description: e.description, path: tabs[0].path, tabs } as NavEntry;
+        if (!e.pages) return ok(e) ? e : null;
+        const pages = e.pages.filter(ok);
+        if (!pages.length) return null;
+        const path = pages.length === 1 ? pages[0].path : e.path;
+        return Object.defineProperties({ ...e, path, pages } as NavEntry, {
+          label: { get: () => e.label, enumerable: true },
+          description: { get: () => e.description, enumerable: true },
+        });
       })
       .filter((e): e is NavEntry => e !== null),
   })).filter((sec) => sec.entries.length);
 }
 
-/** Old section slugs (/section/<slug>) → where they live now. */
+/** Where a page sits: its category (or Settings) and the page itself, for "Category › Page". */
+export interface TrailInfo {
+  parentLabel: string;
+  parentPath: string;
+  label: string;
+}
+
+/**
+ * The trail for this salon-relative path, or null on a page that is not inside a category
+ * (Calendar, Till, a category's own card page). The longest matching page wins, so
+ * /inventory/count is Stock count, not Products.
+ */
+export function usePageTrail(rel: string): TrailInfo | null {
+  const sections = useVisibleNav();
+  const settings = useVisibleSettings();
+  const bare = rel.split("?")[0];
+  const hit = (p: string) => bare === p || bare.startsWith(p + "/");
+  let best: { len: number; trail: TrailInfo } | null = null;
+  for (const e of sections.flatMap((s) => s.entries)) {
+    if (!e.pages || e.pages.length < 2) continue;
+    for (const p of e.pages) {
+      if (hit(p.path) && (!best || p.path.length > best.len)) {
+        best = { len: p.path.length, trail: { parentLabel: e.label, parentPath: e.path, label: p.label } };
+      }
+    }
+  }
+  if (best) return best.trail;
+  for (const s of settings) {
+    const r = s.rows.find((x) => x.path === bare);
+    if (r) return { parentLabel: t("nav.settings"), parentPath: `/setup?focus=${s.id}`, label: r.label };
+  }
+  return null;
+}
+
+/** /section/<slug> addresses that are not a category (v1 group pages) → where they live now. */
 export const SECTION_REDIRECTS: Record<string, string> = {
   calendar: "/calendar",
   sales: "/sales",
-  clients: "/clients",
-  marketing: "/marketing",
   catalogue: "/items-category",
-  inventory: "/inventory",
-  team: "/staff",
-  reports: "/analytics",
-  branches: "/locations",
   business: "/setup",
+  settings: "/setup",
 };
 
 export interface MyAccess {

@@ -4114,7 +4114,25 @@
     "shopOrders": "Onlayn sifarişlər",
     "pageTabs": "Bölmənin səhifələri",
     "reportBuilder": "Hesabat qurucusu",
-    "apiDocs": "API bələdçisi"
+    "apiDocs": "API bələdçisi",
+    "overview": "Ümumi baxış",
+    "trail": "Haradasınız",
+    "cat": {
+      "clients": "Müştəri bazanız, anketlər və razılıq formaları",
+      "payments": "Ödənişlər, onlayn sifarişlər, hədiyyə kartları və xərclər",
+      "marketing": "Müştəriləri geri qaytarmaq və yenilərini cəlb etmək üçün",
+      "team": "İşçilər, iş saatları, maaş və hədəflər",
+      "inventory": "Məhsullar, qalıq, sayım və təchizatçılar",
+      "reports": "Gəlir, rezervlər və müştərilər rəqəmlərlə",
+      "branches": "Bütün ünvanlarınız və onların müqayisəsi"
+    },
+    "live": {
+      "lowStock": "{count} məhsul azalıb",
+      "allStocked": "Hamısı yerindədir",
+      "rating": "{avg} ★ · {count} rəy",
+      "people": "{count} nəfər",
+      "toPrepare": "{count} sifariş hazırlanmalıdır"
+    }
   },
   "onlineSales": {
     "title": "Onlayn satışlar",
