@@ -3,6 +3,7 @@ import type { Id } from "@/types/id";
 import {
   BarChart3,
   Bell,
+  BookOpen,
   Boxes,
   CalendarCheck,
   CalendarClock,
@@ -27,6 +28,7 @@ import {
   Palette,
   Percent,
   PiggyBank,
+  Plug,
   Receipt,
   Rocket,
   Scissors,
@@ -40,6 +42,7 @@ import {
   Star,
   Store,
   Tags,
+  Table2,
   Target,
   Truck,
   Users,
@@ -165,7 +168,10 @@ export const NAV: NavSection[] = [
         item(ClipboardCheck, "nav.stockCount", "/inventory/count", "nav.hint.stockCount"),
         item(Truck, "inventory.suppliersAndOrders", "/inventory/suppliers", "nav.hint.suppliers"),
       ]),
-      entry("reports", item(BarChart3, "nav.reports", "/analytics", "layout.revenueBookingsAndClientTrends")),
+      entry("reports", item(BarChart3, "nav.reports", "/analytics", "layout.revenueBookingsAndClientTrends"), [
+        item(BarChart3, "nav.reports", "/analytics", "layout.revenueBookingsAndClientTrends"),
+        item(Table2, "nav.reportBuilder", "/report-builder", "nav.hint.reportBuilder"),
+      ]),
       entry("branches", item(Network, "nav.g.branches", "/locations", "nav.hint.locations"), [
         item(MapPin, "nav.allLocations", "/locations", "nav.hint.locations"),
         item(GitCompare, "nav.compare", "/branch-comparison", "nav.hint.compare"),
@@ -235,6 +241,11 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   S("team", "nav.set.teamRoles", "setup.whatEachRoleCanDo", ShieldCheck, [
     R("setup.rolesPermissions", "setup.whatEachRoleCanDo", "/roles", ShieldCheck),
   ]),
+  // FG-W5-11: owner-only; the pages guard themselves and the server refuses everyone else.
+  S("integrations", "nav.set.integrations", "nav.set.integrationsHint", Plug, [
+    R("nav.set.apiKeysRow", "nav.hint.apiKeysRow", "/integrations", KeyRound),
+    R("nav.apiDocs", "nav.hint.apiDocs", "/api-docs", BookOpen),
+  ]),
   S("security", "nav.set.securityAudit", "nav.set.securityHint", KeyRound, [
     R("setup.passwordSecurity", "setup.changeYourPassword", "/security", KeyRound),
     R("auditLog.title", "layout.auditLogHint", "/audit-log", History),
@@ -289,6 +300,9 @@ export const SEARCH_EXTRAS: { key: string; path: string; icon: React.ElementType
   { key: "chairRental", path: "/staff", icon: UsersRound },
   { key: "resources", path: "/staff", icon: UsersRound },
   { key: "revenuePlan", path: "/analytics", icon: BarChart3 },
+  { key: "savedReports", path: "/report-builder", icon: Table2 },
+  { key: "apiKeys", path: "/integrations", icon: KeyRound },
+  { key: "webhooks", path: "/integrations", icon: Plug },
   { key: "slotOffers", path: "/setup/online-booking", icon: CalendarClock },
   { key: "googleReview", path: "/setup/online-booking", icon: Star },
   { key: "messageTexts", path: "/setup/email", icon: Mail },
@@ -380,6 +394,10 @@ export function hasPermission(access: MyAccess, permission: string): boolean {
 const PAGE_NEEDS: Record<string, string[] | null> = {
   "/sales": ["TILL", "SALES_VIEW"],
   "/analytics": ["ANALYTICS"],
+  "/report-builder": ["ANALYTICS"],
+  // FG-W5-11: keys and webhooks hand out the salon's data; the server allows the owner only.
+  "/integrations": null,
+  "/api-docs": null,
   "/money": ["MONEY"],
   "/gift-cards": ["TILL", "SALES_VIEW"],
   "/shop-orders": ["TILL"],

@@ -36,6 +36,9 @@ const PayrollPage = lazy(() => import("./pages/PayrollPage"));
 const TimesheetPage = lazy(() => import("./pages/TimesheetPage"));
 const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
 const StaffTargetsPage = lazy(() => import("./pages/StaffTargetsPage"));
+const ReportBuilderPage = lazy(() => import("./pages/ReportBuilderPage"));
+const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
+const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
 const GiftCardsPage = lazy(() => import("./pages/GiftCardsPage"));
 const ShopOrdersPage = lazy(() => import("./pages/ShopOrdersPage"));
 const OnlineSalesSettingsPage = lazy(() => import("./pages/OnlineSalesSettingsPage"));
@@ -271,6 +274,9 @@ const App = () => (
               <Route path="settings" element={<Navigate to="../setup" replace />} />
               <Route path="reports" element={<Navigate to="../analytics" replace />} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
+              <Route path="report-builder" element={<Suspense fallback={<PageLoader />}><ReportBuilderPage /></Suspense>} />
+              <Route path="integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsPage /></Suspense>} />
+              <Route path="api-docs" element={<Suspense fallback={<PageLoader />}><ApiDocsPage /></Suspense>} />
               <Route path="money" element={<Suspense fallback={<PageLoader />}><MoneyPage /></Suspense>} />
               <Route path="payroll" element={<Suspense fallback={<PageLoader />}><PayrollPage /></Suspense>} />
               <Route path="timesheet" element={<Suspense fallback={<PageLoader />}><TimesheetPage /></Suspense>} />
