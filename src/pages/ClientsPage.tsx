@@ -58,6 +58,8 @@ import { ClientPhotosSection } from "@/components/clients/ClientPhotosSection";
 import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
 import { BookingImportDialog } from "@/components/bookings/BookingImportDialog";
 import { ClientTagsSection } from "@/components/clients/ClientTagsSection";
+import { ClientFieldsSection } from "@/components/clients/ClientFieldsSection";
+import { ClientCrmFilters } from "@/components/clients/ClientCrmFilters";
 import { ClientBalanceSection } from "@/components/clients/ClientBalanceSection";
 import { salonPath } from "@/lib/salonKey";
 
@@ -91,6 +93,7 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [segment, setSegment] = useState<"all" | "new" | "regulars" | "lapsed60" | "cancelled" | "invited">("all");
   const [exporting, setExporting] = useState(false);
+  const [crmIds, setCrmIds] = useState<Set<string> | null>(null);   // FG-W2-05: tag / custom-field filter
   const [sort, setSort] = useState<{ key: "name" | "last" | "visits" | "spent"; dir: "asc" | "desc" }>({ key: "last", dir: "desc" });
   // Rows drawn at once. A salon with thousands of clients drew every one of them twice
   // (table + phone cards) on each render; the rest come in pages of the same size.
@@ -318,6 +321,7 @@ export default function ClientsPage() {
     const fullName = `${client.firstName} ${client.lastName || ""}`.toLowerCase();
     const email = (client.email || "").toLowerCase();
     const phone = (client.phone || "").toLowerCase();
+    if (crmIds && !crmIds.has(String(client.id))) return false;
     return fullName.includes(query) || email.includes(query) || phone.includes(query);
   });
 
@@ -684,6 +688,7 @@ export default function ClientsPage() {
               );
             })}
           </div>
+          <ClientCrmFilters businessId={businessId} onChange={setCrmIds} />
         </div>
 
         <div className="px-4 pt-5 md:px-8">
@@ -1600,6 +1605,7 @@ export default function ClientsPage() {
                         </section>
                         <ClientBalanceSection clientId={c.id} labelClass={label} boxClass={box} />
                         <ClientTagsSection businessId={businessId} clientId={c.id} labelClass={label} boxClass={box} />
+                        <ClientFieldsSection businessId={businessId} clientId={c.id} labelClass={label} boxClass={box} />
                         {record === null ? (
                           <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.loadingRecord")}</p>
                         ) : (

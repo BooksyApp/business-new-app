@@ -77,6 +77,20 @@ export function ClientTagsSection({ businessId, clientId, labelClass, boxClass }
     }
   };
 
+  const editTag = async (tag: ClientTag, patch: Partial<{ name: string; colour: string }>) => {
+    const next = { name: (patch.name ?? tag.name).trim(), colour: patch.colour ?? tag.colour };
+    if (!next.name || (next.name === tag.name && next.colour === tag.colour)) return;
+    setBusy(true);
+    try {
+      await clientTagService.updateTag(businessId, tag.id, next);
+      await load();
+    } catch {
+      toast.error(t("clients.tagRenameError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const removeTag = async (tagId: Id) => {
     setBusy(true);
     try {
@@ -171,11 +185,25 @@ export function ClientTagsSection({ businessId, clientId, labelClass, boxClass }
               {allTags.length === 0 && <p className="text-sm text-[rgb(var(--reg-muted))]">{t("clients.noTagsYet")}</p>}
               {allTags.map((tag) => (
                 <div key={tag.id} className="flex items-center justify-between gap-2">
-                  <label className="flex min-w-0 items-center gap-2 text-sm">
-                    <input type="checkbox" checked={selected.includes(tag.id)} onChange={() => toggle(tag.id)} />
-                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: tag.colour }} />
-                    <span className="truncate">{tag.name}</span>
+                  <label className="flex shrink-0 items-center gap-2 text-sm">
+                    <input type="checkbox" aria-label={tag.name} checked={selected.includes(tag.id)} onChange={() => toggle(tag.id)} />
                   </label>
+                  <input
+                    type="color"
+                    aria-label={t("clients.tagColour")}
+                    defaultValue={tag.colour}
+                    key={`${tag.id}-${tag.colour}`}
+                    onBlur={(e) => void editTag(tag, { colour: e.target.value })}
+                    className="h-8 w-8 shrink-0 cursor-pointer rounded-md border border-[rgb(var(--reg-line))]"
+                  />
+                  <Input
+                    className="h-8 min-w-0 flex-1"
+                    aria-label={t("clients.tagName")}
+                    defaultValue={tag.name}
+                    key={`${tag.id}-${tag.name}`}
+                    maxLength={40}
+                    onBlur={(e) => void editTag(tag, { name: e.target.value })}
+                  />
                   <Button
                     variant="ghost"
                     size="icon"

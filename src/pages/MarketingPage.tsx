@@ -41,6 +41,7 @@ import { useServices } from "@/hooks/useServices";
 import { useNavigation } from "@/utils/navigationUtils";
 import { promoService, type PromoCode } from "@/services/promoService";
 import { useFeatureFlags } from "@/services/platformService";
+import { clientTagService, type ClientTag } from "@/services/clientTagService";
 import { campaignService, type Campaign, type CampaignResults, type AudiencePreview } from "@/services/campaignService";
 import { t as tr, fmtDate as formatLocaleDate, getLocale } from "@/i18n";
 import { AutomationCard } from "@/components/page/AutomationCard";
@@ -53,9 +54,11 @@ import { CAMPAIGN_TEMPLATES, type CampaignTemplate } from "@/lib/campaignTemplat
 
 type PromoType = "PERCENT" | "FIXED";
 type Channel = "EMAIL" | "SMS";
-type Segment = "LAPSED_60D" | "LAPSED_90D" | "TOP_SPENDERS" | "BIRTHDAY_THIS_MONTH" | "ALL_CLIENTS";
+type BaseSegment = "LAPSED_60D" | "LAPSED_90D" | "TOP_SPENDERS" | "BIRTHDAY_THIS_MONTH" | "ALL_CLIENTS";
+// FG-W2-05: "TAG:<tag id>" targets the clients the salon put that tag on.
+type Segment = BaseSegment | `TAG:${string}`;
 
-const SEGMENT_LABEL: Record<Segment, string> = {
+const SEGMENT_LABEL: Record<BaseSegment, string> = {
   get LAPSED_60D() { return tr("marketing.r02SegmentLapsed60"); },
   get LAPSED_90D() { return tr("marketing.segmentLapsed"); },
   get TOP_SPENDERS() { return tr("marketing.segmentTopSpenders"); },
@@ -114,6 +117,11 @@ export default function MarketingPage() {
   }, [businessId, campaigns]);
   const [campaignForm, setCampaignForm] = useState(EMPTY_CAMPAIGN);
   const [audience, setAudience] = useState<AudiencePreview | null>(null);
+  const [clientTags, setClientTags] = useState<ClientTag[]>([]);
+  const segmentLabel = (seg: string) =>
+    seg.startsWith("TAG:")
+      ? tr("marketing.segmentTagNamed", { name: clientTags.find((x) => String(x.id) === seg.slice(4))?.name ?? "?" })
+      : SEGMENT_LABEL[seg as BaseSegment] ?? seg;
   const [campaignBusy, setCampaignBusy] = useState(false);
   const [campaignSheetOpen, setCampaignSheetOpen] = useState(false);
 
@@ -128,6 +136,10 @@ export default function MarketingPage() {
   }, [businessId]);
 
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+  useEffect(() => {
+    if (!businessId) return;
+    clientTagService.tags(businessId).then(setClientTags).catch(() => setClientTags([]));
+  }, [businessId]);
   useEffect(() => { loadPromos(); }, [loadPromos]);
 
   // Recheck the audience whenever the targeting changes, so the size is never stale
@@ -442,7 +454,7 @@ export default function MarketingPage() {
                             <StatusChip status={campaignStatus(c)} label={campaignLabel(c)} />
                           </div>
                           <p className="mt-0.5 truncate text-sm text-[rgb(var(--reg-muted))]">
-                            {c.channel === "SMS" ? "SMS" : tr("common.email")} · {SEGMENT_LABEL[c.segment] ?? c.segment}
+                            {c.channel === "SMS" ? "SMS" : tr("common.email")} · {segmentLabel(c.segment)}
                             {c.status !== "DRAFT" ? " " + tr("marketing.recipientCount", { count: c.recipientCount }) : ""}
                             {c.createdAt ? ` · ${formatLocaleDate(new Date(c.createdAt), { day: "numeric", month: "short" })}` : ""}
                           </p>
@@ -543,6 +555,17 @@ export default function MarketingPage() {
                 { value: "ALL_CLIENTS", label: tr("marketing.segmentAllClients"), hint: tr("marketing.segmentAllClientsHint") },
               ]}
             />
+            {clientTags.length > 0 && (
+              <select
+                className={cn(fieldCls, "mt-2")}
+                aria-label={tr("marketing.segmentByTag")}
+                value={campaignForm.segment.startsWith("TAG:") ? campaignForm.segment : ""}
+                onChange={(e) => setCampaignForm((f) => ({ ...f, segment: (e.target.value || "LAPSED_90D") as Segment }))}
+              >
+                <option value="">{tr("marketing.segmentByTagNone")}</option>
+                {clientTags.map((x) => <option key={x.id} value={`TAG:${x.id}`}>{tr("marketing.segmentTagNamed", { name: x.name })}</option>)}
+              </select>
+            )}
           </Field>
           {campaignForm.channel === "EMAIL" && (
             <Field label={tr("marketing.subject")} htmlFor="cmp-subject">
