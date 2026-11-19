@@ -17,6 +17,7 @@ const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SalesPage = lazy(() => import("./pages/SalesPage"));
 const MoneyPage = lazy(() => import("./pages/MoneyPage"));
 const PromotionPage = lazy(() => import("./pages/PromotionPage"));
+const BillingPage = lazy(() => import("./pages/BillingPage"));
 const ItemsCategoryPage = lazy(() => import("./pages/ItemsCategoryPage"));
 const AddServicePage = lazy(() => import("./pages/AddServicePage"));
 const AddComboServicePage = lazy(() => import("./pages/AddComboServicePage"));
@@ -285,6 +286,7 @@ const App = () => (
               <Route path="my-day" element={<Suspense fallback={<PageLoader />}><MyDayPage /></Suspense>} />
               <Route path="expenses" element={<Suspense fallback={<PageLoader />}><ExpensesPage /></Suspense>} />
               <Route path="promotion" element={<Suspense fallback={<PageLoader />}><PromotionPage /></Suspense>} />
+              <Route path="billing" element={<Suspense fallback={<PageLoader />}><BillingPage /></Suspense>} />
               <Route path="staff" element={<Suspense fallback={<PageLoader />}><StaffPage /></Suspense>} />
               <Route path="staff-targets" element={<Suspense fallback={<PageLoader />}><StaffTargetsPage /></Suspense>} />
               <Route path="gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCardsPage /></Suspense>} />

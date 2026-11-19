@@ -238,6 +238,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     R("bookingRules.paymentMethods", "setup.paymentMethodsHint", "/setup/payment-methods", CreditCard),
     R("setup.currencyTax", "setup.whatYourPricesAreIn", "/setup/currency-tax", Receipt),
     R("nav.set.onlineSales", "onlineSales.navSettingsHint", "/setup/online-sales", Gift),
+    R("billing.navRow", "billing.navHint", "/billing", Wallet),
   ]),
   S("notifications", "setup.notifications", "setup.whatClientsHearFromYou", Bell, [
     R("setup.emailReminders", "setup.confirmationsAndReminderTiming", "/setup/email", Mail),
@@ -447,6 +448,7 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/payroll": ["MONEY"],
   "/expenses": ["MONEY"],
   "/promotion": null,
+  "/billing": null,
   "/clients": ["CLIENTS_VIEW"],
   "/referral-program": ["MARKETING"],
   "/marketing": ["MARKETING"],

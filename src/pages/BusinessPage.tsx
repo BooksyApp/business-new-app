@@ -86,8 +86,6 @@ export default function BusinessPage() {
   // all. Plan keys come from the server (stripe.billing.plans); hardcoding a list here
   // would drift from the configuration silently.
   const [subscription, setSubscription] = useState<SubscriptionStatus | null>(null);
-  const [plans, setPlans] = useState<string[]>([]);
-  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [ratingSummary, setRatingSummary] = useState<RatingSummary | null>(null);
 
@@ -110,7 +108,6 @@ export default function BusinessPage() {
     const id = getCurrentBusinessId();
     if (!id) return;
     subscriptionService.getStatus(id).then(setSubscription).catch(() => setSubscription(null));
-    subscriptionService.getPlans().then((p) => setPlans(p || [])).catch(() => setPlans([]));
   }, []);
 
   // Back from Stripe: the billing webhook activates the plan, which can trail the redirect by
@@ -127,19 +124,6 @@ export default function BusinessPage() {
     }, 2500);
     return () => clearInterval(timer);
   }, [subscribedFlag, subscriptionActive]);
-
-  const startCheckout = async (planKey: string) => {
-    const id = getCurrentBusinessId();
-    if (!id) return;
-    setCheckoutBusy(true);
-    try {
-      // Stripe hosts the payment page; leaving the app is the intended flow.
-      window.location.href = await subscriptionService.createCheckout(id, planKey);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : t("business.couldNotStartCheckout"));
-      setCheckoutBusy(false);
-    }
-  };
 
   // The salon's page on the public site — same host, /salon/{id} (booqi-web). It used to
   // be a made-up "<name>.booksy.com" that Share and Preview sent customers to.
@@ -492,21 +476,9 @@ export default function BusinessPage() {
                     t("business.noActiveSubscription")
                   )}
                 </p>
-                {plans.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {plans.map((planKey) => (
-                      <Button
-                        key={planKey}
-                        variant="outline"
-                        className={secondaryBtn}
-                        disabled={checkoutBusy || subscription?.planKey === planKey}
-                        onClick={() => startCheckout(planKey)}
-                      >
-                        {subscription?.planKey === planKey ? t("business.planCurrent", { planKey }) : t("business.choose", { planKey })}
-                      </Button>
-                    ))}
-                  </div>
-                )}
+                <Button variant="outline" className={`${secondaryBtn} mt-3`} onClick={() => navigate(getPath("billing"))}>
+                  {t("billing.manage")}
+                </Button>
               </section>
             </aside>
           </div>

@@ -112,9 +112,143 @@
     "needLabel": "Hər sualın adı olmalıdır.",
     "needOptions": "Tək seçimli sualda ən azı iki variant olmalıdır."
   },
+  "billing": {
+    "navRow": "Ödənişlər və tarif",
+    "navHint": "booqi tarifiniz, hesablar, komissiya və mesaj paketləri",
+    "manage": "Tarifi və ödənişləri idarə et",
+    "title": "Ödənişlər",
+    "subtitle": "Tarifiniz, hesablar, marketplace komissiyası və mesaj paketləri.",
+    "loading": "Yüklənir…",
+    "loadFailed": "Ödəniş məlumatları yüklənmədi.",
+    "retry": "Yenidən yoxla",
+    "failed": "Alınmadı. Bir az sonra yenidən cəhd edin.",
+    "notConfigured": "Ödənişlər hələ qoşulmayıb",
+    "notConfiguredBody": "Ölkəniz üçün onlayn ödəniş hələ qoşulmayıb, ona görə tarif və paketləri hələlik buradan almaq olmur. Heç bir məbləğ tutulmur.",
+    "current": {
+      "title": "Cari tarif",
+      "none": "Hələ aktiv tarifiniz yoxdur. Aşağıdan birini seçin.",
+      "trialUntil": "Pulsuz sınaq müddəti {date} tarixinədək.",
+      "renews": "{date} tarixində yenilənəcək.",
+      "endsOn": "Tarif yenilənməyəcək və {date} tarixində başa çatacaq. Bundan əvvəl onu bərpa edə bilərsiniz.",
+      "pastDue": "Son ödəniş alınmadı. Hesabınızın məhdudlaşdırılmaması üçün ödəniş üsulunu {date} tarixinədək yeniləyin.",
+      "restricted": "Ödəniş gecikib və hesabınız məhdudlaşdırılıb. Tam girişi bərpa etmək üçün ödəniş üsulunu yeniləyin.",
+      "cancel": "Tarifi ləğv et",
+      "resume": "Tarifi bərpa et"
+    },
+    "status": {
+      "NONE": "Tarif yoxdur",
+      "TRIALING": "Pulsuz sınaq",
+      "ACTIVE": "Aktiv",
+      "PAST_DUE": "Ödəniş gecikib",
+      "CANCELLED": "Ləğv edilib",
+      "INCOMPLETE": "Ödəniş gözlənilir"
+    },
+    "cancel": {
+      "title": "Tarifi ləğv edək?",
+      "body": "{date} tarixinədək bütün imkanlar qalır. Sonra tarif yenilənməyəcək.",
+      "go": "Tarifi ləğv et"
+    },
+    "plans": {
+      "title": "Tarif seçin",
+      "none": "Hazırda mövcud tarif yoxdur.",
+      "perMonth": "{price} / ay",
+      "free": "Pulsuz",
+      "trial": "{days} gün pulsuz sınaq",
+      "staff": "{count} nəfərə qədər komanda",
+      "unlimitedStaff": "Komanda üçün limit yoxdur",
+      "current": "Cari tarifiniz",
+      "choose": "Seç",
+      "startTrial": "Pulsuz sınağa başla",
+      "upgrade": "Yüksəlt",
+      "downgrade": "Aşağı tarifə keç"
+    },
+    "confirm": {
+      "title": "{plan} tarifinə keçək?",
+      "start": "Kart məlumatlarını daxil etmək üçün təhlükəsiz ödəniş səhifəsinə yönləndiriləcəksiniz. Qiymət: {price} / ay; pulsuz sınaq günləri varsa, əvvəlcə onlar keçir.",
+      "upgrade": "Yuxarı tarif dərhal başlayır. Qiymət fərqi ({price} / ay) cari dövrün qalan hissəsi üçün mütənasib tutulur.",
+      "downgrade": "Aşağı tarif cari dövrün sonunda qüvvəyə minir; o vaxta qədər indiki imkanlarınız qalır.",
+      "back": "Geri",
+      "go": "Təsdiq et"
+    },
+    "toast": {
+      "changed": "Tarif yeniləndi",
+      "freeActivated": "Pulsuz tarif aktivləşdirildi",
+      "cancelScheduled": "Tarif cari dövrün sonunda başa çatacaq",
+      "resumed": "Tarif bərpa olundu"
+    },
+    "next": {
+      "title": "Növbəti hesab",
+      "none": "Yaxın hesab yoxdur.",
+      "on": "Tarix: {date}",
+      "plan": "Tarif",
+      "commission": "Marketplace komissiyası",
+      "total": "Cəmi",
+      "estimate": "Bu təxmini məbləğdir: komissiya hissəsi yeni rezervasiyalar gəldikcə dəyişir."
+    },
+    "invoices": {
+      "title": "Hesablar",
+      "none": "Hələ hesab yoxdur.",
+      "number": "Nömrə",
+      "period": "Dövr",
+      "amount": "Məbləğ",
+      "status": "Status",
+      "open": "Aç",
+      "st": {
+        "DRAFT": "Qaralama",
+        "OPEN": "Ödənilməyib",
+        "PAID": "Ödənilib",
+        "VOID": "Ləğv edilib",
+        "UNCOLLECTIBLE": "Tutulmayıb"
+      }
+    },
+    "commission": {
+      "title": "Marketplace komissiyası",
+      "explain": "booqi marketplace vasitəsilə sizə gətirdiyi yeni müştərilərdən yalnız {pct}% komissiya götürür. Mövcud müştərilərinizdən və öz linkiniz ya QR kodunuzla gələn rezervasiyalardan heç vaxt komissiya tutulmur.",
+      "current": "{month}: hazırda hesablanır",
+      "summary": "{bookings} rezervasiya, cəmi {base}, {pct}%",
+      "none": "Keçmiş ay hələ yoxdur.",
+      "row": "{bookings} rezervasiya · {pct}%",
+      "st": {
+        "PENDING": "Hələ hesaba daxil edilməyib",
+        "INVOICED": "Hesaba daxil edilib"
+      },
+      "noLines": "Bu ayda rezervasiya yoxdur.",
+      "lineDate": "Tarix",
+      "linePrice": "Rezervasiya məbləği",
+      "lineCommission": "Komissiya"
+    },
+    "messages": {
+      "title": "Mesaj paketləri",
+      "notLive": "Müştərilərə WhatsApp və SMS göndərmə hələ aktiv deyil. Paketləri indidən ala bilərsiniz, göndərmə başlayanda balans saxlanılacaq.",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "quantity": "{count} mesaj",
+      "buy": "{price} - ə al",
+      "noPacks": "Hazırda paket yoxdur.",
+      "history": "Alışlar",
+      "st": {
+        "PENDING": "Ödəniş gözlənilir",
+        "PAID": "Ödənilib",
+        "FAILED": "Alınmayıb",
+        "CANCELLED": "Ləğv edilib",
+        "EXPIRED": "Vaxtı bitib"
+      }
+    },
+    "return": {
+      "messages": "Ödəniş qəbul olundu. Təsdiqlənən kimi mesaj balansınız yenilənəcək."
+    },
+    "dunning": {
+      "body": "Son ödəniş alınmadı. Hesabın məhdudlaşdırılmaması üçün ödəniş üsulunu {date} tarixinədək yeniləyin.",
+      "restricted": "Ödəniş gecikib və hesabınız məhdudlaşdırılıb. Tam girişi bərpa etmək üçün ödəniş üsulunu yeniləyin.",
+      "cta": "Ödənişlərə keç"
+    }
+  },
   "marketplacePromotion": {
+    "statusOn": "Önə çıxarılır",
+    "statusOff": "Önə çıxarılmır",
+    "buy": "Təbliğat paketi al",
     "title": "Marketplace promosiyası",
-    "hint": "Marketplace-də adla axtarışda bərabər nəticələr arasında salonunuz öndə çıxır. Pulsuzdur: heç nə ödənilmir.",
+    "hint": "Təbliğat paketi aktiv olduğu müddətdə salonunuz marketplace-də ad axtarışında bərabər nəticələr arasında birinci çıxır.",
     "turnOn": "Aç",
     "turnOff": "Söndür",
     "on": "Marketplace promosiyası açıldı",
@@ -2496,6 +2630,11 @@
     "keepIt": "Saxla"
   },
   "promotion": {
+    "pendingPackage": "{days} günlük paket ({value}) sifariş olunub, amma hələ ödənilməyib. Başlamaq üçün ödənişi tamamlayın və ya sifarişi ləğv edin.",
+    "packageDays": "{days} gün",
+    "packageForecast": "Gündə təxminən {value} nəfər salonunuzu görəcək.",
+    "freeGrant": "Pulsuz (booqi tərəfindən hədiyyə)",
+    "noPackages": "Hazırda satışda paket yoxdur.",
     "couldNotLoadPromotions": "Reklamları yükləmək alınmadı",
     "couldNotStartThePurchase": "Ödənişə başlamaq alınmadı",
     "thatDidNotWork": "Alınmadı",

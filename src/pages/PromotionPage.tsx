@@ -11,14 +11,18 @@ import { getCurrentBusinessId } from "@/config/api";
 import { salonPath } from "@/lib/salonKey";
 import { PaymentReturnBanner } from "@/components/page/PaymentReturnBanner";
 import { formatPrice } from "@/lib/currency";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   promotionService,
+  type PromotionPackage,
   type PromotionQuote,
   type PromotionRow,
 } from "@/services/promotionService";
-import { t, fmtDate as formatLocaleDate } from "@/i18n";
+import { t, getLocale, fmtDate as formatLocaleDate } from "@/i18n";
+
+const packageName = (p: PromotionPackage) => {
+  const l = getLocale();
+  return (l === "az" ? p.nameAz : l === "ru" ? p.nameRu : p.nameEn) || p.nameEn;
+};
 
 /**
  * Paying to be seen, and seeing what it bought.
@@ -36,9 +40,6 @@ export default function PromotionPage() {
   const businessId = getCurrentBusinessId();
   const [quote, setQuote] = useState<PromotionQuote | null>(null);
   const [history, setHistory] = useState<PromotionRow[]>([]);
-  const [dailyBudget, setDailyBudget] = useState("");
-  const [days, setDays] = useState("7");
-  const [liveBudget, setLiveBudget] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [searchParams] = useSearchParams();
@@ -48,9 +49,6 @@ export default function PromotionPage() {
     try {
       const rows = await promotionService.history(businessId);
       setHistory(rows);
-      const running = rows.find((r) => r.status === "ACTIVE" || r.status === "PAUSED");
-      // Seeded from the server once, never overwritten while the salon is mid-edit.
-      setLiveBudget((prev) => (prev === "" && running ? String(running.dailyBudget) : prev));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("promotion.couldNotLoadPromotions"));
     }
@@ -73,28 +71,17 @@ export default function PromotionPage() {
     return () => clearInterval(id);
   }, [returnFlag, activated, load]);
 
-  // Re-quoted as the numbers change, debounced: the forecast is the product here, and one
-  // that only appears after committing is not a forecast.
   useEffect(() => {
-    const rate = Number(dailyBudget);
-    const timer = setTimeout(() => {
-      promotionService
-        .quote(businessId, Number.isFinite(rate) && rate > 0 ? rate : undefined, Number(days) || 7)
-        .then((q) => {
-          setQuote(q);
-          // First load: start the field at the platform's floor rather than empty, so the
-          // forecast has something to describe.
-          setDailyBudget((prev) => (prev === "" ? String(q.minDaily) : prev));
-        })
-        .catch((e) => setError(e instanceof Error ? e.message : t("promotion.couldNotLoadPromotions")));
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [businessId, dailyBudget, days]);
+    promotionService
+      .quote(businessId)
+      .then(setQuote)
+      .catch((e) => setError(e instanceof Error ? e.message : t("promotion.couldNotLoadPromotions")));
+  }, [businessId]);
 
-  const buy = async () => {
+  const buy = async (packageId: PromotionPackage["id"]) => {
     setBusy(true);
     try {
-      const reserved = await promotionService.buy(businessId, Number(dailyBudget), Number(days) || 7);
+      const reserved = await promotionService.buy(businessId, packageId);
       // Reserved first, paid second: a Stripe session created before the reservation
       // exists leaves nothing behind when the salon abandons the page.
       const { checkoutUrl } = await promotionService.checkout(
@@ -164,7 +151,7 @@ export default function PromotionPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                {t("promotion.aCampaignAtADay", { value: formatPrice(pending.dailyBudget), days: pending.days })}
+                {t("promotion.pendingPackage", { value: formatPrice(pending.amount), days: pending.days })}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
@@ -243,27 +230,6 @@ export default function PromotionPage() {
               ) : null}
 
               <div className="flex flex-wrap items-end gap-3">
-                <div className="w-40">
-                  <Label htmlFor="liveBudget">{t("promotion.dailyBudget")}</Label>
-                  <Input
-                    id="liveBudget"
-                    inputMode="decimal"
-                    value={liveBudget}
-                    onChange={(e) => setLiveBudget(e.target.value)}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  disabled={busy || !liveBudget || Number(liveBudget) === live.dailyBudget}
-                  onClick={() =>
-                    void act(
-                      () => promotionService.setBudget(businessId, live.id, Number(liveBudget)),
-                      t("promotion.dailyBudgetUpdated")
-                    )
-                  }
-                >
-                  {t("promotion.saveBudget")}
-                </Button>
                 {live.status === "ACTIVE" ? (
                   <Button
                     variant="outline"
@@ -288,9 +254,6 @@ export default function PromotionPage() {
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {t("promotion.aNewBudgetAppliesTo")}
-              </p>
             </CardContent>
           </Card>
         ) : null}
@@ -307,66 +270,28 @@ export default function PromotionPage() {
                 {t("promotion.yourSalonAppearsAtThe")}{" "}
                 {t("promotion.markedAsPromotedYouSet", { value: quote.countryCode ?? t("promotion.yourCountry") })}
               </p>
-
-              <>
-                  <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {quote.packages.map((p) => (
+                  <div key={p.id} className="flex flex-col gap-3 rounded-lg border p-4">
                     <div>
-                      <Label htmlFor="dailyBudget">{t("promotion.dailyBudget")}</Label>
-                      <Input
-                        id="dailyBudget"
-                        inputMode="decimal"
-                        value={dailyBudget}
-                        onChange={(e) => setDailyBudget(e.target.value)}
-                        placeholder={String(quote.minDaily)}
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("promotion.minimumADay", { value: formatPrice(quote.minDaily) })}
-                      </p>
+                      <p className="font-semibold">{packageName(p)}</p>
+                      <p className="text-sm text-muted-foreground">{t("promotion.packageDays", { days: p.days })}</p>
                     </div>
-                    <div>
-                      <Label htmlFor="days">{t("promotion.days")}</Label>
-                      <Input
-                        id="days"
-                        inputMode="numeric"
-                        value={days}
-                        onChange={(e) => setDays(e.target.value)}
-                        placeholder="7"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("promotion.upToEnds", { maxDays: quote.maxDays, endsOn: quote.endsOn })}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* The forecast, or an honest admission that there is not one yet. A
-                      salon quoted a number and given a fifth of it does not buy a second
-                      run, so an invented figure costs more than a blank. */}
-                  <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-                    {quote.forecastKnown ? (
-                      <>
-                        <span className="font-medium">
-                          {t("promotion.aboutPeopleADay", { value: quote.forecastPerDay.toLocaleString() })}
-                        </span>{" "}
-                        <span className="text-muted-foreground">
-                          {t("promotion.seeYourSalonAtThis")}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {t("promotion.noPromotionHasRunHere")}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Button onClick={() => void buy()} disabled={busy || !dailyBudget}>
-                      {busy ? t("promotion.openingPayment") : t("promotion.promoteFor", { value: formatPrice(quote.total) })}
+                    {/* A forecast, or an honest admission that there is not one yet. */}
+                    <p className="flex-1 text-xs text-muted-foreground">
+                      {p.forecastKnown
+                        ? t("promotion.packageForecast", { value: p.forecastPerDay.toLocaleString() })
+                        : t("promotion.noPromotionHasRunHere")}
+                    </p>
+                    <Button disabled={busy} onClick={() => void buy(p.id)}>
+                      {busy ? t("promotion.openingPayment") : t("promotion.promoteFor", { value: formatPrice(p.price) })}
                     </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {t("promotion.days2", { value: formatPrice(quote.dailyBudget), days: quote.days })}
-                    </span>
                   </div>
-              </>
+                ))}
+              </div>
+              {quote.packages.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("promotion.noPackages")}</p>
+              ) : null}
             </CardContent>
           </Card>
         ) : null}
@@ -386,7 +311,7 @@ export default function PromotionPage() {
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="py-2 font-medium">{t("common.period")}</th>
-                      <th className="py-2 font-medium">{t("promotion.rate")}</th>
+                      <th className="py-2 font-medium">{t("promotion.days")}</th>
                       <th className="py-2 font-medium">{t("common.paid")}</th>
                       <th className="py-2 font-medium">{t("promotion.seen")}</th>
                       <th className="py-2 font-medium">{t("promotion.tapped")}</th>
@@ -409,9 +334,17 @@ export default function PromotionPage() {
                             {formatLocaleDate(new Date(row.endsAt), { year: "numeric", month: "numeric", day: "numeric" })}
                           </td>
                           <td className="py-2 text-muted-foreground">
-                            {t("promotion.day", { value: formatPrice(row.dailyBudget) })}
+                            {row.days}
                           </td>
-                          <td className="py-2">{formatPrice(row.amount)}</td>
+                          <td className="py-2">
+                            {row.source === "FREE_GRANT" ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                                {t("promotion.freeGrant")}
+                              </span>
+                            ) : (
+                              formatPrice(row.amount)
+                            )}
+                          </td>
                           <td className="py-2">
                             <span className="inline-flex items-center gap-1.5">
                               <Eye className="h-3.5 w-3.5 text-muted-foreground" />

@@ -9,6 +9,19 @@ import { apiClient } from '@/config/api';
  * another.
  */
 
+/** A fixed-price placement the salon can buy: a number of days at a set price. */
+export interface PromotionPackage {
+  id: Id;
+  nameAz: string;
+  nameEn: string;
+  nameRu: string;
+  days: number;
+  price: number;
+  currency: string | null;
+  forecastKnown: boolean;
+  forecastPerDay: number;
+}
+
 export interface PromotionQuote {
   /** Whether the platform is selling it at all right now. */
   enabled: boolean;
@@ -32,6 +45,8 @@ export interface PromotionQuote {
   forecastPerDay: number;
   /** A salon cannot stack two runs; this is what the panel branches on. */
   alreadyRunning: boolean;
+  /** What can be bought. Fixed packages replaced the daily-budget model. */
+  packages: PromotionPackage[];
 }
 
 export interface PromotionRow {
@@ -43,6 +58,8 @@ export interface PromotionRow {
   days: number;
   amount: number;
   currency: string | null;
+  /** 'FREE_GRANT': booqi gave this run to the salon, nothing was paid. */
+  source: 'PAID' | 'FREE_GRANT';
   status: 'PENDING' | 'ACTIVE' | 'PAUSED' | 'ENDED' | 'CANCELLED';
   countryCode: string | null;
   impressions: number;
@@ -58,21 +75,14 @@ export interface PromotionDay {
 }
 
 export const promotionService = {
-  /**
-   * What a daily budget is likely to buy. Re-read as the salon changes the number: the
-   * whole point of a budget model is that the answer moves with it.
-   */
-  quote: (businessId: Id, dailyBudget?: number, days = 7) => {
-    const q = new URLSearchParams({ days: String(days) });
-    if (dailyBudget != null) q.set('dailyBudget', String(dailyBudget));
-    return apiClient.get<PromotionQuote>(`/businesses/${businessId}/promotion?${q.toString()}`);
-  },
+  /** The packages on sale, and whether placement is on at all. */
+  quote: (businessId: Id) => apiClient.get<PromotionQuote>(`/businesses/${businessId}/promotion`),
 
-  /** Reserve a run. Returns it PENDING — placement starts once the money lands. */
-  buy: (businessId: Id, dailyBudget: number, days: number) =>
+  /** Reserve a package. Returns it PENDING — placement starts once the money lands. */
+  buy: (businessId: Id, packageId: Id) =>
     apiClient.post<{ id: Id; amount: number; currency: string | null; endsAt: string }>(
       `/businesses/${businessId}/promotion`,
-      { dailyBudget, days }
+      { packageId }
     ),
 
   /** The Stripe page that pays for a reservation. */
@@ -92,13 +102,6 @@ export const promotionService = {
 
   resume: (businessId: Id, promotionId: Id) =>
     apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/resume`, {}),
-
-  /** Change what a running campaign spends a day. Applies to the days still to come. */
-  setBudget: (businessId: Id, promotionId: Id, dailyBudget: number) =>
-    apiClient.post<unknown>(`/businesses/${businessId}/promotion/${promotionId}/budget`, {
-      dailyBudget,
-      days: 0,
-    }),
 
   history: (businessId: Id) =>
     apiClient.get<PromotionRow[]>(`/businesses/${businessId}/promotion/history`),

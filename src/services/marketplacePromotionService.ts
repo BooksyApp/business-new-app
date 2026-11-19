@@ -7,14 +7,10 @@ export interface MarketplacePromotion {
   daily: { date: string; bookings: number }[];
 }
 
-/** FG-W4-11: the salon's marketplace promotion switch, and its marketplace bookings by day. */
+/** FG-W4-11: the salon's marketplace promotion status (derived from an active promotion), and its marketplace bookings by day. */
 class MarketplacePromotionService {
   get(businessId: Id): Promise<MarketplacePromotion> {
     return apiClient.get<MarketplacePromotion>(`/businesses/${businessId}/marketplace-promotion`);
-  }
-
-  set(businessId: Id, promoted: boolean): Promise<MarketplacePromotion> {
-    return apiClient.put<MarketplacePromotion>(`/businesses/${businessId}/marketplace-promotion`, { promoted });
   }
 }
 

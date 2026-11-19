@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { MobileTabBar, MobileTopBar, Sidebar } from "./Sidebar";
 import { InstallAppBanner } from "./InstallAppBanner";
+import { DunningBanner } from "./DunningBanner";
 import { QuickSearch } from "./QuickSearch";
 import { PageTrail } from "./PageTrail";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -42,6 +43,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar collapsed={collapsed} onToggle={toggle} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />
+        <DunningBanner />
         <InstallAppBanner />
         {base && <PageTrail base={base} current={rel} />}
         {/* On a phone the floating tab bar sits over the bottom; keep content clear of it. */}

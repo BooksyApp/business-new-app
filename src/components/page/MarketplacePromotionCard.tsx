@@ -1,33 +1,20 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { t as tr } from "@/i18n";
 import { marketplacePromotionService, type MarketplacePromotion } from "@/services/marketplacePromotionService";
+import { salonPath } from "@/lib/salonKey";
 import type { Id } from "@/types/id";
 
-/** FG-W4-11: the salon opts in to marketplace promotion. Free, no payment; the daily bars are marketplace bookings. */
+/** FG-W4-11: read-only marketplace promotion status. It is on while a promotion package is active; buying one happens on the promotion page. The daily bars are marketplace bookings. */
 export function MarketplacePromotionCard({ businessId }: { businessId: Id }) {
   const [state, setState] = useState<MarketplacePromotion | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     marketplacePromotionService.get(businessId).then(setState).catch(() => setState(null));
   }, [businessId]);
 
   if (state === null) return null;
-
-  const toggle = async () => {
-    setBusy(true);
-    try {
-      const next = await marketplacePromotionService.set(businessId, !state.promoted);
-      setState(next);
-      toast.success(tr(next.promoted ? "marketplacePromotion.on" : "marketplacePromotion.off"));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : tr("marketplacePromotion.failed"));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const max = Math.max(1, ...state.daily.map((d) => d.bookings));
   const total = state.daily.reduce((n, d) => n + d.bookings, 0);
@@ -39,10 +26,17 @@ export function MarketplacePromotionCard({ businessId }: { businessId: Id }) {
           <p className="text-sm font-semibold">{tr("marketplacePromotion.title")}</p>
           <p className="text-xs text-muted-foreground">{tr("marketplacePromotion.hint")}</p>
         </div>
-        <Button variant={state.promoted ? "outline" : "default"} size="sm" disabled={busy} onClick={() => void toggle()}>
-          {state.promoted ? tr("marketplacePromotion.turnOff") : tr("marketplacePromotion.turnOn")}
-        </Button>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${state.promoted ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}
+        >
+          {state.promoted ? tr("marketplacePromotion.statusOn") : tr("marketplacePromotion.statusOff")}
+        </span>
       </div>
+      {!state.promoted && (
+        <Button asChild size="sm">
+          <Link to={salonPath(businessId, "promotion")}>{tr("marketplacePromotion.buy")}</Link>
+        </Button>
+      )}
       {state.promoted && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">{tr("marketplacePromotion.daily")}</p>
