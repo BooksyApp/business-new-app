@@ -36,6 +36,8 @@
     "backToLocations": "Back to salons"
   },
   "shc": {
+    "includeOwn": "Include clients of this salon",
+    "otherSalonsVisits": "Visits in your other salons ({count})",
     "title": "Clients of my other salons",
     "hint": "Shared by you across your salons. Consent answers stay private.",
     "shareSwitch": "Share clients across my salons",

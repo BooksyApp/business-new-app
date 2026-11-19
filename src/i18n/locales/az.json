@@ -36,6 +36,8 @@
     "backToLocations": "Salonlara qayıt"
   },
   "shc": {
+    "includeOwn": "Bu salonun müştərilərini də göstər",
+    "otherSalonsVisits": "Digər salonlarınızdakı ziyarətlər ({count})",
     "title": "Digər salonlarımın müştəriləri",
     "hint": "Sahib olduğunuz salonlar arasında paylaşılır. Razılıq cavabları gizli qalır.",
     "shareSwitch": "Müştəriləri salonlarım arasında paylaş",

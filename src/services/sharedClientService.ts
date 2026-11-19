@@ -14,6 +14,21 @@ export interface SharedClientRow {
   visits: number | null;
   lastVisit: string | null;
   alreadyAdded: boolean;
+  /** True for a client of the salon being worked in (only when searched with includeOwn). */
+  ownSalon?: boolean;
+}
+
+/** One visit of a client in any of the owner's salons. */
+export interface OwnerVisitRow {
+  appointment_date: string;
+  start_time: string;
+  end_time?: string | null;
+  status: string;
+  price?: number | null;
+  service_name?: string | null;
+  staff_name?: string | null;
+  salonId: Id;
+  salon_name: string;
 }
 
 export const sharedClientService = {
@@ -25,8 +40,15 @@ export const sharedClientService = {
     return apiClient.put<{ shareClients: boolean }>("/clients/sharing", { shareClients });
   },
 
-  search(businessId: Id, q: string): Promise<SharedClientRow[]> {
-    return apiClient.get<SharedClientRow[]>(`/clients/shared?businessId=${encodeURIComponent(String(businessId))}&q=${encodeURIComponent(q)}`);
+  search(businessId: Id, q: string, includeOwn = false): Promise<SharedClientRow[]> {
+    return apiClient.get<SharedClientRow[]>(
+      `/clients/shared?businessId=${encodeURIComponent(String(businessId))}&q=${encodeURIComponent(q)}${includeOwn ? "&includeOwn=true" : ""}`,
+    );
+  },
+
+  /** The client's visits across all the owner's salons (owner only; empty for anyone else). */
+  visits(businessId: Id, clientId: Id): Promise<OwnerVisitRow[]> {
+    return apiClient.get<OwnerVisitRow[]>(`/clients/shared/${encodeURIComponent(String(clientId))}/visits?businessId=${encodeURIComponent(String(businessId))}`);
   },
 
   adopt(businessId: Id, clientId: Id): Promise<{ id: Id }> {

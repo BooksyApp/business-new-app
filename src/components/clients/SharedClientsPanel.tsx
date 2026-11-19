@@ -18,6 +18,7 @@ export function SharedClientsPanel({ businessId }: { businessId: Id }) {
   const [sharing, setSharing] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [includeOwn, setIncludeOwn] = useState(false);
   const [rows, setRows] = useState<SharedClientRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -35,12 +36,12 @@ export function SharedClientsPanel({ businessId }: { businessId: Id }) {
     if (!open || !sharing) return;
     const handle = window.setTimeout(() => {
       sharedClientService
-        .search(businessId, q)
+        .search(businessId, q, includeOwn)
         .then(setRows)
         .catch(() => setRows([]));
     }, 250);
     return () => window.clearTimeout(handle);
-  }, [open, sharing, q, businessId]);
+  }, [open, sharing, q, businessId, includeOwn]);
 
   if (!multiSalon) return null;
 
@@ -105,6 +106,10 @@ export function SharedClientsPanel({ businessId }: { businessId: Id }) {
             aria-label={t("shc.searchPlaceholder")}
             className="h-10 w-full rounded-full bg-[rgb(var(--reg-canvas))] px-4 text-sm outline-none ring-1 ring-[rgb(var(--reg-line))] focus:ring-2"
           />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={includeOwn} onChange={(e) => setIncludeOwn(e.target.checked)} />
+            {t("shc.includeOwn")}
+          </label>
           {rows.length === 0 ? (
             <p className="text-sm text-[rgb(var(--reg-muted))]">{t("shc.none")}</p>
           ) : (
@@ -127,11 +132,11 @@ export function SharedClientsPanel({ businessId }: { businessId: Id }) {
                   </div>
                   <button
                     type="button"
-                    disabled={r.alreadyAdded || busyId === String(r.id)}
+                    disabled={r.alreadyAdded || r.ownSalon || busyId === String(r.id)}
                     onClick={() => add(r)}
                     className="h-9 rounded-full px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] disabled:opacity-50"
                   >
-                    {r.alreadyAdded ? t("shc.alreadyHere") : t("shc.addHere")}
+                    {r.ownSalon || r.alreadyAdded ? t("shc.alreadyHere") : t("shc.addHere")}
                   </button>
                 </li>
               ))}

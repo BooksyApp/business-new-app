@@ -43,6 +43,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
 import { consentFormService, type ClientConsentSubmission } from "@/services/consentFormService";
 import { membershipService } from "@/services/membershipService";
+import { OtherSalonsVisits } from "@/components/clients/OtherSalonsVisits";
 import { SharedClientsPanel } from "@/components/clients/SharedClientsPanel";
 import { salonDayService, type ClientRecord, type NoteKind } from "@/services/salonDayService";
 import { useServices } from "@/hooks/useServices";
@@ -1561,6 +1562,7 @@ export default function ClientsPage() {
                       </>
                     )
                   )}
+                  {profileTab === "bookings" && !pending && Boolean(c?.id) && businessId ? <OtherSalonsVisits businessId={businessId} clientId={c.id} /> : null}
 
                   {profileTab === "notes" && (
                     !c.id ? (
