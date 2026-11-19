@@ -5,6 +5,7 @@ import { DollarSign, TrendingUp, Clock, CreditCard } from "lucide-react";
 import { format } from "@/i18n/dateFns";
 import type { RevenueAnalytics } from "@/services/analysisService";
 import { t } from "@/i18n";
+import RevenuePlanCard from "@/components/analytics/RevenuePlanCard";
 
 interface RevenueTabProps {
   data: RevenueAnalytics;
@@ -14,6 +15,7 @@ interface RevenueTabProps {
 export default function RevenueTab({ data }: RevenueTabProps) {
   return (
     <div className="space-y-6">
+      <RevenuePlanCard />
       {/* Key Metrics */}
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60 shadow-sm">

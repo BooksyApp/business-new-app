@@ -2839,6 +2839,20 @@
     "navHint": "Kim nəyi nə vaxt dəyişib",
     "exportCapped": "Yalnız ilk 500 qeyd ixrac olundu — qalanı üçün tarixi daraldın"
   },
+  "revenuePlan": {
+    "title": "Gəlir planı",
+    "subtitle": "Aylıq plan və ayın faktiki gəliri",
+    "prevYear": "Əvvəlki il",
+    "nextYear": "Növbəti il",
+    "month": "Ay",
+    "plan": "Plan",
+    "actual": "Fakt",
+    "achieved": "İcra",
+    "save": "Planı saxla",
+    "saveFailed": "Plan saxlanılmadı",
+    "loadFailed": "Plan yüklənmədi",
+    "totals": "İli üzrə plan: {plan} · fakt: {actual}"
+  },
   "staffTargets": {
     "title": "Usta hədəfləri",
     "subtitle": "Hər ustanın aylıq gəlir və vizit hədəfi, ayın indiki vəziyyəti ilə",

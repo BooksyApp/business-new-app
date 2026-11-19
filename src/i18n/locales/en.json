@@ -2839,6 +2839,20 @@
     "navHint": "Who changed what, and when",
     "exportCapped": "Only the first 500 entries were exported — narrow the dates for the rest"
   },
+  "revenuePlan": {
+    "title": "Revenue plan",
+    "subtitle": "Monthly plan against the revenue each month brought in",
+    "prevYear": "Previous year",
+    "nextYear": "Next year",
+    "month": "Month",
+    "plan": "Plan",
+    "actual": "Actual",
+    "achieved": "Achieved",
+    "save": "Save plan",
+    "saveFailed": "The plan was not saved",
+    "loadFailed": "The plan did not load",
+    "totals": "Year plan: {plan} · actual: {actual}"
+  },
   "staffTargets": {
     "title": "Staff targets",
     "subtitle": "Each member's monthly revenue and booking targets, against the month so far",
