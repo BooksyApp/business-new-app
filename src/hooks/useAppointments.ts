@@ -32,6 +32,7 @@ export interface Appointment {
   serviceId?: Id;
   /** Shared by every service booked in one multi-service visit. */
   visitId?: string | null;
+  staffAutoAssigned?: boolean;
   isPackage?: boolean;
   packageStep?: number | null;
   packageParty?: number | null;
@@ -78,6 +79,7 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     status: apiAppt.status,   // #30
     serviceId: apiAppt.serviceId,
     visitId: apiAppt.visitId ?? null,
+    staffAutoAssigned: apiAppt.staffAutoAssigned === true,
     isPackage: apiAppt.isPackage === true,
     packageStep: apiAppt.packageStep ?? null,
     packageParty: apiAppt.packageParty ?? null,

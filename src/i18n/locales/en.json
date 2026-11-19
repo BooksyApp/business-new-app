@@ -965,7 +965,20 @@
     "theTillTakes": "The till takes:",
     "nothingSelected": "nothing selected",
     "pricesIn": " · prices in {currency}",
-    "depositPct": "Deposit %"
+    "depositPct": "Deposit %",
+    "assignmentTitle": "Booking assignment (any master)",
+    "modeFair": "Fair (by earnings)",
+    "modeFairHint": "When the client picks no one, the free team member with the lowest earnings gets the booking.",
+    "modeRoundRobin": "Round-robin",
+    "modeRoundRobinHint": "Free team members take turns, so everyone gets the same number of clients.",
+    "modePriority": "Priority order",
+    "modePriorityHint": "The free team member highest in the list always gets the booking.",
+    "priorityOrder": "Team priority order",
+    "priorityEmpty": "There are no active team members.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "parallelTitle": "Parallel services (two different masters at the same time)",
+    "parallelHint": "Services of one visit may run at the same time with two different team members. When off, services run back to back."
   },
   "branding": {
     "healthTitle": "Health and safety",
@@ -1374,7 +1387,9 @@
     "packageCreated": "Package booked: {count} appointments in one visit.",
     "packageNotCreated": "Package not booked: {reason}",
     "chargeCancellationFee": "Charge cancellation fee",
-    "chargeCancellationFeeHint": "The deposit is kept first, then the saved card is charged; otherwise it is recorded as owed."
+    "chargeCancellationFeeHint": "The deposit is kept first, then the saved card is charged; otherwise it is recorded as owed.",
+    "groupBadge": "Group ({count} services)",
+    "autoAssigned": "Auto-assigned"
   },
   "checkout": {
     "pickAClientToUse": "Pick a client to use a membership, a package, points or an earned free service.",

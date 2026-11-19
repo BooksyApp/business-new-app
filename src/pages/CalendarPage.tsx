@@ -103,6 +103,7 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
     price: apt.price,
     serviceId: apt.serviceId,
     visitId: apt.visitId,
+    staffAutoAssigned: apt.staffAutoAssigned,
     isClass: (apt as { isClass?: boolean }).isClass,
     answers: apt.answers,
     cancelledBy: apt.cancelledBy,
@@ -632,7 +633,10 @@ export default function CalendarPage() {
         price: sortedActive.reduce((n, x) => n + Number(x.price ?? 0), 0),
         groupServices: mine.length > 1 ? mine.map((m) => m.service) : undefined,
         answers: sorted.flatMap((m) => m.answers ?? []),
-        linked: new Set(sortedActive.map((m) => m.staffId)).size > 1,
+        // Basket visits (non-package) with a same-day sibling are always grouped, even with one master.
+        linked: new Set(sortedActive.map((m) => m.staffId)).size > 1 || (!first.isPackage && sortedActive.length > 1),
+        groupSize: sortedActive.length,
+        staffAutoAssigned: mine.some((m) => m.staffAutoAssigned),
         visitMates: sorted.map((m) => ({
           id: m.id, service: m.service, startTime: m.startTime, endTime: m.endTime, price: m.price,
           status: m.status, packageStep: m.packageStep, guestName: m.guestName, staffId: m.staffId, serviceId: String(m.serviceId ?? ""), staffName: apiStaff?.find((st) => String(st.id) === m.staffId)?.name,

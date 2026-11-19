@@ -2,6 +2,8 @@ import type { Id } from "@/types/id";
 import { rememberSalons } from "@/lib/salonKey";
 import { apiClient } from '@/config/api';
 
+export type StaffAssignmentMode = "FAIR_EARNINGS" | "ROUND_ROBIN" | "PRIORITY";
+
 export interface BusinessRequest {
   currency?: string;
   taxRate?: number;
@@ -31,6 +33,10 @@ export interface BusinessRequest {
   maxBookingDaysAhead?: number;
   /** FG-W4-13: the salon's Google review link, offered to customers who rate 4 or 5 stars. */
   googleReviewUrl?: string | null;
+  /** "Any master" assignment: FAIR_EARNINGS (default) | ROUND_ROBIN | PRIORITY. */
+  staffAssignmentMode?: StaffAssignmentMode;
+  /** Two different masters may serve one visit's services at the same time. */
+  allowParallelServices?: boolean;
   /** Comma-separated: any of CASH, CARD, ONLINE. */
   acceptedPaymentMethods?: string;
   website?: string;
@@ -96,6 +102,8 @@ export interface Business {
   minBookingNoticeMinutes?: number;
   maxBookingDaysAhead?: number;
   /** FG-W4-13: the salon's Google review link, offered to customers who rate 4 or 5 stars. */
+  staffAssignmentMode?: StaffAssignmentMode;
+  allowParallelServices?: boolean;
   googleReviewUrl?: string | null;
   /** Comma-separated: any of CASH, CARD, ONLINE. */
   acceptedPaymentMethods?: string;

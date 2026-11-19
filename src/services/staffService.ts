@@ -85,6 +85,16 @@ export const staffService = {
   async setRole(id: Id, role: string): Promise<Staff> {
     return apiClient.put<Staff>(`/staff/${id}/role`, { role });
   },
+
+  /** Active staff of the salon in "any master" priority order. */
+  async getAssignmentOrder(businessId: Id): Promise<{ id: Id; name: string; priority: number }[]> {
+    return apiClient.get(`/staff-assignment/business/${businessId}`);
+  },
+
+  /** Saves the priority order (first = tried first). 204. */
+  async setAssignmentOrder(businessId: Id, staffIds: Id[]): Promise<void> {
+    await apiClient.put(`/staff-assignment/business/${businessId}`, { staffIds });
+  },
 };
 
 

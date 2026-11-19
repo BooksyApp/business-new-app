@@ -965,7 +965,20 @@
     "theTillTakes": "Kassa qəbul edir:",
     "nothingSelected": "heç nə seçilməyib",
     "pricesIn": " · qiymətlər: {currency}",
-    "depositPct": "Depozit %"
+    "depositPct": "Depozit %",
+    "assignmentTitle": "Rezerv təyinatı (istənilən usta)",
+    "modeFair": "Ədalətli (qazanca görə)",
+    "modeFairHint": "Müştəri usta seçməyəndə gəliri ən az olan boş usta təyin olunur.",
+    "modeRoundRobin": "Növbə ilə (round-robin)",
+    "modeRoundRobinHint": "Boş ustalar növbə ilə təyin olunur, hər kəsə eyni sayda müştəri düşür.",
+    "modePriority": "Prioritet sırası",
+    "modePriorityHint": "Həmişə siyahıda ən yuxarıdakı boş usta təyin olunur.",
+    "priorityOrder": "Ustaların prioritet sırası",
+    "priorityEmpty": "Aktiv usta yoxdur.",
+    "moveUp": "Yuxarı",
+    "moveDown": "Aşağı",
+    "parallelTitle": "Paralel xidmət (iki fərqli usta eyni vaxtda)",
+    "parallelHint": "Bir gəlişin xidmətləri iki fərqli ustada eyni vaxta düşə bilər. Söndürülübsə, xidmətlər ardıcıl olur."
   },
   "branding": {
     "healthTitle": "Sağlamlıq və təhlükəsizlik",
@@ -1374,7 +1387,9 @@
     "packageCreated": "Paket rezerv edildi: bir ziyarətdə {count} qeyd.",
     "packageNotCreated": "Paket rezerv edilmədi: {reason}",
     "chargeCancellationFee": "Ləğv haqqı tutulsun",
-    "chargeCancellationFeeHint": "Əvvəlcə depozit saxlanılır, sonra saxlanmış kartdan çıxılır; alınmasa borc kimi qeyd olunur."
+    "chargeCancellationFeeHint": "Əvvəlcə depozit saxlanılır, sonra saxlanmış kartdan çıxılır; alınmasa borc kimi qeyd olunur.",
+    "groupBadge": "Qrup ({count} xidmət)",
+    "autoAssigned": "Avtomatik təyin"
   },
   "checkout": {
     "pickAClientToUse": "Abonement, paket, bonus və ya qazanılmış pulsuz xidmətdən istifadə üçün müştəri seçin.",

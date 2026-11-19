@@ -45,6 +45,10 @@ export interface Appointment {
   categoryId?: Id;
   categoryName?: string;
   visitId?: string | null;
+  /** The system picked this master ("any master" booking). */
+  staffAutoAssigned?: boolean;
+  /** Number of active services in the visit (multi-service group badge). */
+  groupSize?: number;
   /** Part of a package service: the step number, and which party member it is for. */
   isPackage?: boolean;
   packageStep?: number | null;
@@ -190,7 +194,14 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: tint.accent }} />
       {accent && <span aria-hidden className="absolute inset-y-0 right-0 w-[4px]" style={{ backgroundColor: accent }} />}
       {appointment.linked && (
-        <span aria-label={t("calendar.linkedToTheSameVisit")} title={t("calendar.linkedToTheSameVisit")} className="absolute bottom-1 right-1.5 text-[rgb(var(--reg-muted))]">
+        <span
+          aria-label={appointment.groupSize ? t("calendar.groupBadge", { count: appointment.groupSize }) : t("calendar.linkedToTheSameVisit")}
+          title={[
+            appointment.groupSize ? t("calendar.groupBadge", { count: appointment.groupSize }) : t("calendar.linkedToTheSameVisit"),
+            appointment.staffAutoAssigned ? t("calendar.autoAssigned") : "",
+          ].filter(Boolean).join(" · ")}
+          className="absolute bottom-1 right-1.5 text-[rgb(var(--reg-muted))]"
+        >
           <Link2 size={12} strokeWidth={2.5} />
         </span>
       )}

@@ -17,6 +17,8 @@ export interface Appointment {
   serviceName?: string;
   /** Set when the customer booked several services in one visit: one appointment each, same id here. */
   visitId?: string | null;
+  /** True when the system picked the master ("any master" booking). */
+  staffAutoAssigned?: boolean;
   /** Part of a package service (several specialists in one visit). */
   isPackage?: boolean;
   packageStep?: number | null;

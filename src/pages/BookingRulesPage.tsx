@@ -7,15 +7,17 @@ import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
 import { ClientPreview, Field } from "@/components/page/kit";
 import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, CreditCard, Receipt, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarCheck, CreditCard, Receipt, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { businessService, type Business } from "@/services/businessService";
+import { businessService, type Business, type StaffAssignmentMode } from "@/services/businessService";
+import { staffService } from "@/services/staffService";
 import { getCurrentBusinessId } from "@/config/api";
 import { getPlatformSettings } from "@/services/platformService";
 import { BackToSettings, SaveBar } from "@/components/page/SettingsChrome";
 import { SlotOffersCard } from "@/components/bookings/SlotOffersCard";
 import { t } from "@/i18n";
+import type { Id } from "@/types/id";
 
 /** One Setup row each; without a section the page shows all four (the old /booking-rules). */
 export type BookingRulesSection = "online" | "cancellation" | "payment-methods" | "currency-tax";
@@ -45,6 +47,11 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
   });
   const [onlineBooking, setOnlineBooking] = useState(true);
   const [methods, setMethods] = useState<string[]>(["CASH", "CARD"]);
+  const [assignMode, setAssignMode] = useState<StaffAssignmentMode>("FAIR_EARNINGS");
+  const [parallel, setParallel] = useState(false);
+  /** Active staff in priority order; edited in place, saved with the rest. */
+  const [order, setOrder] = useState<{ id: Id; name: string }[]>([]);
+  const [savedOrder, setSavedOrder] = useState("");
   /** What was loaded or last saved, to know when the save bar is needed. */
   const [savedJson, setSavedJson] = useState("");
   const [reviewUrl, setReviewUrl] = useState("");
@@ -69,12 +76,37 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
         const loadedMethods = (b.acceptedPaymentMethods ?? "CASH,CARD").split(",").map(m => m.trim()).filter(Boolean);
         setForm(loaded);
         setOnlineBooking(loadedOnline);
+        const loadedMode = b.staffAssignmentMode ?? "FAIR_EARNINGS";
+        const loadedParallel = b.allowParallelServices === true;
         setMethods(loadedMethods);
-        setSavedJson(JSON.stringify({ form: loaded, onlineBooking: loadedOnline, methods: loadedMethods }));
+        setAssignMode(loadedMode);
+        setParallel(loadedParallel);
+        setSavedJson(JSON.stringify({ form: loaded, onlineBooking: loadedOnline, methods: loadedMethods, assignMode: loadedMode, parallel: loadedParallel }));
       })
       .catch(() => toast.error(t("bookingRules.couldNotLoadYourBooking")))
       .finally(() => setLoading(false));
   }, [businessId]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    staffService
+      .getAssignmentOrder(businessId)
+      .then((list) => {
+        const sorted = [...(list ?? [])].sort((a, b) => a.priority - b.priority).map((x) => ({ id: x.id, name: x.name }));
+        setOrder(sorted);
+        setSavedOrder(JSON.stringify(sorted.map((x) => x.id)));
+      })
+      .catch(() => setOrder([]));
+  }, [businessId]);
+
+  const move = (i: number, d: -1 | 1) =>
+    setOrder((o) => {
+      const j = i + d;
+      if (j < 0 || j >= o.length) return o;
+      const n = [...o];
+      [n[i], n[j]] = [n[j], n[i]];
+      return n;
+    });
 
   // Whether a deposit can actually be collected. Unknown (null) until the platform answers.
   const [onlinePayments, setOnlinePayments] = useState<boolean | null>(null);
@@ -120,9 +152,15 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
         // Always sent: an empty list is a real choice (a salon that takes no payment in
         // the app), so it must not be read as "unchanged".
         acceptedPaymentMethods: methods.join(","),
+        staffAssignmentMode: assignMode,
+        allowParallelServices: parallel,
       });
+      if (assignMode === "PRIORITY" && JSON.stringify(order.map((x) => x.id)) !== savedOrder) {
+        await staffService.setAssignmentOrder(businessId, order.map((x) => x.id));
+        setSavedOrder(JSON.stringify(order.map((x) => x.id)));
+      }
       setBusiness(updated);
-      setSavedJson(JSON.stringify({ form, onlineBooking, methods }));
+      setSavedJson(JSON.stringify({ form, onlineBooking, methods, assignMode, parallel }));
       toast.success(t("bookingRules.bookingSettingsSaved"));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("bookingRules.couldNotSaveYourSettings"));
@@ -148,10 +186,17 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
     </Field>
   );
 
-  const dirty = savedJson !== "" && JSON.stringify({ form, onlineBooking, methods }) !== savedJson;
+  const orderDirty = assignMode === "PRIORITY" && savedOrder !== "" && JSON.stringify(order.map((x) => x.id)) !== savedOrder;
+  const dirty = savedJson !== "" && (JSON.stringify({ form, onlineBooking, methods, assignMode, parallel }) !== savedJson || orderDirty);
   const discard = () => {
     if (!savedJson) return;
-    const v = JSON.parse(savedJson) as { form: typeof form; onlineBooking: boolean; methods: string[] };
+    const v = JSON.parse(savedJson) as { form: typeof form; onlineBooking: boolean; methods: string[]; assignMode: StaffAssignmentMode; parallel: boolean };
+    setAssignMode(v.assignMode);
+    setParallel(v.parallel);
+    if (savedOrder) {
+      const ids = JSON.parse(savedOrder) as Id[];
+      setOrder((o) => [...o].sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)));
+    }
     setForm(v.form);
     setOnlineBooking(v.onlineBooking);
     setMethods(v.methods);
@@ -269,6 +314,59 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
                     </ul>
                   </>
                 ), "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}
+
+                {show("online") && section_(Users, t("bookingRules.assignmentTitle"), (
+                  <>
+                    <div role="radiogroup" aria-label={t("bookingRules.assignmentTitle")} className="space-y-2">
+                      {([
+                        ["FAIR_EARNINGS", t("bookingRules.modeFair"), t("bookingRules.modeFairHint")],
+                        ["ROUND_ROBIN", t("bookingRules.modeRoundRobin"), t("bookingRules.modeRoundRobinHint")],
+                        ["PRIORITY", t("bookingRules.modePriority"), t("bookingRules.modePriorityHint")],
+                      ] as [StaffAssignmentMode, string, string][]).map(([key, label, hint]) => (
+                        <label key={key} htmlFor={`br-mode-${key}`} className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[rgb(var(--reg-canvas))] p-4">
+                          <input
+                            id={`br-mode-${key}`}
+                            type="radio"
+                            name="br-assign-mode"
+                            className="mt-1"
+                            checked={assignMode === key}
+                            onChange={() => setAssignMode(key)}
+                          />
+                          <span>
+                            <span className="block text-[15px] font-semibold">{label}</span>
+                            <span className="mt-0.5 block text-sm text-[rgb(var(--reg-muted))]">{hint}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {assignMode === "PRIORITY" && (
+                      <div>
+                        <p className="mb-2 text-sm font-semibold">{t("bookingRules.priorityOrder")}</p>
+                        {order.length === 0 ? (
+                          <p className="text-sm text-[rgb(var(--reg-muted))]">{t("bookingRules.priorityEmpty")}</p>
+                        ) : (
+                          <ol className="divide-y divide-[rgb(var(--reg-line)/0.6)] rounded-2xl ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                            {order.map((s, i) => (
+                              <li key={String(s.id)} className="flex items-center gap-3 px-4 py-2">
+                                <span className="w-5 text-sm text-[rgb(var(--reg-muted))]">{i + 1}</span>
+                                <span className="flex-1 text-[15px] font-semibold">{s.name}</span>
+                                <Button type="button" variant="ghost" size="icon" disabled={i === 0} aria-label={t("bookingRules.moveUp")} onClick={() => move(i, -1)}><ArrowUp size={16} /></Button>
+                                <Button type="button" variant="ghost" size="icon" disabled={i === order.length - 1} aria-label={t("bookingRules.moveDown")} onClick={() => move(i, 1)}><ArrowDown size={16} /></Button>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+                    )}
+                    <label htmlFor="br-parallel" className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-[rgb(var(--reg-canvas))] p-4">
+                      <span>
+                        <span className="block text-[15px] font-semibold">{t("bookingRules.parallelTitle")}</span>
+                        <span className="mt-0.5 block text-sm text-[rgb(var(--reg-muted))]">{t("bookingRules.parallelHint")}</span>
+                      </span>
+                      <Switch id="br-parallel" checked={parallel} onCheckedChange={setParallel} className="data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
+                    </label>
+                  </>
+                ))}
 
                 {show("online") && <SlotOffersCard businessId={businessId} />}
                 {show("currency-tax") && section_(Receipt, t("bookingRules.currencyAndTax"), (
