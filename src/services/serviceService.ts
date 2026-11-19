@@ -28,6 +28,8 @@ export interface Service {
   mobileService?: boolean;
   /** FG-W3-02: fixed travel fee in AZN, mobile services only. */
   travelFee?: number | null;
+  /** FG-W6-01: null/absent = salon default; 0 = no online payment; 1-99 = deposit %; 100 = full prepay. Send -1 to reset to the default. */
+  depositPercent?: number | null;
   /** FG-W3-02: free-text service area, mobile services only. */
   serviceArea?: string | null;
   virtualAppointment?: boolean;
@@ -67,6 +69,8 @@ export interface CreateServiceRequest {
   mobileService?: boolean;
   /** FG-W3-02: fixed travel fee in AZN, mobile services only. */
   travelFee?: number | null;
+  /** FG-W6-01: null/absent = salon default; 0 = no online payment; 1-99 = deposit %; 100 = full prepay. Send -1 to reset to the default. */
+  depositPercent?: number | null;
   /** FG-W3-02: free-text service area, mobile services only. */
   serviceArea?: string | null;
   virtualAppointment?: boolean;
@@ -103,6 +107,8 @@ export interface UpdateServiceRequest {
   mobileService?: boolean;
   /** FG-W3-02: fixed travel fee in AZN, mobile services only. */
   travelFee?: number | null;
+  /** FG-W6-01: null/absent = salon default; 0 = no online payment; 1-99 = deposit %; 100 = full prepay. Send -1 to reset to the default. */
+  depositPercent?: number | null;
   /** FG-W3-02: free-text service area, mobile services only. */
   serviceArea?: string | null;
   virtualAppointment?: boolean;

@@ -422,7 +422,14 @@
     "materialsEmpty": "No materials added yet.",
     "materialsFailed": "Could not save the material",
     "failedToUpdate": "Failed to update service",
-    "failedToCreate": "Failed to create service"
+    "failedToCreate": "Failed to create service",
+    "onlinePayment": "Online payment",
+    "payInherit": "Use the salon's default",
+    "payNone": "No online payment",
+    "payDeposit": "Deposit (% of price)",
+    "payFull": "Full prepayment",
+    "depositPercent": "Deposit percent",
+    "payHint": "Customers pay by card when they book. The booking is confirmed once the payment is received."
   },
   "addStaff": {
     "invalidEmailAddressFormat": "Invalid email address format",
@@ -2859,7 +2866,7 @@
       "submit": "Refund {value}",
       "submitting": "Refunding…",
       "done": "Refunded {value}",
-      "onlinePaid": "This sale was paid online. Refund it through the payment provider.",
+      "onlinePaid": "This sale was paid online. The refund goes back to the customer's card through Stripe.",
       "fullyRefunded": "This sale is already fully refunded.",
       "noItems": "Nothing on this sale can be picked. Refund by amount instead.",
       "reasonRequired": "Write a reason to refund.",
@@ -3929,5 +3936,16 @@
     "you": "You",
     "client": "Client",
     "blockHint": "To stop a client messaging you, block them from their client card."
+  },
+  "paymentLink": {
+    "title": "Payment link",
+    "preparing": "Preparing…",
+    "failed": "Could not create the payment link",
+    "copied": "Link copied",
+    "copy": "Copy link",
+    "sendWhatsapp": "Send on WhatsApp",
+    "qrAlt": "QR code to pay",
+    "hint": "The customer pays by card. The booking is marked paid once the payment is confirmed.",
+    "whatsappText": "Your booking payment ({amount}): {url}"
   }
 }

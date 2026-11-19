@@ -312,3 +312,12 @@ export const refundService = {
       status: string;
     }>(`/payments/refund/${bookingId}`, { amount: amount ?? null, reason: reason ?? null }),
 };
+
+/** FG-W6-04: a payment link (and QR) for a booking. The amount is the server's, never sent. */
+export const paymentLinkService = {
+  create: (bookingId: string) =>
+    apiClient.post<{ id: string; url: string; amount: number; currency: string; expiresAt: string; status: string }>(
+      `/payments/link/${bookingId}`,
+      {},
+    ),
+};

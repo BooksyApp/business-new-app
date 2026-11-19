@@ -422,7 +422,14 @@
     "materialsEmpty": "Hələ material əlavə edilməyib.",
     "materialsFailed": "Materialı yadda saxlamaq mümkün olmadı",
     "failedToUpdate": "Xidməti yeniləmək alınmadı",
-    "failedToCreate": "Xidməti yaratmaq alınmadı"
+    "failedToCreate": "Xidməti yaratmaq alınmadı",
+    "onlinePayment": "Onlayn ödəniş",
+    "payInherit": "Salonun ümumi qaydası",
+    "payNone": "Onlayn ödəniş yoxdur",
+    "payDeposit": "Depozit (qiymətin %-i)",
+    "payFull": "Tam əvvəlcədən ödəniş",
+    "depositPercent": "Depozit faizi",
+    "payHint": "Müştəri rezerv zamanı kartla ödəyir. Ödəniş daxil olandan sonra rezerv təsdiqlənir."
   },
   "addStaff": {
     "invalidEmailAddressFormat": "E-poçt ünvanı düzgün deyil",
@@ -2859,7 +2866,7 @@
       "submit": "{value} geri qaytar",
       "submitting": "Qaytarılır…",
       "done": "{value} geri qaytarıldı",
-      "onlinePaid": "Bu satış onlayn ödənilib. Qaytarışı ödəniş provayderi vasitəsilə edin.",
+      "onlinePaid": "Bu satış onlayn ödənilib. Qaytarış Stripe vasitəsilə müştərinin kartına gedəcək.",
       "fullyRefunded": "Bu satış artıq tam geri qaytarılıb.",
       "noItems": "Bu satışda seçiləcək maddə yoxdur. Məbləğlə geri qaytarın.",
       "reasonRequired": "Geri qaytarmaq üçün səbəb yazın.",
@@ -3929,5 +3936,16 @@
     "you": "Siz",
     "client": "Müştəri",
     "blockHint": "Müştərinin sizə yazmasının qarşısını almaq üçün onu müştəri kartından bloklayın."
+  },
+  "paymentLink": {
+    "title": "Ödəniş linki",
+    "preparing": "Hazırlanır…",
+    "failed": "Ödəniş linkini yaratmaq alınmadı",
+    "copied": "Link kopyalandı",
+    "copy": "Linki kopyala",
+    "sendWhatsapp": "WhatsApp ilə göndər",
+    "qrAlt": "Ödəniş üçün QR kod",
+    "hint": "Müştəri kartla ödəyir. Ödəniş təsdiqlənəndə rezerv ödənilmiş sayılır.",
+    "whatsappText": "Rezerv ödənişiniz ({amount}): {url}"
   }
 }

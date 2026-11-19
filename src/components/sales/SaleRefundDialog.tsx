@@ -70,7 +70,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
   ];
 
   const refundable = summary?.refundable ?? 0;
-  const blocked = !summary || summary.onlinePayment || refundable <= 0;
+  const blocked = !summary || refundable <= 0;   // FG-W6-08: an online sale is refunded to the card through Stripe
 
   // The server prorates line prices for the sale's discount and leaves the tip out.
   const netRatio = sale.subtotal > 0 ? (sale.total - (sale.tipAmount || 0)) / sale.subtotal : 1;
@@ -145,7 +145,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
           </div>
 
           {summary?.onlinePayment && (
-            <p className="text-sm text-rose-600">{t("sales.saleRefund.onlinePaid")}</p>
+            <p className="text-sm text-muted-foreground">{t("sales.saleRefund.onlinePaid")}</p>
           )}
           {summary && !summary.onlinePayment && refundable <= 0 && (
             <p className="text-sm text-rose-600">{t("sales.saleRefund.fullyRefunded")}</p>
@@ -211,6 +211,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
                 </div>
               )}
 
+              {!summary?.onlinePayment && (
               <div className="space-y-2">
                 <Label htmlFor="sale-refund-method">{t("sales.saleRefund.method")}</Label>
                 <div className="flex flex-wrap gap-2">
@@ -227,8 +228,9 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
                   ))}
                 </div>
               </div>
+              )}
 
-              {method === "GIFT_CARD" && (
+              {method === "GIFT_CARD" && !summary?.onlinePayment && (
                 <div className="space-y-2">
                   <Label htmlFor="sale-refund-card">{t("sales.saleRefund.giftCardCode")}</Label>
                   <Input

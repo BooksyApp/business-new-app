@@ -37,6 +37,7 @@ import { useStaff } from "@/hooks/useStaff";
 import { useNavigation } from "@/utils/navigationUtils";
 import { toast } from "sonner";
 import { t as tr, formatMinutes } from "@/i18n";
+import { useOnlinePayments } from "@/services/platformService";
 import { salonDayService, type RecipeLine } from "@/services/salonDayService";
 import { productService, type Product } from "@/services/productService";
 
@@ -56,8 +57,18 @@ const splitMinutes = (total?: number) => {
   return { hours: Math.floor(t / 60).toString(), minutes: (t % 60).toString() };
 };
 
+
+/** FG-W6-01: the per-service online payment choice as the API wants it (-1 = salon default). */
+function depositPercentOf(s: { payMode: string; depositPct: string }): number {
+  if (s.payMode === "none") return 0;
+  if (s.payMode === "full") return 100;
+  if (s.payMode === "deposit") return Math.min(99, Math.max(1, Math.round(Number(s.depositPct) || 30)));
+  return -1;
+}
+
 export default function AddServicePage() {
   const navigate = useNavigate();
+  const onlinePayments = useOnlinePayments();
   const { id } = useParams<{ id?: string }>();
   const { getPath, businessId } = useNavigation();
   const isEditMode = !!id;
@@ -106,6 +117,8 @@ export default function AddServicePage() {
     mobileService: false,
     travelFee: "",
     serviceArea: "",
+    payMode: "inherit" as "inherit" | "none" | "deposit" | "full",   // FG-W6-01
+    depositPct: "30",
     virtualAppointments: false,
     bookingIntervalHours: "0",
     bookingIntervalMinutes: "15",
@@ -199,6 +212,11 @@ export default function AddServicePage() {
           maxParticipants: String(service.maxParticipants ?? 10),
           mobileService: service.mobileService ?? false,
           travelFee: service.travelFee != null ? String(service.travelFee) : "",
+          payMode: service.depositPercent == null ? "inherit"
+            : Number(service.depositPercent) <= 0 ? "none"
+            : Number(service.depositPercent) >= 100 ? "full" : "deposit",
+          depositPct: service.depositPercent != null && Number(service.depositPercent) > 0 && Number(service.depositPercent) < 100
+            ? String(service.depositPercent) : "30",
           serviceArea: service.serviceArea ?? "",
           virtualAppointments: service.virtualAppointment ?? false,
           bookingIntervalHours: bi.hours,
@@ -287,6 +305,7 @@ export default function AddServicePage() {
         isVisible: settingsData.allowSelfBooking, // "Allow self-booking" gates visibility in the customer app
         mobileService: settingsData.mobileService,
         travelFee: settingsData.mobileService ? Number(settingsData.travelFee || 0) : null,
+        depositPercent: depositPercentOf(settingsData),
         serviceArea: settingsData.mobileService ? settingsData.serviceArea.trim() : null,
         virtualAppointment: settingsData.virtualAppointments,
         // Scheduling engine (Phase 2): booking interval, padding, processing time.
@@ -336,6 +355,7 @@ export default function AddServicePage() {
         isVisible: settingsData.allowSelfBooking,
         mobileService: settingsData.mobileService,
         travelFee: settingsData.mobileService ? Number(settingsData.travelFee || 0) : null,
+        depositPercent: depositPercentOf(settingsData),
         serviceArea: settingsData.mobileService ? settingsData.serviceArea.trim() : null,
         virtualAppointment: settingsData.virtualAppointments,
         ...buildScheduling(),
@@ -793,6 +813,37 @@ export default function AddServicePage() {
                       />
                     </div>
                   </div>
+
+                  {/* FG-W6-01: online payment for this service */}
+                  {onlinePayments && (
+                    <div className="grid gap-1.5 py-3 border-b border-[rgb(var(--reg-line)/0.8)]">
+                      <Label className="text-sm font-medium text-[rgb(var(--reg-ink))]">
+                        {tr("addService.onlinePayment")}
+                      </Label>
+                      <select
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={settingsData.payMode}
+                        onChange={(e) => setSettingsData((prev) => ({ ...prev, payMode: e.target.value as typeof prev.payMode }))}
+                      >
+                        <option value="inherit">{tr("addService.payInherit")}</option>
+                        <option value="none">{tr("addService.payNone")}</option>
+                        <option value="deposit">{tr("addService.payDeposit")}</option>
+                        <option value="full">{tr("addService.payFull")}</option>
+                      </select>
+                      {settingsData.payMode === "deposit" && (
+                        <Input
+                          type="number"
+                          min="1"
+                          max="99"
+                          step="1"
+                          aria-label={tr("addService.depositPercent")}
+                          value={settingsData.depositPct}
+                          onChange={(e) => setSettingsData((prev) => ({ ...prev, depositPct: e.target.value }))}
+                        />
+                      )}
+                      <p className="text-xs text-[rgb(var(--reg-muted))]">{tr("addService.payHint")}</p>
+                    </div>
+                  )}
 
                   {/* Mobile Service */}
                   <div className="flex items-center justify-between py-3 border-b border-[rgb(var(--reg-line)/0.8)]">

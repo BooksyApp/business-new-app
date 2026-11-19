@@ -9,6 +9,8 @@ import { appointmentStatusStyle } from "@/lib/appointmentStatus";
 import "@/components/auth/auth-tokens.css";
 import { Button } from "@/components/ui/button";
 import { RefundDialog } from "@/components/money/RefundDialog";
+import { PaymentLinkDialog } from "@/components/money/PaymentLinkDialog";
+import { useOnlinePayments } from "@/services/platformService";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -212,6 +214,8 @@ export function AppointmentModal({
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
   // LR-09: compared with the salon's today (market zone until the salon's is known).
+  const onlinePayments = useOnlinePayments();   // FG-W6-04: the link only exists when Stripe is on
+  const [linkOpen, setLinkOpen] = useState(false);
   const isFutureVisit = appointmentDate > format(salonNow(salonTz), 'yyyy-MM-dd');
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
   const repServiceName = appointmentData.serviceName || appointment.service;
@@ -566,6 +570,16 @@ export function AppointmentModal({
               </p>
             )
           ) : null}
+          {!settled && !paid && onlinePayments && appointment.apiId && (
+            <Button
+              variant="outline"
+              className="h-11 w-full gap-2 rounded-full text-sm font-semibold"
+              onClick={() => setLinkOpen(true)}
+            >
+              <CreditCard className="h-4 w-4" />
+              {tr("paymentLink.title")}
+            </Button>
+          )}
           {/* A visit that has not happened yet is not taken to the till (the server refuses it
               too): it would show as completed to the customer before they have been. */}
           {!settled && !paid && isFutureVisit && (
@@ -632,6 +646,14 @@ export function AppointmentModal({
           )}
         </div>
       </SheetContent>
+
+      <PaymentLinkDialog
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        bookingId={appointment.apiId ?? ""}
+        clientName={clientName}
+        clientPhone={clientPhone}
+      />
 
       <RefundDialog
         open={refundOpen}
