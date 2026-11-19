@@ -616,6 +616,8 @@ const RegistrationPage = () => {
         errorMessage = error;
       }
       
+      // SIGNUPS_CLOSED: the switch was turned off while this form was open.
+      if (e?.status === 403) setSignupsOpen(false);
       toast.error(errorMessage);
     } finally {
       setIsRegistering(false);

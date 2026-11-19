@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -9,8 +9,14 @@ import { cn } from "@/lib/utils";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { authInput, authLabel, authLink, authSubtitle, authTitle, brandCta } from "@/components/auth/authStyles";
 import { t } from "@/i18n";
+import { getPlatformSettings } from "@/services/platformService";
 
 const LoginPage = () => {
+  // The admin can close salon sign-ups; then the "create account" doors go away (registration itself also says so).
+  const [signupsOpen, setSignupsOpen] = useState(true);
+  useEffect(() => {
+    getPlatformSettings().then((p) => setSignupsOpen(p.businessSignupsOpen));
+  }, []);
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
@@ -74,10 +80,12 @@ const LoginPage = () => {
   };
 
   return (
-    <AuthShell headerLink={{ label: t("login.signUp"), to: "/register" }}>
+    <AuthShell headerLink={signupsOpen ? { label: t("login.signUp"), to: "/register" } : undefined}>
       <h1 className={authTitle}>{t("login.logIn")}</h1>
       <p className={authSubtitle}>{t("login.signInToManageYour")}</p>
 
+      {signupsOpen && (
+        <>
       {/* Same segmented control as booqi-web's /signin: sign-up is the other half of it. */}
       <div role="tablist" aria-label={t("login.signInOrSignUp")} className="mb-6 flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
         <span
@@ -96,6 +104,9 @@ const LoginPage = () => {
           {t("login.signUp")}
         </Link>
       </div>
+
+        </>
+      )}
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
@@ -155,12 +166,14 @@ const LoginPage = () => {
           {isLoading ? t("login.signingIn") : t("login.logIn")}
         </button>
 
-        <p className="text-center text-sm text-[rgb(var(--reg-muted))]">
-          {t("login.newToBooqi")}{" "}
-          <Link to="/register" className={authLink}>
-            {t("login.createABusinessAccount")}
-          </Link>
-        </p>
+        {signupsOpen && (
+          <p className="text-center text-sm text-[rgb(var(--reg-muted))]">
+            {t("login.newToBooqi")}{" "}
+            <Link to="/register" className={authLink}>
+              {t("login.createABusinessAccount")}
+            </Link>
+          </p>
+        )}
       </form>
     </AuthShell>
   );
