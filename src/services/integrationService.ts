@@ -34,7 +34,50 @@ export interface WebhookDelivery {
   nextAttemptAt: string | null;
 }
 
+export interface MarketplaceCard {
+  key: string;
+  category: string;
+  /** false when booqi has switched this integration off for everyone. */
+  enabled: boolean;
+  connected: boolean;
+  count: number;
+}
+
+export interface TrackingIds {
+  metaPixelId: string | null;
+  gaMeasurementId: string | null;
+}
+
+export interface DomainView {
+  available: boolean;
+  cnameTarget: string;
+  domain: string | null;
+  status?: "PENDING" | "FAILED" | "VERIFIED";
+  verifiedAt?: string | null;
+  lastCheckedAt?: string | null;
+  lastError?: string | null;
+}
+
 export const integrationService = {
+  catalog(businessId: Id): Promise<{ integrations: MarketplaceCard[]; tracking: TrackingIds }> {
+    return apiClient.get(`/businesses/${businessId}/integrations`);
+  },
+  saveTracking(businessId: Id, body: { metaPixelId: string; gaMeasurementId: string }): Promise<TrackingIds> {
+    return apiClient.put(`/businesses/${businessId}/integrations/tracking`, body);
+  },
+  getDomain(businessId: Id): Promise<DomainView> {
+    return apiClient.get(`/businesses/${businessId}/custom-domain`);
+  },
+  setDomain(businessId: Id, domain: string): Promise<DomainView> {
+    return apiClient.put(`/businesses/${businessId}/custom-domain`, { domain });
+  },
+  verifyDomain(businessId: Id): Promise<DomainView> {
+    return apiClient.post(`/businesses/${businessId}/custom-domain/verify`, {});
+  },
+  removeDomain(businessId: Id): Promise<void> {
+    return apiClient.delete<void>(`/businesses/${businessId}/custom-domain`);
+  },
+
   listKeys(businessId: Id): Promise<{ keys: ApiKeyRow[]; scopes: string[] }> {
     return apiClient.get(`/businesses/${businessId}/api-keys`);
   },

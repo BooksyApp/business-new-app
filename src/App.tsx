@@ -331,6 +331,7 @@ const App = () => (
               <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
               <Route path="support" element={<Suspense fallback={<PageLoader />}><SupportPage /></Suspense>} />
               <Route path="help" element={<Suspense fallback={<PageLoader />}><HelpPage /></Suspense>} />
+              <Route path="help/:articleSlug" element={<Suspense fallback={<PageLoader />}><HelpPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageLoader />}><ReviewsPage /></Suspense>} />
               <Route path="inbox" element={<Suspense fallback={<PageLoader />}><InboxPage /></Suspense>} />
               <Route path="payment-method" element={<Suspense fallback={<PageLoader />}><PaymentMethodPage /></Suspense>} />

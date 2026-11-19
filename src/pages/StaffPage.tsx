@@ -666,7 +666,7 @@ export default function StaffPage() {
     <AppLayout>
       <BooqiScope>
       <div className="flex flex-col">
-        <PageHeader
+        <PageHeader helpSlug="komanda-elave-etmek"
           title={tr("common.team")}
           subtitle={tr("staff.whoWorksHereWhatThey")}
           actions={

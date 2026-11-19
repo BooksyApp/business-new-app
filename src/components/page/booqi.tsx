@@ -1,7 +1,9 @@
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 import type { LucideIcon } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { t } from "@/i18n";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
 import "@/components/auth/auth-tokens.css";
@@ -28,12 +30,16 @@ export function PageHeader({
   subtitle,
   actions,
   className,
+  helpSlug,
 }: {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
   className?: string;
+  /** Slug of a help article about this page: shows a "?" link to it. */
+  helpSlug?: string;
 }) {
+  const { salonKey } = useParams<{ salonKey?: string }>();
   return (
     <header
       className={cn(
@@ -42,7 +48,19 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] md:text-[32px]">{title}</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] md:text-[32px]">
+          {title}
+          {helpSlug && salonKey && (
+            <Link
+              to={`/${salonKey}/help/${helpSlug}`}
+              aria-label={t("helpCenter.helpLink")}
+              title={t("helpCenter.helpLink")}
+              className="ml-2 inline-flex h-6 w-6 -translate-y-1 items-center justify-center rounded-full bg-[rgb(var(--reg-ink)/0.07)] align-middle text-xs font-bold text-[rgb(var(--reg-ink)/0.7)] hover:bg-[rgb(var(--reg-ink)/0.12)]"
+            >
+              ?
+            </Link>
+          )}
+        </h1>
         {subtitle && <p className="mt-1 max-w-2xl text-sm text-[rgb(var(--reg-muted))] md:text-[15px]">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

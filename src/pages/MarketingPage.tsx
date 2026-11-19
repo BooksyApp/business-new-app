@@ -329,7 +329,7 @@ export default function MarketingPage() {
   return (
     <AppLayout>
       <BooqiScope>
-        <PageHeader
+        <PageHeader helpSlug="kampaniya-gondermek"
           title={tr("marketing.campaignsCodes")}
           subtitle={tr("marketing.discountCodesForCheckoutAnd")}
           actions={

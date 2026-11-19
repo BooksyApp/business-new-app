@@ -4605,6 +4605,166 @@
       "status": "Status"
     }
   },
+  "marketplace": {
+    "title": "Integrations",
+    "subtitle": "Connect booqi with the calendars, tools and channels you already use.",
+    "tabMarketplace": "All integrations",
+    "tabFeeds": "Data feeds",
+    "tabCalendar": "Calendars",
+    "tabTracking": "Ads & analytics",
+    "tabSocial": "Instagram & Facebook",
+    "tabDomain": "Own domain",
+    "intro": "Switch on what you need. Everything here is yours to turn off again at any time.",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "switchedOff": "Switched off by booqi",
+    "manage": "Open",
+    "setUp": "Set up",
+    "paidPlan": "Paid plan",
+    "usedBy": "{count, plural, one {# in use} other {# in use}}",
+    "card": {
+      "google_calendar": {
+        "title": "Google Calendar",
+        "desc": "Each team member gets a private link and sees their bookings in Google Calendar."
+      },
+      "apple_calendar": {
+        "title": "Apple Calendar",
+        "desc": "The same private link works in Apple Calendar on iPhone and Mac."
+      },
+      "webhooks": {
+        "title": "Outgoing webhooks",
+        "desc": "We send a signed message to your address whenever a booking or client changes, with a log and automatic retries."
+      },
+      "zapier_make": {
+        "title": "Zapier and Make",
+        "desc": "Connect thousands of apps without code: use a webhook as the trigger in Zapier or Make."
+      },
+      "api_keys": {
+        "title": "API keys",
+        "desc": "Let your own website or software read your data and create bookings."
+      },
+      "data_feeds": {
+        "title": "Power BI and Google Sheets",
+        "desc": "Read-only feeds of bookings, clients, sales, team and services as CSV or JSON."
+      },
+      "tracking": {
+        "title": "Meta Pixel and Google Analytics",
+        "desc": "Measure visits and bookings from your own page with your own pixel and analytics."
+      },
+      "social_book": {
+        "title": "Instagram and Facebook booking button",
+        "desc": "Links for the Book button of your Instagram and Facebook pages, tagged so you see what they bring."
+      },
+      "custom_domain": {
+        "title": "Your own domain",
+        "desc": "Your booking page on book.yoursalon.com, with your logo and colours and nothing of the marketplace."
+      }
+    },
+    "calendar": {
+      "intro": "Each team member has one private link. Add it to a calendar app once and every booking appears there by itself. Anyone with the link can see that person's bookings, so share it only with them.",
+      "noTeam": "No team members yet.",
+      "getLink": "Show link",
+      "copy": "Copy link",
+      "copied": "Link copied.",
+      "regenerate": "New link",
+      "regenerated": "New link created. The old one stopped working.",
+      "failed": "Could not load the link.",
+      "googleTitle": "Google Calendar",
+      "googleSteps": "Open Google Calendar on a computer, choose Other calendars (+), From URL, paste the link and add. Google refreshes it every few hours.",
+      "appleTitle": "Apple Calendar",
+      "appleSteps": "On iPhone: Settings, Calendar, Accounts, Add account, Other, Add subscribed calendar. On Mac: File, New Calendar Subscription."
+    },
+    "tracking": {
+      "intro": "Your own pixel and analytics measure visits to your booking page. Visitors are asked for cookie consent first, and nothing loads for those who decline.",
+      "pixel": "Meta Pixel ID",
+      "pixelHint": "Digits only, for example 1234567890123456.",
+      "ga": "Google Analytics measurement ID",
+      "gaHint": "Looks like G-XXXXXXXXXX.",
+      "save": "Save",
+      "saved": "Saved.",
+      "failed": "Could not save.",
+      "clear": "Leave both empty to switch tracking off."
+    },
+    "social": {
+      "intro": "Use these links as the booking button or link on your social pages. They open your booking page and mark the booking as coming from that channel.",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "website": "Your own website or link in bio",
+      "copy": "Copy",
+      "copied": "Copied.",
+      "noSalon": "Your public page is not available yet. Finish the setup first."
+    },
+    "domain": {
+      "intro": "Serve your booking page on your own domain, with your logo and colours. Customers see only your salon, with nothing of the marketplace.",
+      "planTitle": "Included in a paid plan",
+      "planBody": "Your own domain is part of the paid plans. Contact booqi support to switch it on for your salon.",
+      "domainLabel": "Your domain",
+      "domainPlaceholder": "book.yoursalon.com",
+      "save": "Save domain",
+      "saveFailed": "Could not save this domain.",
+      "dnsTitle": "Add this record at your domain provider",
+      "dnsType": "Type",
+      "dnsName": "Name",
+      "dnsValue": "Points to",
+      "dnsNote": "Changes can take from a few minutes to a day. A bare domain (without book.) may not accept a CNAME: use a subdomain such as book.",
+      "verify": "Check DNS",
+      "verifying": "Checking...",
+      "status": {
+        "PENDING": "Waiting for DNS",
+        "FAILED": "DNS not ready",
+        "VERIFIED": "Connected"
+      },
+      "lastChecked": "Last checked {when}",
+      "live": "Your page is live. Customers can open it here:",
+      "secureNote": "The security certificate is issued automatically the first time the page is opened.",
+      "remove": "Remove domain",
+      "removeAsk": "Remove this domain? The page stops opening there.",
+      "removed": "Domain removed."
+    },
+    "feeds": {
+      "intro": "Read-only feeds for reports and CRMs. They use an API key that belongs to your salon only: create one with the read scopes you need.",
+      "createKey": "Create an API key",
+      "baseUrl": "Feed address",
+      "entities": "What is in the feeds",
+      "entity": {
+        "bookings": "Bookings (read bookings)",
+        "clients": "Clients (read clients)",
+        "sales": "Sales and payments (read sales)",
+        "staff": "Team (read services and team)",
+        "services": "Services and prices (read services and team)"
+      },
+      "params": "Options",
+      "paramsBody": "from and to (dates, for bookings and sales), updated_since (only what changed after this moment, for example 2026-11-01T00:00:00Z), limit (up to 5000), cursor (continue where the last page stopped). JSON answers {data, next}; CSV puts the next cursor in the X-Next-Cursor header.",
+      "incremental": "Fetch only what changed",
+      "incrementalBody": "Ask with updated_since set to the time of your last fetch. Rows are ordered by their last change, so a scheduled refresh never misses or repeats a row. Removed clients stay in the feed with their details emptied.",
+      "powerbi": "Power BI",
+      "powerbiSteps": "Get data, Web, Advanced. Paste the feed address in the URL parts, then add the header Authorization with the value Bearer bqk_YOUR_KEY. Choose CSV or JSON and load.",
+      "sheets": "Google Sheets",
+      "sheetsBody": "Sheets cannot send headers, so for the feeds the key may also go in the address as api_key. Create a key only for the sheet, with the scopes it needs, and revoke it if the sheet is shared.",
+      "crm": "CRM",
+      "crmBody": "To push changes to a CRM as they happen, use a webhook (Zapier, Make or your own server)."
+    }
+  },
+  "helpCenter": {
+    "helpLink": "Help",
+    "articlesTitle": "Help articles",
+    "quickTitle": "Quick answers",
+    "readMore": "Read the full article",
+    "close": "Close",
+    "loadFailed": "Could not load this article.",
+    "noneMatch": "No articles match your search.",
+    "cat": {
+      "start": "Getting started",
+      "calendar": "Calendar",
+      "team": "Team",
+      "services": "Services",
+      "payments": "Payments",
+      "promotions": "Promotions",
+      "campaigns": "Campaigns"
+    },
+    "searchHelp": "Help articles",
+    "sales": "Sales"
+  },
   "integrations": {
     "title": "API keys & webhooks",
     "subtitle": "Let your own tools or partners read bookings and clients, create bookings and get notified when something happens.",
@@ -4622,7 +4782,8 @@
       "read:bookings": "Read bookings",
       "write:bookings": "Create bookings",
       "read:clients": "Read clients",
-      "read:services": "Read services and team"
+      "read:services": "Read services and team",
+      "read:sales": "Read sales and payments"
     },
     "create": "Create key",
     "created": "Key created.",

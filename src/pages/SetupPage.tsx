@@ -45,7 +45,7 @@ export default function SetupPage() {
   return (
     <AppLayout>
       <BooqiScope>
-        <PageHeader title={t("setup.settings")} subtitle={t("nav.set.subtitle")} />
+        <PageHeader helpSlug="ilk-addimlar" title={t("setup.settings")} subtitle={t("nav.set.subtitle")} />
 
         <div className={pageBody}>
           <div className="relative mb-6 max-w-md">

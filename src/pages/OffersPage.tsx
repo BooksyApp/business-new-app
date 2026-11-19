@@ -128,7 +128,7 @@ export default function OffersPage() {
   return (
     <AppLayout>
       <BooqiScope>
-        <PageHeader
+        <PageHeader helpSlug="endirim-ve-teklifler"
           title={tr("common.offers")}
           subtitle={tr("offers.aCutPriceShowsOn")}
           actions={

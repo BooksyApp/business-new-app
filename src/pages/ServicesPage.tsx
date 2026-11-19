@@ -154,7 +154,7 @@ export default function ServicesPage() {
 
   return (
     <AppLayout>
-      <PageHeader
+      <PageHeader helpSlug="xidmetler-ve-qiymetler"
         title={t("common.services")}
         subtitle={t("services.manageYourServiceOfferingsAnd")}
         actions={

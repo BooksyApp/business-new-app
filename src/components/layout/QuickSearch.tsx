@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CornerDownLeft } from "lucide-react";
+import { CornerDownLeft, LifeBuoy } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { keyForId } from "@/lib/salonKey";
-import { loadHubLocale, t, tDynamic, translate, type TKey } from "@/i18n";
+import { getLocale, loadHubLocale, t, tDynamic, translate, type TKey } from "@/i18n";
+import { helpService, type HelpArticle } from "@/services/helpService";
 import { BRAND_FONT } from "@/components/auth/useBrandFont";
 import {
   QUICK_SEARCH_EVENT,
@@ -31,7 +32,7 @@ function norm(s: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-type Kind = "page" | "setting" | "inside";
+type Kind = "page" | "setting" | "inside" | "help";
 interface Entry {
   id: string;
   kind: Kind;
@@ -56,6 +57,7 @@ export function QuickSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [loadedTick, setLoadedTick] = useState(0);
+  const [articles, setArticles] = useState<HelpArticle[]>([]);
   const navigate = useNavigate();
   const businessId = useBusinessId();
   const navSections = useVisibleNav();
@@ -89,6 +91,16 @@ export function QuickSearch() {
 
   useEffect(() => {
     if (!open) setQuery("");
+  }, [open]);
+
+  // Help articles written in the back office: searched next to the pages.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    helpService.list(getLocale()).then((r) => alive && setArticles(r)).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
   }, [open]);
 
   const entries = useMemo<Entry[]>(() => {
@@ -157,14 +169,27 @@ export function QuickSearch() {
         hay: names.join(" "),
       });
     }
+    for (const a of articles) {
+      const names = [norm(a.title)];
+      out.push({
+        id: `h:${a.slug}`,
+        kind: "help",
+        label: a.title,
+        hint: tDynamic(`helpCenter.cat.${a.category}`, a.category),
+        icon: LifeBuoy,
+        href: href(`/help/${a.slug}`),
+        names,
+        hay: [...names, norm(a.body)].join(" "),
+      });
+    }
     return out;
     // loadedTick: rebuild once the other languages arrive.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, navSections.length, settings.length, businessId, loadedTick]);
+  }, [open, navSections.length, settings.length, businessId, loadedTick, articles]);
 
   const q = norm(query.trim());
   const results = useMemo(() => {
-    if (!q) return entries.filter((e) => e.kind !== "inside");
+    if (!q) return entries.filter((e) => e.kind !== "inside" && e.kind !== "help");
     const words = q.split(/\s+/).filter(Boolean);
     const score = (e: Entry) =>
       e.names.some((n) => n.startsWith(q)) ? 0 : e.names.some((n) => n.split(/[\s&,/-]+/).some((w) => w.startsWith(words[0]))) ? 1 : 2;
@@ -184,6 +209,7 @@ export function QuickSearch() {
     { kind: "page", heading: t("nav.search.pages") },
     { kind: "setting", heading: t("nav.search.settings") },
     { kind: "inside", heading: t("nav.search.inside") },
+    { kind: "help", heading: t("helpCenter.searchHelp") },
   ];
 
   return (

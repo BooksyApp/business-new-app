@@ -4605,6 +4605,166 @@
       "status": "Status"
     }
   },
+  "marketplace": {
+    "title": "İnteqrasiyalar",
+    "subtitle": "booqi-ni artıq istifadə etdiyiniz təqvim, alət və kanallarla birləşdirin.",
+    "tabMarketplace": "Bütün inteqrasiyalar",
+    "tabFeeds": "Data axınları",
+    "tabCalendar": "Təqvimlər",
+    "tabTracking": "Reklam və analitika",
+    "tabSocial": "Instagram və Facebook",
+    "tabDomain": "Öz domeniniz",
+    "intro": "Lazım olanı aktiv edin. Burada hər şeyi istədiyiniz vaxt yenidən söndürə bilərsiniz.",
+    "connected": "Qoşulub",
+    "notConnected": "Qoşulmayıb",
+    "switchedOff": "booqi tərəfindən söndürülüb",
+    "manage": "Aç",
+    "setUp": "Qur",
+    "paidPlan": "Ödənişli plan",
+    "usedBy": "{count, plural, one {# istifadədə} other {# istifadədə}}",
+    "card": {
+      "google_calendar": {
+        "title": "Google Təqvim",
+        "desc": "Hər komanda üzvü şəxsi keçid alır və rezervasiyalarını Google Təqvimdə görür."
+      },
+      "apple_calendar": {
+        "title": "Apple Təqvim",
+        "desc": "Eyni şəxsi keçid iPhone və Mac-dəki Apple Təqvimdə də işləyir."
+      },
+      "webhooks": {
+        "title": "Çıxan webhook-lar",
+        "desc": "Rezervasiya və ya müştəri dəyişəndə ünvanınıza imzalı mesaj göndərilir. Jurnal və avtomatik təkrar cəhd var."
+      },
+      "zapier_make": {
+        "title": "Zapier və Make",
+        "desc": "Kod yazmadan minlərlə tətbiqi birləşdirin: Zapier və ya Make-də webhook-u tətikləyici kimi istifadə edin."
+      },
+      "api_keys": {
+        "title": "API açarları",
+        "desc": "Öz saytınız və ya proqramınız məlumatlarınızı oxusun və rezervasiya yaratsın."
+      },
+      "data_feeds": {
+        "title": "Power BI və Google Sheets",
+        "desc": "Rezervasiya, müştəri, satış, komanda və xidmətlərin yalnız oxunan axını (CSV və ya JSON)."
+      },
+      "tracking": {
+        "title": "Meta Pixel və Google Analytics",
+        "desc": "Öz səhifənizə gələnləri və rezervasiyaları öz pixel və analitikanızla ölçün."
+      },
+      "social_book": {
+        "title": "Instagram və Facebook rezerv düyməsi",
+        "desc": "Instagram və Facebook səhifənizin «Rezerv et» düyməsi üçün keçidlər. Hansı kanaldan nə gəldiyini görəcəksiniz."
+      },
+      "custom_domain": {
+        "title": "Öz domeniniz",
+        "desc": "Rezervasiya səhifəniz book.salonunuz.az ünvanında, öz loqo və rənginizlə, marketplace elementləri olmadan."
+      }
+    },
+    "calendar": {
+      "intro": "Hər komanda üzvünün bir şəxsi keçidi var. Onu təqvim tətbiqinə bir dəfə əlavə edin, bütün rezervasiyalar özü görünəcək. Keçidi bilən şəxs həmin işçinin rezervasiyalarını görə bilər, ona görə yalnız özünə göndərin.",
+      "noTeam": "Hələ komanda üzvü yoxdur.",
+      "getLink": "Keçidi göstər",
+      "copy": "Keçidi kopyala",
+      "copied": "Keçid kopyalandı.",
+      "regenerate": "Yeni keçid",
+      "regenerated": "Yeni keçid yaradıldı. Köhnəsi artıq işləmir.",
+      "failed": "Keçid yüklənmədi.",
+      "googleTitle": "Google Təqvim",
+      "googleSteps": "Kompüterdə Google Təqvimi açın, «Digər təqvimlər» (+) bölməsində «URL-dən» seçin, keçidi yapışdırıb əlavə edin. Google bunu bir neçə saatdan bir yeniləyir.",
+      "appleTitle": "Apple Təqvim",
+      "appleSteps": "iPhone-da: Ayarlar, Təqvim, Hesablar, Hesab əlavə et, Digər, Abunə olunan təqvim əlavə et. Mac-də: Fayl, Yeni təqvim abunəliyi."
+    },
+    "tracking": {
+      "intro": "Öz pixel və analitikanız booking səhifənizə gələnləri ölçür. Ziyarətçidən əvvəlcə cookie razılığı soruşulur, imtina edənlər üçün heç nə yüklənmir.",
+      "pixel": "Meta Pixel ID",
+      "pixelHint": "Yalnız rəqəmlər, məsələn 1234567890123456.",
+      "ga": "Google Analytics ölçmə ID-si",
+      "gaHint": "G-XXXXXXXXXX formasındadır.",
+      "save": "Yadda saxla",
+      "saved": "Yadda saxlandı.",
+      "failed": "Yadda saxlamaq mümkün olmadı.",
+      "clear": "İzləməni söndürmək üçün hər iki xananı boş buraxın."
+    },
+    "social": {
+      "intro": "Bu keçidləri sosial səhifələrinizdəki rezerv düyməsi və ya link kimi istifadə edin. Keçid rezervasiya səhifənizi açır və rezervin hansı kanaldan gəldiyini qeyd edir.",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "website": "Öz saytınız və ya bio-dakı link",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı.",
+      "noSalon": "İctimai səhifəniz hələ hazır deyil. Əvvəlcə quraşdırmanı tamamlayın."
+    },
+    "domain": {
+      "intro": "Rezervasiya səhifənizi öz domeninizdə, öz loqo və rənginizlə təqdim edin. Müştəri yalnız sizin salonu görür, marketplace-dən heç nə yoxdur.",
+      "planTitle": "Ödənişli plana daxildir",
+      "planBody": "Öz domen ödənişli planların tərkibindədir. Salonunuz üçün aktiv etmək üçün booqi dəstəyinə yazın.",
+      "domainLabel": "Domeniniz",
+      "domainPlaceholder": "book.salonunuz.az",
+      "save": "Domeni saxla",
+      "saveFailed": "Bu domeni saxlamaq mümkün olmadı.",
+      "dnsTitle": "Bu qeydi domen provayderinizdə əlavə edin",
+      "dnsType": "Növ",
+      "dnsName": "Ad",
+      "dnsValue": "İşarə edir",
+      "dnsNote": "Dəyişikliyin qüvvəyə minməsi bir neçə dəqiqədən bir günə qədər çəkə bilər. Sadə domen (book. olmadan) CNAME qəbul etməyə bilər, ona görə book. kimi subdomen seçin.",
+      "verify": "DNS-i yoxla",
+      "verifying": "Yoxlanılır...",
+      "status": {
+        "PENDING": "DNS gözlənilir",
+        "FAILED": "DNS hazır deyil",
+        "VERIFIED": "Qoşulub"
+      },
+      "lastChecked": "Son yoxlama: {when}",
+      "live": "Səhifəniz aktivdir. Müştərilər onu buradan aça bilər:",
+      "secureNote": "Təhlükəsizlik sertifikatı səhifə ilk dəfə açılanda avtomatik verilir.",
+      "remove": "Domeni sil",
+      "removeAsk": "Bu domen silinsin? Səhifə həmin ünvanda açılmayacaq.",
+      "removed": "Domen silindi."
+    },
+    "feeds": {
+      "intro": "Hesabat və CRM üçün yalnız oxunan axınlar. Onlar yalnız sizin salona aid API açarı ilə işləyir: lazım olan oxuma icazələri ilə açar yaradın.",
+      "createKey": "API açarı yarat",
+      "baseUrl": "Axın ünvanı",
+      "entities": "Axınlarda nə var",
+      "entity": {
+        "bookings": "Rezervasiyalar (rezervasiyaları oxumaq)",
+        "clients": "Müştərilər (müştəriləri oxumaq)",
+        "sales": "Satış və ödənişlər (satışları oxumaq)",
+        "staff": "Komanda (xidmətləri və komandanı oxumaq)",
+        "services": "Xidmətlər və qiymətlər (xidmətləri və komandanı oxumaq)"
+      },
+      "params": "Seçimlər",
+      "paramsBody": "from və to (tarixlər, rezervasiya və satış üçün), updated_since (bu andan sonra dəyişənlər, məsələn 2026-11-01T00:00:00Z), limit (5000-ə qədər), cursor (son səhifənin qaldığı yerdən davam). JSON {data, next} qaytarır; CSV-də növbəti cursor X-Next-Cursor başlığındadır.",
+      "incremental": "Yalnız dəyişənləri götür",
+      "incrementalBody": "updated_since parametrini son götürmə vaxtına qoyun. Sətirlər son dəyişikliyə görə sıralanır, buna görə planlı yeniləmə heç bir sətri buraxmır və təkrarlamır. Silinmiş müştərilər axında qalır, amma məlumatları boşaldılır.",
+      "powerbi": "Power BI",
+      "powerbiSteps": "Get data, Web, Advanced. Axın ünvanını URL hissələrinə yapışdırın, sonra Authorization başlığını Bearer bqk_SIZIN_ACAR dəyəri ilə əlavə edin. CSV və ya JSON seçib yükləyin.",
+      "sheets": "Google Sheets",
+      "sheetsBody": "Sheets başlıq göndərə bilmir, ona görə axınlarda açar ünvana api_key kimi də yazıla bilər. Açarı yalnız cədvəl üçün, lazım olan icazələrlə yaradın və cədvəl paylaşılsa, ləğv edin.",
+      "crm": "CRM",
+      "crmBody": "Dəyişiklikləri CRM-ə dərhal göndərmək üçün webhook istifadə edin (Zapier, Make və ya öz serveriniz)."
+    }
+  },
+  "helpCenter": {
+    "helpLink": "Kömək",
+    "articlesTitle": "Kömək məqalələri",
+    "quickTitle": "Qısa cavablar",
+    "readMore": "Məqalənin hamısını oxu",
+    "close": "Bağla",
+    "loadFailed": "Məqaləni yükləmək mümkün olmadı.",
+    "noneMatch": "Axtarışa uyğun məqalə tapılmadı.",
+    "cat": {
+      "start": "İlk addımlar",
+      "calendar": "Təqvim",
+      "team": "Komanda",
+      "services": "Xidmətlər",
+      "payments": "Ödənişlər",
+      "promotions": "Endirimlər",
+      "campaigns": "Kampaniyalar"
+    },
+    "searchHelp": "Kömək məqalələri",
+    "sales": "Satışlar"
+  },
   "integrations": {
     "title": "API açarları və webhook-lar",
     "subtitle": "Öz alətlərinizin və ya tərəfdaşlarınızın rezervləri və müştəriləri oxumasına, rezerv yaratmasına və hadisələr barədə xəbər almasına icazə verin.",
@@ -4622,7 +4782,8 @@
       "read:bookings": "Rezervləri oxumaq",
       "write:bookings": "Rezerv yaratmaq",
       "read:clients": "Müştəriləri oxumaq",
-      "read:services": "Xidmətləri və komandanı oxumaq"
+      "read:services": "Xidmətləri və komandanı oxumaq",
+      "read:sales": "Satışları və ödənişləri oxumaq"
     },
     "create": "Açar yarat",
     "created": "Açar yaradıldı.",

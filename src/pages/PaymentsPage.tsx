@@ -61,7 +61,7 @@ export default function PaymentsPage() {
   return (
     <AppLayout>
       <BooqiScope>
-        <PageHeader title={t("ledger.title")} subtitle={t("ledger.subtitle")} actions={<PeriodPicker value={range} onChange={changeRange} ranges={PAY_RANGES} />} />
+        <PageHeader helpSlug="odenisler-ve-qebzler" title={t("ledger.title")} subtitle={t("ledger.subtitle")} actions={<PeriodPicker value={range} onChange={changeRange} ranges={PAY_RANGES} />} />
         <div className={pageBody}>
           {d && <Totals d={d} />}
 

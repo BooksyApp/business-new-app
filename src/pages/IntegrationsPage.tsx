@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { fmtDate, t, tDynamic } from "@/i18n";
+import { CalendarTab, DomainTab, FeedsTab, MarketplaceTab, SocialTab, TrackingTab, type IntegrationTab } from "@/pages/integrations/MarketplaceTabs";
 import { integrationService, type ApiKeyRow, type WebhookDelivery, type WebhookRow } from "@/services/integrationService";
 
 const card = "rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]";
@@ -272,6 +273,7 @@ function HooksTab({ businessId }: { businessId: string }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-[rgb(var(--reg-muted))]">{t("integrations.hooksIntro")}</p>
+      <p className="text-sm text-[rgb(var(--reg-muted))]">{t("marketplace.card.zapier_make.desc")}</p>
       {secret && <SecretBox title={t("integrations.hookSecret")} secret={secret} hint={t("integrations.hookSecretOnce")} onDone={() => setSecret(null)} />}
 
       {open ? (
@@ -363,13 +365,14 @@ export default function IntegrationsPage() {
   const businessId = useBusinessId();
   const { salonKey } = useParams<{ salonKey?: string }>();
   const isOwner = myAccess().isOwner;
+  const [tab, setTab] = useState<IntegrationTab>("market");
 
   return (
     <AppLayout>
       <BooqiScope>
         <PageHeader
-          title={t("integrations.title")}
-          subtitle={t("integrations.subtitle")}
+          title={t("marketplace.title")}
+          subtitle={t("marketplace.subtitle")}
           actions={
             isOwner ? (
               <Link to={`/${salonKey ?? ""}/api-docs`} className={`${secondaryBtn} inline-flex items-center`}>
@@ -382,16 +385,40 @@ export default function IntegrationsPage() {
           {!isOwner || !businessId ? (
             <EmptyState icon={KeyRound} title={t("integrations.ownerOnly")} />
           ) : (
-            <Tabs defaultValue="keys">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as IntegrationTab)}>
               <TabsList>
+                <TabsTrigger value="market">{t("marketplace.tabMarketplace")}</TabsTrigger>
                 <TabsTrigger value="keys">{t("integrations.tabKeys")}</TabsTrigger>
                 <TabsTrigger value="hooks">{t("integrations.tabHooks")}</TabsTrigger>
+                <TabsTrigger value="feeds">{t("marketplace.tabFeeds")}</TabsTrigger>
+                <TabsTrigger value="calendar">{t("marketplace.tabCalendar")}</TabsTrigger>
+                <TabsTrigger value="tracking">{t("marketplace.tabTracking")}</TabsTrigger>
+                <TabsTrigger value="social">{t("marketplace.tabSocial")}</TabsTrigger>
+                <TabsTrigger value="domain">{t("marketplace.tabDomain")}</TabsTrigger>
               </TabsList>
+              <TabsContent value="market">
+                <MarketplaceTab businessId={businessId} onOpen={setTab} />
+              </TabsContent>
               <TabsContent value="keys">
                 <KeysTab businessId={businessId} />
               </TabsContent>
               <TabsContent value="hooks">
                 <HooksTab businessId={businessId} />
+              </TabsContent>
+              <TabsContent value="feeds">
+                <FeedsTab onOpen={setTab} />
+              </TabsContent>
+              <TabsContent value="calendar">
+                <CalendarTab businessId={businessId} />
+              </TabsContent>
+              <TabsContent value="tracking">
+                <TrackingTab businessId={businessId} />
+              </TabsContent>
+              <TabsContent value="social">
+                <SocialTab businessId={businessId} />
+              </TabsContent>
+              <TabsContent value="domain">
+                <DomainTab businessId={businessId} />
               </TabsContent>
             </Tabs>
           )}

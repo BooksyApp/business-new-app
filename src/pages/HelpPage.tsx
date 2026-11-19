@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LifeBuoy, MessageCircle, Search } from "lucide-react";
 
@@ -8,7 +8,9 @@ import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyle
 import { fieldCls } from "@/components/page/kitStyles";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
-import { t } from "@/i18n";
+import { HelpMarkdown } from "@/components/HelpMarkdown";
+import { getLocale, t, tDynamic } from "@/i18n";
+import { helpService, type HelpArticle } from "@/services/helpService";
 import { platformSettings, getSalonSupport } from "@/services/platformService";
 
 type Article = "a1" | "a2" | "a3" | "a4" | "a5" | "a6" | "a7" | "a8";
@@ -29,9 +31,65 @@ const q = (id: Article) => t(`help.${id}.q` as "help.a1.q");
 const body = (id: Article) => t(`help.${id}.a` as "help.a1.a");
 const linkLabel = (id: Article) => t(`help.${id}.link` as "help.a1.link");
 
-/** Kömək: short static answers, and the way to Support when they are not enough. */
+/** Articles written in the back office: grouped by category, full text loaded when one is opened. */
+function ServerArticles({ query, initialSlug }: { query: string; initialSlug?: string }) {
+  const [rows, setRows] = useState<HelpArticle[] | null>(null);
+  const [open, setOpen] = useState(initialSlug ?? "");
+  const [bodies, setBodies] = useState<Record<string, string | null>>({});
+  const asked = useRef(new Set<string>());
+  const locale = getLocale();
+
+  useEffect(() => {
+    let live = true;
+    const timer = setTimeout(() => {
+      helpService.list(locale, query).then((r) => live && setRows(r)).catch(() => live && setRows([]));
+    }, query ? 250 : 0);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [query, locale]);
+
+  useEffect(() => {
+    if (!open || asked.current.has(open)) return;
+    asked.current.add(open);
+    helpService.article(locale, open).then((a) => setBodies((b) => ({ ...b, [open]: a?.body ?? null }))).catch(() => setBodies((b) => ({ ...b, [open]: null })));
+  }, [open, locale]);
+
+  if (!rows || rows.length === 0) return null;
+  const groups = new Map<string, HelpArticle[]>();
+  for (const a of rows) groups.set(a.category, [...(groups.get(a.category) ?? []), a]);
+  return (
+    <section className="space-y-4">
+      <h2 className="text-base font-semibold">{t("helpCenter.articlesTitle")}</h2>
+      {[...groups].map(([cat, list]) => (
+        <div key={cat} className="overflow-hidden rounded-[20px] bg-white px-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:px-6">
+          <p className="pt-4 text-xs font-bold uppercase tracking-wide opacity-60">{tDynamic(`helpCenter.cat.${cat}`, cat)}</p>
+          <Accordion type="single" collapsible value={open} onValueChange={setOpen}>
+            {list.map((a) => (
+              <AccordionItem key={a.slug} value={a.slug} id={`help-${a.slug}`}>
+                <AccordionTrigger className="text-left">{a.title}</AccordionTrigger>
+                <AccordionContent>
+                  {bodies[a.slug] === undefined ? (
+                    <p className="text-sm opacity-70">{a.body}</p>
+                  ) : bodies[a.slug] === null ? (
+                    <p className="text-sm opacity-70">{t("helpCenter.loadFailed")}</p>
+                  ) : (
+                    <HelpMarkdown source={bodies[a.slug] ?? ""} className="text-sm" />
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** Kömək: articles from the back office and short static answers, and the way to Support when they are not enough. */
 export default function HelpPage() {
-  const { salonKey: businessId } = useParams<{ salonKey?: string }>();
+  const { salonKey: businessId, articleSlug } = useParams<{ salonKey?: string; articleSlug?: string }>();
   const [query, setQuery] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [priority, setPriority] = useState(false);
@@ -79,6 +137,9 @@ export default function HelpPage() {
             />
           </div>
 
+          <ServerArticles query={query.trim()} initialSlug={articleSlug} />
+
+          <h2 className="text-base font-semibold">{t("helpCenter.quickTitle")}</h2>
           <section className="overflow-hidden rounded-[20px] bg-white px-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:px-6">
             {shown.length === 0 ? (
               <p className="py-6 text-sm opacity-70">{t("help.noResults")}</p>
