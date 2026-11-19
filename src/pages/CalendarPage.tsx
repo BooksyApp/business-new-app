@@ -62,6 +62,8 @@ import { appointmentService, BookingConflictDeclined } from "@/services/appointm
 import { serviceService, type ServicePackage } from "@/services/serviceService";
 import { PackageBookingPanel } from "@/components/calendar/PackageBookingPanel";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
+import { WaitingBlock, WaitingPill } from "@/components/calendar/WaitingBlock";
+import { isFreed, placeWaiting, toHHmm, toMinutes, type BusyRange, type WaitingPlacement } from "@/lib/waitlistCalendar";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -384,7 +386,10 @@ function hasTimeOffConflict(
   });
 }
 
-type ConflictItem = { type: 'appointment'; item: Appointment } | { type: 'timeoff'; item: TimeOff };
+type ConflictItem =
+  | { type: 'appointment'; item: Appointment }
+  | { type: 'timeoff'; item: TimeOff }
+  | { type: 'waiting'; item: WaitlistEntry; placement: WaitingPlacement; start: string; end: string };
 
 // Group appointments and time offs by conflicts
 function groupConflictingItems(
@@ -791,8 +796,6 @@ export default function CalendarPage() {
    * again — the one thing they were already looking at when they saw the gap. Dragging the
    * card onto the gap says who, when and with whom in one gesture.
    */
-  const [draggingEntry, setDraggingEntry] = useState<WaitlistEntry | null>(null);
-
   const dropOnSlot = (entry: WaitlistEntry, staffId: string, startTime: string) => {
     const duration = entry.serviceId ? serviceDuration(String(entry.serviceId)) : 30;
     const [h, m] = startTime.split(":").map(Number);
@@ -810,7 +813,6 @@ export default function CalendarPage() {
       endTime: `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
       notes: "From the waiting list",
     }));
-    setDraggingEntry(null);
     setPlacingEntryId(entry.id);
     setIsNewAppointmentOpen(true);
   };
@@ -1482,6 +1484,69 @@ export default function CalendarPage() {
   const prevMonth = () => setCalendarMonth(subMonths(calendarMonth, 1));
   const nextMonth = () => setCalendarMonth(addMonths(calendarMonth, 1));
 
+  // Waiting clients on the grid. A toggle in the view options (default on); the server flag
+  // `waitlist` still switches the whole feature off.
+  const [showWaiting, setShowWaitingState] = useState<boolean>(() => {
+    try { return localStorage.getItem("calendar.showWaiting") !== "0"; } catch { return true; }
+  });
+  const setShowWaiting = (on: boolean) => {
+    setShowWaitingState(on);
+    try { localStorage.setItem("calendar.showWaiting", on ? "1" : "0"); } catch { /* per-viewer convenience only */ }
+  };
+  const waitingEnabled = flags.waitlist !== false && showWaiting && viewType === "Day";
+  const dayKey = format(currentDate, "yyyy-MM-dd");
+  const waitingForDay = useMemo(
+    () =>
+      waitingEnabled
+        ? waitlist
+            .filter(w => !w.preferredDate || w.preferredDate === dayKey)
+            .map(w => {
+              const dur = w.serviceId ? serviceDuration(String(w.serviceId)) : 30;
+              return { entry: w, durationMin: dur, placement: placeWaiting(w, dur) };
+            })
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- serviceDuration reads `services`, listed
+    [waitingEnabled, waitlist, dayKey, services],
+  );
+  // What is really booked (appointments and time off) that day, per master. Waiting blocks are
+  // deliberately not in here: a waiting client does not occupy the chair.
+  const dayBusy: BusyRange[] = useMemo(() => {
+    if (!waitingEnabled) return [];
+    const out: BusyRange[] = appointments
+      .filter(a => isSameDay(a.date, currentDate) && (a as { status?: string }).status !== "CANCELLED")
+      .map(a => ({ staffId: a.staffId, start: normalizeTime(a.startTime), end: normalizeTime(a.endTime) }));
+    for (const st of staff) {
+      for (const to of getTimeOffsForStaffAndDate(timeOffs, st.id, currentDate)) {
+        out.push({ staffId: st.id, start: to.isFullDay ? "00:00" : normalizeTime(to.startTime || "00:00"), end: to.isFullDay ? "23:59" : normalizeTime(to.endTime || "23:59") });
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- staff is derived from apiStaff each render
+  }, [waitingEnabled, appointments, timeOffs, currentDate, apiStaff]);
+  const waitingProps = (w: { entry: WaitlistEntry; durationMin: number; placement: WaitingPlacement }) => {
+    const { startHour, endHour } = getBusinessHoursForDate(currentDate);
+    const doing = services.find(x => w.entry.serviceId && x.id.toString() === String(w.entry.serviceId))?.staffIds;
+    const masters = staff
+      .filter(st => !doing || doing.length === 0 || doing.map(String).includes(String(st.id)))
+      .map(st => ({ id: st.id, name: st.name }));
+    const now = salonNow(salonTz);
+    return {
+      entry: w.entry,
+      placement: w.placement,
+      businessId: String(businessId),
+      dateStr: dayKey,
+      durationMin: w.durationMin,
+      masters,
+      busy: dayBusy,
+      dayStartMin: startHour * 60,
+      dayEndMin: Math.max(endHour, startHour + 1) * 60,
+      notBeforeMin: isSameDay(currentDate, now) ? now.getHours() * 60 + now.getMinutes() : undefined,
+      onBook: dropOnSlot,
+      onChanged: reloadWaitlist,
+    };
+  };
+  const waitingStrip = waitingForDay.filter(w => !(w.placement.staffId && w.placement.start));
+
   return (
     <AppLayout>
       <div className="flex h-full w-full overflow-hidden bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ fontFamily: BRAND_FONT }}>
@@ -1501,6 +1566,19 @@ export default function CalendarPage() {
               the salon then picks the slot, which is the part only they can decide. */}
           {/* LR-02: what still stops clients booking, with a link to each fix (not-bookable only). */}
           {businessId ? <VisibilityBanner businessId={businessId} showLive={false} className="mx-3 mt-3 md:mx-6" /> : null}
+
+          {/* Waiting clients with no time on the grid (any master, or only a date). A slim strip of
+              chips, not a column: it takes one row and disappears when nobody is waiting. */}
+          {waitingStrip.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto border-b border-[rgb(var(--reg-line)/0.7)] bg-white px-3 py-2 md:px-6" aria-label={tr("waitlistCal.stripLabel")}>
+              <span className="flex shrink-0 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[rgb(var(--reg-muted))]">
+                <Clock size={13} aria-hidden /> {tr("waitlistCal.stripLabel")} · {waitingStrip.length}
+              </span>
+              {waitingStrip.map(w => (
+                <WaitingPill key={w.entry.id} {...waitingProps(w)} freed={isFreed(w.entry)} />
+              ))}
+            </div>
+          )}
 
           {/* Loading State */}
           {loading && (
@@ -1852,6 +1930,24 @@ export default function CalendarPage() {
                 </Popover>
               )}
 
+              {viewType === "Day" && flags.waitlist !== false && (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={showWaiting}
+                  onClick={() => setShowWaiting(!showWaiting)}
+                  className={`inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
+                    showWaiting
+                      ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-[rgb(var(--reg-brand)/0.4)]"
+                      : "bg-white text-[rgb(var(--reg-muted))] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
+                  }`}
+                >
+                  <Clock size={16} strokeWidth={1.75} aria-hidden />
+                  <span className="hidden sm:inline">{tr("waitlistCal.showWaiting")}</span>
+                  <span className="sm:hidden">{tr("waitlistCal.stripLabel")}</span>
+                </button>
+              )}
+
               {viewType === "Day" && getAppointmentsForDate(currentDate).length === 0 && (
                 <p className="ml-auto hidden text-sm text-[rgb(var(--reg-muted))] lg:block">
                   {tr("calendar.noBookingsYetClickA")}
@@ -1980,64 +2076,6 @@ export default function CalendarPage() {
         {/* self-start: as a stretched flex item this row was only as tall as the viewport,
             so the sticky staff headers scrolled away with it once the day opened at 09:00. */}
         <div className="flex flex-1 self-start">
-              {/* The waiting list, as the first column of the calendar. It sat above the
-                  grid as a strip, which is the wrong shape for the job: a salon looks at a
-                  gap in a staff member's day and wants to drag somebody into it, and the
-                  people who could fill it belong beside the gaps, not over them. */}
-              {flags.waitlist !== false && waitlist.length > 0 && (
-                <div className="w-[210px] shrink-0 border-r border-amber-200 bg-amber-50/60">
-                  <div className="sticky top-0 z-10 border-b border-amber-200 bg-amber-50 px-3 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-900">
-                      {tr("calendar.waiting", { count: waitlist.length })}
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-amber-800/70">
-                      {tr("calendar.dragOntoAGapTo")}
-                    </p>
-                  </div>
-                  <div className="space-y-2 p-2">
-                    {waitlist.map((w) => (
-                      <div
-                        key={w.id}
-                        draggable
-                        onDragStart={() => setDraggingEntry(w)}
-                        onDragEnd={() => setDraggingEntry(null)}
-                        onClick={() => placeFromWaitlist(w)}
-                        title={tr("calendar.dragOntoASlotOr")}
-                        className={`cursor-grab rounded-xl border bg-white p-2.5 shadow-sm transition-all active:cursor-grabbing hover:-translate-y-0.5 hover:shadow-md ${
-                          draggingEntry?.id === w.id ? "opacity-50" : "border-amber-200"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${clientColorClasses(
-                              w.clientName || w.clientEmail || "client"
-                            )}`}
-                          >
-                            {(w.clientName || w.clientEmail || "C").charAt(0).toUpperCase()}
-                          </span>
-                          <p className="min-w-0 flex-1 truncate text-xs font-medium">
-                            {w.clientName || w.clientEmail || tr("common.client")}
-                          </p>
-                          {w.status === "NOTIFIED" && (
-                            <span className="shrink-0 rounded-full bg-[rgb(var(--reg-success-soft))] px-1.5 py-0.5 text-[9px] font-medium text-[rgb(var(--reg-success))]">
-                              {tr("calendar.told")}
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1.5 truncate text-[11px] text-muted-foreground">
-                          {w.serviceName || tr("calendar.anyService")}
-                        </p>
-                        <p className="truncate text-[11px] text-muted-foreground">
-                          {[w.staffName ? tr("calendar.withStaff", { name: w.staffName }) : null, w.preferredDate || tr("calendar.anyDate")]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {visibleStaff.map((staff) => {
                 const dayAppointments = getAppointmentsForDate(currentDate);
                 const staffAppointments = getAppointmentsForStaff(dayAppointments, staff.id);
@@ -2076,17 +2114,6 @@ export default function CalendarPage() {
                     <div 
                       className="relative select-none" 
                       style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
-                      onDragOver={(e) => {
-                        // Only while a waiting client is in hand; otherwise the grid's own
-                        // drag behaviour is untouched.
-                        if (draggingEntry) e.preventDefault();
-                      }}
-                      onDrop={(e) => {
-                        if (!draggingEntry) return;
-                        e.preventDefault();
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        dropOnSlot(draggingEntry, staff.id, getTimeFromPosition(e.clientY - rect.top, SLOT_HEIGHT));
-                      }}
                       onMouseDown={(e) => {
                         // Allow selection even if clicking on or near appointments
                         // Only prevent if clicking directly on appointment content
@@ -2329,6 +2356,17 @@ export default function CalendarPage() {
                       {/* Appointments and Time Offs - Grouped by conflicts */}
                       {(() => {
                         const conflictGroups = groupConflictingItems(staffAppointments, staffTimeOffs, dayBusinessStartHour, dayBusinessEndHour);
+                        // Waiting clients join the master's lanes like an overlapping booking:
+                        // beside the appointment they overlap, alone otherwise.
+                        for (const w of waitingForDay) {
+                          if (!w.placement.start || !w.placement.end || String(w.placement.staffId) !== String(staff.id)) continue;
+                          const ws = toMinutes(w.placement.start);
+                          const we = toMinutes(w.placement.end);
+                          const item: ConflictItem = { type: 'waiting', item: w.entry, placement: w.placement, start: w.placement.start, end: w.placement.end };
+                          const host = conflictGroups.find((g) =>
+                            g.some((x) => x.type === 'appointment' && ws < parseTime(normalizeTime(x.item.endTime)) && we > parseTime(normalizeTime(x.item.startTime))));
+                          if (host) host.push(item); else conflictGroups.push([item]);
+                        }
                         const isDragging = dragSelection?.isDragging && dragSelection.staffId === staff.id;
                         
                         return conflictGroups.flatMap((group) => {
@@ -2345,6 +2383,10 @@ export default function CalendarPage() {
                               const pos = getTimePosition(aptStartTime, aptEndTime, SLOT_HEIGHT);
                               top = pos.top;
                               height = pos.height;
+                            } else if (item.type === 'waiting') {
+                              const pos = getTimePosition(item.start, item.end, SLOT_HEIGHT);
+                              top = pos.top;
+                              height = Math.max(pos.height, SLOT_HEIGHT * 2);
                             } else {
                               // For full day time offs, show them only during business hours for this day (or 00:00-00:00 if disabled)
                               const startTime = item.item.isFullDay 
@@ -2418,6 +2460,27 @@ export default function CalendarPage() {
                       />
                     </div>
                   );
+                            } else if (item.type === 'waiting') {
+                              const wp = waitingProps({ entry: item.item, durationMin: item.item.serviceId ? serviceDuration(String(item.item.serviceId)) : 30, placement: item.placement });
+                              return (
+                                <div
+                                  key={`waiting-${item.item.id}`}
+                                  className="absolute z-20"
+                                  data-appointment-block="true"
+                                  style={{
+                                    top: `${top}px`,
+                                    height: `${height}px`,
+                                    left: groupSize === 1 ? '0.25rem' : `calc(0.25rem + ${leftPercent}%)`,
+                                    width: groupSize === 1 ? 'calc(100% - 0.5rem)' : `calc(${widthPercent}% - ${gapPercent * 0.5}%)`,
+                                    marginRight: itemIndex < groupSize - 1 ? `${gapPercent}%` : '0.5rem',
+                                    pointerEvents: isDragging ? "none" : "auto",
+                                  }}
+                                  onMouseDown={(e) => { if (!isDragging) e.stopPropagation(); }}
+                                  onMouseUp={(e) => { if (!isDragging) e.stopPropagation(); }}
+                                >
+                                  <WaitingBlock {...wp} height={height} freed={item.placement.freed} />
+                                </div>
+                              );
                             } else {
                               // Time off block
                               const timeOff = item.item;

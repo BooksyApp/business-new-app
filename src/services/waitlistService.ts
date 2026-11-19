@@ -21,11 +21,37 @@ export interface WaitlistEntry {
   serviceName: string | null;
   staffName: string | null;
   createdAt: string | null;
+  /** HH:mm[:ss] window the client can come in; null = any time that day. */
+  preferredStartTime?: string | null;
+  preferredEndTime?: string | null;
+  /** Salon switch: message this client automatically when a matching slot frees up. */
+  autoNotify?: boolean;
+  /** A matching slot freed up (cancellation): when, with whom, at what time. */
+  slotFreedAt?: string | null;
+  freedStaffId?: Id | null;
+  freedStartTime?: string | null;
+  holdUntil?: string | null;
+  offeredAt?: string | null;
+}
+
+export interface WaitlistOfferSlot {
+  staffId: Id;
+  date: string;
+  startTime: string;
 }
 
 class WaitlistService {
   async listForBusiness(businessId: Id): Promise<WaitlistEntry[]> {
     return apiClient.get<WaitlistEntry[]>(`/waitlist/business/${businessId}`);
+  }
+
+  async setAutoNotify(businessId: Id, id: Id, autoNotify: boolean): Promise<void> {
+    return apiClient.patch<void>(`/waitlist/business/${businessId}/${id}`, { autoNotify });
+  }
+
+  /** Send the client 1-3 concrete times over the existing waitlist channels. */
+  async offer(businessId: Id, id: Id, slots: WaitlistOfferSlot[]): Promise<void> {
+    return apiClient.post<void>(`/waitlist/business/${businessId}/${id}/offer`, { slots });
   }
 
   /** Take someone off the list — booked elsewhere, or no longer waiting. */
