@@ -43,6 +43,7 @@ export default function LocationsPage() {
           actions={
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => navigate("../branch-comparison")}>{t("cmp.compareSalons")}</Button>
+              <Button variant="outline" onClick={() => navigate("../central-prices")}>{t("cp.title")}</Button>
               <Button className={primaryBtn} onClick={() => navigate("/create-business")}>
                 <Plus size={16} />{" "}{t("layout.addSalon")}
               </Button>
