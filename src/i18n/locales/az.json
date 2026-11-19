@@ -4916,5 +4916,16 @@
     "noExpenses": "Bu dövrdə xərc yoxdur.",
     "expensesTitle": "Xərclər",
     "expensesHint": "Kateqoriya üzrə xərclər, kreslo icarəsi daxil: əlavə edin və dəyişin"
+  },
+  "bookButton": {
+    "title": "Instagram və Facebook \"Rezerv et\" düyməsi",
+    "hint": "Bu linklərdən birini Instagram bio-nuza, Facebook səhifənizin əməliyyat düyməsinə (Rezerv et) və ya story link stikerinə qoyun. Bu yolla gələn rezervlər sizin öz linkinizdən sayılır.",
+    "instagram": "Instagram linki",
+    "facebook": "Facebook linki",
+    "copy": "Kopyala",
+    "copied": "Link kopyalandı",
+    "step1": "Instagram: Profili redaktə et > Linklər > Xarici link əlavə et, Instagram linkini yapışdırın. Və ya Profili redaktə et > Əməliyyat düymələri bölməsində Rezerv et düyməsi əlavə edin.",
+    "step2": "Facebook: səhifənizi açın > Əməliyyat düyməsi əlavə et > Rezerv et, Facebook linkini yapışdırın.",
+    "step3": "Paylaşmazdan əvvəl linki gizli brauzer pəncərəsində yoxlayın."
   }
 }

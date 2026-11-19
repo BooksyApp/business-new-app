@@ -46,6 +46,7 @@ import { campaignService, type Campaign, type CampaignResults, type AudiencePrev
 import { t as tr, fmtDate as formatLocaleDate, getLocale } from "@/i18n";
 import { AutomationCard } from "@/components/page/AutomationCard";
 import { LoyaltyTiersCard } from "@/components/page/LoyaltyTiersCard";
+import { BookingLinkCard } from "@/components/page/BookingLinkCard";
 import { MarketplacePromotionCard } from "@/components/page/MarketplacePromotionCard";
 import { CAMPAIGN_TEMPLATES, type CampaignTemplate } from "@/lib/campaignTemplates";
 
@@ -349,6 +350,8 @@ export default function MarketingPage() {
             <StatCard icon={Megaphone} label={tr("marketing.campaigns")} value={campaignList.length} hint={drafts ? `${drafts} draft${drafts === 1 ? "" : "s"}` : tr("marketing.noneWaiting")} tone="sky" />
             <StatCard icon={Send} label={tr("marketing.clientsReached")} value={reached} hint={tr("marketing.queuedOrSent")} tone="amber" />
           </div>
+
+          {businessId && <BookingLinkCard businessId={businessId} />}
 
           <Tabs value={tab} onValueChange={(v) => setTab(v as "promos" | "campaigns")}>
             <TabsList>

@@ -4916,5 +4916,16 @@
     "noExpenses": "No expenses in this period.",
     "expensesTitle": "Expenses",
     "expensesHint": "Expenses by category, chair rent included: add and edit"
+  },
+  "bookButton": {
+    "title": "Instagram and Facebook \"Book\" button",
+    "hint": "Put one of these links in your Instagram bio, your Facebook page's action button (Book now) or a story link sticker. Bookings made through it are counted as your own link.",
+    "instagram": "Instagram link",
+    "facebook": "Facebook link",
+    "copy": "Copy",
+    "copied": "Link copied",
+    "step1": "Instagram: Edit profile > Links > Add external link, paste the Instagram link. Or add a Book now action button under Edit profile > Action buttons.",
+    "step2": "Facebook: open your page > Add action button > Book now, paste the Facebook link.",
+    "step3": "Test the link in a private browser window before you share it."
   }
 }

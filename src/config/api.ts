@@ -248,7 +248,7 @@ export function publicSiteUrl(): string {
  * tell the bookings the salon brought itself (its link, its QR code) from the ones booqi brought.
  * booqi-web reads ?src=link|qr (lib/bookingSource). Use the plain URL for the owner's own preview.
  */
-export function salonShareUrl(salonUrl: string, src: "link" | "qr"): string {
+export function salonShareUrl(salonUrl: string, src: "link" | "qr" | "instagram" | "facebook"): string {
   if (!salonUrl) return "";
   return `${salonUrl}${salonUrl.includes("?") ? "&" : "?"}src=${src}`;
 }
