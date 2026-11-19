@@ -283,6 +283,14 @@ export default function PromotionPage() {
                         ? t("promotion.packageForecast", { value: p.forecastPerDay.toLocaleString() })
                         : t("promotion.noPromotionHasRunHere")}
                     </p>
+                    {p.overridden && (
+                      <p className="flex items-center gap-2 text-xs">
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t("billing.specialPrice")}</span>
+                        {p.defaultPrice !== undefined && (
+                          <span className="text-muted-foreground line-through">{formatPrice(p.defaultPrice)}</span>
+                        )}
+                      </p>
+                    )}
                     <Button disabled={busy} onClick={() => void buy(p.id)}>
                       {busy ? t("promotion.openingPayment") : t("promotion.promoteFor", { value: formatPrice(p.price) })}
                     </Button>

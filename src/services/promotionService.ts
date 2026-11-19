@@ -18,6 +18,9 @@ export interface PromotionPackage {
   days: number;
   price: number;
   currency: string | null;
+  overridden?: boolean;
+  defaultPrice?: number;
+  defaultCurrency?: string;
   forecastKnown: boolean;
   forecastPerDay: number;
 }

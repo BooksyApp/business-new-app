@@ -30,6 +30,10 @@ export interface BillingPlan {
   nameRu: string;
   monthlyPrice: number;
   currency: string;
+  /** True when this salon has its own price; monthlyPrice is then the effective one. */
+  overridden?: boolean;
+  defaultPrice?: number;
+  defaultCurrency?: string;
   trialDays: number;
   maxStaff: number | null;
   features: { az: string[]; en: string[]; ru: string[] };
@@ -45,6 +49,16 @@ export interface NextInvoice {
   estimate: boolean;
 }
 
+export interface PendingCharge {
+  id: Id;
+  description: string;
+  amount: number;
+  currency: string;
+  promotionDays: number | null;
+  status: "PENDING";
+  createdAt: string;
+}
+
 export type MessageChannel = "WHATSAPP" | "SMS";
 
 export interface BillingOverview {
@@ -57,6 +71,7 @@ export interface BillingOverview {
   nextInvoice: NextInvoice | null;
   messageBalances: Partial<Record<MessageChannel, number>>;
   commissionPct: number;
+  pendingCharges?: PendingCharge[];
 }
 
 export interface SubscriptionChange {
@@ -115,6 +130,9 @@ export interface MessagePack {
   quantity: number;
   price: number;
   currency: string;
+  overridden?: boolean;
+  defaultPrice?: number;
+  defaultCurrency?: string;
 }
 
 export interface MessagePurchase {
@@ -157,4 +175,9 @@ export const billingService = {
 
   purchaseMessages: (businessId: Id, packId: Id, successUrl: string, cancelUrl: string) =>
     apiClient.post<{ checkoutUrl: string }>(`${base(businessId)}/messages/purchase`, { packId, successUrl, cancelUrl }),
+
+  charges: (businessId: Id) => apiClient.get<PendingCharge[]>(`${base(businessId)}/charges`),
+
+  payCharge: (businessId: Id, chargeId: Id, successUrl: string, cancelUrl: string) =>
+    apiClient.post<{ checkoutUrl: string }>(`${base(businessId)}/charges/${chargeId}/pay`, { successUrl, cancelUrl }),
 };

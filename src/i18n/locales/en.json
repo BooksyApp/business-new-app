@@ -113,6 +113,8 @@
     "needOptions": "A single-choice question needs at least two options."
   },
   "billing": {
+    "toPay": { "title": "To pay", "pay": "Pay", "promoDays": "+{days} days promotion" },
+    "specialPrice": "Special price",
     "navRow": "Billing & plan",
     "navHint": "Your booqi plan, invoices, commission and message packs",
     "manage": "Manage plan and billing",

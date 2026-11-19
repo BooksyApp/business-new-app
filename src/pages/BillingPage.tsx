@@ -64,6 +64,16 @@ function monthLabel(month: string): string {
   return fmtDate(new Date(y, m - 1, 1), { year: "numeric", month: "long" });
 }
 
+/** "Special price" badge with the default price struck through, for per-salon overrides. */
+function PriceBadge({ price, currency }: { price: number | undefined; currency: string }) {
+  return (
+    <p className="flex items-center gap-2 text-xs">
+      <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{t("billing.specialPrice")}</span>
+      {price !== undefined && <span className="text-muted-foreground line-through">{money(price, currency)}</span>}
+    </p>
+  );
+}
+
 type PendingChange = { plan: BillingPlan; kind: "start" | "upgrade" | "downgrade" };
 
 export default function BillingPage() {
@@ -153,10 +163,18 @@ export default function BillingPage() {
     onError: fail,
   });
 
+  const payCharge = useMutation({
+    mutationFn: (chargeId: Id) => billingService.payCharge(businessId, chargeId, back("1", "charge"), back("0", "charge")),
+    onSuccess: (res) => {
+      window.location.href = res.checkoutUrl;
+    },
+    onError: fail,
+  });
+
   const data = overview.data;
   const sub = data?.subscription;
   const planConfirmed = sub?.status === "ACTIVE" || sub?.status === "TRIALING";
-  const busy = change.isPending || cancel.isPending || resume.isPending || buyPack.isPending;
+  const busy = change.isPending || cancel.isPending || resume.isPending || buyPack.isPending || payCharge.isPending;
   const payOff = data ? !data.providerEnabled : false;
 
   return (
@@ -191,6 +209,30 @@ export default function BillingPage() {
               <CardContent className="py-5 text-sm">
                 <p className="font-medium">{t("billing.notConfigured")}</p>
                 <p className="mt-1 text-muted-foreground">{t("billing.notConfiguredBody")}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {data && data.pendingCharges && data.pendingCharges.length > 0 && (
+            <Card className="border-[rgb(var(--reg-brand))]">
+              <CardHeader>
+                <CardTitle>{t("billing.toPay.title")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {data.pendingCharges.map((c) => (
+                  <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
+                    <div>
+                      <p className="font-medium">{c.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {money(c.amount, c.currency)}
+                        {c.promotionDays ? ` · ${t("billing.toPay.promoDays", { days: c.promotionDays })}` : ""}
+                      </p>
+                    </div>
+                    <Button size="sm" disabled={busy} onClick={() => payCharge.mutate(c.id)}>
+                      {t("billing.toPay.pay")}
+                    </Button>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
@@ -357,6 +399,7 @@ export default function BillingPage() {
                               {t("billing.messages.quantity", { count: p.quantity })}
                             </p>
                           </div>
+                          {p.overridden && <PriceBadge price={p.defaultPrice} currency={p.defaultCurrency ?? p.currency} />}
                           <Button size="sm" disabled={busy || payOff} onClick={() => buyPack.mutate(p.id)}>
                             {t("billing.messages.buy", { price: money(p.price, p.currency) })}
                           </Button>
@@ -544,6 +587,7 @@ function PlanCard({
         <p className="text-2xl font-semibold">
           {plan.monthlyPrice > 0 ? t("billing.plans.perMonth", { price: money(plan.monthlyPrice, plan.currency) }) : t("billing.plans.free")}
         </p>
+        {plan.overridden && <PriceBadge price={plan.defaultPrice} currency={plan.defaultCurrency ?? plan.currency} />}
         {plan.trialDays > 0 && <p className="text-xs text-muted-foreground">{t("billing.plans.trial", { days: plan.trialDays })}</p>}
         <p className="text-xs text-muted-foreground">
           {plan.maxStaff ? t("billing.plans.staff", { count: plan.maxStaff }) : t("billing.plans.unlimitedStaff")}

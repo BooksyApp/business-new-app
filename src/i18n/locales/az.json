@@ -113,6 +113,8 @@
     "needOptions": "Tək seçimli sualda ən azı iki variant olmalıdır."
   },
   "billing": {
+    "toPay": { "title": "Ödənilməli", "pay": "Ödə", "promoDays": "+{days} gün təşviq" },
+    "specialPrice": "Xüsusi qiymət",
     "navRow": "Ödənişlər və tarif",
     "navHint": "booqi tarifiniz, hesablar, komissiya və mesaj paketləri",
     "manage": "Tarifi və ödənişləri idarə et",
