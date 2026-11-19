@@ -34,7 +34,7 @@ export type ShareTexts = {
   storyCta: string;
 };
 
-async function ensureFont() {
+export async function ensureFont() {
   if (typeof document === "undefined") return;
   if (!document.querySelector(`link[href="${FONT_HREF}"]`)) {
     const link = document.createElement("link");
@@ -73,7 +73,7 @@ function mesh(ctx: CanvasRenderingContext2D, w: number, h: number) {
   blob(w * 0.45, h * 1.05, w * 0.9, "rgba(255,217,161,0.8)");
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -95,7 +95,7 @@ function noShadow(ctx: CanvasRenderingContext2D) {
 }
 
 /** Words onto at most `max` lines; the size steps down until the text fits. */
-function fitLines(ctx: CanvasRenderingContext2D, text: string, weight: number, start: number, min: number, width: number, max: number) {
+export function fitLines(ctx: CanvasRenderingContext2D, text: string, weight: number, start: number, min: number, width: number, max: number) {
   for (let size = start; size >= min; size -= 2) {
     ctx.font = `${weight} ${size}px ${FONT}`;
     const lines: string[] = [];
