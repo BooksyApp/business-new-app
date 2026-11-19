@@ -3923,13 +3923,16 @@
     "storyBody": "{name} artıq booqi-də. Boş saatları gör, xidməti seç, bir dəqiqəyə yazıl.",
     "storyToday": "Bu gün",
     "storyCta": "Linkə toxun, yerini seç",
-    "guideTitle": "Qurulum 5 addımda",
+    "guideTitle": "Salonu qurun",
     "guideBody": "Hər addım özü işarələnir — data əlavə edən kimi.",
     "guideServices": "Xidmətlər",
     "guideStaff": "Ustalar",
     "guideHours": "İş saatları",
     "guidePhotos": "Şəkillər",
     "guideShare": "Linki paylaş",
+    "guidePayments": "Ödənişləri qəbul edin",
+    "guidePublish": "Yayımlayın",
+    "guideDismiss": "Bu bələdçini gizlət",
     "guideDone": "{done}/{total} hazırdır"
   },
   "myDay": {

@@ -3923,13 +3923,16 @@
     "storyBody": "{name} теперь на booqi. Смотрите свободное время, выбирайте услугу и записывайтесь за минуту.",
     "storyToday": "Сегодня",
     "storyCta": "Нажмите на ссылку и выберите время",
-    "guideTitle": "Настройка за 5 шагов",
+    "guideTitle": "Настройте салон",
     "guideBody": "Каждый шаг отмечается сам, как только вы добавите данные.",
     "guideServices": "Услуги",
     "guideStaff": "Мастера",
     "guideHours": "Часы работы",
     "guidePhotos": "Фото",
     "guideShare": "Поделиться ссылкой",
+    "guidePayments": "Приём платежей",
+    "guidePublish": "Опубликуйте",
+    "guideDismiss": "Скрыть это руководство",
     "guideDone": "Готово {done} из {total}"
   },
   "myDay": {

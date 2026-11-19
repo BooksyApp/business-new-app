@@ -3923,13 +3923,16 @@
     "storyBody": "{name} is on booqi now. See free times, pick a service, book in a minute.",
     "storyToday": "Today",
     "storyCta": "Tap the link, pick your time",
-    "guideTitle": "Set up in 5 steps",
+    "guideTitle": "Set up your salon",
     "guideBody": "Each step ticks itself as soon as you add the data.",
     "guideServices": "Services",
     "guideStaff": "Team",
     "guideHours": "Opening hours",
     "guidePhotos": "Photos",
     "guideShare": "Share your link",
+    "guidePayments": "Take payments",
+    "guidePublish": "Go live",
+    "guideDismiss": "Hide this guide",
     "guideDone": "{done}/{total} done"
   },
   "myDay": {
