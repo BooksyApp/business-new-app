@@ -129,6 +129,42 @@ async function withConflictConfirm<T>(send: (override?: BookingOverride) => Prom
   }
 }
 
+/** FG-W3-01: start times at which a whole package fits for a party. */
+export interface PackageSlots {
+  date: string;
+  name: string;
+  partySize: number;
+  maxPartySize: number;
+  durationMinutes: number;
+  availableSlots: string[];
+  price: number;
+}
+
+export interface CreatePackageBookingRequest {
+  businessId: Id;
+  /** The package service. Who does which step is decided by the server. */
+  serviceId: Id;
+  partySize: number;
+  /** One name per person after the first. */
+  guestNames?: string[];
+  clientId?: Id;
+  clientName?: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  appointmentDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  notes?: string;
+}
+
+export interface PackageBookingResult {
+  visitId: string;
+  partySize: number;
+  price: number;
+  startTime: string;
+  endTime: string;
+  items: Array<{ id?: string | number }>;
+}
+
 export interface CreateAppointmentRequest {
   businessId: Id;
   staffId: Id;
@@ -245,6 +281,18 @@ export const appointmentService = {
       idempotencyKey: key,
       ...(override ? { override } : {}),
     }));
+  },
+
+  /** FG-W3-01: start times for a package on one day (same planner the customer site uses). */
+  async getPackageSlots(businessId: Id, serviceId: Id, date: string, partySize: number): Promise<PackageSlots> {
+    const q = new URLSearchParams({ businessId: String(businessId), serviceId: String(serviceId), date, partySize: String(partySize) });
+    return apiClient.get<PackageSlots>(`/bookings/package/slots?${q.toString()}`);
+  },
+
+  /** FG-W3-01: book a package. A conflict goes through the usual "book anyway" dialog. */
+  async createPackageBooking(request: CreatePackageBookingRequest): Promise<PackageBookingResult> {
+    return withConflictConfirm((override) =>
+      apiClient.post<PackageBookingResult>('/bookings/package', { ...request, ...(override ? { override } : {}) }));
   },
 
   async updateAppointment(id: string, request: CreateAppointmentRequest): Promise<Appointment> {

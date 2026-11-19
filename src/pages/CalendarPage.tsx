@@ -58,6 +58,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { useFeatureFlags } from "@/services/platformService";
 import { appointmentService, BookingConflictDeclined } from "@/services/appointmentService";
+import { serviceService, type ServicePackage } from "@/services/serviceService";
+import { PackageBookingPanel } from "@/components/calendar/PackageBookingPanel";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -901,6 +903,29 @@ export default function CalendarPage() {
   const [recurrence, setRecurrence] = useState<{ frequency: "DAILY" | "WEEKLY" | "MONTHLY"; interval: number; count: number }>({ frequency: "WEEKLY", interval: 1, count: 4 });
   const [isBatchSubmitting, setIsBatchSubmitting] = useState(false);
 
+  // FG-W3-01: package services (several specialists in one visit). Picking one swaps the staff/time
+  // pickers for the package slot finder; the server plans who does which step.
+  const [packages, setPackages] = useState<Map<string, ServicePackage>>(new Map());
+  const [packageParty, setPackageParty] = useState(1);
+  useEffect(() => {
+    if (!isNewAppointmentOpen || !businessId) return;
+    let cancelled = false;
+    serviceService
+      .getPackagesByBusiness(businessId)
+      .then((list) => {
+        if (!cancelled) setPackages(new Map((list ?? []).map((p) => [String(p.serviceId), p])));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId, isNewAppointmentOpen]);
+  const selectedPackage = appointmentForm.serviceId ? packages.get(String(appointmentForm.serviceId)) : undefined;
+  useEffect(() => {
+    // A new package starts with one person, and never more than it allows.
+    setPackageParty((n) => Math.max(1, Math.min(n, selectedPackage?.maxPartySize ?? 1)));
+  }, [selectedPackage]);
+
   // Reset advanced-booking state whenever the form closes.
   useEffect(() => {
     if (!isNewAppointmentOpen) {
@@ -1016,6 +1041,47 @@ export default function CalendarPage() {
   const withRequestedFlag = (notes: string, requested: boolean): string | undefined => {
     const tagged = requested ? ["⭐ Requested by client", notes].filter(Boolean).join(" — ") : notes;
     return tagged || undefined;
+  };
+
+  /**
+   * FG-W3-01: book the chosen package for the chosen party at the chosen start. One request; the
+   * server plans the specialists again and answers a conflict with the usual "book anyway" dialog.
+   */
+  const submitPackageBooking = async () => {
+    const base = appointmentForm;
+    if (!selectedPackage || !businessId) return;
+    if (!base.startTime) {
+      toast.error(tr("calendar.packagePickTime"));
+      return;
+    }
+    setIsBatchSubmitting(true);
+    try {
+      const result = await appointmentService.createPackageBooking({
+        businessId,
+        serviceId: base.serviceId,
+        partySize: packageParty,
+        clientId: base.clientId ? base.clientId : undefined,
+        clientName: base.clientName || undefined,
+        clientPhone: base.clientPhone || undefined,
+        clientEmail: base.clientEmail || undefined,
+        appointmentDate: base.date,
+        startTime: base.startTime,
+        notes: withRequestedFlag(base.notes, base.requestedByClient),
+      });
+      toast.success(tr("calendar.packageCreated", { count: result.items?.length ?? 0 }));
+      refreshAppointments();
+      setIsNewAppointmentOpen(false);
+      setEditingAppointmentId(null);
+      setFinalSelection(null);
+      setPackageParty(1);
+      setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, "yyyy-MM-dd"), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+    } catch (err) {
+      if (!(err instanceof BookingConflictDeclined)) {
+        toast.error(tr("calendar.packageNotCreated", { reason: (err instanceof Error && err.message) || "" }));
+      }
+    } finally {
+      setIsBatchSubmitting(false);
+    }
   };
 
   // Advanced bookings (group / recurring / multi-service) are composed from the
@@ -3321,7 +3387,22 @@ export default function CalendarPage() {
               </div>
             </section>
 
+            {/* FG-W3-01: a package is booked from its own slot finder (party size + start time). */}
+            {selectedPackage && businessId && !editingAppointmentId && (
+              <PackageBookingPanel
+                businessId={businessId}
+                serviceId={appointmentForm.serviceId}
+                date={appointmentForm.date || format(currentDate, "yyyy-MM-dd")}
+                maxParty={selectedPackage.maxPartySize}
+                partySize={packageParty}
+                onPartySize={setPackageParty}
+                startTime={appointmentForm.startTime}
+                onStartTime={(hhmm) => setAppointmentForm((prev) => ({ ...prev, startTime: hhmm }))}
+              />
+            )}
+
             {/* Time — start as a grid of slots within the day's opening hours; end follows the service. */}
+            {!(selectedPackage && !editingAppointmentId) && (
             <section className="space-y-2">
               <p className={SECTION_LABEL}>{tr("calendar.time2")}</p>
               {(() => {
@@ -3388,7 +3469,10 @@ export default function CalendarPage() {
               })()}
             </section>
 
+            )}
+
             {/* Staff Selection (in group mode this is member 1's staff) */}
+            {!(selectedPackage && !editingAppointmentId) && (
             <section className="space-y-2">
               <p className={SECTION_LABEL}>{bookingMode === "group" ? tr("calendar.withMember") : tr("calendar.with2")}</p>
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={tr("common.staff")}>
@@ -3415,6 +3499,7 @@ export default function CalendarPage() {
                 })}
               </div>
             </section>
+            )}
             
             {/* Group members — each gets their own staff + time. The primary
                 client above is member 1; add the rest here. */}
@@ -3484,7 +3569,7 @@ export default function CalendarPage() {
 
             {/* Extra services (multi-service) — appended after the primary service.
                 Not available in group mode. */}
-            {bookingMode !== "group" && (
+            {bookingMode !== "group" && !(selectedPackage && !editingAppointmentId) && (
               <div className="space-y-2">
                 {extraServices.map((es, i) => (
                   <div key={i} className="space-y-1 rounded-md border border-gray-200 p-2">
@@ -3614,9 +3699,22 @@ export default function CalendarPage() {
             </Button>
             <Button
               className={PRIMARY_BTN}
-              disabled={isBatchSubmitting || !appointmentForm.serviceId || !appointmentForm.staffId || !appointmentForm.startTime || !appointmentForm.endTime}
+              disabled={isBatchSubmitting || !appointmentForm.serviceId || !appointmentForm.startTime
+                || (!(selectedPackage && !editingAppointmentId) && (!appointmentForm.staffId || !appointmentForm.endTime))}
               onClick={async () => {
                 try {
+                  // FG-W3-01: a package goes through its own endpoint (server-side planner).
+                  if (selectedPackage && !editingAppointmentId) {
+                    const day = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
+                    const todayStart = salonNow(salonTz);
+                    todayStart.setHours(0, 0, 0, 0);
+                    if (day < todayStart) {
+                      toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
+                      return;
+                    }
+                    await submitPackageBooking();
+                    return;
+                  }
                   if (!appointmentForm.serviceId) {
                     toast.error(tr("calendar.pleaseSelectAService"));
                     return;
