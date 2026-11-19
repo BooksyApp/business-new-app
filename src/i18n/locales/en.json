@@ -1683,7 +1683,9 @@
     "bookingRulesDepositsPaymentsNotifications": "Booking rules, deposits, payments, notifications, branding",
     "support": "Support",
     "auditLog": "Audit log",
-    "auditLogHint": "Who changed what, and when"
+    "auditLogHint": "Who changed what, and when",
+    "staffTargets": "Staff targets",
+    "staffTargetsHint": "Monthly revenue and booking targets per member"
   },
   "locations": {
     "couldNotAddThisLocation": "Could not add this location",
@@ -2836,6 +2838,23 @@
     "exportFailed": "The CSV was not exported",
     "navHint": "Who changed what, and when",
     "exportCapped": "Only the first 500 entries were exported — narrow the dates for the rest"
+  },
+  "staffTargets": {
+    "title": "Staff targets",
+    "subtitle": "Each member's monthly revenue and booking targets, against the month so far",
+    "month": "Month",
+    "colStaff": "Staff member",
+    "revenueTarget": "Revenue target",
+    "revenueActual": "Revenue (actual)",
+    "bookingsTarget": "Bookings target",
+    "bookingsActual": "Bookings (actual)",
+    "save": "Save",
+    "saveFailed": "The target was not saved",
+    "loadFailed": "The targets did not load",
+    "noTarget": "no target",
+    "empty": "No team members",
+    "emptyBody": "Add a team member, then you can set their targets.",
+    "note": "Actual = bookings not cancelled, and what they were charged. Only the owner and managers can change targets."
   },
   "security": {
     "passwordChanged": "Password changed",

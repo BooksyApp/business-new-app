@@ -17,6 +17,7 @@ import {
   Stamp,
   Rocket,
   History,
+  Target,
 } from "lucide-react";
 import { useFeatureFlags } from "@/services/platformService";
 import {
@@ -136,6 +137,7 @@ export const navGroups: NavGroup[] = [
       { icon: Users, get label() { return t("layout.teamMembers"); }, path: "/staff", get description() { return t("layout.whoWorksHereTheirServices"); } },
       { icon: ShieldCheck, get label() { return t("layout.roles"); }, path: "/roles", get description() { return t("layout.whatEachRoleCanSee"); } },
       { icon: Clock, get label() { return t("timesheet.title"); }, path: "/timesheet", get description() { return t("timesheet.navHint"); } },
+      { icon: Target, get label() { return t("staffTargets.title"); }, path: "/staff-targets", get description() { return t("layout.staffTargetsHint"); } },
       { icon: CalendarIcon, get label() { return t("myDay.title"); }, path: "/my-day", get description() { return t("myDay.navHint"); }, staffOnly: true },
     ],
   },
@@ -229,6 +231,7 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/addons": ["CATALOG"],
   "/inventory": ["CATALOG"],
   "/staff": ["TEAM"],
+  "/staff-targets": ["TEAM"],
   "/add-staff": ["TEAM"],
   "/edit-staff": ["TEAM"],
   "/roles": null,

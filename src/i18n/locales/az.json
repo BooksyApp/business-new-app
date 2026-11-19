@@ -1683,7 +1683,9 @@
     "bookingRulesDepositsPaymentsNotifications": "Rezerv qaydaları, depozit, ödənişlər, bildirişlər, brendinq",
     "support": "Dəstək",
     "auditLog": "Audit jurnalı",
-    "auditLogHint": "Kim nəyi nə vaxt dəyişib"
+    "auditLogHint": "Kim nəyi nə vaxt dəyişib",
+    "staffTargets": "Usta hədəfləri",
+    "staffTargetsHint": "Ustaların aylıq gəlir və vizit hədəfi"
   },
   "locations": {
     "couldNotAddThisLocation": "Filialı əlavə etmək alınmadı",
@@ -2836,6 +2838,23 @@
     "exportFailed": "CSV ixrac olunmadı",
     "navHint": "Kim nəyi nə vaxt dəyişib",
     "exportCapped": "Yalnız ilk 500 qeyd ixrac olundu — qalanı üçün tarixi daraldın"
+  },
+  "staffTargets": {
+    "title": "Usta hədəfləri",
+    "subtitle": "Hər ustanın aylıq gəlir və vizit hədəfi, ayın indiki vəziyyəti ilə",
+    "month": "Ay",
+    "colStaff": "Usta",
+    "revenueTarget": "Gəlir hədəfi",
+    "revenueActual": "Gəlir (fakt)",
+    "bookingsTarget": "Vizit hədəfi",
+    "bookingsActual": "Vizit (fakt)",
+    "save": "Saxla",
+    "saveFailed": "Hədəf saxlanılmadı",
+    "loadFailed": "Hədəflər yüklənmədi",
+    "noTarget": "hədəf yoxdur",
+    "empty": "Usta yoxdur",
+    "emptyBody": "Komandaya usta əlavə edin, sonra ona hədəf qoya bilərsiniz.",
+    "note": "Fakt — ləğv olunmamış qeydlər və onların qiyməti. Hədəfi yalnız sahib və menecer dəyişə bilər."
   },
   "security": {
     "passwordChanged": "Şifrə dəyişdirildi",
