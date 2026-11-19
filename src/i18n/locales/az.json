@@ -4346,5 +4346,20 @@
     "verify": "İmzanı yoxlayın (Node.js)",
     "errors": "Xətalar",
     "errorsBody": "401 açar yoxdur və ya ləğv edilib · 403 səlahiyyət yoxdur · 404 naməlum id · 409 vaxt əlçatan deyil · 422 rezerv etmək olmur · 429 limit aşılıb."
+  },
+  "pos": {
+    "wallet": "Balans",
+    "walkIn": "Yazılmadan gələn müştəri",
+    "more": "Daha çox seçim",
+    "moreHint": "Endirim, abunə və paketlər, bir neçə ödəniş üsulu, qalığı borc yazmaq, çek",
+    "addDiscount": "Endirim et",
+    "due": "Ödəniləcək",
+    "combinedActive": "Ödəniş “Daha çox seçim” bölməsində seçilən üsullarla alınacaq",
+    "cardRest": "Kart (qalan)",
+    "walletCovers": "Balansda {value} var — {value2} çıxılacaq",
+    "restBy": "Qalan {value}:",
+    "cardNote": "Terminalda {value} çəkin",
+    "takePayment": "Ödənişi al · {value}",
+    "keysHint": "Enter — ödənişi al · rəqəm yazın — məbləğ"
   }
 }
