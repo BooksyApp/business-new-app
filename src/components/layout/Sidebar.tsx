@@ -3,15 +3,18 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Check,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   ChevronsUpDown,
   Globe,
+  KeyRound,
   LifeBuoy,
   MessagesSquare,
   LogOut,
   MoreHorizontal,
   Plus,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -34,7 +37,7 @@ import { assetUrl } from "@/config/api";
 import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
 import "@/components/auth/auth-tokens.css";
 
-import { useVisibleNavGroups, type NavGroup } from "./navigation";
+import { NAV_SECTIONS, SettingsIcon, isSettingsPath, openQuickSearch, useVisibleNavGroups, useVisibleSettings, type NavGroup } from "./navigation";
 import { t } from "@/i18n";
 import { useSupportHref } from "@/services/platformService";
 import { keyForId, salonPath } from "@/lib/salonKey";
@@ -48,11 +51,33 @@ import { keyForId, salonPath } from "@/lib/salonKey";
  * flag rules as before; this file only changes how it looks.
  */
 
-const SECTIONS: { title: string; slugs: string[] }[] = [
-  { get title() { return t("common.daily"); }, slugs: ["calendar", "clients", "sales"] },
-  { get title() { return t("layout.grow"); }, slugs: ["marketing"] },
-  { get title() { return t("common.business"); }, slugs: ["catalogue", "team", "business"] },
-];
+/** ⌘K on a Mac, Ctrl+K elsewhere — shown on the search button. */
+const MOD_KEY = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
+
+const OPEN_KEY = "booqi.nav.open";
+/** Which groups the person has opened, remembered per browser (storage may be blocked). */
+function useOpenGroups(): [Set<string>, (slug: string) => void] {
+  const [open, setOpen] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(OPEN_KEY) || "[]") as string[]);
+    } catch {
+      return new Set();
+    }
+  });
+  const toggle = (slug: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      try {
+        localStorage.setItem(OPEN_KEY, JSON.stringify([...next]));
+      } catch {
+        /* per-browser convenience only */
+      }
+      return next;
+    });
+  return [open, toggle];
+}
 
 /* ── shared helpers ─────────────────────────────────────────────────────── */
 
@@ -130,6 +155,10 @@ function useNavModel() {
     (full === getPath("/business") && location.pathname === `/${salonKey}`);
   const groupActive = (g: NavGroup) =>
     (g.items ? [...g.items.map((i) => getPath(i.path)), getPath(`/section/${g.slug}`)] : [getPath(g.path!)]).some(matches);
+  // The salon-relative path ("/setup/email"), for the Settings entry.
+  const relPath = salonKey && location.pathname.startsWith(`/${salonKey}`) ? location.pathname.slice(salonKey.length + 1) || "/" : location.pathname;
+  const settingsActive = isSettingsPath(relPath) && relPath !== "/support";
+  const hasSettings = useVisibleSettings().length > 0;
 
   const currentUser = getCurrentUser();
   const initials = currentUser?.fullName
@@ -169,7 +198,7 @@ function useNavModel() {
   const addSalon = () => navigate("/create-business");
 
   return {
-    groups, getPath, groupHref, matches, groupActive, navigate, location,
+    groups, getPath, groupHref, matches, groupActive, navigate, location, settingsActive, hasSettings,
     currentUser, initials, businessName, businessMark, businessLogo: business.logoUrl, handleLogout, switchTo, addSalon, businessId,
   };
 }
@@ -228,6 +257,8 @@ const itemBase =
   "group flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]";
 const itemIdle = "text-[rgb(var(--reg-ink)/0.72)] hover:bg-[rgb(var(--reg-ink)/0.04)] hover:text-[rgb(var(--reg-ink))]";
 const itemOn = "bg-[rgb(var(--reg-brand)/0.1)] text-[rgb(var(--reg-ink))]";
+// The group that holds the current page: named in ink, the page itself carries the tint.
+const itemGroupOn = "text-[rgb(var(--reg-ink))]";
 
 /* ── desktop sidebar ────────────────────────────────────────────────────── */
 
@@ -240,14 +271,16 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
   const [salonMenuOpen, setSalonMenuOpen] = useState(false);
   const businesses = useMyBusinesses(salonMenuOpen);
 
-  const sections = SECTIONS.map((s) => ({
-    ...s,
-    groups: s.slugs.map((slug) => m.groups.find((g) => g.slug === slug)).filter(Boolean) as NavGroup[],
+  const [openGroups, toggleGroup] = useOpenGroups();
+
+  const sections = NAV_SECTIONS.map((sec) => ({
+    title: t(sec.key),
+    groups: sec.slugs.map((slug) => m.groups.find((g) => g.slug === slug)).filter(Boolean) as NavGroup[],
   }));
   // Any group not placed in a section still shows (never lose a destination).
-  const placed = new Set(SECTIONS.flatMap((s) => s.slugs));
+  const placed = new Set(NAV_SECTIONS.flatMap((sec) => sec.slugs));
   const rest = m.groups.filter((g) => !placed.has(g.slug));
-  if (rest.length) sections.push({ title: t("common.more"), slugs: [], groups: rest });
+  if (rest.length) sections.push({ title: t("common.more"), groups: rest });
 
   return (
     <>
@@ -317,11 +350,35 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           </DropdownMenu>
         </div>
 
+        {/* Quick search (⌘K / Ctrl+K) */}
+        <div className="px-3 pb-2">
+          <MaybeTip show={collapsed} label={t("nav.search.open")}>
+            <button
+              type="button"
+              onClick={openQuickSearch}
+              aria-label={t("nav.search.open")}
+              aria-keyshortcuts="Meta+K Control+K"
+              className={cn(
+                "flex h-10 w-full items-center gap-2.5 rounded-xl bg-[rgb(var(--reg-ink)/0.04)] px-3 text-sm text-[rgb(var(--reg-muted))] transition-colors hover:bg-[rgb(var(--reg-ink)/0.07)] hover:text-[rgb(var(--reg-ink))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
+                collapsed && "justify-center px-0",
+              )}
+            >
+              <Search size={17} strokeWidth={1.9} className="shrink-0" aria-hidden />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 truncate text-left">{t("nav.search.open")}</span>
+                  <kbd className="rounded-md bg-white px-1.5 py-0.5 font-sans text-[11px] font-semibold text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line))]">{MOD_KEY}</kbd>
+                </>
+              )}
+            </button>
+          </MaybeTip>
+        </div>
+
         {/* Navigation */}
-        <nav aria-label={t("layout.main")} className={cn("flex-1 overflow-y-auto pb-3", collapsed ? "px-3" : "px-3")}>
+        <nav aria-label={t("layout.main")} className="flex-1 overflow-y-auto px-3 pb-3">
           {sections.map((section) =>
             section.groups.length ? (
-              <div key={section.title} className="mt-3 first:mt-1">
+              <div key={section.title} className="mt-4 first:mt-1">
                 {!collapsed ? (
                   <p className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted)/0.8)]">
                     {section.title}
@@ -333,28 +390,50 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                   {section.groups.map((g) => {
                     const active = m.groupActive(g);
                     const Icon = g.icon;
+                    const iconCls = cn(
+                      "shrink-0",
+                      active ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.55)] group-hover:text-[rgb(var(--reg-ink)/0.8)]",
+                    );
+                    // A page, or the collapsed rail (a group then opens its section page).
+                    if (!g.items || collapsed) {
+                      return (
+                        <li key={g.slug}>
+                          <MaybeTip show={collapsed} label={g.label}>
+                            <NavLink
+                              to={m.groupHref(g)}
+                              aria-label={collapsed ? g.label : undefined}
+                              aria-current={active ? "page" : undefined}
+                              className={cn(itemBase, active && !g.items ? itemOn : active ? itemGroupOn : itemIdle, collapsed && "justify-center px-0")}
+                            >
+                              <Icon size={20} strokeWidth={1.75} className={iconCls} />
+                              {!collapsed && <span className="truncate">{g.label}</span>}
+                            </NavLink>
+                          </MaybeTip>
+                        </li>
+                      );
+                    }
+                    // A group: opens in place. The group holding the current page stays open.
+                    const expanded = active || openGroups.has(g.slug);
+                    const listId = `nav-group-${g.slug}`;
                     return (
                       <li key={g.slug}>
-                        <MaybeTip show={collapsed} label={g.label}>
-                          <NavLink
-                            to={m.groupHref(g)}
-                            aria-label={collapsed ? g.label : undefined}
-                            aria-current={active ? "page" : undefined}
-                            className={cn(itemBase, active ? itemOn : itemIdle, collapsed && "justify-center px-0")}
-                          >
-                            <Icon
-                              size={20}
-                              className={cn(
-                                "shrink-0",
-                                active ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.55)] group-hover:text-[rgb(var(--reg-ink)/0.8)]",
-                              )}
-                            />
-                            {!collapsed && <span className="truncate">{g.label}</span>}
-                          </NavLink>
-                        </MaybeTip>
-                        {/* The open group lists its pages, so the second click is one away. */}
-                        {!collapsed && active && g.items && g.items.length > 0 && (
-                          <ul className="mb-1 ml-[22px] mt-0.5 space-y-0.5 border-l border-[rgb(var(--reg-line))] pl-3">
+                        <button
+                          type="button"
+                          onClick={() => !active && toggleGroup(g.slug)}
+                          aria-expanded={expanded}
+                          aria-controls={listId}
+                          className={cn(itemBase, "w-full", active ? itemGroupOn : itemIdle)}
+                        >
+                          <Icon size={20} strokeWidth={1.75} className={iconCls} />
+                          <span className="flex-1 truncate text-left">{g.label}</span>
+                          <ChevronDown
+                            size={16}
+                            aria-hidden
+                            className={cn("shrink-0 text-[rgb(var(--reg-muted))] transition-transform duration-200 motion-reduce:transition-none", expanded && "rotate-180", active && "opacity-0")}
+                          />
+                        </button>
+                        {expanded && (
+                          <ul id={listId} className="mb-1.5 ml-[21px] mt-0.5 space-y-0.5 border-l border-[rgb(var(--reg-line))] pl-3">
                             {g.items.map((item) => {
                               const on = m.matches(m.getPath(item.path));
                               return (
@@ -363,10 +442,10 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                                     to={m.getPath(item.path)}
                                     aria-current={on ? "page" : undefined}
                                     className={cn(
-                                      "block truncate rounded-lg px-2.5 py-1.5 text-[13px] transition-colors",
+                                      "block truncate rounded-lg px-2.5 py-1.5 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]",
                                       on
-                                        ? "font-semibold text-[rgb(var(--reg-brand-strong))]"
-                                        : "text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.04)] hover:text-[rgb(var(--reg-ink))]",
+                                        ? "bg-[rgb(var(--reg-brand)/0.1)] font-semibold text-[rgb(var(--reg-brand-strong))]"
+                                        : "text-[rgb(var(--reg-ink)/0.68)] hover:bg-[rgb(var(--reg-ink)/0.04)] hover:text-[rgb(var(--reg-ink))]",
                                     )}
                                   >
                                     {item.label}
@@ -387,6 +466,18 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 
         {/* Bottom: help, language, profile */}
         <div className="space-y-0.5 border-t border-[rgb(var(--reg-line)/0.8)] px-3 py-3">
+          {m.hasSettings && (
+            <MaybeTip show={collapsed} label={t("nav.settings")}>
+              <NavLink
+                to={m.getPath("/setup")}
+                aria-current={m.settingsActive ? "page" : undefined}
+                className={cn(itemBase, m.settingsActive ? itemOn : itemIdle, collapsed && "justify-center px-0")}
+              >
+                <SettingsIcon size={20} strokeWidth={1.6} className={cn("shrink-0", m.settingsActive ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.55)]")} />
+                {!collapsed && t("nav.settings")}
+              </NavLink>
+            </MaybeTip>
+          )}
           {collapsed && (
             <MaybeTip show label={t("layout.expandMenu")}>
               <button type="button" onClick={onToggle} aria-label={t("layout.expandMenu")} className={cn(itemBase, itemIdle, "w-full justify-center px-0")}>
@@ -394,12 +485,6 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
               </button>
             </MaybeTip>
           )}
-          <MaybeTip show={collapsed} label={t("layout.help")}>
-            <a href={supportHref} className={cn(itemBase, itemIdle, collapsed && "justify-center px-0")}>
-              <LifeBuoy size={20} strokeWidth={1.6} className="shrink-0 text-[rgb(var(--reg-ink)/0.55)]" />
-              {!collapsed && t("layout.help")}
-            </a>
-          </MaybeTip>
           <MaybeTip show={collapsed} label={t("layout.support")}>
             <NavLink
               to={m.getPath("/support")}
@@ -439,9 +524,15 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             </MaybeTip>
             <DropdownMenuContent side="top" align="start" className="w-56 rounded-2xl p-1.5">
               <DropdownMenuItem asChild className="h-11 gap-2 rounded-xl">
-                <NavLink to={m.getPath("/support")}>
-                  <MessagesSquare size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
-                  {t("layout.support")}
+                <a href={supportHref}>
+                  <LifeBuoy size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
+                  {t("layout.help")}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="h-11 gap-2 rounded-xl">
+                <NavLink to={m.getPath("/security")}>
+                  <KeyRound size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.55)]" />
+                  {t("setup.passwordSecurity")}
                 </NavLink>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -480,7 +571,15 @@ export function MobileTopBar() {
         <span className="truncate text-[15px] font-bold">{m.businessName}</span>
         <ChevronsUpDown size={16} className="shrink-0 text-[rgb(var(--reg-muted))]" />
       </button>
-      <span className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-ink))] text-[11px] font-bold text-white" aria-label={t("layout.signedIn")}>
+      <button
+        type="button"
+        onClick={openQuickSearch}
+        aria-label={t("nav.search.open")}
+        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.7)] hover:bg-[rgb(var(--reg-ink)/0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]"
+      >
+        <Search size={20} strokeWidth={1.9} />
+      </button>
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-ink))] text-[11px] font-bold text-white" aria-label={t("layout.signedIn")}>
         {m.initials}
       </span>
     </header>
@@ -587,35 +686,54 @@ export function MobileTabBar() {
         >
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-[rgb(var(--reg-ink)/0.15)]" aria-hidden />
           <SheetTitle className="px-1 text-xl font-extrabold tracking-[-0.02em]">{t("layout.menu")}</SheetTitle>
-          <div className="mt-4 space-y-5">
-            {m.groups.map((g) => {
-              const Icon = g.icon;
-              const links = g.items?.length ? g.items.map((i) => ({ href: m.getPath(i.path), label: i.label })) : [{ href: m.groupHref(g), label: g.label }];
+          <button
+            type="button"
+            onClick={() => { setMoreOpen(false); openQuickSearch(); }}
+            className="mt-3 flex h-12 w-full items-center gap-3 rounded-2xl bg-white px-4 text-[15px] text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line))]"
+          >
+            <Search size={18} strokeWidth={1.9} aria-hidden /> {t("nav.search.placeholder")}
+          </button>
+          <div className="mt-5 space-y-5">
+            {(() => {
+              // Single pages (Calendar, Messages, Reports…) share one card; each group gets its own.
+              const singles = m.groups.filter((g) => !g.items?.length);
+              const row = (href: string, label: string, Icon: React.ElementType) => {
+                const on = m.matches(href);
+                return (
+                  <li key={href} className="border-b border-[rgb(var(--reg-line)/0.6)] last:border-0">
+                    <NavLink
+                      to={href}
+                      onClick={() => setMoreOpen(false)}
+                      aria-current={on ? "page" : undefined}
+                      className={cn("flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold", on && "text-[rgb(var(--reg-brand-strong))]")}
+                    >
+                      <Icon size={18} strokeWidth={1.75} className={on ? "text-[rgb(var(--reg-brand))]" : "text-[rgb(var(--reg-ink)/0.5)]"} aria-hidden />
+                      {label}
+                    </NavLink>
+                  </li>
+                );
+              };
+              const card = "overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]";
               return (
-                <section key={g.slug}>
-                  <p className="mb-1.5 flex items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">
-                    <Icon size={14} /> {g.label}
-                  </p>
-                  <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
-                    {links.map((l) => {
-                      const on = m.matches(l.href);
-                      return (
-                        <li key={l.href} className="border-b border-[rgb(var(--reg-line)/0.6)] last:border-0">
-                          <NavLink
-                            to={l.href}
-                            onClick={() => setMoreOpen(false)}
-                            aria-current={on ? "page" : undefined}
-                            className={cn("flex min-h-[48px] items-center px-4 text-[15px] font-semibold", on && "text-[rgb(var(--reg-brand-strong))]")}
-                          >
-                            {l.label}
-                          </NavLink>
-                        </li>
-                      );
-                    })}
+                <>
+                  <ul className={card}>
+                    {singles.map((g) => row(m.groupHref(g), g.label, g.icon))}
+                    {m.hasSettings && row(m.getPath("/setup"), t("nav.settings"), SettingsIcon)}
                   </ul>
-                </section>
+                  {m.groups.filter((g) => g.items?.length).map((g) => {
+                    const Icon = g.icon;
+                    return (
+                      <section key={g.slug}>
+                        <p className="mb-1.5 flex items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">
+                          <Icon size={14} aria-hidden /> {g.label}
+                        </p>
+                        <ul className={card}>{g.items!.map((i) => row(m.getPath(i.path), i.label, i.icon))}</ul>
+                      </section>
+                    );
+                  })}
+                </>
               );
-            })}
+            })()}
             <section>
               <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
 

@@ -1,52 +1,69 @@
 import type React from "react";
 import type { Id } from "@/types/id";
 import {
+  BarChart3,
+  Bell,
+  Boxes,
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  Coins,
   Clock,
-  Receipt,
-  Wallet,
-  Users,
-  ShieldCheck,
-  Package,
-  Clock as ClockIcon,
+  CreditCard,
+  GitCompare,
   Gift,
-  Percent,
-  Landmark,
-  Megaphone,
-  Image as ImageIcon,
-  MessageSquareText,
-  Inbox,
-  Stamp,
-  Rocket,
   History,
+  Image as ImageIcon,
+  Inbox,
+  KeyRound,
+  Landmark,
+  LifeBuoy,
+  Mail,
+  MapPin,
+  Megaphone,
+  Network,
+  Package,
+  Palette,
+  Percent,
+  PiggyBank,
+  Receipt,
+  Rocket,
+  Scissors,
+  Settings,
+  Shield,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Stamp,
+  Star,
+  Store,
+  Tags,
   Target,
+  Truck,
+  Users,
+  UsersRound,
+  Wallet,
 } from "lucide-react";
 import { useFeatureFlags } from "@/services/platformService";
-import {
-  CalendarIcon,
-  TaskIcon,
-  ItemCategoryIcon,
-  MarketingIcon,
-  CouponIcon,
-  AnalyticsIcon,
-  StaffIcon,
-  BusinessIcon,
-  SettingsIcon,
-  HelpIcon,
-} from "./navIcons";
-import { t } from "@/i18n";
+import { t, type TKey } from "@/i18n";
 
 /**
- * The manager app's menu and who may open what. Kept out of Sidebar.tsx so that file
- * exports only components (fast refresh needs that); the Sidebar, the section pages and
- * the route guard all read the menu and the role rules from here.
+ * The manager app's menu, the settings map and who may open what. Kept out of Sidebar.tsx
+ * so that file exports only components (fast refresh needs that); the sidebar, the phone
+ * drawer, the settings hub, the quick search and the route guard all read from here.
+ *
+ * IA (2026-11-19, business/product/hub-ia-2026-11-19.md): grouped by the owner's day, not
+ * by the backlog. Every page has exactly one home; Settings is one hub with its own
+ * sub-nav, so the rail stays short.
  */
 
-// Custom Globe Icon Component
 export interface NavItem {
   icon: React.ElementType;
   label: string;
   path: string;
-  /** One line saying what the page is for, shown on the section page. */
+  /** One line saying what the page is for, shown on the section page and in search. */
   description?: string;
   /**
    * The platform flag this page needs, if any.
@@ -57,16 +74,11 @@ export interface NavItem {
   flag?: string;
   /** Only a team member has this page: hidden from an owner with no team record here. */
   staffOnly?: boolean;
+  /** The i18n key of the label: quick search matches it in every language. */
+  labelKey?: TKey;
 }
 
-/**
- * The rail is grouped, not a list of fifteen icons.
- *
- * Everything was flat and in no particular order — Inventory next to Add-ons, Reviews
- * three rows from Clients, Hours nowhere near Staff — so finding a page meant hovering
- * along the rail reading tooltips. A group opens a panel with its pages named, which is
- * the only way a nav this size stays learnable.
- */
+/** A rail entry: one page (`path`) or a collapsible group of pages (`items`). */
 export interface NavGroup {
   icon: React.ElementType;
   label: string;
@@ -74,88 +86,251 @@ export interface NavGroup {
   /** Groups with one destination navigate straight there. */
   path?: string;
   items?: NavItem[];
+  /** Only a team member has this page (single-page entries). */
+  staffOnly?: boolean;
+  labelKey?: TKey;
 }
 
-// Language options for flag display
+// Labels are getters, read at render time: the menu is built once at import, before the
+// panel's language has loaded, so a plain value would freeze the wrong language. (Spreading
+// a getter would evaluate it, hence these builders rather than `...{ get label() }`.)
+function item(icon: React.ElementType, label: TKey, path: string, hint?: TKey, extra: Partial<NavItem> = {}): NavItem {
+  return {
+    icon,
+    path,
+    labelKey: label,
+    ...extra,
+    get label() { return t(label); },
+    get description() { return hint ? t(hint) : undefined; },
+  };
+}
+function group(icon: React.ElementType, label: TKey, slug: string, rest: Omit<NavGroup, "icon" | "label" | "slug">): NavGroup {
+  return { icon, slug, labelKey: label, ...rest, get label() { return t(label); } };
+}
+
 /**
- * The nav, in one place. The rail and the section pages both read it, so a page cannot
- * exist in one and be missing from the other — which is how half these screens ended up
- * unreachable.
+ * The rail, top to bottom. The phone drawer and the section pages read the same list, so a
+ * page cannot be in one and missing from the other.
  */
 export const navGroups: NavGroup[] = [
-  { icon: CalendarIcon, get label() { return t("common.calendar"); }, slug: "calendar", path: "/calendar" },
-  {
-    icon: TaskIcon,
-    get label() { return t("common.sales"); },
-    slug: "sales",
+  // Every day: the diary and the conversation with clients.
+  group(CalendarDays, "nav.calendar", "calendar", { path: "/calendar" }),
+  group(CalendarCheck, "nav.myDay", "my-day", { path: "/my-day", staffOnly: true }),
+  group(Inbox, "nav.inbox", "inbox", { path: "/inbox" }),
+  group(Wallet, "nav.g.sales", "sales", {
     items: [
-      { icon: TaskIcon, get label() { return t("common.till"); }, path: "/sales", get description() { return t("layout.ringUpAVisitTake"); } },
-      { icon: AnalyticsIcon, get label() { return t("layout.analytics"); }, path: "/analytics", get description() { return t("layout.revenueBookingsAndClientTrends"); } },
-      { icon: Landmark, get label() { return t("common.money"); }, path: "/money", get description() { return t("layout.payoutsTipsTheCashDrawer"); } },
-      { icon: Wallet, get label() { return t("payroll.title"); }, path: "/payroll", get description() { return t("payroll.navHint"); } },
-      { icon: Receipt, get label() { return t("expenses.title"); }, path: "/expenses", get description() { return t("expenses.navHint"); } },
-      { icon: Rocket, get label() { return t("layout.promotion"); }, path: "/promotion", get description() { return t("layout.payToAppearAtThe"); } },
+      item(Receipt, "nav.till", "/sales", "layout.ringUpAVisitTake"),
+      item(Landmark, "nav.payments", "/money", "layout.payoutsTipsTheCashDrawer"),
+      item(PiggyBank, "expenses.title", "/expenses", "expenses.navHint"),
+    ],
+  }),
+  group(Users, "nav.g.clients", "clients", {
+    items: [
+      item(Users, "nav.allClients", "/clients", "layout.everyoneWhoHasBookedWith"),
+      item(ClipboardList, "nav.forms", "/setup/consent-forms", "consentForms.hint"),
+    ],
+  }),
+  // Getting more clients, apart from the clients themselves.
+  group(Megaphone, "nav.g.marketing", "marketing", {
+    items: [
+      item(Megaphone, "nav.campaigns", "/marketing", "layout.messagesToClientsAndPromo"),
+      item(Percent, "nav.offers", "/offers", "layout.cutAPriceItShows"),
+      item(Stamp, "nav.loyalty", "/loyalty", "layout.comeNTimesOneService", {flag: "loyalty_cards"}),
+      item(Gift, "nav.referrals", "/referral-program", "layout.yourCodeAndTheClients", {flag: "platform_referral"}),
+      item(Star, "nav.reviews", "/reviews", "layout.readFeedbackReplyToIt"),
+      item(Rocket, "nav.promotion", "/promotion", "layout.payToAppearAtThe"),
+    ],
+  }),
+  // Running the business.
+  group(Scissors, "nav.g.catalogue", "catalogue", {
+    items: [
+      item(Scissors, "nav.services", "/items-category", "layout.whatYouSellHowLong"),
+      item(Sparkles, "nav.addons", "/addons", "layout.extrasYouAddToA"),
+    ],
+  }),
+  group(Boxes, "nav.g.inventory", "inventory", {
+    items: [
+      item(Package, "nav.products", "/inventory", "layout.stockLevelsAndReorderPoints"),
+      item(ClipboardCheck, "nav.stockCount", "/inventory/count", "nav.hint.stockCount"),
+      item(Truck, "inventory.suppliersAndOrders", "/inventory/suppliers", "nav.hint.suppliers"),
+    ],
+  }),
+  group(UsersRound, "nav.g.team", "team", {
+    items: [
+      item(UsersRound, "layout.teamMembers", "/staff", "layout.whoWorksHereTheirServices"),
+      item(Clock, "timesheet.title", "/timesheet", "timesheet.navHint"),
+      item(Coins, "payroll.title", "/payroll", "payroll.navHint"),
+      item(Target, "nav.targets", "/staff-targets", "layout.staffTargetsHint"),
+    ],
+  }),
+  group(BarChart3, "nav.reports", "reports", { path: "/analytics" }),
+  group(Network, "nav.g.branches", "branches", {
+    items: [
+      item(MapPin, "nav.allLocations", "/locations", "nav.hint.locations"),
+      item(GitCompare, "nav.compare", "/branch-comparison", "nav.hint.compare"),
+      item(Tags, "nav.centralPrices", "/central-prices", "nav.hint.centralPrices"),
+    ],
+  }),
+];
+
+/** How the rail is sectioned (headings on a desktop). Settings sits at the foot, not here. */
+export const NAV_SECTIONS: { key: TKey; slugs: string[] }[] = [
+  { key: "common.daily", slugs: ["calendar", "my-day", "inbox", "sales", "clients"] },
+  { key: "layout.grow", slugs: ["marketing"] },
+  { key: "nav.sec.manage", slugs: ["catalogue", "inventory", "team", "reports", "branches"] },
+];
+
+/* ── settings: one hub, its own sub-nav ─────────────────────────────────── */
+
+export interface SettingRow {
+  label: string;
+  labelKey: TKey;
+  hint: string;
+  path: string;
+  icon: React.ElementType;
+}
+
+export interface SettingsSection {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  rows: SettingRow[];
+}
+
+const R = (label: TKey, hint: TKey, path: string, icon: React.ElementType): SettingRow => ({
+  get label() { return t(label); },
+  get hint() { return t(hint); },
+  labelKey: label,
+  path,
+  icon,
+});
+
+/**
+ * Every setting, once. A row is a screen that changes how the salon behaves; the daily
+ * work (calendar, till, catalogue, team) lives in the rail.
+ */
+export const SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    id: "business",
+    get title() { return t("nav.set.salon"); },
+    get description() { return t("setup.whoYouAreAndWhere"); },
+    icon: Store,
+    rows: [
+      R("common.businessProfile", "setup.nameCategoryDescriptionContact", "/business", Store),
+      R("common.photos", "setup.coverLogoAndGallery", "/photos", ImageIcon),
+      R("common.openingHours", "setup.weeklyHoursClosedDays", "/business-hours", Clock),
+      R("setup.brandColourReceiptFooter", "setup.yourColourTheLineUnder", "/branding", Palette),
     ],
   },
   {
-    icon: Users,
-    get label() { return t("common.clients"); },
-    slug: "clients",
-    items: [
-      { icon: Users, get label() { return t("layout.allClients"); }, path: "/clients", get description() { return t("layout.everyoneWhoHasBookedWith"); } },
-      { icon: MessageSquareText, get label() { return t("common.reviews"); }, path: "/reviews", get description() { return t("layout.readFeedbackReplyToIt"); } },
-      { icon: Inbox, get label() { return t("inbox.navLabel"); }, path: "/inbox", get description() { return t("inbox.navDescription"); } },
+    id: "booking",
+    get title() { return t("setup.onlineBooking"); },
+    get description() { return t("setup.howAndWhenClientsCan"); },
+    icon: CalendarClock,
+    rows: [
+      R("nav.set.bookingRules", "setup.onOrOffNoticeHow", "/setup/online-booking", CalendarClock),
+      R("nav.set.cancellation", "setup.howLateAClientCan", "/setup/cancellation", Shield),
     ],
   },
   {
-    // Growing the book of clients, apart from the clients themselves: these five used to
-    // sit under Clients, so "who are my clients" and "how do I get more" were one list.
-    icon: Megaphone,
-    get label() { return t("layout.marketing"); },
-    slug: "marketing",
-    items: [
-      { icon: MarketingIcon, get label() { return t("layout.campaignsCodes"); }, path: "/marketing", get description() { return t("layout.messagesToClientsAndPromo"); } },
-      { icon: Percent, get label() { return t("common.offers"); }, path: "/offers", get description() { return t("layout.cutAPriceItShows"); } },
-      { icon: Stamp, get label() { return t("common.loyalty"); }, path: "/loyalty", get description() { return t("layout.comeNTimesOneService"); }, flag: "loyalty_cards" },
-      { icon: Gift, get label() { return t("common.referrals"); }, path: "/referral-program", get description() { return t("layout.yourCodeAndTheClients"); }, flag: "platform_referral" },
+    id: "money",
+    get title() { return t("nav.set.payments"); },
+    get description() { return t("setup.clientsPayWhenTheyVisit"); },
+    icon: CreditCard,
+    rows: [
+      R("bookingRules.paymentMethods", "setup.paymentMethodsHint", "/setup/payment-methods", CreditCard),
+      R("setup.currencyTax", "setup.whatYourPricesAreIn", "/setup/currency-tax", Receipt),
     ],
   },
   {
-    icon: ItemCategoryIcon,
-    get label() { return t("layout.catalogue"); },
-    slug: "catalogue",
-    items: [
-      { icon: ItemCategoryIcon, get label() { return t("common.services"); }, path: "/items-category", get description() { return t("layout.whatYouSellHowLong"); } },
-      { icon: Package, get label() { return t("layout.addOns"); }, path: "/addons", get description() { return t("layout.extrasYouAddToA"); } },
-      // #26: real stock with SKUs and reorder levels, not add-on management.
-      { icon: Package, get label() { return t("layout.inventory"); }, path: "/inventory", get description() { return t("layout.stockLevelsAndReorderPoints"); } },
+    id: "notifications",
+    get title() { return t("setup.notifications"); },
+    get description() { return t("setup.whatClientsHearFromYou"); },
+    icon: Bell,
+    rows: [
+      R("setup.emailReminders", "setup.confirmationsAndReminderTiming", "/setup/email", Mail),
+      R("setup.smsPush", "setup.textsAndAppNotifications", "/setup/sms-push", Smartphone),
     ],
   },
   {
-    icon: StaffIcon,
-    get label() { return t("common.team"); },
-    slug: "team",
-    items: [
-      { icon: Users, get label() { return t("layout.teamMembers"); }, path: "/staff", get description() { return t("layout.whoWorksHereTheirServices"); } },
-      { icon: ShieldCheck, get label() { return t("layout.roles"); }, path: "/roles", get description() { return t("layout.whatEachRoleCanSee"); } },
-      { icon: Clock, get label() { return t("timesheet.title"); }, path: "/timesheet", get description() { return t("timesheet.navHint"); } },
-      { icon: Target, get label() { return t("staffTargets.title"); }, path: "/staff-targets", get description() { return t("layout.staffTargetsHint"); } },
-      { icon: CalendarIcon, get label() { return t("myDay.title"); }, path: "/my-day", get description() { return t("myDay.navHint"); }, staffOnly: true },
+    id: "access",
+    get title() { return t("nav.set.access"); },
+    get description() { return t("nav.set.accessHint"); },
+    icon: ShieldCheck,
+    rows: [
+      R("setup.rolesPermissions", "setup.whatEachRoleCanDo", "/roles", ShieldCheck),
+      R("auditLog.title", "layout.auditLogHint", "/audit-log", History),
     ],
   },
   {
-    icon: SettingsIcon,
-    get label() { return t("common.business"); },
-    slug: "business",
-    items: [
-      { icon: BusinessIcon, get label() { return t("common.businessProfile"); }, path: "/business", get description() { return t("layout.nameAddressAndContactDetails"); } },
-      { icon: ImageIcon, get label() { return t("common.photos"); }, path: "/photos", get description() { return t("layout.coverLogoAndGalleryCustomers"); } },
-      { icon: ClockIcon, get label() { return t("common.openingHours"); }, path: "/business-hours", get description() { return t("layout.whenTheSalonIsOpen"); } },
-      { icon: SettingsIcon, get label() { return t("layout.settings"); }, path: "/setup", get description() { return t("layout.bookingRulesDepositsPaymentsNotifications"); } },
-      { icon: History, get label() { return t("auditLog.title"); }, path: "/audit-log", get description() { return t("layout.auditLogHint"); } },
+    id: "account",
+    get title() { return t("setup.account"); },
+    get description() { return t("setup.yourOwnSignIn"); },
+    icon: KeyRound,
+    rows: [
+      R("setup.passwordSecurity", "setup.changeYourPassword", "/security", KeyRound),
+      R("setup.support", "setup.supportHint", "/support", LifeBuoy),
     ],
   },
 ];
+
+/** The settings icon, for the rail foot and search. */
+export const SettingsIcon = Settings;
+
+/** Settings the person may open (the hub, the sub-nav and search all use this). */
+export function useVisibleSettings(): SettingsSection[] {
+  const access = myAccess();
+  return SETTINGS_SECTIONS.map((s) => ({ ...s, rows: s.rows.filter((r) => pageAllowed(access, r.path)) })).filter((s) => s.rows.length);
+}
+
+/** True when this salon-relative path ("/setup/email") belongs to Settings. */
+export function isSettingsPath(path: string): boolean {
+  return path === "/setup" || SETTINGS_SECTIONS.some((s) => s.rows.some((r) => r.path === path)) || path === "/notifications" || path === "/booking-rules";
+}
+
+/* ── quick search: things that live inside a page ───────────────────────── */
+
+/**
+ * Features that are a card or a tab inside a page, not a page of their own. Search finds
+ * them by name and opens the page that holds them. `key` is under nav.find.* in every
+ * locale; search matches all three languages at once.
+ */
+export const SEARCH_EXTRAS: { key: string; path: string; icon: React.ElementType; /** Outside the salon (no salon key). */ absolute?: boolean }[] = [
+  { key: "newBooking", path: "/calendar?new=1", icon: CalendarDays },
+  { key: "waitlist", path: "/calendar", icon: CalendarDays },
+  { key: "paymentLinks", path: "/calendar", icon: CreditCard },
+  { key: "quickSale", path: "/sales", icon: Receipt },
+  { key: "giftCards", path: "/sales", icon: Gift },
+  { key: "memberships", path: "/sales", icon: Stamp },
+  { key: "invoices", path: "/money", icon: Landmark },
+  { key: "tips", path: "/money", icon: Landmark },
+  { key: "cashDrawer", path: "/money", icon: Landmark },
+  { key: "deposits", path: "/money", icon: Landmark },
+  { key: "debts", path: "/clients", icon: Users },
+  { key: "clientTags", path: "/clients", icon: Users },
+  { key: "promoCodes", path: "/marketing", icon: Megaphone },
+  { key: "automations", path: "/marketing", icon: Megaphone },
+  { key: "loyaltyTiers", path: "/marketing", icon: Stamp },
+  { key: "packages", path: "/items-category", icon: Scissors },
+  { key: "peakPricing", path: "/items-category", icon: Scissors },
+  { key: "stockLocations", path: "/inventory", icon: Package },
+  { key: "shifts", path: "/staff", icon: UsersRound },
+  { key: "commissions", path: "/staff", icon: UsersRound },
+  { key: "chairRental", path: "/staff", icon: UsersRound },
+  { key: "resources", path: "/staff", icon: UsersRound },
+  { key: "revenuePlan", path: "/analytics", icon: BarChart3 },
+  { key: "slotOffers", path: "/setup/online-booking", icon: CalendarClock },
+  { key: "googleReview", path: "/setup/online-booking", icon: Star },
+  { key: "messageTexts", path: "/setup/email", icon: Mail },
+  { key: "addSalon", path: "/create-business", icon: Store, absolute: true },
+];
+
+/** Opens the quick search from anywhere (a button, the phone drawer); ⌘K / Ctrl+K also do. */
+export const QUICK_SEARCH_EVENT = "booqi:quick-search";
+export function openQuickSearch(): void {
+  window.dispatchEvent(new Event(QUICK_SEARCH_EVENT));
+}
 
 /**
  * The nav with the switched-off features removed.
@@ -169,10 +344,11 @@ export function useVisibleNavGroups(): NavGroup[] {
   const access = myAccess();
   const on = (flag?: string) => !flag || flags[flag] !== false;
   const allowed = (path?: string) => pageAllowed(access, path);
+  const mine = (staffOnly?: boolean) => !staffOnly || myStaffRecord() !== undefined;
   return navGroups
-    .filter((group) => group.items || allowed(group.path))
+    .filter((group) => group.items || (allowed(group.path) && mine(group.staffOnly)))
     .map((group) =>
-      group.items ? { ...group, items: group.items.filter((item) => on(item.flag) && allowed(item.path) && (!item.staffOnly || myStaffRecord() !== undefined)) } : group
+      group.items ? { ...group, items: group.items.filter((item) => on(item.flag) && allowed(item.path) && mine(item.staffOnly)) } : group
     )
     .filter((group) => !group.items || group.items.length > 0);
 }
@@ -244,12 +420,21 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/business-hours": ["SETTINGS"],
   "/setup": ["SETTINGS"],
   "/audit-log": null,
+  "/booking-rules": ["SETTINGS"],
+  "/notifications": ["SETTINGS"],
+  "/locations": ["SETTINGS"],
+  "/branch-comparison": ["ANALYTICS"],
+  "/central-prices": ["CATALOG"],
 };
 
 export function pageAllowed(access: MyAccess, path?: string): boolean {
   if (!path || access.isOwner) return true;
-  if (!(path in PAGE_NEEDS)) return true;
-  const needs = PAGE_NEEDS[path];
+  // "/setup/email" is ruled by "/setup" unless it has a rule of its own (the route guard
+  // already reads the first segment; the menu now does too).
+  const bare = path.split("?")[0];
+  const key = bare in PAGE_NEEDS ? bare : "/" + (bare.split("/").filter(Boolean)[0] ?? "");
+  if (!(key in PAGE_NEEDS)) return true;
+  const needs = PAGE_NEEDS[key];
   return needs !== null && needs.some((p) => access.permissions.includes(p));
 }
 

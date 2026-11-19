@@ -1,6 +1,12 @@
 import { ReactNode, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { MobileTabBar, MobileTopBar, Sidebar } from "./Sidebar";
 import { InstallAppBanner } from "./InstallAppBanner";
+import { QuickSearch } from "./QuickSearch";
+import { SettingsNav } from "./SettingsNav";
+import { isSettingsPath } from "./navigation";
+import { useBusinessId } from "@/hooks/useBusinessId";
+import { keyForId } from "@/lib/salonKey";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -10,6 +16,11 @@ interface AppLayoutProps {
 const COLLAPSE_KEY = "booqi.nav.collapsed";
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const location = useLocation();
+  const salonKey = keyForId(useBusinessId());
+  const base = salonKey ? `/${salonKey}` : "";
+  const rel = base && location.pathname.startsWith(base) ? location.pathname.slice(base.length) || "/" : location.pathname;
+  const inSettings = Boolean(base) && isSettingsPath(rel);
   // Remembered per browser; storage can be blocked (private mode), so never trust it.
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -31,6 +42,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-[100dvh] bg-[rgb(var(--reg-canvas))]">
       <Sidebar collapsed={collapsed} onToggle={toggle} />
+      {inSettings && <SettingsNav base={base} current={rel} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar />
         <InstallAppBanner />
@@ -40,6 +52,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
       <MobileTabBar />
+      <QuickSearch />
     </div>
   );
 }

@@ -26,7 +26,6 @@ const StaffPage = lazy(() => import("./pages/StaffPage"));
 const RolesPage = lazy(() => import("./pages/RolesPage"));
 const EditStaffPage = lazy(() => import("./pages/EditStaffPage"));
 const AddStaffPage = lazy(() => import("./pages/AddStaffPage"));
-const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 // #26/#44: "Inventory" now opens real product stock. The add-on management that used to
 // live behind that label keeps its own route so nothing is lost.
 const AddonsPage = lazy(() => import("./pages/AddonsPage"));
@@ -79,9 +78,7 @@ const FIRST_PAGE: Record<string, () => Promise<unknown>> = {
   "": () => import("./pages/CalendarPage"),
   calendar: () => import("./pages/CalendarPage"),
   clients: () => import("./pages/ClientsPage"),
-  contacts: () => import("./pages/ClientsPage"),
   sales: () => import("./pages/SalesPage"),
-  shopping: () => import("./pages/SalesPage"),
 };
 if (typeof window !== "undefined") {
   // business.getbooqi.tech/<slug>_<publicId>/<page>: the API wants the numeric id, which
@@ -250,10 +247,11 @@ const App = () => (
               <Route path="inventory/suppliers" element={<Suspense fallback={<PageLoader />}><SuppliersOrdersPage /></Suspense>} />
               <Route path="inventory/count" element={<Suspense fallback={<PageLoader />}><StockCountPage /></Suspense>} />
               <Route path="addons" element={<Suspense fallback={<PageLoader />}><AddonsPage /></Suspense>} />
-              <Route path="shopping" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
+              {/* Old addresses kept working (hub IA 2026-11-19): each now has one home. */}
+              <Route path="shopping" element={<Navigate to="../sales" replace />} />
               <Route path="sales" element={<Suspense fallback={<PageLoader />}><SalesPage /></Suspense>} />
               <Route path="items-category" element={<Suspense fallback={<PageLoader />}><ItemsCategoryPage /></Suspense>} />
-              <Route path="services" element={<Suspense fallback={<PageLoader />}><ServicesPage /></Suspense>} />
+              <Route path="services" element={<Navigate to="../items-category" replace />} />
               <Route path="add-service" element={<Suspense fallback={<PageLoader />}><AddServicePage /></Suspense>} />
               <Route path="edit-service/:id" element={<Suspense fallback={<PageLoader />}><AddServicePage /></Suspense>} />
               <Route path="add-combo-service" element={<Suspense fallback={<PageLoader />}><AddComboServicePage /></Suspense>} />
@@ -264,7 +262,11 @@ const App = () => (
               <Route path="referral-program" element={<Suspense fallback={<PageLoader />}><ReferralProgramPage /></Suspense>} />
               <Route path="loyalty" element={<Suspense fallback={<PageLoader />}><LoyaltyPage /></Suspense>} />
               <Route path="section/:section" element={<Suspense fallback={<PageLoader />}><SectionPage /></Suspense>} />
-              <Route path="contacts" element={<Suspense fallback={<PageLoader />}><ClientsPage /></Suspense>} />
+              <Route path="contacts" element={<Navigate to="../clients" replace />} />
+              <Route path="consent-forms" element={<Navigate to="../setup/consent-forms" replace />} />
+              <Route path="forms" element={<Navigate to="../setup/consent-forms" replace />} />
+              <Route path="settings" element={<Navigate to="../setup" replace />} />
+              <Route path="reports" element={<Navigate to="../analytics" replace />} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
               <Route path="money" element={<Suspense fallback={<PageLoader />}><MoneyPage /></Suspense>} />
               <Route path="payroll" element={<Suspense fallback={<PageLoader />}><PayrollPage /></Suspense>} />

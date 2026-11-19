@@ -321,7 +321,8 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
           )}
         </div>
 
-        <section className="mt-8 max-w-xl space-y-3 rounded-2xl p-4 ring-1 ring-[rgb(var(--reg-line))]">
+        {/* Belongs with online booking only: it showed under every settings sub-page. */}
+        {show("online") && <section className="mt-8 max-w-xl space-y-3 rounded-2xl p-4 ring-1 ring-[rgb(var(--reg-line))]">
           <Field label={t("bookingRules.googleReviewLink")} htmlFor="br-google-review" hint={t("bookingRules.googleReviewLinkHint")}>
             <div className="flex flex-wrap gap-2">
               <input
@@ -341,7 +342,7 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
               </Button>
             </div>
           </Field>
-        </section>
+        </section>}
 
         <SaveBar dirty={dirty} saving={saving} onSave={() => void save()} onDiscard={discard} />
       </BooqiScope>
