@@ -31,6 +31,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useServices } from "@/hooks/useServices";
+import { PeakPricingCard } from "@/components/services/PeakPricingCard";
 import { useCategories } from "@/hooks/useCategories";
 import { useStaff } from "@/hooks/useStaff";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -1167,6 +1168,15 @@ export default function AddServicePage() {
                         <SelectItem value="23">23%</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* FG-W4-06: peak-hour surcharge, online customer bookings only. Needs a saved service. */}
+                  <div className="border-t border-[rgb(var(--reg-line)/0.8)] pt-6">
+                    {isEditMode && id && businessId ? (
+                      <PeakPricingCard businessId={businessId} serviceId={id} />
+                    ) : (
+                      <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("peakPricing.saveFirst")}</p>
+                    )}
                   </div>
                 </div>
               </div>

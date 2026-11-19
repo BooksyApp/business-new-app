@@ -3686,5 +3686,20 @@
     "saveFailed": "The change could not be saved.",
     "deleteFailed": "The photo could not be deleted.",
     "reorderFailed": "The new order could not be saved."
+  },
+  "peakPricing": {
+    "title": "Peak-hour pricing",
+    "hint": "On the days and hours you choose, online bookings cost the service price plus this percentage. Bookings the salon makes and till prices stay the same. Up to 14 rules.",
+    "weekday": "Weekday",
+    "from": "From",
+    "to": "To",
+    "percent": "Increase %",
+    "add": "Add rule",
+    "remove": "Remove",
+    "save": "Save peak pricing",
+    "saved": "Peak pricing saved",
+    "saveFailed": "Could not save peak pricing",
+    "loadFailed": "Could not load peak pricing",
+    "saveFirst": "Save the service first, then set peak pricing."
   }
 }

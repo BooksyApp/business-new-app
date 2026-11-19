@@ -3686,5 +3686,20 @@
     "saveFailed": "Dəyişiklik yadda saxlanılmadı.",
     "deleteFailed": "Şəkil silinmədi.",
     "reorderFailed": "Yeni sıra yadda saxlanılmadı."
+  },
+  "peakPricing": {
+    "title": "Pik saat qiyməti",
+    "hint": "Seçdiyiniz gün və saatlarda onlayn rezervasiya xidmətin qiymətinə bu faiz əlavə edilərək alınır. Salonun özünün etdiyi rezervlər və kassa qiymətləri dəyişmir. Ən çox 14 qayda.",
+    "weekday": "Həftə günü",
+    "from": "Başlanğıc",
+    "to": "Bitmə",
+    "percent": "Artım %",
+    "add": "Qayda əlavə et",
+    "remove": "Sil",
+    "save": "Pik qiyməti saxla",
+    "saved": "Pik qiymət saxlanıldı",
+    "saveFailed": "Pik qiymət saxlanılmadı",
+    "loadFailed": "Pik qiymət yüklənmədi",
+    "saveFirst": "Əvvəlcə xidməti saxlayın, sonra pik qiyməti təyin edin."
   }
 }
