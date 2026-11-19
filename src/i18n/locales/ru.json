@@ -1709,6 +1709,7 @@
   },
   "marketing": {
     "campaignSent": "Отправлена",
+    "campaignResults": "Записей за 14 дней после отправки: {bookings} · выручка {revenue}",
     "campaignSending": "Отправляется: {{sent}}/{{total}}, остальное завтра",
     "campaignCancelled": "Отменена",
     "useCount": "{count, plural, one {# использование} few {# использования} many {# использований} other {# использования}}",

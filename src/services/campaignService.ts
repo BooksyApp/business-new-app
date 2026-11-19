@@ -21,6 +21,15 @@ export interface Campaign {
   createdAt: string | null;
 }
 
+/** FG-W4-10: what a sent campaign brought back in the 14 days after each client's send. */
+export interface CampaignResults {
+  sent: number;
+  failed: number;
+  bookings: number;
+  revenue: number;
+  windowDays: number;
+}
+
 /**
  * Segment size and reachable count are separate on purpose: "40 in segment, 6 reachable"
  * tells a salon it has a consent problem, which a single number would hide.
@@ -47,6 +56,11 @@ class CampaignService {
     name: string; channel: string; segment: string; subject?: string; body: string;
   }): Promise<Campaign> {
     return apiClient.post<Campaign>(`/marketing/campaigns/business/${businessId}`, body);
+  }
+
+  /** FG-W4-10: bookings and revenue from the campaign's recipients (opens and clicks are not tracked yet). */
+  async results(businessId: Id, campaignId: Id): Promise<CampaignResults> {
+    return apiClient.get<CampaignResults>(`/marketing/campaigns/business/${businessId}/${campaignId}/results`);
   }
 
   /** Freezes the recipient list. Delivery itself waits on backend #496. */

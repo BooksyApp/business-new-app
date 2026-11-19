@@ -1709,6 +1709,7 @@
   },
   "marketing": {
     "campaignSent": "Sent",
+    "campaignResults": "{bookings} bookings in 14 days after sending · revenue {revenue}",
     "campaignSending": "Sending: {{sent}}/{{total}}, the rest tomorrow",
     "campaignCancelled": "Cancelled",
     "useCount": "{count, plural, one {# use} other {# uses}}",

@@ -41,7 +41,7 @@ import { useServices } from "@/hooks/useServices";
 import { useNavigation } from "@/utils/navigationUtils";
 import { promoService, type PromoCode } from "@/services/promoService";
 import { useFeatureFlags } from "@/services/platformService";
-import { campaignService, type Campaign, type AudiencePreview } from "@/services/campaignService";
+import { campaignService, type Campaign, type CampaignResults, type AudiencePreview } from "@/services/campaignService";
 import { t as tr, fmtDate as formatLocaleDate, getLocale } from "@/i18n";
 import { AutomationCard } from "@/components/page/AutomationCard";
 import { CAMPAIGN_TEMPLATES, type CampaignTemplate } from "@/lib/campaignTemplates";
@@ -101,6 +101,15 @@ export default function MarketingPage() {
   const [promoSheetOpen, setPromoSheetOpen] = useState(false);
 
   const [campaigns, setCampaigns] = useState<Campaign[] | null>(null);
+  const [campaignResults, setCampaignResults] = useState<Record<string, CampaignResults>>({});
+  useEffect(() => {
+    if (!businessId || !campaigns) return;
+    campaigns.filter((c) => c.status === "SENT").forEach((c) => {
+      campaignService.results(businessId, c.id)
+        .then((r) => setCampaignResults((prev) => ({ ...prev, [String(c.id)]: r })))
+        .catch(() => undefined);
+    });
+  }, [businessId, campaigns]);
   const [campaignForm, setCampaignForm] = useState(EMPTY_CAMPAIGN);
   const [audience, setAudience] = useState<AudiencePreview | null>(null);
   const [campaignBusy, setCampaignBusy] = useState(false);
@@ -433,6 +442,14 @@ export default function MarketingPage() {
                             {c.status !== "DRAFT" ? " " + tr("marketing.recipientCount", { count: c.recipientCount }) : ""}
                             {c.createdAt ? ` · ${formatLocaleDate(new Date(c.createdAt), { day: "numeric", month: "short" })}` : ""}
                           </p>
+                          {campaignResults[String(c.id)] && (
+                            <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">
+                              {tr("marketing.campaignResults", {
+                                bookings: campaignResults[String(c.id)].bookings,
+                                revenue: money(campaignResults[String(c.id)].revenue, currencySymbol()),
+                              })}
+                            </p>
+                          )}
                         </div>
                         {c.status === "DRAFT" && (
                           <RowAction icon={Send} disabled={campaignBusy} onClick={() => void queueCampaign(c)}>

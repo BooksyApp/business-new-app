@@ -1709,6 +1709,7 @@
   },
   "marketing": {
     "campaignSent": "Göndərildi",
+    "campaignResults": "Göndərildikdən sonra 14 gündə {bookings} rezerv · gəlir {revenue}",
     "campaignSending": "Göndərilir: {{sent}}/{{total}}, qalanı sabah",
     "campaignCancelled": "Ləğv edildi",
     "useCount": "{count, plural, one {# istifadə} other {# istifadə}}",
