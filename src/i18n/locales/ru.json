@@ -3737,5 +3737,18 @@
       "CARD": "Карта",
       "TRANSFER": "Перевод"
     }
+  },
+  "clientBalance": {
+    "title": "Долг клиента",
+    "settle": "Погасить долг",
+    "confirmSettle": "Записать оплату",
+    "amount": "Сумма ({value})",
+    "amountRange": "Введите сумму до {value} {value2}",
+    "settled": "Оплата долга записана",
+    "settleFailed": "Не удалось записать оплату",
+    "debt": "Не оплачено",
+    "settlement": "Долг погашен",
+    "leaveRest": "Оставить остаток в долг",
+    "leaveRestHint": "{value} {value2} добавится к долгу клиента"
   }
 }

@@ -3737,5 +3737,18 @@
       "CARD": "Card",
       "TRANSFER": "Transfer"
     }
+  },
+  "clientBalance": {
+    "title": "Balance owed",
+    "settle": "Settle balance",
+    "confirmSettle": "Record payment",
+    "amount": "Amount ({value})",
+    "amountRange": "Enter an amount up to {value} {value2}",
+    "settled": "Balance payment recorded",
+    "settleFailed": "Could not record the payment",
+    "debt": "Left unpaid",
+    "settlement": "Paid off",
+    "leaveRest": "Leave the rest as balance",
+    "leaveRestHint": "{value} {value2} will be added to what the client owes"
   }
 }

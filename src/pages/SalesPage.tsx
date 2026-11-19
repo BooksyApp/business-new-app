@@ -1311,6 +1311,7 @@ export default function SalesPage() {
                 paymentMethod: paymentMethodMap[paymentData.paymentMethod] || 'CASH',
                 // The tenders, when the checkout screen collected more than one.
                 payments: paymentData.payments,
+                leaveBalance: paymentData.leaveBalance ? true : undefined,
                 paymentAmount: paymentData.amount,
                 giftCardCode: paymentData.giftCardCode,
                 splitCashAmount: paymentData.splitCashAmount,

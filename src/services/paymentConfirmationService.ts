@@ -17,6 +17,8 @@ export interface PaymentConfirmationRequest {
   giftCardCode?: string;
   /** Promo code the booking was made with; the server applies it and counts the use. */
   promoCode?: string;
+  /** FG-W6-07: tenders may fall short of the amount due; the rest becomes the client's balance. Needs clientId. */
+  leaveBalance?: boolean;
   /** Several tenders on one bill. Preferred over paymentMethod + split fields. */
   payments?: SalePayment[];
   businessId: Id;

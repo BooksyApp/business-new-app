@@ -3737,5 +3737,18 @@
       "CARD": "Kart",
       "TRANSFER": "Köçürmə"
     }
+  },
+  "clientBalance": {
+    "title": "Müştərinin borcu",
+    "settle": "Borcu ödə",
+    "confirmSettle": "Ödənişi qeyd et",
+    "amount": "Məbləğ ({value})",
+    "amountRange": "{value} {value2} qədər məbləğ daxil edin",
+    "settled": "Borc ödənişi qeyd olundu",
+    "settleFailed": "Ödənişi qeyd etmək alınmadı",
+    "debt": "Ödənilməyib",
+    "settlement": "Borc ödənildi",
+    "leaveRest": "Qalanını borc kimi saxla",
+    "leaveRestHint": "{value} {value2} müştərinin borcuna əlavə olunacaq"
   }
 }

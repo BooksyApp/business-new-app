@@ -88,6 +88,8 @@ interface PaymentMethodPageProps {
     payments?: SalePayment[];
     /** Which line each benefit paid for, keyed by order item id. */
     coverage?: Coverage;
+    /** FG-W6-07: tenders fall short and the rest stays on the client's balance. */
+    leaveBalance?: boolean;
   }) => void;
   onCancel?: () => void;
 }
@@ -116,7 +118,8 @@ export default function PaymentMethodPage({
     payments: SalePayment[];
     due: number;
     remaining: number;
-  }>({ coverage: {}, payments: [], due: 0, remaining: 0 });
+    leaveBalance: boolean;
+  }>({ coverage: {}, payments: [], due: 0, remaining: 0, leaveBalance: false });
   const [selectedTip, setSelectedTip] = useState<{ amount: number; percent: number } | null>(null);
   const [customTip, setCustomTip] = useState("");
   const [showCustomTip, setShowCustomTip] = useState(false);
@@ -336,6 +339,7 @@ export default function PaymentMethodPage({
         giftCardCode?: string;
         payments?: SalePayment[];
         coverage?: Coverage;
+        leaveBalance?: boolean;
       } = {
         tip: selectedTip?.amount || parseFloat(customTip) || 0,
         tipPercent: selectedTip?.percent || 0,
@@ -353,10 +357,11 @@ export default function PaymentMethodPage({
 
       // When the cashier used the benefits panel, that is the payment: it already knows
       // what each line was covered by and how the rest was tendered.
-      if (multi.payments.length > 0 || Object.values(multi.coverage).some(Boolean)) {
+      if (multi.payments.length > 0 || Object.values(multi.coverage).some(Boolean) || multi.leaveBalance) {
         paymentData.payments = multi.payments;
         paymentData.coverage = multi.coverage;
       }
+      if (multi.leaveBalance) paymentData.leaveBalance = true;
 
       // Add split amounts if payment method is split
       if (selectedPaymentMethod === "split") {

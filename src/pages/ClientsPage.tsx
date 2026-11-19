@@ -56,6 +56,7 @@ import { ClientPhotosSection } from "@/components/clients/ClientPhotosSection";
 import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
 import { BookingImportDialog } from "@/components/bookings/BookingImportDialog";
 import { ClientTagsSection } from "@/components/clients/ClientTagsSection";
+import { ClientBalanceSection } from "@/components/clients/ClientBalanceSection";
 import { salonPath } from "@/lib/salonKey";
 
 /** An invitation row shown as a client before it is accepted (no client row yet). */
@@ -1569,6 +1570,7 @@ export default function ClientsPage() {
                             </Button>
                           </div>
                         </section>
+                        <ClientBalanceSection clientId={c.id} labelClass={label} boxClass={box} />
                         <ClientTagsSection businessId={businessId} clientId={c.id} labelClass={label} boxClass={box} />
                         {record === null ? (
                           <p className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.loadingRecord")}</p>

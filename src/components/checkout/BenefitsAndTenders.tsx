@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { ClientBalanceSection } from "@/components/clients/ClientBalanceSection";
 import { currencySymbol } from "@/lib/currency";
 import type { SalePayment } from "@/services/paymentConfirmationService";
 import { useFeatureFlags } from "@/services/platformService";
@@ -18,7 +20,7 @@ interface Props {
   orderItems: Array<{ id: string; name: string; quantity: number; price: number; serviceId?: Id }>;
   /** Bill total, after discount and tip. */
   total: number;
-  onChange: (state: { coverage: Coverage; payments: SalePayment[]; due: number; remaining: number }) => void;
+  onChange: (state: { coverage: Coverage; payments: SalePayment[]; due: number; remaining: number; leaveBalance: boolean }) => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   const [pointsToSpend, setPointsToSpend] = useState("");
   const [cash, setCash] = useState("");
   const [card, setCard] = useState("");
+  const [leaveBalanceOn, setLeaveBalanceOn] = useState(false);
 
   useEffect(() => {
     if (!clientId) {
@@ -78,10 +81,14 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   const tendered = payments.reduce((sum, p) => sum + p.amount, 0);
   const remaining = Number((due - tendered).toFixed(2));
 
+  // FG-W6-07: only a named client can owe the salon, and only while the tenders fall short.
+  const shortfall = !!clientId && remaining > 0.009;
+  const leaveBalance = shortfall && leaveBalanceOn;
+
   useEffect(() => {
-    onChange({ coverage, payments, due, remaining });
+    onChange({ coverage, payments, due, remaining, leaveBalance });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(coverage), JSON.stringify(payments), due, remaining]);
+  }, [JSON.stringify(coverage), JSON.stringify(payments), due, remaining, leaveBalance]);
 
   /** A membership covers a line when it lists that service, or lists none at all. */
   const membershipCovers = (serviceId?: Id) =>
@@ -121,6 +128,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        <ClientBalanceSection clientId={clientId} showEntries={false} boxClass="rounded-md border p-3" labelClass="text-xs text-muted-foreground" />
         <div className="space-y-2">
           {orderItems.map((item) => {
             const options: Array<{ value: Coverage[string]; label: string; enabled: boolean }> = [
@@ -264,6 +272,17 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
             </span>
           </div>
         </div>
+        {shortfall && (
+          <label className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm">
+            <span>
+              <span className="block font-medium">{t("clientBalance.leaveRest")}</span>
+              <span className="text-xs text-muted-foreground">
+                {t("clientBalance.leaveRestHint", { value: remaining.toFixed(2), value2: currencySymbol() })}
+              </span>
+            </span>
+            <Switch checked={leaveBalanceOn} onCheckedChange={setLeaveBalanceOn} />
+          </label>
+        )}
       </CardContent>
     </Card>
   );
