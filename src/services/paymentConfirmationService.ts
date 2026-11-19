@@ -19,6 +19,8 @@ export interface PaymentConfirmationRequest {
   promoCode?: string;
   /** FG-W6-07: tenders may fall short of the amount due; the rest becomes the client's balance. Needs clientId. */
   leaveBalance?: boolean;
+  /** POS v3: the checkout quote's bill; the sale refuses one that changed since (409). */
+  quoteBillDue?: number;
   /** Several tenders on one bill. Preferred over paymentMethod + split fields. */
   payments?: SalePayment[];
   businessId: Id;

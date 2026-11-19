@@ -1,5 +1,6 @@
 import type { Id } from "@/types/id";
 import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { clientBalanceService } from "@/services/clientBalanceService";
 import { salonNow, salonToday } from "@/lib/salonClock";
 import { currencySymbol } from "@/lib/currency";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -1208,6 +1209,9 @@ export default function SalesPage() {
         quantity: 1,
         price: isNaN(raw) ? 0 : raw,
         duration: item.duration,
+        // POS v3: the quote prices and covers lines by service / product.
+        serviceId: item.serviceId,
+        productId: item.productId,
       };
     });
 
@@ -1242,6 +1246,7 @@ export default function SalesPage() {
           // staff member, silently wrong with several) — staffList + onStaffChange make
           // that default visible and correctable via the checkout screen's "CHANGE"
           // control instead of being locked in with no way to fix it.
+          appointmentIds={ticketApptIds.map(String)}
           staffList={staff ?? []}
           onStaffChange={(member) => setSelectedAppointmentStaffId(member.id)}
           onConfirm={async (paymentData) => {
@@ -1327,10 +1332,23 @@ export default function SalesPage() {
                 appointmentId: ticketApptIds.length > 0 ? undefined : selectedAppointmentId || undefined,
                 promoCode: bookedPromo?.code,
                 notes: ticketNote.trim() || undefined,
+                quoteBillDue: paymentData.quoteBillDue,
               };
 
               // Confirm payment (creates sale, calculates commissions, updates appointment)
               const response = await paymentConfirmationService.confirmPayment(confirmationRequest);
+
+              // POS v3: the previous debt the client paid with this visit goes on their balance.
+              if (paymentData.debtSettle && selectedClient) {
+                try {
+                  await clientBalanceService.settle(selectedClient.id, {
+                    amount: paymentData.debtSettle.amount,
+                    method: paymentData.debtSettle.method,
+                  });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : String(e));
+                }
+              }
 
               // Success
               toast.success(tr("sales.paymentProcessedSuccessfully"));
