@@ -1,4 +1,15 @@
 {
+  "loyaltyTiers": {
+    "title": "Levels",
+    "hint": "A client reaches a level by the points they have earned at your salon in total. The level's bonus adds to every purchase's points from then on.",
+    "name": "Level name",
+    "fromPoints": "From points",
+    "bonus": "Bonus %",
+    "remove": "Remove",
+    "add": "Add level",
+    "saved": "Levels saved",
+    "saveFailed": "Could not save the levels"
+  },
   "common": {
     "loading": "Loading...",
     "cancelled": "Cancelled",

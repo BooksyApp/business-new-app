@@ -1,4 +1,15 @@
 {
+  "loyaltyTiers": {
+    "title": "Səviyyələr",
+    "hint": "Müştəri salonunuzda topladığı ümumi xal sayına görə səviyyəyə çatır. Səviyyənin bonusu bundan sonra hər alış xalına əlavə olunur.",
+    "name": "Səviyyənin adı",
+    "fromPoints": "Xaldan",
+    "bonus": "Bonus %",
+    "remove": "Sil",
+    "add": "Səviyyə əlavə et",
+    "saved": "Səviyyələr yadda saxlanıldı",
+    "saveFailed": "Səviyyələr yadda saxlanmadı"
+  },
   "common": {
     "loading": "Yüklənir...",
     "cancelled": "Ləğv edildi",

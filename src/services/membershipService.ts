@@ -93,9 +93,25 @@ export interface LoyaltySettings {
  * The salon's loyalty rules. Points-per-spend and the stamp card are separate programmes
  * on purpose: one rewards how much a client spends, the other how often they come back.
  */
+/** FG-W4-07: a salon level. A client reaches it at minPoints lifetime points earned there. */
+export interface LoyaltyTier {
+  name: string;
+  minPoints: number;
+  bonusPercent: number;
+}
+
 class LoyaltySettingsService {
   get(businessId: Id): Promise<LoyaltySettings> {
     return apiClient.get<LoyaltySettings>(`/businesses/${businessId}/loyalty-settings`);
+  }
+
+  /** FG-W4-07: the salon's levels, by the lifetime points a client has earned there. */
+  tiers(businessId: Id): Promise<LoyaltyTier[]> {
+    return apiClient.get<LoyaltyTier[]>(`/businesses/${businessId}/loyalty-tiers`);
+  }
+
+  setTiers(businessId: Id, tiers: LoyaltyTier[]): Promise<LoyaltyTier[]> {
+    return apiClient.put<LoyaltyTier[]>(`/businesses/${businessId}/loyalty-tiers`, tiers);
   }
 
   update(businessId: Id, settings: Partial<LoyaltySettings>): Promise<LoyaltySettings> {

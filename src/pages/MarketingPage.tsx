@@ -44,6 +44,7 @@ import { useFeatureFlags } from "@/services/platformService";
 import { campaignService, type Campaign, type CampaignResults, type AudiencePreview } from "@/services/campaignService";
 import { t as tr, fmtDate as formatLocaleDate, getLocale } from "@/i18n";
 import { AutomationCard } from "@/components/page/AutomationCard";
+import { LoyaltyTiersCard } from "@/components/page/LoyaltyTiersCard";
 import { CAMPAIGN_TEMPLATES, type CampaignTemplate } from "@/lib/campaignTemplates";
 
 // #46: the campaign list here was hardcoded — invented names, invented open rates,
@@ -413,6 +414,7 @@ export default function MarketingPage() {
               </div>
 
               {businessId && <AutomationCard businessId={businessId} />}
+              {businessId && <LoyaltyTiersCard businessId={businessId} />}
 
               {campaigns === null ? (
                 <SkeletonGrid />
