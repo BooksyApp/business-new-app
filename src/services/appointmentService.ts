@@ -275,7 +275,8 @@ export const appointmentService = {
     // not here at call time — so retries reuse the same key.
     // If caller doesn't provide one, fall back to a time+random key (single-use, not retry-safe).
     const key = request.idempotencyKey
-      ?? `${request.businessId}-${request.staffId}-${request.appointmentDate}-${request.startTime}-${Date.now()}-${Math.random()}`;
+      // Kept short: idempotency_key is varchar(100) and UUID ids alone made this ~125 chars.
+      ?? `booking-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
     return withConflictConfirm((override) => apiClient.post<Appointment>('/bookings', {
       ...request,
       idempotencyKey: key,
