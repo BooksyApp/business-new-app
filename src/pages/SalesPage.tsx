@@ -1,5 +1,6 @@
 import type { Id } from "@/types/id";
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { clientBalanceService } from "@/services/clientBalanceService";
 import { salonNow, salonToday } from "@/lib/salonClock";
 import { currencySymbol } from "@/lib/currency";
@@ -13,7 +14,7 @@ import { format } from "@/i18n/dateFns";
 // The payment step is its own chunk (fetched on idle once the till has painted), not part
 // of the till's first load.
 const loadPaymentMethodPage = () => import("./PaymentMethodPage");
-const PaymentMethodPage = lazy(loadPaymentMethodPage);
+const PaymentMethodPage = lazyWithReload(loadPaymentMethodPage);
 import { useServices } from "@/hooks/useServices";
 import { useAddons } from "@/hooks/useAddons";
 import { useBusinessId } from "@/hooks/useBusinessId";

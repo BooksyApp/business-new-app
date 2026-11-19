@@ -1,5 +1,6 @@
 import type { Id } from "@/types/id";
-import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -31,7 +32,7 @@ import { AppointmentBlock, StaffAvatar, type Appointment, type Staff } from "@/c
 // The visit sheet (~700 lines plus refund dialog and client picker) is only needed once a
 // visit is opened: its own chunk, fetched on idle after the calendar has painted.
 const loadAppointmentModal = () => import("@/components/calendar/AppointmentModal");
-const AppointmentModal = lazy(() => loadAppointmentModal().then((m) => ({ default: m.AppointmentModal })));
+const AppointmentModal = lazyWithReload(() => loadAppointmentModal().then((m) => ({ default: m.AppointmentModal })));
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

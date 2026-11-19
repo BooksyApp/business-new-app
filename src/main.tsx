@@ -8,6 +8,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { t, loadHubLocale } from "@/i18n";
 import { getHubLocale } from "@/lib/hubLocale";
+import { reloadOnceForNewBuild } from "@/lib/lazyWithReload";
 import { initSentry, reportError } from "@/lib/sentry";
 import { ImpersonationBanner, ImpersonationError } from "@/components/ImpersonationBanner";
 import { handleImpersonationLanding } from "@/lib/impersonation";
@@ -19,14 +20,7 @@ initSentry();
 // Reload once (guarded, so a real outage cannot loop) to pick up the new build.
 window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
-  try {
-    const last = Number(sessionStorage.getItem("hub-chunk-reload") || 0);
-    if (Date.now() - last < 60_000) return;
-    sessionStorage.setItem("hub-chunk-reload", String(Date.now()));
-  } catch {
-    return;
-  }
-  window.location.reload();
+  reloadOnceForNewBuild();
 });
 captureInstallPrompt();
 registerServiceWorker();

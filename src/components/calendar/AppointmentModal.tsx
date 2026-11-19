@@ -24,7 +24,7 @@ import { appointmentService, type Appointment as ApiAppointment, type Appointmen
 import { clientService, type Client } from "@/services/clientService";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { parse } from "date-fns";
+import { isValid, parse } from "date-fns";
 import { format } from "@/i18n/dateFns";
 import { toast } from "sonner";
 import {
@@ -44,6 +44,12 @@ interface AppointmentModalProps {
   onEdit: (appointment: Appointment) => void;
   onDelete: (appointmentId: string) => void;
   onCancelled?: () => void;
+}
+
+/** History rows come from the audit log; a missing or malformed timestamp must not blank the whole modal. */
+function formatHistoryStamp(value: unknown): string {
+  const d = new Date(value as string);
+  return isValid(d) ? format(d, "dd.MM.yyyy HH:mm") : "—";
 }
 
 export function AppointmentModal({
@@ -217,7 +223,7 @@ export function AppointmentModal({
   const cancellationFee = Number(appointmentData.cancellationFee ?? 0);
   const status = appointmentData.status || "PENDING";
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
-  const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+  const appointmentDate = appointmentData.appointmentDate || (appointment.date && isValid(new Date(appointment.date)) ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
   // LR-09: compared with the salon's today (market zone until the salon's is known).
   const isFutureVisit = appointmentDate > format(salonNow(salonTz), 'yyyy-MM-dd');
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
@@ -458,7 +464,7 @@ export function AppointmentModal({
             <div className="mt-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm">
               <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="font-medium">
-                {appointmentDate ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM") : "—"}
+                {appointmentDate && isValid(parse(appointmentDate, "yyyy-MM-dd", new Date())) ? format(parse(appointmentDate, "yyyy-MM-dd", new Date()), "EEE d MMM") : "—"}
               </span>
               <span className="text-muted-foreground">
                 {headStart}–{headEnd}
@@ -544,7 +550,7 @@ export function AppointmentModal({
               <p className="text-xs font-medium text-muted-foreground">{tr("calendar.historyTitle")}</p>
               {history.map((h, i) => (
                 <p key={i} className="text-xs text-muted-foreground">
-                  {format(new Date(h.createdAt), "dd.MM.yyyy HH:mm")} · {h.actorName || tr("calendar.historyUnknownUser")} · {h.method === "POST" ? tr("calendar.historyCreated") : h.method === "DELETE" ? tr("calendar.historyDeleted") : tr("calendar.historyChanged")}
+                  {formatHistoryStamp(h.createdAt)} · {h.actorName || tr("calendar.historyUnknownUser")} · {h.method === "POST" ? tr("calendar.historyCreated") : h.method === "DELETE" ? tr("calendar.historyDeleted") : tr("calendar.historyChanged")}
                 </p>
               ))}
             </div>
