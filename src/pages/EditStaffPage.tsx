@@ -39,6 +39,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { useNavigation } from "@/utils/navigationUtils";
 import { WorkingHoursEditor } from "@/components/staff/WorkingHoursEditor";
 import { StaffPortfolioSection } from "@/components/staff/StaffPortfolioSection";
+import { ChairRentCard } from "@/components/staff/ChairRentCard";
 import {
   DEFAULT_WEEK,
   scheduleToPayload,
@@ -443,6 +444,9 @@ export default function EditStaffPage() {
 
             {/* FG-W2-29: the specialist's "Works" gallery on the public salon page. */}
             {id && businessId && <StaffPortfolioSection businessId={businessId} staffId={id} services={services} />}
+
+            {/* FG-W5-02: a chair renter's rent ledger. Not salon revenue; the rent is a salon expense once paid. */}
+            {id && businessId && <ChairRentCard businessId={businessId} staffId={id} />}
     </RouteSheet>
   );
 }

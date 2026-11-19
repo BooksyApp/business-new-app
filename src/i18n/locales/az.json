@@ -3701,5 +3701,41 @@
     "saveFailed": "Pik qiymət saxlanılmadı",
     "loadFailed": "Pik qiymət yüklənmədi",
     "saveFirst": "Əvvəlcə xidməti saxlayın, sonra pik qiyməti təyin edin."
+  },
+  "chairRent": {
+    "title": "Kreslo icarəsi",
+    "hint": "Salona kreslo üçün pul ödəyən icarəçi üçün. Ödənilən icarə haqqı salonun xərcidir. Onlayn heç nə tutulmur, icarəçinin öz rezervləri salon gəlirinə daxil deyil.",
+    "makeRenter": "İcarəçi kimi işarələ",
+    "period": "Dövr",
+    "weekly": "Həftəlik",
+    "monthly": "Aylıq",
+    "amount": "İcarə məbləği",
+    "dueWeekday": "Ödəniş həftə günü",
+    "dueDayOfMonth": "Ödəniş ayın günü",
+    "dueDay": "Ödəniş: {day}",
+    "edit": "Şərtləri dəyiş",
+    "stop": "İcarəni dayandır",
+    "save": "Saxla",
+    "cancel": "Ləğv et",
+    "saved": "Kreslo icarəsi saxlanıldı",
+    "stopped": "Kreslo icarəsi dayandırıldı",
+    "saveFailed": "Kreslo icarəsi saxlanılmadı",
+    "loadFailed": "Kreslo icarəsi yüklənmədi",
+    "overdueBadge": "{n} gecikmiş",
+    "dueOn": "Ödəniş tarixi",
+    "status": "Status",
+    "paid": "Ödənilib",
+    "due": "Gözləyir",
+    "overdue": "Gecikib",
+    "paidOn": "Ödənilmə tarixi",
+    "markPaid": "Ödənildi",
+    "confirmPaid": "Təsdiqlə",
+    "paidSaved": "İcarə ödənilmiş kimi qeyd olundu və xərc kimi yazıldı",
+    "payFailed": "İcarə ödənilmiş kimi qeyd olunmadı",
+    "method": {
+      "CASH": "Nağd",
+      "CARD": "Kart",
+      "TRANSFER": "Köçürmə"
+    }
   }
 }

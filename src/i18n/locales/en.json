@@ -3701,5 +3701,41 @@
     "saveFailed": "Could not save peak pricing",
     "loadFailed": "Could not load peak pricing",
     "saveFirst": "Save the service first, then set peak pricing."
+  },
+  "chairRent": {
+    "title": "Chair rent",
+    "hint": "For a renter who pays the salon for a chair. The rent is a salon expense once paid. Nothing is charged online, and the renter's own bookings are not part of salon revenue.",
+    "makeRenter": "Mark as chair renter",
+    "period": "Period",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "amount": "Rent amount",
+    "dueWeekday": "Due weekday",
+    "dueDayOfMonth": "Due day of month",
+    "dueDay": "Due: {day}",
+    "edit": "Edit terms",
+    "stop": "Stop renting",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Chair rent saved",
+    "stopped": "Chair renting stopped",
+    "saveFailed": "Could not save chair rent",
+    "loadFailed": "Could not load chair rent",
+    "overdueBadge": "{n} overdue",
+    "dueOn": "Due date",
+    "status": "Status",
+    "paid": "Paid",
+    "due": "Due",
+    "overdue": "Overdue",
+    "paidOn": "Paid on",
+    "markPaid": "Mark paid",
+    "confirmPaid": "Confirm",
+    "paidSaved": "Rent marked paid and booked as an expense",
+    "payFailed": "Could not mark rent paid",
+    "method": {
+      "CASH": "Cash",
+      "CARD": "Card",
+      "TRANSFER": "Transfer"
+    }
   }
 }
