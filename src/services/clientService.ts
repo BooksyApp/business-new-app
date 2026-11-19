@@ -192,6 +192,16 @@ class ClientService {
   async setClientPatchTest(clientId: Id, patchTestDate: string): Promise<void> {
     await apiClient.put(`/clients/${clientId}`, { patchTestDate });
   }
+
+  /** FG-W4-03: the salon's VIP mark, which lets the client book inside the minimum-notice window. */
+  async getClientVip(clientId: Id): Promise<boolean> {
+    const c = await apiClient.get<{ vip?: boolean }>(`/clients/${clientId}`);
+    return c.vip === true;
+  }
+
+  async setClientVip(clientId: Id, vip: boolean): Promise<void> {
+    await apiClient.put(`/clients/${clientId}`, { vip });
+  }
 }
 
 export interface Invitation {

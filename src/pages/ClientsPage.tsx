@@ -114,6 +114,7 @@ export default function ClientsPage() {
   const [clientDetailOpen, setClientDetailOpen] = useState(false);
   const [detailClient, setDetailClient] = useState<ClientWithStats | null>(null);
   const [patchTestDate, setPatchTestDate] = useState("");
+  const [isVip, setIsVip] = useState(false);
   // This salon's bookings with them, and nothing from anywhere else.
   const [clientVisits, setClientVisits] = useState<ClientAppointmentRow[] | null>(null);
   // #28: LoyaltyController has served points per client all along with no caller, so a
@@ -490,6 +491,21 @@ export default function ClientsPage() {
     if (!detailClient?.id) return;
     clientService.getClientPatchTest(detailClient.id).then((d) => setPatchTestDate(d ?? "")).catch(() => setPatchTestDate(""));
   }, [detailClient?.id]);
+
+  useEffect(() => {
+    if (!detailClient?.id) return;
+    clientService.getClientVip(detailClient.id).then(setIsVip).catch(() => setIsVip(false));
+  }, [detailClient?.id]);
+
+  const saveVip = async (value: boolean) => {
+    if (!detailClient?.id) return;
+    try {
+      await clientService.setClientVip(detailClient.id, value);
+      setIsVip(value);
+    } catch {
+      toast.error(tr("clients.vipSaveFailed"));
+    }
+  };
 
   const savePatchTestDate = async (value: string) => {
     if (!detailClient?.id) return;
@@ -1313,6 +1329,23 @@ export default function ClientsPage() {
                         }}
                       />
                     </div>
+                  )}
+                  {profileTab === "overview" && detailClient?.id && (
+                    <label className="flex items-start gap-3 rounded-2xl p-4 text-sm ring-1 ring-[rgb(var(--reg-line))]">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4"
+                        checked={isVip}
+                        onChange={(e) => void saveVip(e.target.checked)}
+                      />
+                      <span className="space-y-0.5">
+                        <span className="flex items-center gap-2 font-semibold">
+                          {tr("clients.vipClient")}
+                          {isVip && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">VIP</span>}
+                        </span>
+                        <span className="block text-[rgb(var(--reg-muted))]">{tr("clients.vipHint")}</span>
+                      </span>
+                    </label>
                   )}
                   {profileTab === "overview" && (
                     <>

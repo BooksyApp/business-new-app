@@ -1114,6 +1114,9 @@
   "clients": {
     "patchTestDate": "Patch test tarixi",
     "patchTestSaveFailed": "Patch test tarixi yadda saxlanmadı",
+    "vipClient": "VIP müştəri",
+    "vipHint": "VIP müştəri salonun minimum xəbərdarlıq vaxtından əvvəl də rezerv edə bilir. Maksimum rezerv müddəti yenə tətbiq olunur.",
+    "vipSaveFailed": "VIP ayarı yadda saxlanmadı",
     "unnamedClient": "Adsız müştəri",
     "showMore": "Daha {count} müştəri göstər",
     "visitCount": "{count, plural, one {# gəliş} other {# gəliş}}",

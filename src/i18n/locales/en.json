@@ -1114,6 +1114,9 @@
   "clients": {
     "patchTestDate": "Patch test date",
     "patchTestSaveFailed": "Could not save the patch test date",
+    "vipClient": "VIP client",
+    "vipHint": "A VIP can book inside the salon's minimum notice time. The maximum booking window still applies.",
+    "vipSaveFailed": "Could not save the VIP setting",
     "unnamedClient": "Unnamed client",
     "showMore": "Show {count} more",
     "visitCount": "{count, plural, one {# visit} other {# visits}}",
