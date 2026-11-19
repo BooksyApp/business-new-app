@@ -1,5 +1,5 @@
 import type { Id } from "@/types/id";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -15,12 +15,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  ArrowLeft, Check, User, Trash2, Hand, ChevronDown, Receipt,
-  CreditCard, Split, UserCircle, Gift, Package, Wallet, Percent, CornerDownLeft, DollarSign,
+import { 
+  ArrowLeft, Check, X, User, Plus, Trash2, Pencil, Hand, 
+  CreditCard, FileText, Split, UserCircle, Gift, Package, 
+  MoreHorizontal, Share2, Percent, DollarSign
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { clientBalanceService } from "@/services/clientBalanceService";
 
 import { BenefitsAndTenders, type Coverage } from "@/components/checkout/BenefitsAndTenders";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -95,8 +94,6 @@ interface PaymentMethodPageProps {
   onCancel?: () => void;
 }
 
-const LAST_METHOD_KEY = "booqi.till.lastMethod";
-
 export default function PaymentMethodPage({
   orderItems = [],
   subtotal = 80.00,
@@ -129,16 +126,7 @@ export default function PaymentMethodPage({
   const [showCustomTipDialog, setShowCustomTipDialog] = useState(false);
   const [customTipType, setCustomTipType] = useState<"percentage" | "fixed">("percentage");
   const [customTipValue, setCustomTipValue] = useState("");
-  // The method the till used last (cash or card), so a card-only salon is not re-picking
-  // "Card" on every sale. Per browser; storage may be blocked.
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(() => {
-    try {
-      const last = localStorage.getItem(LAST_METHOD_KEY);
-      return last === "card-terminal" ? last : "cash";
-    } catch {
-      return "cash";
-    }
-  });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash");
   /** Never negative and never more than the bill: a deposit larger than the sale would
       otherwise ask the cashier to hand money back through the "change" field. */
   const depositOnly = Math.max(0, Math.min(depositPaid ?? 0, subtotal));
@@ -194,7 +182,6 @@ export default function PaymentMethodPage({
     { amount: 0, percent: 0, label: t("paymentMethod.noTip") },
     { amount: subtotal * 0.05, percent: 5, label: "5%" },
     { amount: subtotal * 0.10, percent: 10, label: "10%" },
-    { amount: subtotal * 0.15, percent: 15, label: "15%" },
   ];
 
   // What this salon said it accepts (Setup > Booking policy). The till used to offer
@@ -225,43 +212,16 @@ export default function PaymentMethodPage({
     { id: "gift-card", get name() { return t("paymentMethod.giftCard"); }, icon: Gift, requires: "GIFT_CARD" },
     { id: "package", get name() { return t("paymentMethod.package"); }, icon: Package, requires: "PACKAGE" },
     { id: "membership", get name() { return t("paymentMethod.membership"); }, icon: UserCircle, requires: "MEMBERSHIP" },
-    // FG-W6-06: the client's wallet, offered only when there is credit on it (below).
-    { id: "wallet", get name() { return t("pos.wallet"); }, icon: Wallet, requires: "WALLET" },
+    // { id: "check", name: "Check", icon: FileText },
   ];
 
   // Split needs both halves to be accepted; offering it with one of them off would let a
   // salon record cash it does not take.
-  // The client's wallet credit: a tender of its own when there is any.
-  const [walletCredit, setWalletCredit] = useState(0);
-  useEffect(() => {
-    setWalletCredit(0);
-    if (!selectedClient?.id) return;
-    let alive = true;
-    clientBalanceService
-      .get(selectedClient.id)
-      .then((b) => alive && setWalletCredit(Number(b.credit ?? 0)))
-      .catch(() => alive && setWalletCredit(0));
-    return () => {
-      alive = false;
-    };
-  }, [selectedClient?.id]);
-  /** What the rest is paid with when the wallet does not cover the whole bill. */
-  const [walletRest, setWalletRest] = useState<"cash" | "card">("cash");
-
   const paymentMethods = allMethods.filter(m =>
     m.requires === "SPLIT"
       ? accepted.includes("CASH") && accepted.includes("CARD")
-      : m.requires === "WALLET"
-        ? walletCredit > 0.009
-        : accepted.includes(m.requires)
+      : accepted.includes(m.requires)
   );
-  // A remembered method the salon no longer takes falls back to the first one it does.
-  useEffect(() => {
-    if (paymentMethods.length && !paymentMethods.some((m) => m.id === selectedPaymentMethod)) {
-      setSelectedPaymentMethod(paymentMethods[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentMethods.map((m) => m.id).join(","), selectedPaymentMethod]);
 
   // A gift card is spent by code, so the till has to ask for it before it can take one.
   const [giftCardCode, setGiftCardCode] = useState("");
@@ -349,9 +309,7 @@ export default function PaymentMethodPage({
     setShowSplitDialog(false);
   };
 
-  const [busy, setBusy] = useState(false);
   const handleConfirm = () => {
-    if (busy) return;
     // Split payment must sum to total
     if (selectedPaymentMethod === "split") {
       const splitSum = (parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0);
@@ -397,21 +355,6 @@ export default function PaymentMethodPage({
         paymentData.giftCardCode = giftCardCode.trim().toUpperCase();
       }
 
-      // Wallet: as much as the client holds, the rest by cash or card. Sent as tenders,
-      // the same way the combined-tenders panel sends a WALLET part.
-      if (selectedPaymentMethod === "wallet") {
-        const due = Math.max(0, Number(total.toFixed(2)));
-        const fromWallet = Number(Math.min(walletCredit, due).toFixed(2));
-        const rest = Number((due - fromWallet).toFixed(2));
-        paymentData.paymentMethod = walletRest === "card" ? "card-terminal" : "cash";
-        paymentData.amount = due;
-        paymentData.change = 0;
-        paymentData.payments = [
-          { method: "WALLET", amount: fromWallet },
-          ...(rest > 0 ? [{ method: walletRest === "card" ? "CARD_TERMINAL" : "CASH", amount: rest } as SalePayment] : []),
-        ];
-      }
-
       // When the cashier used the benefits panel, that is the payment: it already knows
       // what each line was covered by and how the rest was tendered.
       if (multi.payments.length > 0 || Object.values(multi.coverage).some(Boolean) || multi.leaveBalance) {
@@ -445,16 +388,7 @@ export default function PaymentMethodPage({
         ];
       }
 
-      if (selectedPaymentMethod === "cash" || selectedPaymentMethod === "card-terminal") {
-        try {
-          localStorage.setItem(LAST_METHOD_KEY, selectedPaymentMethod);
-        } catch {
-          /* per-browser convenience only */
-        }
-      }
-      // The parent saves the sale (async): one press, one sale, even with Enter held down.
-      setBusy(true);
-      void Promise.resolve(onConfirm(paymentData) as unknown).finally(() => setBusy(false));
+      onConfirm(paymentData);
     }
   };
 
@@ -466,162 +400,407 @@ export default function PaymentMethodPage({
     }
   };
 
-  // Keyboard: Enter takes payment; typing digits goes straight into the amount field.
-  const amountRef = useRef<HTMLInputElement | null>(null);
-  const confirmRef = useRef(handleConfirm);
-  confirmRef.current = handleConfirm;
-  const [cashText, setCashText] = useState<string | null>(null);
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
-      const el = e.target as HTMLElement | null;
-      const tag = el?.tagName ?? "";
-      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el?.isContentEditable;
-      if (e.key === "Enter") {
-        if (tag === "BUTTON" || tag === "TEXTAREA" || tag === "A") return;
-        e.preventDefault();
-        confirmRef.current();
-        return;
-      }
-      if (!typing && /^[0-9]$/.test(e.key) && amountRef.current) {
-        e.preventDefault();
-        amountRef.current.focus();
-        const input = amountRef.current;
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-        setter?.call(input, e.key);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [receiptOpen, setReceiptOpen] = useState(false);
-  const tipNow = selectedTip?.amount || parseFloat(customTip) || 0;
-  const money = (n: number) => `${n.toFixed(2)} ${currencySymbol()}`;
-  const due = Math.max(0, total);
-  const multiActive = multi.payments.length > 0 || Object.values(multi.coverage).some(Boolean) || multi.leaveBalance;
-  const fromWallet = Math.min(walletCredit, due);
-  const splitCash = parseFloat(splitCashAmount) || 0;
-
-  const pickMethod = (id: string) => {
-    setSelectedPaymentMethod(id);
-    setCashText(null);
-    if (id === "cash") {
-      // Start from the exact total; the field takes what was handed over.
-      if (paymentAmount < total) setPaymentAmount(Number(due.toFixed(2)));
-    } else if (id === "split") {
-      setSplitCashAmount("");
-      setSplitCardAmount(due.toFixed(2));
-    } else {
-      // Card, gift card, wallet, package, membership: exactly what is due, no change.
-      setPaymentAmount(Number(due.toFixed(2)));
-    }
-  };
-
-  const chip = (on: boolean) =>
-    cn(
-      "h-9 rounded-full px-3.5 text-[13px] font-semibold tabular-nums ring-1 ring-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)]",
-      on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white text-[rgb(var(--reg-ink))] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-ink)/0.3)]",
-    );
-  const amountField = "h-12 w-full rounded-[14px] border border-[rgb(var(--reg-line))] bg-white px-3.5 text-lg font-bold tabular-nums outline-none focus:border-[rgb(var(--reg-brand))] focus:ring-2 focus:ring-[rgb(var(--reg-brand)/0.2)]";
-  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("");
-
   return (
-    <div
-      className="flex min-h-[100dvh] flex-col bg-[rgb(var(--reg-canvas))] pb-[calc(92px+env(safe-area-inset-bottom))] text-[rgb(var(--reg-ink))] md:h-[100dvh] md:flex-row md:overflow-hidden md:pb-0"
-      style={{ fontFamily: '"Plus Jakarta Sans", Inter, system-ui, sans-serif' }}
-    >
-      {/* ── Left: the ticket. Everything here comes from the booking; nothing to type. ── */}
-      <section aria-label={t("paymentMethod.orderSummary")} className="flex min-w-0 flex-col md:min-h-0 md:flex-1">
-        <header className="flex shrink-0 items-center gap-2 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas))] px-3 py-3 md:px-6">
-          <Button variant="ghost" size="icon" aria-label={t("paymentMethod.backToTicket")} title={t("paymentMethod.backToTicket")} onClick={handleCancel} className="h-10 w-10 rounded-full">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-extrabold leading-tight tracking-[-0.02em]">{t("paymentMethod.takePayment")}</h1>
-            <p className="truncate text-[13px] text-[rgb(var(--reg-muted))]">
-              {selectedClient ? t("paymentMethod.itemsForClient", { count: orderItems.length, name: selectedClient.name }) : t("paymentMethod.itemsWalkIn", { count: orderItems.length })}
-            </p>
+    <div className="flex h-[100dvh] flex-col overflow-y-auto bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))] md:flex-row md:overflow-hidden" style={{ fontFamily: '"Plus Jakarta Sans", Inter, system-ui, sans-serif' }}>
+      {/* Left Panel - Payment Method & Tip */}
+      <div className="flex w-full flex-col border-b border-[rgb(var(--reg-line))] bg-white md:w-1/2 md:overflow-y-auto md:border-b-0 md:border-r">
+        {/* Header */}
+        <div className="p-6 border-b border-[rgb(var(--reg-line)/0.8)] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t("paymentMethod.back")}
+              onClick={handleCancel}
+              className="h-8 w-8"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-[22px] font-extrabold leading-tight tracking-[-0.02em]">{t("paymentMethod.takePayment")}</h1>
+              <p className="text-sm text-[rgb(var(--reg-muted))]">{selectedClient ? t("paymentMethod.itemsForClient", { count: orderItems.length, name: selectedClient.name }) : t("paymentMethod.itemsWalkIn", { count: orderItems.length })}</p>
+            </div>
           </div>
           <Button
-            variant="ghost"
-            size="icon"
-            aria-label={t("paymentMethod.discardThisSale")}
-            title={t("paymentMethod.discardThisSale")}
-            className="h-10 w-10 rounded-full text-red-600 hover:bg-red-50"
-            onClick={() => {
-              if (!confirm(t("paymentMethod.discardThisSaleTheTicket"))) return;
-              if (onDiscard) onDiscard();
-              else handleCancel();
-            }}
+            variant="outline"
+            onClick={handleCancel}
+            className="h-10 rounded-full border-[rgb(var(--reg-line))] px-4 text-sm font-semibold"
           >
-            <Trash2 className="h-[18px] w-[18px]" />
+            {t("paymentMethod.backToTicket")}
           </Button>
-        </header>
+        </div>
 
-        <div className="space-y-4 px-3 py-4 md:min-h-0 md:flex-1 md:overflow-y-auto md:px-6">
-          {/* Who: the client and the staff member, read from the booking. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex h-9 items-center gap-2 rounded-full bg-white pl-1 pr-3 text-[13px] font-semibold ring-1 ring-[rgb(var(--reg-line))]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--reg-ink)/0.06)]"><User className="h-3.5 w-3.5" aria-hidden /></span>
-              {selectedClient ? selectedClient.name : t("pos.walkIn")}
-            </span>
-            {selectedStaff && (
-              <button
-                type="button"
-                disabled={staffList.length < 2}
-                aria-expanded={showStaffPicker}
-                onClick={() => setShowStaffPicker((v) => !v)}
-                className="inline-flex h-9 items-center gap-2 rounded-full bg-white pl-1 pr-3 text-[13px] font-semibold ring-1 ring-[rgb(var(--reg-line))] transition enabled:hover:ring-[rgb(var(--reg-brand)/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)]"
-              >
-                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-[rgb(var(--reg-brand-soft))] text-[10px] font-bold text-[rgb(var(--reg-brand-strong))]">
-                  {selectedStaff.avatarUrl ? <img src={assetUrl(selectedStaff.avatarUrl)} alt="" className="h-full w-full object-cover" /> : initials(selectedStaff.name || "")}
-                </span>
-                {selectedStaff.name}
-                {staffList.length > 1 && <ChevronDown className={cn("h-3.5 w-3.5 text-[rgb(var(--reg-muted))] transition-transform", showStaffPicker && "rotate-180")} aria-hidden />}
-              </button>
-            )}
-          </div>
-          {/* #15: the sale's staff (who gets the commission) can be corrected here. */}
-          {showStaffPicker && staffList.length > 1 && selectedStaff && (
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("paymentMethod.change")}>
-              {staffList.map((member) => (
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {/* Tip Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold text-[rgb(var(--reg-ink))]">{t("paymentMethod.tip")}</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {tipOptions.map((tip) => (
                 <button
-                  key={member.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedStaff(member);
-                    onStaffChange?.(member);
-                    setShowStaffPicker(false);
-                  }}
-                  className={chip(member.id === selectedStaff.id)}
+                  key={tip.percent}
+                  onClick={() => handleTipSelect(tip)}
+                  className={`relative min-h-[64px] rounded-2xl p-4 text-left ring-1 ring-inset transition-all ${
+                    selectedTip?.percent === tip.percent && !showCustomTip
+                      ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                      : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
+                  }`}
                 >
-                  {member.name}
+                  {selectedTip?.percent === tip.percent && !showCustomTip && (
+                    <div className="absolute top-2 right-2">
+                      <div className="w-5 h-5 bg-[rgb(var(--reg-brand))] rounded-full flex items-center justify-center">
+                        <Check className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{tip.label}</p>
                 </button>
               ))}
+              <button
+                onClick={handleCustomTip}
+                className={`relative min-h-[64px] rounded-2xl p-4 text-left ring-1 ring-inset transition-all ${
+                  showCustomTip
+                    ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                    : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
+                }`}
+              >
+                {showCustomTip && (
+                  <div className="absolute top-2 right-2">
+                    <div className="w-5 h-5 bg-[rgb(var(--reg-brand))] rounded-full flex items-center justify-center">
+                      <Check className="h-3 w-3 text-white" />
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <MoreHorizontal className="h-5 w-5 text-[rgb(var(--reg-muted)/0.8)]" />
+                  <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{t("paymentMethod.custom")}</p>
+                </div>
+              </button>
+            </div>
+            {showCustomTip && (
+              <div className="mt-2 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[rgb(var(--reg-muted))]">
+                    {t("paymentMethod.customTip", { value: selectedTip ? (selectedTip.percent > 0 ? `${selectedTip.percent.toFixed(1)}%` : `${selectedTip.amount.toFixed(2)} ${currencySymbol()}`) : `${parseFloat(customTip).toFixed(2)} ${currencySymbol()}` })}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowCustomTip(false);
+                      setCustomTip("");
+                      setSelectedTip(null);
+                      setPaymentAmount(subtotal);
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    {t("common.remove")}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Payment Method Section */}
+          <div className="space-y-4">
+            <Label className="text-base font-semibold text-[rgb(var(--reg-ink))]">{t("paymentMethod.paymentMethod")}</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {paymentMethods.map((method) => {
+                const Icon = method.icon;
+                return (
+                  <button
+                    key={method.id}
+                    onClick={() => {
+                      setSelectedPaymentMethod(method.id);
+                      if (method.id === "cash") {
+                        // Start from the exact total; the calculator below takes what was handed over.
+                        if (paymentAmount < total) setPaymentAmount(Number(Math.max(0, total).toFixed(2)));
+                      } else if (method.id === "card-terminal") {
+                        // For card, set payment amount to total (exact amount)
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
+                        setPaymentAmount(currentTotal);
+                      } else if (method.id === "split") {
+                        // For split payment, open split dialog
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
+                        setSplitCashAmount("");
+                        setSplitCardAmount("");
+                        setShowSplitDialog(true);
+                      } else {
+                        // Gift card, package, membership: the customer has already paid,
+                        // so there is nothing to hand over and no change to give.
+                        const currentTotal = subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit;
+                        setPaymentAmount(currentTotal);
+                      }
+                    }}
+                    className={`relative min-h-[64px] rounded-2xl p-4 text-left ring-1 ring-inset transition-all ${
+                      selectedPaymentMethod === method.id
+                        ? "bg-[rgb(var(--reg-brand-soft))] ring-2 ring-[rgb(var(--reg-brand))]"
+                        : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
+                    }`}
+                  >
+                    {selectedPaymentMethod === method.id && (
+                      <div className="absolute top-2 right-2">
+                        <div className="w-5 h-5 bg-[rgb(var(--reg-brand))] rounded-full flex items-center justify-center">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                      </div>
+                    )}
+                    <Icon className="h-6 w-6 text-[rgb(var(--reg-ink)/0.85)] mb-2" />
+                    <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{method.name}</p>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedPaymentMethod === "cash" && (
+              <div className="rounded-2xl bg-[rgb(var(--reg-canvas))] p-4 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
+                <label htmlFor="cash-received" className="text-sm font-semibold">{t("paymentMethod.cashReceived")}</label>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    id="cash-received"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.01"
+                    value={Number.isFinite(paymentAmount) ? String(paymentAmount) : ""}
+                    onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                    className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-lg font-bold tabular-nums"
+                  />
+                  <span className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{currencySymbol()}</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[...new Set([Math.max(0, total), ...[5, 10, 20, 50, 100].map((n) => Math.ceil(Math.max(0, total) / n) * n)])]
+                    .filter((v) => v > 0)
+                    .slice(0, 5)
+                    .map((v, k) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setPaymentAmount(Number(v.toFixed(2)))}
+                        className={`h-9 rounded-full px-3.5 text-sm font-semibold tabular-nums ring-1 ring-inset ${Math.abs(paymentAmount - v) < 0.005 ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))]"}`}
+                      >
+                        {k === 0 ? t("paymentMethod.exact") : `${v.toFixed(0)} ${currencySymbol()}`}
+                      </button>
+                    ))}
+                </div>
+                <div className={`mt-3 flex items-center justify-between rounded-xl px-3 py-2.5 ${paymentAmount - total < -0.005 ? "bg-rose-50 text-rose-800" : "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]"}`}>
+                  <span className="text-sm font-semibold">{paymentAmount - total < -0.005 ? t("paymentMethod.stillToPay") : t("paymentMethod.changeToGive")}</span>
+                  <span className="text-xl font-extrabold tabular-nums">{Math.abs(paymentAmount - total).toFixed(2)} {currencySymbol()}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel - Order Summary */}
+      <div className="flex w-full flex-col bg-[rgb(var(--reg-canvas))] md:w-1/2 md:overflow-y-auto">
+        <div className="p-6 pb-0 shrink-0">
+          <BenefitsAndTenders
+            businessId={checkoutBusinessId}
+            clientId={selectedClient?.id ? selectedClient.id : null}
+            orderItems={orderItems.map((item) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              serviceId: (item as { serviceId?: Id }).serviceId,
+            }))}
+            total={subtotal - discountAmount + (selectedTip?.amount || parseFloat(customTip) || 0) - depositCredit}
+            onChange={setMulti}
+          />
+        </div>
+        {/* Header */}
+        <div className="p-6 border-b border-[rgb(var(--reg-line)/0.8)] shrink-0">
+          <h2 className="text-lg font-semibold text-[rgb(var(--reg-ink))] mb-4">{t("paymentMethod.orderSummary")}</h2>
+          
+          {/* Client Selection */}
+          <div className="border-2 border-dashed border-[rgb(var(--reg-line))] rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-gray-400 transition-colors">
+            <div className="flex items-center gap-3">
+              {selectedClient ? (
+                <>
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                    <User className="h-5 w-5 text-[rgb(var(--reg-muted))]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{selectedClient.name}</p>
+                    <p className="text-xs text-[rgb(var(--reg-muted))]">{t("common.client")}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <User className="h-5 w-5 text-[rgb(var(--reg-muted)/0.8)]" />
+                  <span className="text-sm text-[rgb(var(--reg-muted))]">{t("paymentMethod.selectClientOrLeaveEmpty")}</span>
+                </>
+              )}
+            </div>
+            <Plus className="h-5 w-5 text-[rgb(var(--reg-muted)/0.8)]" />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Item Details */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm font-medium text-[rgb(var(--reg-muted))] pb-2 border-b border-[rgb(var(--reg-line)/0.8)]">
+              <span>{t("paymentMethod.item")}</span>
+              <span>{t("paymentMethod.amount")}</span>
+            </div>
+            {orderItems.length > 0 ? (
+              <div className="space-y-3">
+                {orderItems.map((item) => (
+                  <div key={item.id} className="flex items-start justify-between p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl cursor-pointer hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{item.name}</p>
+                      {item.duration && (
+                        <p className="text-xs text-[rgb(var(--reg-muted))] mt-0.5">{item.duration}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.x", { quantity: item.quantity })}</p>
+                      <p className="text-sm font-semibold text-[rgb(var(--reg-ink))] mt-0.5">{item.price.toFixed(2)} {currencySymbol()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl">
+                <p className="text-sm text-[rgb(var(--reg-muted))]">{t("paymentMethod.pedicureKlasycznyHM")}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.x1")}</span>
+                  <span className="text-sm font-medium text-[rgb(var(--reg-ink))]">{`100,00 ${currencySymbol()}`}</span>
+                </div>
+                <p className="text-xs text-[rgb(var(--reg-muted))] mt-2">{t("paymentMethod.discount")}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Staff Info */}
+          {selectedStaff && (
+            <div className="p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                    {selectedStaff.avatarUrl ? (
+                      <img
+                        src={assetUrl(selectedStaff.avatarUrl)}
+                        alt={selectedStaff.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-xs font-semibold text-[rgb(var(--reg-muted))]">
+                        {(selectedStaff.name || '').split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[rgb(var(--reg-ink))]">{selectedStaff.name}</p>
+                    {selectedStaff.position && (
+                      <p className="text-xs text-[rgb(var(--reg-muted))]">{selectedStaff.position}</p>
+                    )}
+                  </div>
+                </div>
+                {/* #15: this used to have no onClick at all — the sale's staff (and so
+                    who gets commission credit) could never actually be changed here. */}
+                {staffList.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setShowStaffPicker(v => !v)}
+                  >
+                    <User className="h-3.5 w-3.5 mr-1.5" />
+                    <Pencil className="h-3.5 w-3.5" />
+                    {t("paymentMethod.change")}
+                  </Button>
+                )}
+              </div>
+              {showStaffPicker && staffList.length > 1 && (
+                <div className="mt-2 space-y-1 border-t border-[rgb(var(--reg-line)/0.8)] pt-2">
+                  {staffList.map((member) => (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStaff(member);
+                        onStaffChange?.(member);
+                        setShowStaffPicker(false);
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors ${
+                        member.id === selectedStaff.id ? "font-medium text-[rgb(var(--reg-ink))]" : "text-[rgb(var(--reg-muted))]"
+                      }`}
+                    >
+                      {member.name}
+                      {member.position && <span className="text-xs text-[rgb(var(--reg-muted)/0.8)] ml-1.5">{member.position}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* The lines, from the ticket. Changing them is "Back to ticket". */}
-          <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-            {orderItems.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 border-b border-[rgb(var(--reg-line)/0.6)] px-4 py-3 last:border-0">
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold">{item.name}</p>
-                  <p className="text-xs text-[rgb(var(--reg-muted))]">
-                    {[item.duration, item.quantity > 1 ? t("paymentMethod.x", { quantity: item.quantity }) : null].filter(Boolean).join(" · ")}
-                  </p>
-                </div>
-                <span className="shrink-0 text-[14px] font-semibold tabular-nums">{money(item.price * item.quantity)}</span>
-              </li>
-            ))}
-            {depositCredit > 0 && (
-              // #117: named, so a lower total does not read as a pricing error.
-              <li className="flex items-center justify-between gap-3 bg-[rgb(var(--reg-success-soft))] px-4 py-2.5 text-[13px] text-[rgb(var(--reg-success))]">
-                <span className="font-semibold">
+          <div className="text-center">
+            <p className="text-xs text-[rgb(var(--reg-muted))] flex items-center justify-center gap-1">
+              <span>👆</span>
+              {t("paymentMethod.tapItemToChange")}
+            </p>
+          </div>
+
+          {/* Summary Breakdown */}
+          <div className="space-y-2 pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.subtotal")}</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">{subtotal.toFixed(2)} {currencySymbol()}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-[rgb(var(--reg-muted))]">{t("common.discount")}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  aria-label={t("paymentMethod.editDiscount")}
+                  className="h-5 w-5"
+                  onClick={() => {
+                    setDiscountValue("");
+                    setDiscountType("percentage");
+                    setShowDiscountDialog(true);
+                  }}
+                >
+                  <Plus className="h-3 w-3 text-[rgb(var(--reg-muted)/0.8)]" />
+                </Button>
+              </div>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">
+                {discountAmount > 0 ? `-${discountAmount.toFixed(2)} ${currencySymbol()}` : `0,00 ${currencySymbol()}`}
+              </span>
+            </div>
+            {/* Usage section disabled */}
+            {/* <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-[rgb(var(--reg-muted)/0.8)]" />
+                <span className="text-[rgb(var(--reg-muted))]">Usage</span>
+              </div>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">-</span>
+            </div> */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.tip")}</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">
+                {(selectedTip?.amount || parseFloat(customTip) || 0).toFixed(2)} {currencySymbol()}
+              </span>
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-[rgb(var(--reg-line)/0.8)]">
+              <span className="text-base font-bold text-[rgb(var(--reg-ink))]">{t("paymentMethod.total")}</span>
+              <span className="text-lg font-bold text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
+            </div>
+          </div>
+
+          {/* Payment Details Section */}
+          <div className="space-y-2 pt-4 border-t border-[rgb(var(--reg-line)/0.8)]">
+            {/* #117: named, because a total that is simply lower than the services reads as
+                a pricing error and gets "corrected" by the cashier. */}
+            {depositCredit > 0 ? (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[rgb(var(--reg-muted))]">
                   {pointsCovered > 0 && depositOnly + prepaidCredit === 0
                     ? t("paymentMethod.paidWithPointsAtBooking")
                     : pointsCovered > 0
@@ -630,275 +809,113 @@ export default function PaymentMethodPage({
                         ? t("paymentMethod.alreadyPaidDepositGiftCard2")
                         : t("paymentMethod.depositAlreadyPaid")}
                 </span>
-                <span className="font-bold tabular-nums">-{money(depositCredit)}</span>
-              </li>
-            )}
-          </ul>
-
-          {/* Rarely needed: discount, benefits and several tenders, leaving the rest on the
-              client's balance, the receipt. Folded so the usual sale is one screen. */}
-          <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-            <button
-              type="button"
-              aria-expanded={moreOpen}
-              onClick={() => setMoreOpen((v) => !v)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgb(var(--reg-brand)/0.6)]"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-semibold">{t("pos.more")}</span>
-                <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{t("pos.moreHint")}</span>
-              </span>
-              {(discountAmount > 0 || multiActive) && <span className="h-2 w-2 shrink-0 rounded-full bg-[rgb(var(--reg-brand))]" aria-hidden />}
-              <ChevronDown className={cn("h-4 w-4 shrink-0 text-[rgb(var(--reg-muted))] transition-transform motion-reduce:transition-none", moreOpen && "rotate-180")} aria-hidden />
-            </button>
-            {moreOpen && (
-              <div className="space-y-4 border-t border-[rgb(var(--reg-line)/0.6)] px-4 py-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    className={chip(discountAmount > 0)}
-                    onClick={() => {
-                      setDiscountValue("");
-                      setDiscountType("percentage");
-                      setShowDiscountDialog(true);
-                    }}
-                  >
-                    <Percent className="mr-1 inline h-3.5 w-3.5" aria-hidden />
-                    {discountAmount > 0 ? `${t("common.discount")} −${money(discountAmount)}` : t("pos.addDiscount")}
-                  </button>
-                  {discountAmount > 0 && (
-                    <button
-                      type="button"
-                      className="h-9 rounded-full px-3 text-[13px] font-semibold text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
-                      onClick={() => {
-                        setDiscountAmount(0);
-                        setDiscountPercent(0);
-                      }}
-                    >
-                      {t("common.remove")}
-                    </button>
-                  )}
-                  <button type="button" className={chip(receiptOpen)} aria-expanded={receiptOpen} onClick={() => setReceiptOpen((v) => !v)}>
-                    <Receipt className="mr-1 inline h-3.5 w-3.5" aria-hidden />
-                    {t("paymentMethod.receiptPreview")}
-                  </button>
-                </div>
-                <BenefitsAndTenders
-                  businessId={checkoutBusinessId}
-                  clientId={selectedClient?.id ? selectedClient.id : null}
-                  orderItems={orderItems.map((item) => ({
-                    id: item.id,
-                    name: item.name,
-                    quantity: item.quantity,
-                    price: item.price,
-                    serviceId: (item as { serviceId?: Id }).serviceId,
-                  }))}
-                  total={subtotal - discountAmount + tipNow - depositCredit}
-                  onChange={setMulti}
+                <span className="font-medium text-[rgb(var(--reg-success))]">
+                  -{depositCredit.toFixed(2)} {currencySymbol()}
+                </span>
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[rgb(var(--reg-muted))]">{depositCredit > 0 ? t("paymentMethod.leftToPay") : t("common.total")}</span>
+              <span className="font-medium text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
+            </div>
+            {selectedPaymentMethod === "gift-card" ? (
+              <div className="space-y-1.5">
+                <label className="text-sm text-[rgb(var(--reg-muted))]">{t("paymentMethod.giftCardCode")}</label>
+                <Input
+                  value={giftCardCode}
+                  onChange={e => setGiftCardCode(e.target.value.toUpperCase())}
+                  placeholder={t("paymentMethod.cardCode")}
+                  autoComplete="off"
                 />
-                {receiptOpen && (
-                  <div className="mx-auto max-w-[320px] overflow-hidden rounded-xl bg-white font-mono text-[12px] leading-relaxed shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                    <div className="h-1.5" style={{ backgroundColor: /^#[0-9a-fA-F]{6}$/.test(receiptLook.brandColor) ? receiptLook.brandColor : "rgb(var(--reg-brand))" }} aria-hidden />
-                    <div className="px-5 py-4">
-                      <p className="text-center text-[13px] font-bold">{receiptLook.name || t("common.yourSalon")}</p>
-                      <p className="text-center text-[rgb(var(--reg-muted))]">{formatLocaleDate(new Date(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                      <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
-                      {orderItems.map((it) => (
-                        <p key={it.id} className="flex justify-between gap-3"><span className="truncate">{it.name}</span><span className="tabular-nums">{(it.price * it.quantity).toFixed(2)}</span></p>
-                      ))}
-                      {discountAmount > 0 && <p className="flex justify-between"><span>{t("common.discount")}</span><span className="tabular-nums">-{discountAmount.toFixed(2)}</span></p>}
-                      {tipNow > 0 && <p className="flex justify-between"><span>{t("paymentMethod.tip")}</span><span className="tabular-nums">{tipNow.toFixed(2)}</span></p>}
-                      {depositCredit > 0 && <p className="flex justify-between"><span>{t("paymentMethod.alreadyPaid")}</span><span className="tabular-nums">-{depositCredit.toFixed(2)}</span></p>}
-                      <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
-                      <p className="flex justify-between font-bold"><span>{t("common.total")}</span><span className="tabular-nums">{money(total)}</span></p>
-                      {receiptLook.footer.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{receiptLook.footer}</p>}
-                    </div>
+                <p className="text-xs text-[rgb(var(--reg-muted))]">
+                  {t("paymentMethod.theCardMustHaveBeen")}
+                </p>
+              </div>
+            ) : selectedPaymentMethod === "package" || selectedPaymentMethod === "membership" ? (
+              <p className="text-xs text-[rgb(var(--reg-muted))]">
+                {t("paymentMethod.oneSessionComesOffThis")}
+              </p>
+            ) : selectedPaymentMethod === "split" ? (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.cash")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.card")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.customerGives")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{paymentAmount.toFixed(2)} {currencySymbol()}</span>
+                </div>
+                {change > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.return")}</span>
+                    <span className="font-medium text-[rgb(var(--reg-ink))]">{change.toFixed(2)} {currencySymbol()}</span>
                   </div>
                 )}
-              </div>
+                {change < 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.dueTo")}</span>
+                    <span className="font-medium text-red-600">{Math.abs(change).toFixed(2)} {currencySymbol()}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
-      </section>
 
-      {/* ── Right: what is due and how it is paid. One screen, one button. ── */}
-      <aside aria-label={t("paymentMethod.paymentMethod")} className="flex shrink-0 flex-col border-t border-[rgb(var(--reg-line)/0.8)] bg-white md:w-[400px] md:border-l md:border-t-0 lg:w-[440px]">
-        <div className="space-y-5 px-4 py-5 md:min-h-0 md:flex-1 md:overflow-y-auto md:px-6">
-          {/* The number the cashier asks for, and only the lines that changed it. */}
-          <div>
-            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{depositCredit > 0 ? t("paymentMethod.leftToPay") : t("pos.due")}</p>
-            <p className="mt-0.5 text-[40px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">{money(due)}</p>
-            {(discountAmount > 0 || tipNow > 0 || depositCredit > 0) && (
-              <dl className="mt-2 space-y-0.5 text-[13px] text-[rgb(var(--reg-muted))]">
-                <div className="flex justify-between"><dt>{t("paymentMethod.subtotal")}</dt><dd className="tabular-nums">{money(subtotal)}</dd></div>
-                {discountAmount > 0 && <div className="flex justify-between"><dt>{t("common.discount")}</dt><dd className="tabular-nums">−{money(discountAmount)}</dd></div>}
-                {tipNow > 0 && <div className="flex justify-between"><dt>{t("paymentMethod.tip")}</dt><dd className="tabular-nums">+{money(tipNow)}</dd></div>}
-                {depositCredit > 0 && <div className="flex justify-between"><dt>{t("paymentMethod.alreadyPaid")}</dt><dd className="tabular-nums">−{money(depositCredit)}</dd></div>}
-              </dl>
-            )}
-          </div>
-
-          {/* Tip: one tap. */}
-          <div>
-            <p className="mb-2 text-[13px] font-semibold">{t("paymentMethod.tip")}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {tipOptions.map((tip) => (
-                <button
-                  key={tip.percent}
-                  type="button"
-                  aria-pressed={(selectedTip?.percent ?? 0) === tip.percent && !showCustomTip}
-                  onClick={() => {
-                    handleTipSelect(tip);
-                    setCashText(null);
-                  }}
-                  className={chip((selectedTip?.percent ?? 0) === tip.percent && !showCustomTip)}
-                >
-                  {tip.label}
-                </button>
+        {/* The receipt as it prints: the salon's colour on top, its footer at the bottom. */}
+        <div className="px-6 pb-6">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{t("paymentMethod.receiptPreview")}</p>
+          <div className="mx-auto max-w-[320px] overflow-hidden rounded-xl bg-white font-mono text-[12px] leading-relaxed shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+            <div className="h-1.5" style={{ backgroundColor: /^#[0-9a-fA-F]{6}$/.test(receiptLook.brandColor) ? receiptLook.brandColor : "rgb(var(--reg-brand))" }} aria-hidden />
+            <div className="px-5 py-4">
+              <p className="text-center text-[13px] font-bold">{receiptLook.name || t("common.yourSalon")}</p>
+              <p className="text-center text-[rgb(var(--reg-muted))]">{formatLocaleDate(new Date(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+              <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+              {orderItems.map((it) => (
+                <p key={it.id} className="flex justify-between gap-3"><span className="truncate">{it.name}</span><span className="tabular-nums">{(it.price * it.quantity).toFixed(2)}</span></p>
               ))}
-              <button type="button" aria-pressed={showCustomTip} onClick={handleCustomTip} className={chip(showCustomTip)}>
-                {showCustomTip ? money(tipNow) : t("paymentMethod.custom")}
-              </button>
+              {discountAmount > 0 && <p className="flex justify-between"><span>{t("common.discount")}</span><span className="tabular-nums">-{discountAmount.toFixed(2)}</span></p>}
+              {(selectedTip?.amount || parseFloat(customTip) || 0) > 0 && <p className="flex justify-between"><span>{t("paymentMethod.tip")}</span><span className="tabular-nums">{(selectedTip?.amount || parseFloat(customTip) || 0).toFixed(2)}</span></p>}
+              {depositCredit > 0 && <p className="flex justify-between"><span>{t("paymentMethod.alreadyPaid")}</span><span className="tabular-nums">-{depositCredit.toFixed(2)}</span></p>}
+              <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+              <p className="flex justify-between font-bold"><span>{t("common.total")}</span><span className="tabular-nums">{total.toFixed(2)} {currencySymbol()}</span></p>
+              {receiptLook.footer.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{receiptLook.footer}</p>}
             </div>
           </div>
-
-          {/* Method: what the salon accepts; the last one used is already picked. */}
-          <div>
-            <p className="mb-2 text-[13px] font-semibold">{t("paymentMethod.paymentMethod")}</p>
-            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t("paymentMethod.paymentMethod")}>
-              {paymentMethods.map((method) => {
-                const Icon = method.icon;
-                const on = selectedPaymentMethod === method.id;
-                return (
-                  <button
-                    key={method.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    onClick={() => pickMethod(method.id)}
-                    className={cn(
-                      "flex h-[60px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[12.5px] font-semibold ring-1 ring-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.6)]",
-                      on
-                        ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-2 ring-[rgb(var(--reg-brand))]"
-                        : "bg-white text-[rgb(var(--reg-ink))] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
-                    )}
-                  >
-                    <Icon className="h-[18px] w-[18px]" aria-hidden />
-                    <span className="max-w-full truncate">{method.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Only what the chosen method needs. */}
-          {multiActive ? (
-            <p className="rounded-xl bg-[rgb(var(--reg-brand-soft))] px-3.5 py-3 text-[13px] font-semibold text-[rgb(var(--reg-brand-strong))]">{t("pos.combinedActive")}</p>
-          ) : selectedPaymentMethod === "cash" ? (
-            <div className="space-y-2.5">
-              <label htmlFor="cash-received" className="text-[13px] font-semibold">{t("paymentMethod.cashReceived")}</label>
-              <input
-                id="cash-received"
-                ref={amountRef}
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={cashText ?? (Number.isFinite(paymentAmount) ? String(Number(paymentAmount.toFixed(2))) : "")}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9.,]/g, "");
-                  setCashText(v);
-                  setPaymentAmount(parseFloat(v.replace(",", ".")) || 0);
-                }}
-                className={amountField}
-              />
-              <div className="flex flex-wrap gap-1.5">
-                {[...new Set([due, ...[5, 10, 20, 50, 100].map((n) => Math.ceil(due / n) * n)])]
-                  .filter((v) => v > 0)
-                  .slice(0, 5)
-                  .map((v, k) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => {
-                        setCashText(null);
-                        setPaymentAmount(Number(v.toFixed(2)));
-                      }}
-                      className={chip(Math.abs(paymentAmount - v) < 0.005)}
-                    >
-                      {k === 0 ? t("paymentMethod.exact") : `${v.toFixed(0)} ${currencySymbol()}`}
-                    </button>
-                  ))}
-              </div>
-              <div className={cn("flex items-center justify-between rounded-xl px-3.5 py-2.5", paymentAmount - total < -0.005 ? "bg-rose-50 text-rose-800" : "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]")} aria-live="polite">
-                <span className="text-[13px] font-semibold">{paymentAmount - total < -0.005 ? t("paymentMethod.stillToPay") : t("paymentMethod.changeToGive")}</span>
-                <span className="text-xl font-extrabold tabular-nums">{money(Math.abs(paymentAmount - total))}</span>
-              </div>
-            </div>
-          ) : selectedPaymentMethod === "split" ? (
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label htmlFor="split-cash" className="text-[13px] font-semibold">{t("common.cash")}</label>
-                <input
-                  id="split-cash"
-                  ref={amountRef}
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={splitCashAmount}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/[^0-9.,]/g, "");
-                    setSplitCashAmount(v);
-                    // The card takes the rest, so the two always add up to the bill.
-                    setSplitCardAmount(Math.max(0, due - (parseFloat(v.replace(",", ".")) || 0)).toFixed(2));
-                  }}
-                  placeholder="0"
-                  className={cn(amountField, "mt-1.5")}
-                />
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold">{t("pos.cardRest")}</p>
-                <p className="mt-1.5 flex h-12 items-center rounded-[14px] bg-[rgb(var(--reg-canvas))] px-3.5 text-lg font-bold tabular-nums">{money(Math.max(0, due - splitCash))}</p>
-              </div>
-            </div>
-          ) : selectedPaymentMethod === "gift-card" ? (
-            <div className="space-y-1.5">
-              <label htmlFor="gift-code" className="text-[13px] font-semibold">{t("paymentMethod.giftCardCode")}</label>
-              <Input id="gift-code" value={giftCardCode} onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())} placeholder={t("paymentMethod.cardCode")} autoComplete="off" className="h-12 rounded-[14px] text-base font-semibold tracking-wider" />
-              <p className="text-xs text-[rgb(var(--reg-muted))]">{t("paymentMethod.theCardMustHaveBeen")}</p>
-            </div>
-          ) : selectedPaymentMethod === "wallet" ? (
-            <div className="space-y-2.5 rounded-xl bg-[rgb(var(--reg-canvas))] px-3.5 py-3 text-[13px]">
-              <p className="font-semibold">{t("pos.walletCovers", { value: money(walletCredit), value2: money(fromWallet) })}</p>
-              {due - fromWallet > 0.009 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[rgb(var(--reg-muted))]">{t("pos.restBy", { value: money(due - fromWallet) })}</span>
-                  {accepted.includes("CASH") && <button type="button" className={chip(walletRest === "cash")} onClick={() => setWalletRest("cash")}>{t("common.cash")}</button>}
-                  {accepted.includes("CARD") && <button type="button" className={chip(walletRest === "card")} onClick={() => setWalletRest("card")}>{t("common.card")}</button>}
-                </div>
-              )}
-            </div>
-          ) : selectedPaymentMethod === "card-terminal" ? (
-            <p className="rounded-xl bg-[rgb(var(--reg-canvas))] px-3.5 py-3 text-[13px] text-[rgb(var(--reg-muted))]">{t("pos.cardNote", { value: money(due) })}</p>
-          ) : (
-            <p className="rounded-xl bg-[rgb(var(--reg-canvas))] px-3.5 py-3 text-[13px] text-[rgb(var(--reg-muted))]">{t("paymentMethod.oneSessionComesOffThis")}</p>
-          )}
         </div>
 
-        {/* The one action. Fixed to the bottom on a phone. */}
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/95 px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:static md:px-6 md:pb-5">
+        {/* Footer Actions */}
+        <div className="sticky bottom-0 flex shrink-0 items-center justify-end gap-3 border-t border-[rgb(var(--reg-line)/0.8)] bg-white/95 p-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur md:p-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("paymentMethod.discardThisSale")}
+            title={t("paymentMethod.discardThisSale")}
+            className="h-12 w-12 rounded-full text-red-600 hover:bg-red-50"
+            onClick={() => {
+              // It had no handler at all. It now throws the ticket away (Back keeps it).
+              if (!confirm(t("paymentMethod.discardThisSaleTheTicket"))) return;
+              if (onDiscard) onDiscard();
+              else handleCancel();
+            }}
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
           <Button
             onClick={handleConfirm}
-            disabled={busy}
-            className="h-14 w-full rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] text-[17px] font-bold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110 disabled:opacity-60"
+            className="h-[52px] flex-1 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-8 text-base font-semibold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] hover:brightness-110 md:flex-none"
           >
-            {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden /> : <Check className="mr-1.5 h-5 w-5" aria-hidden />}
-            {t("pos.takePayment", { value: money(due) })}
+            {t("paymentMethod.charge", { value: Math.max(0, total).toFixed(2), value2: currencySymbol() })}
           </Button>
-          <p className="mt-2 hidden items-center justify-center gap-1.5 text-xs text-[rgb(var(--reg-muted))] md:flex">
-            <CornerDownLeft className="h-3.5 w-3.5" aria-hidden /> {t("pos.keysHint")}
-          </p>
         </div>
-      </aside>
+      </div>
 
       {/* Custom Tip Dialog */}
       <Dialog open={showCustomTipDialog} onOpenChange={setShowCustomTipDialog}>
@@ -1176,6 +1193,123 @@ export default function PaymentMethodPage({
         </DialogContent>
       </Dialog>
 
+      {/* Split Payment Dialog */}
+      <Dialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("paymentMethod.splitPayment")}</DialogTitle>
+            <DialogDescription>
+              {t("paymentMethod.enterHowMuchToPay")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl">
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-[rgb(var(--reg-muted))]">{t("paymentMethod.totalAmount")}</span>
+                <span className="font-semibold text-[rgb(var(--reg-ink))]">{total.toFixed(2)} {currencySymbol()}</span>
+              </div>
+            </div>
+
+            {/* Cash Amount Input */}
+            <div className="space-y-2">
+              <Label>{t("paymentMethod.cashAmount", { value: currencySymbol() })}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
+                <Input
+                  type="number"
+                  placeholder={t("paymentMethod.enterCashAmount")}
+                  value={splitCashAmount}
+                  onChange={(e) => {
+                    setSplitCashAmount(e.target.value);
+                    const cash = parseFloat(e.target.value) || 0;
+                    const card = total - cash;
+                    setSplitCardAmount(card > 0 ? card.toFixed(2) : "");
+                  }}
+                  className="h-12 pl-12 text-lg font-semibold"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            {/* Card Amount Input */}
+            <div className="space-y-2">
+              <Label>{t("paymentMethod.cardAmount", { value: currencySymbol() })}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))] font-medium">{currencySymbol()}</span>
+                <Input
+                  type="number"
+                  placeholder={t("paymentMethod.enterCardAmount")}
+                  value={splitCardAmount}
+                  onChange={(e) => {
+                    setSplitCardAmount(e.target.value);
+                    const card = parseFloat(e.target.value) || 0;
+                    const cash = total - card;
+                    setSplitCashAmount(cash > 0 ? cash.toFixed(2) : "");
+                  }}
+                  className="h-12 pl-12 text-lg font-semibold"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            {/* Split Summary */}
+            {(splitCashAmount || splitCardAmount) && (
+              <div className="mt-3 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.cash")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCashAmount) || 0} {currencySymbol()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[rgb(var(--reg-muted))]">{t("common.card")}</span>
+                  <span className="font-medium text-[rgb(var(--reg-ink))]">{parseFloat(splitCardAmount) || 0} {currencySymbol()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-[rgb(var(--reg-line)/0.8)]">
+                  <span className="text-[rgb(var(--reg-muted))] font-semibold">{t("common.total")}</span>
+                  <span className={`font-semibold ${
+                    Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) < 0.01
+                      ? "text-[rgb(var(--reg-success))]"
+                      : "text-red-600"
+                  }`}>
+                    {((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0)).toFixed(2)} {currencySymbol()}
+                  </span>
+                </div>
+                {Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) >= 0.01 && (
+                  <p className="text-xs text-red-600 mt-1">
+                    {t("paymentMethod.amountsMustEqual", { value: total.toFixed(2), value2: currencySymbol() })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Dialog Actions */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSplitDialog(false);
+                  setSplitCashAmount("");
+                  setSplitCardAmount("");
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleSplitConfirm}
+                disabled={
+                  !splitCashAmount || 
+                  !splitCardAmount || 
+                  parseFloat(splitCashAmount) < 0 || 
+                  parseFloat(splitCardAmount) < 0 ||
+                  Math.abs((parseFloat(splitCashAmount) || 0) + (parseFloat(splitCardAmount) || 0) - total) >= 0.01
+                }
+                className="bg-gray-900 hover:bg-gray-800"
+              >
+                {t("paymentMethod.confirm")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

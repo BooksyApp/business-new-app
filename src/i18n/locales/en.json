@@ -4346,20 +4346,5 @@
     "verify": "Check the signature (Node.js)",
     "errors": "Errors",
     "errorsBody": "401 missing or revoked key · 403 scope missing · 404 unknown id · 409 slot not available · 422 cannot be booked · 429 rate limit."
-  },
-  "pos": {
-    "wallet": "Wallet",
-    "walkIn": "Walk-in client",
-    "more": "More options",
-    "moreHint": "Discount, memberships and packages, several tenders, leave the rest owing, receipt",
-    "addDiscount": "Add discount",
-    "due": "To pay",
-    "combinedActive": "Payment will use the tenders set under More options",
-    "cardRest": "Card (the rest)",
-    "walletCovers": "Wallet has {value} — {value2} comes off it",
-    "restBy": "The other {value}:",
-    "cardNote": "Charge {value} on the card terminal",
-    "takePayment": "Take payment · {value}",
-    "keysHint": "Enter takes payment · type digits for the amount"
   }
 }
