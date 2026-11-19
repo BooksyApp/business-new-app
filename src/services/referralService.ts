@@ -65,13 +65,17 @@ export interface CreateReferralCodeRequest {
 }
 
 export interface PlatformReferral {
+  /** The one code, and the one share link (https://getbooqi.tech/r/<code>). */
   code: string;
+  link: string;
+  salons: { signedUp: number; paying: number; freeMonths: number };
+  customers: { signedUp: number; booked: number };
   referrerPoints: number;
   newUserPoints: number;
   pending: number;
   qualified: number;
   pointsEarned: number;
-  invites: { name: string; status: string; reward_points: number }[];
+  invites: { name: string; type: "CUSTOMER" | "SALON"; status: string; reward_points: number; created_at: string }[];
 }
 
 /** The salon's own "invite a salon" code (salon → salon, BUSINESS_REFERRAL) and what it earned. */

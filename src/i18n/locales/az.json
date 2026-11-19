@@ -2593,7 +2593,19 @@
     "salonInviteShareText": "booqi-də salonunu qur — onlayn rezerv, təqvim, kassa. Mənim dəvət linkim: {link}",
     "copyLink": "Linki kopyala",
     "clientProgrammeTitle": "Müştəri dəvət proqramı",
-    "clientProgrammeBody": "Müştəriləriniz üçün: onlar dostlarını salonunuza gətirir, ilk gəlişdən sonra hər ikisi bonus alır."
+    "clientProgrammeBody": "Müştəriləriniz üçün: onlar dostlarını salonunuza gətirir, ilk gəlişdən sonra hər ikisi bonus alır.",
+    "oneCodeTitle": "Dəvət kodunuz",
+    "oneCodeBody": "Dəvət etdiyiniz hər kəs üçün tək kod. Onlar müştəri və ya salon kimi qeydiyyatdan keçir, hər biri ayrıca sayılır.",
+    "oneLinkShareText": "booqi-yə qoşul — gözəllik qeydi et və ya salonunu idarə et: {link}",
+    "qrAlt": "Dəvət linkinin QR kodu",
+    "invitedSalons": "Dəvət olunan salonlar",
+    "invitedCustomers": "Dəvət olunan müştərilər",
+    "signedUp": "Qeydiyyatdan keçib",
+    "becamePaying": "Ödənişli olub",
+    "freeMonthsEarned": "Qazanılan pulsuz aylar",
+    "booked": "Rezerv edib",
+    "typeSalon": "Salon",
+    "typeCustomer": "Müştəri"
   },
   "registration": {
     "createYourBusinessAccount": "Biznes hesabınızı yaradın",

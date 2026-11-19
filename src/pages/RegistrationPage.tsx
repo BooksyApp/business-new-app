@@ -31,7 +31,6 @@ import { getPlatformSettings } from "@/services/platformService";
 import { TERMS_VERSION } from "@/config/legal";
 import { t as tr, tOpt } from "@/i18n";
 import { salonPath } from "@/lib/salonKey";
-import { referralService } from "@/services/referralService";
 
 interface RegistrationData {
   firstName: string;
@@ -88,6 +87,16 @@ const PHONE_PREFIXES: [string, string][] = [
   ["+1", "US/CA"], ["+7", "RU/KZ"], ["+31", "NL"], ["+32", "BE"], ["+33", "FR"], ["+34", "ES"], ["+36", "HU"], ["+39", "IT"], ["+41", "CH"], ["+43", "AT"], ["+44", "UK"], ["+45", "DK"], ["+46", "SE"], ["+47", "NO"], ["+48", "PL"], ["+49", "DE"], ["+90", "TR"], ["+353", "IE"], ["+358", "FI"], ["+370", "LT"], ["+371", "LV"], ["+372", "EE"], ["+380", "UA"], ["+420", "CZ"], ["+966", "SA"], ["+971", "AE"], ["+992", "TJ"], ["+994", "AZ"], ["+995", "GE"], ["+998", "UZ"],
 ];
 
+/** The code the web landing page (/r/<code>) stored for sign-up, if any. */
+function readRefCookie(): string {
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)bq_ref=([A-Za-z0-9]{1,16})/);
+    return m ? m[1] : "";
+  } catch {
+    return "";
+  }
+}
+
 const RegistrationPage = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -106,8 +115,9 @@ const RegistrationPage = () => {
   const prefillEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam) ? emailParam : "";
   const prefillBusiness = (searchParams.get("business") ?? "").trim().slice(0, 120);
   const planParam = (searchParams.get("plan") ?? "").trim();
-  // Salon → salon invite: ?ref=<code> from another salon's invite link (via web /for-business).
-  const refParam = (searchParams.get("ref") ?? "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  // The one referral code: ?ref=<code> from a share link (getbooqi.tech/r/<code>), else the
+  // bq_ref cookie the landing page left on .getbooqi.tech. Sent in the sign-up body.
+  const refParam = (searchParams.get("ref") || readRefCookie()).trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
   const selectedPlan = /^[a-z0-9-]{1,24}$/i.test(planParam)
     ? planParam.charAt(0).toUpperCase() + planParam.slice(1).toLowerCase()
     : null;
@@ -423,6 +433,7 @@ const RegistrationPage = () => {
           marketingOptIn: formData.marketing1,
           source: "hub_register",
         },
+        referralCode: refParam || undefined,
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
@@ -575,10 +586,8 @@ const RegistrationPage = () => {
       }
 
 
-      // Who invited this salon. Never blocks sign-up: an unknown or stale code is ignored.
-      if (refParam) {
-        await referralService.claimSalonInvite(business.id, refParam).catch(() => undefined);
-      }
+      // Who invited this salon travelled in the sign-up body (recorded as SALON server-side;
+      // a bad code never blocks sign-up).
 
       // The welcome screen's button goes on to the portal (home page).
       setRegisteredBusinessId(business.id);

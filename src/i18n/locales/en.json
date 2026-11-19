@@ -2593,7 +2593,19 @@
     "salonInviteShareText": "Set up your salon on booqi — online booking, calendar, till. My invite link: {link}",
     "copyLink": "Copy link",
     "clientProgrammeTitle": "Client referral programme",
-    "clientProgrammeBody": "For your clients: they bring friends to your salon, and both get a reward after the first visit."
+    "clientProgrammeBody": "For your clients: they bring friends to your salon, and both get a reward after the first visit.",
+    "oneCodeTitle": "Your invite code",
+    "oneCodeBody": "One code for everyone you invite. They choose to sign up as a customer or as a salon, and each is counted separately.",
+    "oneLinkShareText": "Join booqi — book beauty appointments or run your salon on it: {link}",
+    "qrAlt": "QR code for your invite link",
+    "invitedSalons": "Invited salons",
+    "invitedCustomers": "Invited customers",
+    "signedUp": "Signed up",
+    "becamePaying": "Became paying",
+    "freeMonthsEarned": "Free months earned",
+    "booked": "Booked",
+    "typeSalon": "Salon",
+    "typeCustomer": "Customer"
   },
   "registration": {
     "createYourBusinessAccount": "Create your business account",

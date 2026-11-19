@@ -6,6 +6,8 @@ import { t } from "@/i18n";
 export interface RegisterRequest {
   /** What the owner agreed to on the form; the server records it with the wording version. */
   consent?: { acceptTerms: boolean; termsVersion: string; marketingOptIn: boolean; source: string };
+  /** The one referral code (from the share link); recorded as SALON at sign-up. */
+  referralCode?: string;
   email: string;
   password: string;
   firstName?: string;
