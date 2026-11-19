@@ -134,7 +134,52 @@ export interface ComboServiceItem {
   timeBetweenMinutes?: number;
 }
 
+export interface PackageStep {
+  position: number;
+  serviceId: Id;
+  serviceName: string;
+  staffId: Id | null;
+  staffName: string | null;
+  parallel: boolean;
+  durationMinutes: number;
+  price: number;
+}
+
+export interface ServicePackage {
+  serviceId: Id;
+  maxPartySize: number;
+  steps: PackageStep[];
+  totalDurationMinutes: number;
+  totalPrice: number;
+}
+
+export interface SavePackageRequest {
+  businessId: Id;
+  maxPartySize: number;
+  /** Empty clears the package. */
+  steps: { serviceId: Id; staffId: Id | null; parallel: boolean }[];
+}
+
 export const serviceService = {
+  async getPackagesByBusiness(businessId: Id): Promise<ServicePackage[]> {
+    return apiClient.get<ServicePackage[]>(`/services/business/${businessId}/packages`);
+  },
+
+  /** null when the service is an ordinary one (404). */
+  async getPackage(serviceId: Id, businessId: Id): Promise<ServicePackage | null> {
+    try {
+      return await apiClient.get<ServicePackage>(`/services/${serviceId}/package?businessId=${businessId}`);
+    } catch (e) {
+      const err = e as { status?: number; response?: { status?: number }; message?: string };
+      if (err?.status === 404 || err?.response?.status === 404 || /404/.test(err?.message ?? "")) return null;
+      throw e;
+    }
+  },
+
+  async savePackage(serviceId: Id, request: SavePackageRequest): Promise<ServicePackage | null> {
+    return apiClient.put<ServicePackage | null>(`/services/${serviceId}/package`, request);
+  },
+
   async getServicesByBusiness(businessId: Id): Promise<Service[]> {
     return apiClient.get<Service[]>(`/services/business/${businessId}`);
   },

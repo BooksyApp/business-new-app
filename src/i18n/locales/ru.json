@@ -429,7 +429,20 @@
     "payDeposit": "Депозит (% от цены)",
     "payFull": "Полная предоплата",
     "depositPercent": "Процент депозита",
-    "payHint": "Клиент платит картой при записи. Запись подтверждается, когда платёж получен."
+    "payHint": "Клиент платит картой при записи. Запись подтверждается, когда платёж получен.",
+    "packageTitle": "Пакет (несколько мастеров)",
+    "packageHint": "Одна запись, несколько услуг у разных мастеров",
+    "packageStepService": "Услуга этапа",
+    "packagePickService": "Выберите услугу",
+    "packageStepSpecialist": "Мастер",
+    "packageAnySpecialist": "Любой мастер с этим навыком",
+    "packageParallel": "Выполняется одновременно с предыдущим этапом",
+    "packageMoveUp": "Переместить вверх",
+    "packageMoveDown": "Переместить вниз",
+    "packageRemoveStep": "Удалить этап",
+    "packageAddStep": "Добавить этап",
+    "packageMaxParty": "Группа / свадебный: количество человек",
+    "packageTotals": "Итого: {duration} · {price}"
   },
   "addStaff": {
     "invalidEmailAddressFormat": "Неверный формат эл. почты",
@@ -1194,7 +1207,11 @@
     "anyDate": "любая дата",
     "single": "ОДИН",
     "noAppointmentsCreatedSlotTaken": "Записи не созданы — время уже занято ({count})",
-    "confirmBookingGeneric": "Подтвердить запись"
+    "confirmBookingGeneric": "Подтвердить запись",
+    "packageStepTitle": "Пакет, этап {step}",
+    "packageGuest": "Гость: {name}",
+    "chargeCancellationFee": "Взять плату за отмену",
+    "chargeCancellationFeeHint": "Сначала удерживается депозит, затем списывается с сохранённой карты; иначе записывается как долг."
   },
   "checkout": {
     "pickAClientToUse": "Выберите клиента, чтобы использовать абонемент, пакет, бонусы или заработанную бесплатную услугу.",

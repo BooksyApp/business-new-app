@@ -32,6 +32,11 @@ export interface Appointment {
   serviceId?: Id;
   /** Shared by every service booked in one multi-service visit. */
   visitId?: string | null;
+  isPackage?: boolean;
+  packageStep?: number | null;
+  packageParty?: number | null;
+  packageLead?: boolean;
+  guestName?: string | null;
   isClass?: boolean;
   answers?: { question: string; answer: string }[];
   cancelledBy?: string | null;
@@ -73,6 +78,11 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     status: apiAppt.status,   // #30
     serviceId: apiAppt.serviceId,
     visitId: apiAppt.visitId ?? null,
+    isPackage: apiAppt.isPackage === true,
+    packageStep: apiAppt.packageStep ?? null,
+    packageParty: apiAppt.packageParty ?? null,
+    packageLead: apiAppt.packageLead === true,
+    guestName: apiAppt.guestName ?? null,
     isClass: apiAppt.isClass ?? false,
     answers: apiAppt.answers,
     cancelledBy: apiAppt.cancelledBy,

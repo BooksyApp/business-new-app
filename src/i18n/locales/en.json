@@ -429,7 +429,20 @@
     "payDeposit": "Deposit (% of price)",
     "payFull": "Full prepayment",
     "depositPercent": "Deposit percent",
-    "payHint": "Customers pay by card when they book. The booking is confirmed once the payment is received."
+    "payHint": "Customers pay by card when they book. The booking is confirmed once the payment is received.",
+    "packageTitle": "Package (several specialists)",
+    "packageHint": "One booking, several services with different specialists",
+    "packageStepService": "Step service",
+    "packagePickService": "Choose a service",
+    "packageStepSpecialist": "Specialist",
+    "packageAnySpecialist": "Any specialist with this skill",
+    "packageParallel": "Runs at the same time as the previous step",
+    "packageMoveUp": "Move up",
+    "packageMoveDown": "Move down",
+    "packageRemoveStep": "Remove step",
+    "packageAddStep": "Add step",
+    "packageMaxParty": "Group / bridal: number of people",
+    "packageTotals": "Total: {duration} · {price}"
   },
   "addStaff": {
     "invalidEmailAddressFormat": "Invalid email address format",
@@ -1194,7 +1207,11 @@
     "anyDate": "any date",
     "single": "SINGLE",
     "noAppointmentsCreatedSlotTaken": "No appointments created — {count, plural, one {# slot was} other {# slots were}} already taken",
-    "confirmBookingGeneric": "Confirm booking"
+    "confirmBookingGeneric": "Confirm booking",
+    "packageStepTitle": "Package, step {step}",
+    "packageGuest": "Guest: {name}",
+    "chargeCancellationFee": "Charge cancellation fee",
+    "chargeCancellationFeeHint": "The deposit is kept first, then the saved card is charged; otherwise it is recorded as owed."
   },
   "checkout": {
     "pickAClientToUse": "Pick a client to use a membership, a package, points or an earned free service.",

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { RefundDialog } from "@/components/money/RefundDialog";
 import { PaymentLinkDialog } from "@/components/money/PaymentLinkDialog";
 import { useOnlinePayments } from "@/services/platformService";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -161,6 +162,7 @@ export function AppointmentModal({
     }
   };
   const [cancelReason, setCancelReason] = useState("");
+  const [chargeFee, setChargeFee] = useState(false);
 
   useEffect(() => {
     if (isOpen && appointment?.apiId) {
@@ -419,6 +421,8 @@ export function AppointmentModal({
                     <div className="flex items-baseline justify-between gap-3">
                       <span className={`min-w-0 truncate ${isGone(m) ? "line-through" : ""}`}>
                         {m.service}
+                        {appointment.isPackage && m.packageStep ? <span className="ml-1.5 rounded bg-white/70 px-1 text-[10px] font-bold">#{m.packageStep}</span> : null}
+                        {appointment.isPackage && m.guestName ? <span className="font-normal" style={{ color: tint.muted }}> · {tr("calendar.packageGuest", { name: m.guestName })}</span> : null}
                         {m.staffName ? <span className="font-normal" style={{ color: tint.muted }}> · {m.staffName}</span> : null}
                       </span>
                       <span className="shrink-0 text-xs" style={{ color: tint.muted }}>
@@ -692,12 +696,20 @@ export function AppointmentModal({
                 className="min-h-[100px]"
               />
             </div>
+            <div className="flex items-start gap-2">
+              <Checkbox id="cancel-charge-fee" checked={chargeFee} onCheckedChange={(v) => setChargeFee(v === true)} />
+              <div className="grid gap-0.5">
+                <Label htmlFor="cancel-charge-fee" className="cursor-pointer">{tr("calendar.chargeCancellationFee")}</Label>
+                <span className="text-xs text-muted-foreground">{tr("calendar.chargeCancellationFeeHint")}</span>
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
                   setCancelDialogOpen(false);
                   setCancelReason("");
+                  setChargeFee(false);
                 }}
               >
                 {tr("common.close")}
@@ -715,12 +727,13 @@ export function AppointmentModal({
                       const ids = cancelOnly ? [cancelOnly] : visitIds();
                       // The whole visit is ONE call, so the customer gets one message; a single
                       // service of it is cancelled on its own and the rest stands.
-                      if (cancelOnly || ids.length <= 1) await appointmentService.cancelAppointment(cancelOnly ?? ids[0] ?? appointment.apiId, cancelReason);
-                      else await appointmentService.cancelAppointment(ids[0], cancelReason, true);
+                      if (cancelOnly || ids.length <= 1) await appointmentService.cancelAppointment(cancelOnly ?? ids[0] ?? appointment.apiId, cancelReason, false, chargeFee);
+                      else await appointmentService.cancelAppointment(ids[0], cancelReason, true, chargeFee);
                       toast.success(!cancelOnly && ids.length > 1 ? tr("calendar.visitCancelledServices", { count: ids.length }) : tr("calendar.appointmentCancelledSuccessfully"));
                       setCancelOnly(null);
                       setCancelDialogOpen(false);
                       setCancelReason("");
+                      setChargeFee(false);
                       onClose();
                       onCancelled?.();
                     } catch (error) {

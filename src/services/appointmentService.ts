@@ -17,6 +17,13 @@ export interface Appointment {
   serviceName?: string;
   /** Set when the customer booked several services in one visit: one appointment each, same id here. */
   visitId?: string | null;
+  /** Part of a package service (several specialists in one visit). */
+  isPackage?: boolean;
+  packageStep?: number | null;
+  /** 0 = the booker, 1.. = guests. */
+  packageParty?: number | null;
+  packageLead?: boolean;
+  guestName?: string | null;
   /** FG-W1-12: a group-class booking (several clients share the session). */
   isClass?: boolean;
   /** Who cancelled it and what they said, when it is cancelled. */
@@ -260,8 +267,12 @@ export const appointmentService = {
   },
 
   /** wholeVisit: cancel every service of the visit this belongs to, with one message to the customer. */
-  async cancelAppointment(id: string, reason: string, wholeVisit = false): Promise<void> {
-    return apiClient.put<void>(`/bookings/${id}/cancel`, wholeVisit ? { reason, wholeVisit: true } : { reason });
+  async cancelAppointment(id: string, reason: string, wholeVisit = false, chargeFee = false): Promise<void> {
+    return apiClient.put<void>(`/bookings/${id}/cancel`, {
+      reason,
+      ...(wholeVisit ? { wholeVisit: true } : {}),
+      ...(chargeFee ? { chargeFee: true } : {}),
+    });
   },
 };
 

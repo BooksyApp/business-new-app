@@ -31,6 +31,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useServices } from "@/hooks/useServices";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { PackageEditor, EMPTY_PACKAGE, type PackageDraft } from "@/components/services/PackageEditor";
+import { serviceService } from "@/services/serviceService";
 import { PeakPricingCard } from "@/components/services/PeakPricingCard";
 import { useCategories } from "@/hooks/useCategories";
 import { useStaff } from "@/hooks/useStaff";
@@ -108,6 +111,46 @@ export default function AddServicePage() {
     setRecipeDraft({ productId: "", quantity: "" });
   };
   const [selectedStaff, setSelectedStaff] = useState<Id[]>([]);
+  // Package service: several specialists in one visit.
+  const [pkg, setPkg] = useState<PackageDraft>(EMPTY_PACKAGE);
+  const [hadPackage, setHadPackage] = useState(false);
+  const pkgQuery = useQuery({
+    queryKey: ["service-package", businessId, id],
+    queryFn: () => serviceService.getPackage(id as Id, businessId as Id),
+    enabled: isEditMode && !!id && !!businessId,
+  });
+  const packagesQuery = useQuery({
+    queryKey: ["service-packages", businessId],
+    queryFn: () => serviceService.getPackagesByBusiness(businessId as Id),
+    enabled: !!businessId,
+  });
+  useEffect(() => {
+    const p = pkgQuery.data;
+    if (!p) return;
+    setHadPackage(true);
+    setPkg({
+      enabled: true,
+      maxPartySize: p.maxPartySize,
+      steps: p.steps.map((st) => ({ serviceId: String(st.serviceId), staffId: st.staffId != null ? String(st.staffId) : null, parallel: st.parallel })),
+    });
+  }, [pkgQuery.data]);
+  const packageServiceIds = new Set((packagesQuery.data ?? []).map((p) => String(p.serviceId)));
+  const stepServices = services.filter((s) => s.isActive && !s.isClass && String(s.id) !== String(id) && !packageServiceIds.has(String(s.id)));
+  const queryClient = useQueryClient();
+  /** After the service itself is saved: PUT the package (or clear it when switched off). */
+  const savePackageFor = async (serviceId: Id) => {
+    if (!businessId) return;
+    if (!pkg.enabled && !hadPackage) return;
+    const steps = pkg.enabled ? pkg.steps.filter((st) => st.serviceId) : [];
+    if (pkg.enabled && steps.length === 0 && !hadPackage) return;
+    await serviceService.savePackage(serviceId, {
+      businessId,
+      maxPartySize: pkg.maxPartySize,
+      steps: steps.map((st) => ({ serviceId: st.serviceId as Id, staffId: (st.staffId as Id | null) ?? null, parallel: st.parallel })),
+    });
+    queryClient.invalidateQueries({ queryKey: ["service-package"] });
+    queryClient.invalidateQueries({ queryKey: ["service-packages"] });
+  };
   // Per-staff own price / duration (strings from the inputs; empty = the service's own).
   const [staffOverrides, setStaffOverrides] = useState<Record<string, { price: string; duration: string }>>({});
   const [settingsData, setSettingsData] = useState({
@@ -315,8 +358,10 @@ export default function AddServicePage() {
 
       if (isEditMode && id) {
         await safeUpdateService(id, serviceData); // useServices shows the toast
+        await savePackageFor(id);
       } else {
-        await safeCreateService(serviceData); // useServices shows the toast
+        const created = await safeCreateService(serviceData); // useServices shows the toast
+        if (created && (created as { id?: Id }).id != null) await savePackageFor((created as { id: Id }).id);
       }
       navigate(getPath("items-category"));
     } catch (error) {
@@ -341,7 +386,7 @@ export default function AddServicePage() {
       }
 
       const durationMinutes = parseInt(formData.durationHours) * 60 + parseInt(formData.durationMinutes);
-      await safeCreateService({
+      const createdNext = await safeCreateService({
         name: formData.serviceName,
         description: formData.description || undefined,
         durationMinutes: durationMinutes || undefined,
@@ -362,6 +407,8 @@ export default function AddServicePage() {
         ...buildClientSettings(),
       });
       // useServices shows the "created" toast.
+      if (createdNext && (createdNext as { id?: Id }).id != null) await savePackageFor((createdNext as { id: Id }).id);
+      setPkg(EMPTY_PACKAGE);
       // Reset form for next service
       setFormData({
         serviceName: "",
@@ -813,6 +860,13 @@ export default function AddServicePage() {
                       />
                     </div>
                   </div>
+
+                  <PackageEditor
+                    value={pkg}
+                    onChange={setPkg}
+                    services={stepServices}
+                    staff={safeStaff.map((m) => ({ id: m.id, name: m.name }))}
+                  />
 
                   {/* FG-W6-01: online payment for this service */}
                   {onlinePayments && (

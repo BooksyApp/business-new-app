@@ -1,7 +1,8 @@
 import type { Id } from "@/types/id";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
+import { visitAccent } from "@/lib/servicePackage";
 import { cn } from "@/lib/utils";
-import { Link2, TriangleAlert } from "lucide-react";
+import { Link2, Package, TriangleAlert } from "lucide-react";
 import { appointmentStatusStyle } from "@/lib/appointmentStatus";
 import { categoryTint } from "@/lib/serviceCategoryColor";
 import "@/components/auth/auth-tokens.css";
@@ -44,6 +45,12 @@ export interface Appointment {
   categoryId?: Id;
   categoryName?: string;
   visitId?: string | null;
+  /** Part of a package service: the step number, and which party member it is for. */
+  isPackage?: boolean;
+  packageStep?: number | null;
+  packageParty?: number | null;
+  packageLead?: boolean;
+  guestName?: string | null;
   /** FG-W1-12: one block for a class session; the names of everyone booked into it. */
   isClass?: boolean;
   participants?: string[];
@@ -51,7 +58,7 @@ export interface Appointment {
    * Every appointment of the same multi-service visit (this one included), earliest
    * first. Empty/absent for a single-service booking.
    */
-  visitMates?: { id: string; service: string; startTime: string; endTime: string; price?: number; status?: string; staffId?: string; staffName?: string; serviceId?: string; cancelledBy?: string | null; cancellationNote?: string | null }[];
+  visitMates?: { id: string; service: string; startTime: string; endTime: string; price?: number; status?: string; staffId?: string; staffName?: string; serviceId?: string; packageStep?: number | null; guestName?: string | null; cancelledBy?: string | null; cancellationNote?: string | null }[];
   cancelledBy?: string | null;
   cancellationNote?: string | null;
   /** Saved despite schedule conflicts after a manager's confirm: the block carries a marker. */
@@ -124,6 +131,8 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
   const serviceLabel = appointmentServiceLabel(appointment);
   // A short block only has room for the first service and a count.
   const shortLabel = grouped && grouped.length > 1 ? `${grouped[0]} +${grouped.length - 1}` : appointment.service;
+  // A package (or any multi-service visit) shares one accent per visitId across columns.
+  const accent = appointment.isPackage || appointment.linked ? visitAccent(appointment.visitId) : null;
   const tags = appointmentTags({ notes: appointment.notes, visits });
   const start = appointment.startTime?.slice(0, 5);
   const end = appointment.endTime?.slice(0, 5);
@@ -167,6 +176,7 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
         backgroundImage: cancelled
           ? "repeating-linear-gradient(135deg, transparent 0 6px, rgba(30,27,46,0.09) 6px 8px)"
           : undefined,
+        boxShadow: accent ? `inset 0 0 0 2px ${accent}` : undefined,
         outline: noShow ? `1.5px dashed ${s.dot}` : undefined,
         outlineOffset: noShow ? "-4px" : undefined,
         opacity: cancelled ? 0.6 : completed ? 0.82 : 1,
@@ -178,6 +188,7 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
       )}
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: tint.accent }} />
+      {accent && <span aria-hidden className="absolute inset-y-0 right-0 w-[4px]" style={{ backgroundColor: accent }} />}
       {appointment.linked && (
         <span aria-label={t("calendar.linkedToTheSameVisit")} title={t("calendar.linkedToTheSameVisit")} className="absolute bottom-1 right-1.5 text-[rgb(var(--reg-muted))]">
           <Link2 size={12} strokeWidth={2.5} />
@@ -220,6 +231,15 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
               {appointment.clientAlert && (
                 <TriangleAlert aria-label={t("calendar.clientAlert")} role="img" className="h-3.5 w-3.5 shrink-0 text-amber-700" />
               )}
+              {appointment.isPackage && (
+                <span
+                  title={appointment.guestName ? t("calendar.packageGuest", { name: appointment.guestName }) : t("calendar.packageStepTitle", { step: appointment.packageStep ?? 1 })}
+                  className="inline-flex h-4 shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[10px] font-bold"
+                  style={{ color: accent ?? undefined }}
+                >
+                  <Package size={10} strokeWidth={2.5} />{appointment.packageStep ?? ""}
+                </span>
+              )}
               {/* Did they ask for this person, is it their first visit, are they a regular. */}
               {tags.map(({ Icon, label, className }) => (
                 <span key={label} title={label} className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full", className)}>
@@ -233,7 +253,10 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
               </p>
             ) : (
               <>
-                <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.ink }}>{serviceLabel}</p>
+                <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.ink }}>
+                  {serviceLabel}
+                  {appointment.isPackage && appointment.guestName ? ` · ${t("calendar.packageGuest", { name: appointment.guestName })}` : ""}
+                </p>
                 <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.muted }}>
                   {start}–{end}
                   {appointment.staffName ? ` · ${appointment.staffName}` : ""}

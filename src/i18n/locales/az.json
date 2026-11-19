@@ -429,7 +429,20 @@
     "payDeposit": "Depozit (qiymətin %-i)",
     "payFull": "Tam əvvəlcədən ödəniş",
     "depositPercent": "Depozit faizi",
-    "payHint": "Müştəri rezerv zamanı kartla ödəyir. Ödəniş daxil olandan sonra rezerv təsdiqlənir."
+    "payHint": "Müştəri rezerv zamanı kartla ödəyir. Ödəniş daxil olandan sonra rezerv təsdiqlənir.",
+    "packageTitle": "Paket (bir neçə usta)",
+    "packageHint": "Bir rezervasiya, fərqli ustalarla bir neçə xidmət",
+    "packageStepService": "Mərhələ xidməti",
+    "packagePickService": "Xidmət seçin",
+    "packageStepSpecialist": "Usta",
+    "packageAnySpecialist": "Bu xidməti göstərən istənilən usta",
+    "packageParallel": "Əvvəlki mərhələ ilə eyni vaxtda gedir",
+    "packageMoveUp": "Yuxarı apar",
+    "packageMoveDown": "Aşağı apar",
+    "packageRemoveStep": "Mərhələni sil",
+    "packageAddStep": "Mərhələ əlavə et",
+    "packageMaxParty": "Qrup / gəlin: nəfər sayı",
+    "packageTotals": "Cəmi: {duration} · {price}"
   },
   "addStaff": {
     "invalidEmailAddressFormat": "E-poçt ünvanı düzgün deyil",
@@ -1194,7 +1207,11 @@
     "anyDate": "istənilən tarix",
     "single": "TƏK",
     "noAppointmentsCreatedSlotTaken": "Rezerv yaradılmadı — {count} vaxt artıq tutulub",
-    "confirmBookingGeneric": "Rezervi təsdiqlə"
+    "confirmBookingGeneric": "Rezervi təsdiqlə",
+    "packageStepTitle": "Paket, {step}-ci mərhələ",
+    "packageGuest": "Qonaq: {name}",
+    "chargeCancellationFee": "Ləğv haqqı tutulsun",
+    "chargeCancellationFeeHint": "Əvvəlcə depozit saxlanılır, sonra saxlanmış kartdan çıxılır; alınmasa borc kimi qeyd olunur."
   },
   "checkout": {
     "pickAClientToUse": "Abonement, paket, bonus və ya qazanılmış pulsuz xidmətdən istifadə üçün müştəri seçin.",

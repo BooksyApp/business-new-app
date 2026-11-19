@@ -625,7 +625,7 @@ export default function CalendarPage() {
         linked: new Set(sortedActive.map((m) => m.staffId)).size > 1,
         visitMates: sorted.map((m) => ({
           id: m.id, service: m.service, startTime: m.startTime, endTime: m.endTime, price: m.price,
-          status: m.status, staffId: m.staffId, serviceId: String(m.serviceId ?? ""), staffName: apiStaff?.find((st) => String(st.id) === m.staffId)?.name,
+          status: m.status, packageStep: m.packageStep, guestName: m.guestName, staffId: m.staffId, serviceId: String(m.serviceId ?? ""), staffName: apiStaff?.find((st) => String(st.id) === m.staffId)?.name,
           cancelledBy: m.cancelledBy, cancellationNote: m.cancellationNote,
         })),
       });
