@@ -110,12 +110,14 @@ function item(icon: React.ElementType, label: TKey, path: string, hint?: TKey, e
     get description() { return hint ? t(hint) : undefined; },
   };
 }
-function entry(slug: string, base: NavItem, pages?: NavItem[]): NavEntry {
+function entry(slug: string, base: NavItem, pages?: NavItem[], landing?: string): NavEntry {
   const e = base as NavEntry;
   e.slug = slug;
   if (pages) {
     e.pages = pages;
-    e.path = categoryPath(slug);
+    // A category whose first page already is a page of blocks (Reports' dashboard of
+    // tiles) opens on that page instead of a card page.
+    e.path = landing ?? categoryPath(slug);
   }
   return e;
 }
@@ -174,7 +176,7 @@ export const NAV: NavSection[] = [
       entry("reports", item(BarChart3, "nav.reports", "/analytics", "nav.cat.reports"), [
         item(BarChart3, "nav.overview", "/analytics", "layout.revenueBookingsAndClientTrends"),
         item(Table2, "nav.reportBuilder", "/report-builder", "nav.hint.reportBuilder"),
-      ]),
+      ], "/analytics"),
       entry("branches", item(Network, "nav.g.branches", "/locations", "nav.cat.branches"), [
         item(MapPin, "nav.allLocations", "/locations", "nav.hint.locations"),
         item(GitCompare, "nav.compare", "/branch-comparison", "nav.hint.compare"),
@@ -302,7 +304,7 @@ export const SEARCH_EXTRAS: { key: string; path: string; icon: React.ElementType
   { key: "commissions", path: "/staff", icon: UsersRound },
   { key: "chairRental", path: "/staff", icon: UsersRound },
   { key: "resources", path: "/staff", icon: UsersRound },
-  { key: "revenuePlan", path: "/analytics", icon: BarChart3 },
+  { key: "revenuePlan", path: "/analytics/revenue", icon: BarChart3 },
   { key: "savedReports", path: "/report-builder", icon: Table2 },
   { key: "apiKeys", path: "/integrations", icon: KeyRound },
   { key: "webhooks", path: "/integrations", icon: Plug },
@@ -366,6 +368,9 @@ export function usePageTrail(rel: string): TrailInfo | null {
   for (const e of sections.flatMap((s) => s.entries)) {
     if (!e.pages || e.pages.length < 2) continue;
     for (const p of e.pages) {
+      // The category's own landing page has no trail, nor do the pages under it (Reports'
+      // drill-downs draw their own).
+      if (p.path === e.path) continue;
       if (hit(p.path) && (!best || p.path.length > best.len)) {
         best = { len: p.path.length, trail: { parentLabel: e.label, parentPath: e.path, label: p.label } };
       }

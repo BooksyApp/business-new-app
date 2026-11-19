@@ -45,6 +45,7 @@ const OnlineSalesSettingsPage = lazy(() => import("./pages/OnlineSalesSettingsPa
 const MyDayPage = lazy(() => import("./pages/MyDayPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const ReportDetailPage = lazy(() => import("./pages/ReportDetailPage"));
 const SetupPage = lazy(() => import("./pages/SetupPage"));
 const MarketingPage = lazy(() => import("./pages/MarketingPage"));
 const OffersPage = lazy(() => import("./pages/OffersPage"));
@@ -274,6 +275,7 @@ const App = () => (
               <Route path="settings" element={<Navigate to="../setup" replace />} />
               <Route path="reports" element={<Navigate to="../analytics" replace />} />
               <Route path="analytics" element={<Suspense fallback={<PageLoader />}><AnalyticsPage /></Suspense>} />
+              <Route path="analytics/:metric" element={<Suspense fallback={<PageLoader />}><ReportDetailPage /></Suspense>} />
               <Route path="report-builder" element={<Suspense fallback={<PageLoader />}><ReportBuilderPage /></Suspense>} />
               <Route path="integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsPage /></Suspense>} />
               <Route path="api-docs" element={<Suspense fallback={<PageLoader />}><ApiDocsPage /></Suspense>} />

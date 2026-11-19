@@ -1,7 +1,7 @@
 import { Navigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { SECTION_REDIRECTS, useVisibleNav, type NavEntry } from "@/components/layout/navigation";
+import { SECTION_REDIRECTS, categoryPath, useVisibleNav, type NavEntry } from "@/components/layout/navigation";
 import { NavCard, NavCardGrid, type CardStat } from "@/components/layout/NavCards";
 import { BooqiScope, PageHeader } from "@/components/page/booqi";
 import { pageBody } from "@/components/page/booqiStyles";
@@ -30,8 +30,8 @@ export default function SectionPage() {
   const pages = entry?.pages ?? [];
   const stats = useCardStats(pages.map((p) => p.path));
 
-  if (!entry || pages.length < 2) {
-    const to = pages[0]?.path ?? entry?.path ?? SECTION_REDIRECTS[section ?? ""] ?? "/calendar";
+  if (!entry || pages.length < 2 || entry.path !== categoryPath(entry.slug)) {
+    const to = (entry && entry.path !== categoryPath(entry.slug) ? entry.path : pages[0]?.path) ?? entry?.path ?? SECTION_REDIRECTS[section ?? ""] ?? "/calendar";
     return <Navigate to={getPath(to)} replace />;
   }
 
