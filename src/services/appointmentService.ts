@@ -178,7 +178,17 @@ export const appointmentService = {
 
   async getAppointmentHistory(businessId: Id, appointmentId: string): Promise<AppointmentHistoryEntry[]> {
     const params = new URLSearchParams({ entityId: appointmentId, limit: '50' });
-    return apiClient.get<AppointmentHistoryEntry[]>(`/businesses/${businessId}/audit-log?${params.toString()}`);
+    // The audit-log endpoint returns raw DB columns (snake_case: created_at, actor_name),
+    // not camelCase — read both so a row without a usable date can never crash the sheet.
+    const rows = await apiClient.get<Array<Record<string, unknown>>>(`/businesses/${businessId}/audit-log?${params.toString()}`);
+    if (!Array.isArray(rows)) return [];
+    return rows
+      .map((r) => ({
+        method: String(r.method ?? ''),
+        actorName: (r.actorName ?? r.actor_name ?? null) as string | null,
+        createdAt: (r.createdAt ?? r.created_at) as string | number,
+      }))
+      .filter((h) => h.createdAt != null && !Number.isNaN(new Date(h.createdAt).getTime()));
   },
 
   async getAppointmentsByBusiness(businessId: Id, date?: Date): Promise<Appointment[]> {

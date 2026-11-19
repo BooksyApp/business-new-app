@@ -14,6 +14,20 @@ import { handleImpersonationLanding } from "@/lib/impersonation";
 import { captureInstallPrompt, registerServiceWorker } from "@/lib/pwa";
 
 initSentry();
+
+// A redeploy deletes the old hashed chunks; an open tab then fails to load a lazy page.
+// Reload once (guarded, so a real outage cannot loop) to pick up the new build.
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  try {
+    const last = Number(sessionStorage.getItem("hub-chunk-reload") || 0);
+    if (Date.now() - last < 60_000) return;
+    sessionStorage.setItem("hub-chunk-reload", String(Date.now()));
+  } catch {
+    return;
+  }
+  window.location.reload();
+});
 captureInstallPrompt();
 registerServiceWorker();
 
