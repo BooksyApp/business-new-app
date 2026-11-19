@@ -79,6 +79,7 @@ const convertToComponentAppointment = (apt: AppointmentType): AppointmentWithDat
   return {
     id: apt.id,
     clientName: apt.clientName,
+    clientAlert: apt.clientAlert,
     service: apt.service,
     startTime: apt.startTime,
     endTime: apt.endTime,

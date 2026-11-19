@@ -813,6 +813,7 @@
     "verifyingAccess": "Verifying access..."
   },
   "calendar": {
+    "clientAlert": "Allergy or patch test on record",
     "serviceCount": "{count, plural, one {# service} other {# services}}",
     "thisVisit": "This visit · {services}",
     "cancelledCount": " ({count} cancelled)",
@@ -1111,6 +1112,8 @@
     "field_note": "Note"
   },
   "clients": {
+    "patchTestDate": "Patch test date",
+    "patchTestSaveFailed": "Could not save the patch test date",
     "unnamedClient": "Unnamed client",
     "showMore": "Show {count} more",
     "visitCount": "{count, plural, one {# visit} other {# visits}}",

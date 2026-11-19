@@ -3,6 +3,7 @@ import { API_BASE_URL, apiClient, refreshSession } from "@/config/api";
 import { getAccessToken, isTokenValid } from "@/utils/authUtils";
 
 export interface ClientWithStats {
+  patchTestDate?: string | null;
   id: Id;
   businessId: Id;
   firstName: string;
@@ -180,6 +181,16 @@ class ClientService {
     allowSmsNotifications?: boolean;
   }): Promise<Client> {
     return apiClient.post<Client>(`/clients/business/${businessId}`, clientData);
+  }
+
+  /** FG-W4-01: the client's patch-test date (YYYY-MM-DD), or null. */
+  async getClientPatchTest(clientId: Id): Promise<string | null> {
+    const c = await apiClient.get<{ patchTestDate?: string | null }>(`/clients/${clientId}`);
+    return c.patchTestDate ?? null;
+  }
+
+  async setClientPatchTest(clientId: Id, patchTestDate: string): Promise<void> {
+    await apiClient.put(`/clients/${clientId}`, { patchTestDate });
   }
 }
 

@@ -13,6 +13,7 @@ import { t } from "@/i18n";
 export interface Appointment {
   id: string;
   clientName: string;
+  clientAlert?: boolean;
   service: string;
   startTime: string;
   endTime: string;
@@ -54,6 +55,7 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
   return {
     id: apiAppt.id.toString(),
     clientName: apiAppt.clientName || t("sales.walkInClient"),
+    clientAlert: apiAppt.clientAlert === true,
     service: apiAppt.serviceName || 'Service',
     startTime: apiAppt.startTime,
     endTime: apiAppt.endTime,

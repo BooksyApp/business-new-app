@@ -20,6 +20,7 @@ export type AppointmentColor =
 export interface Appointment {
   id: string;
   clientName: string;
+  clientAlert?: boolean;
   service: string;
   startTime: string;
   endTime: string;
@@ -216,6 +217,9 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
               <p className={cn("min-w-0 flex-1 truncate text-[13px] font-bold leading-tight", appointment.overrideApplied ? "pr-8" : "pr-3", cancelled && "line-through")}>
                 {appointment.clientName}
               </p>
+              {appointment.clientAlert && (
+                <TriangleAlert aria-label={t("calendar.clientAlert")} role="img" className="h-3.5 w-3.5 shrink-0 text-amber-700" />
+              )}
               {/* Did they ask for this person, is it their first visit, are they a regular. */}
               {tags.map(({ Icon, label, className }) => (
                 <span key={label} title={label} className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full", className)}>

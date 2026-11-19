@@ -113,6 +113,7 @@ export default function ClientsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [clientDetailOpen, setClientDetailOpen] = useState(false);
   const [detailClient, setDetailClient] = useState<ClientWithStats | null>(null);
+  const [patchTestDate, setPatchTestDate] = useState("");
   // This salon's bookings with them, and nothing from anywhere else.
   const [clientVisits, setClientVisits] = useState<ClientAppointmentRow[] | null>(null);
   // #28: LoyaltyController has served points per client all along with no caller, so a
@@ -483,6 +484,21 @@ export default function ClientsPage() {
     if (!businessId || !clientId) return;
     tillBenefitsService.get(businessId, clientId).then(setBenefits).catch(() => setBenefits(null));
     salonDayService.getClientRecord(businessId, clientId).then(setRecord).catch(() => setRecord({ notes: [], photos: [], visits: [] }));
+  };
+
+  useEffect(() => {
+    if (!detailClient?.id) return;
+    clientService.getClientPatchTest(detailClient.id).then((d) => setPatchTestDate(d ?? "")).catch(() => setPatchTestDate(""));
+  }, [detailClient?.id]);
+
+  const savePatchTestDate = async (value: string) => {
+    if (!detailClient?.id) return;
+    try {
+      await clientService.setClientPatchTest(detailClient.id, value);
+      setPatchTestDate(value);
+    } catch {
+      toast.error(tr("clients.patchTestSaveFailed"));
+    }
   };
 
   const addNote = async () => {
@@ -1283,6 +1299,21 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-6 pt-2 md:px-6">
+                  {profileTab === "overview" && detailClient?.id && (
+                    <div className="space-y-1.5 rounded-2xl p-4 ring-1 ring-[rgb(var(--reg-line))]">
+                      <Label htmlFor="client-patch-test">{tr("clients.patchTestDate")}</Label>
+                      <Input
+                        id="client-patch-test"
+                        type="date"
+                        className="max-w-[220px]"
+                        value={patchTestDate}
+                        onChange={(e) => {
+                          setPatchTestDate(e.target.value);
+                          if (e.target.value) void savePatchTestDate(e.target.value);
+                        }}
+                      />
+                    </div>
+                  )}
                   {profileTab === "overview" && (
                     <>
                       <section className={cn(box, "space-y-2 text-sm")}>

@@ -10,6 +10,7 @@ export interface Appointment {
   staffName?: string;
   clientId?: Id;
   clientName?: string;
+  clientAlert?: boolean;
   clientPhone?: string;
   clientEmail?: string;
   serviceId: Id;

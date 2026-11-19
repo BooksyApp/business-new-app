@@ -813,6 +813,7 @@
     "verifyingAccess": "Giriş yoxlanılır..."
   },
   "calendar": {
+    "clientAlert": "Allergiya və ya patch test qeydi var",
     "serviceCount": "{count, plural, one {# xidmət} other {# xidmət}}",
     "thisVisit": "Bu gəliş · {services}",
     "cancelledCount": " ({count} ləğv)",
@@ -1111,6 +1112,8 @@
     "field_note": "Qeyd"
   },
   "clients": {
+    "patchTestDate": "Patch test tarixi",
+    "patchTestSaveFailed": "Patch test tarixi yadda saxlanmadı",
     "unnamedClient": "Adsız müştəri",
     "showMore": "Daha {count} müştəri göstər",
     "visitCount": "{count, plural, one {# gəliş} other {# gəliş}}",

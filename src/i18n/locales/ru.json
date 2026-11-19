@@ -813,6 +813,7 @@
     "verifyingAccess": "Проверяем доступ..."
   },
   "calendar": {
+    "clientAlert": "Есть аллергия или проба на чувствительность",
     "serviceCount": "{count, plural, one {# услуга} few {# услуги} many {# услуг} other {# услуги}}",
     "thisVisit": "Этот визит · {services}",
     "cancelledCount": " (отменено: {count})",
@@ -1111,6 +1112,8 @@
     "field_note": "Заметка"
   },
   "clients": {
+    "patchTestDate": "Дата пробы на чувствительность",
+    "patchTestSaveFailed": "Не удалось сохранить дату пробы",
     "unnamedClient": "Клиент без имени",
     "showMore": "Показать ещё {count}",
     "visitCount": "{count, plural, one {# визит} few {# визита} many {# визитов} other {# визита}}",
