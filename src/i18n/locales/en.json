@@ -1,4 +1,15 @@
 {
+  "marketplacePromotion": {
+    "title": "Marketplace promotion",
+    "hint": "Your salon comes first among equal matches in marketplace name search. It is free: nothing is charged.",
+    "turnOn": "Turn on",
+    "turnOff": "Turn off",
+    "on": "Marketplace promotion is on",
+    "off": "Marketplace promotion is off",
+    "failed": "Could not change marketplace promotion",
+    "daily": "Marketplace bookings, last 14 days",
+    "total": "{count} bookings from the marketplace in the last 14 days"
+  },
   "loyaltyTiers": {
     "title": "Levels",
     "hint": "A client reaches a level by the points they have earned at your salon in total. The level's bonus adds to every purchase's points from then on.",
