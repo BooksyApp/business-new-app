@@ -117,7 +117,11 @@
     "needOptions": "A single-choice question needs at least two options."
   },
   "billing": {
-    "toPay": { "title": "To pay", "pay": "Pay", "promoDays": "+{days} days promotion" },
+    "toPay": {
+      "title": "To pay",
+      "pay": "Pay",
+      "promoDays": "+{days} days promotion"
+    },
     "specialPrice": "Special price",
     "navRow": "Billing & plan",
     "navHint": "Your booqi plan, invoices, commission and message packs",
@@ -5174,6 +5178,24 @@
     "saveFailed": "Change was not saved",
     "back": "Back",
     "freedAt": "{time} just freed up",
-    "heldUntil": "held for them until {time}"
+    "heldUntil": "held for them until {time}",
+    "newWaiter": "A client joined the waiting list",
+    "addButton": "Add to waiting list",
+    "addTitle": "Add to waiting list",
+    "addName": "Client name",
+    "addPhone": "Phone",
+    "addEmail": "Email (optional, to message them when a time opens)",
+    "addService": "Service",
+    "addMaster": "Master",
+    "addFrom": "From",
+    "addTo": "Until (optional)",
+    "addWhen": "Part of the day",
+    "addAny": "Any time",
+    "addMorning": "Morning",
+    "addAfternoon": "Afternoon",
+    "addEvening": "Evening",
+    "addSave": "Add",
+    "addDone": "Added to the waiting list",
+    "addFailed": "Could not add"
   }
 }

@@ -521,6 +521,54 @@ class WebSocketService {
     };
   }
 
+  subscribeToWaitlist(businessId: Id, handler: MessageHandler<{ event: string }>): () => void {
+    let subscription: Subscription | null = null;
+    let unsubscribeCalled = false;
+    let connectListener: (() => void) | null = null;
+
+    const doSubscribe = () => {
+      if (unsubscribeCalled || !this.connected || !this.stompClient) return;
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+      }
+      try {
+        subscription = this.stompClient.subscribe(
+          `/topic/waitlist/${businessId}`,
+          (message) => {
+            if (unsubscribeCalled) return;
+            try {
+              handler(JSON.parse(message.body));
+            } catch (error) {
+              console.error('Error parsing waitlist message:', error);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error subscribing to the waitlist:', error);
+      }
+    };
+
+    if (this.connected && this.stompClient) {
+      doSubscribe();
+    } else {
+      connectListener = this.onConnect(() => {
+        if (!unsubscribeCalled) setTimeout(doSubscribe, 200);
+      });
+      if (!this.isConnecting) {
+        this.connect().catch(() => {});
+      }
+    }
+
+    return () => {
+      unsubscribeCalled = true;
+      if (connectListener) { connectListener(); connectListener = null; }
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+        subscription = null;
+      }
+    };
+  }
+
   /**
    * FG-W4-04: new inbox messages for the open salon, `/topic/messages/{businessId}` (owner, or a
    * team member with CLIENTS_VIEW). `onStatus(true)` once subscribed, `false` when the socket

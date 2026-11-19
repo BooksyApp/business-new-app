@@ -34,6 +34,8 @@ import { AppointmentBlock, StaffAvatar, type Appointment, type Staff } from "@/c
 const loadAppointmentModal = () => import("@/components/calendar/AppointmentModal");
 const AppointmentModal = lazyWithReload(() => loadAppointmentModal().then((m) => ({ default: m.AppointmentModal })));
 import { toast } from "sonner";
+import { websocketService } from "@/services/websocketService";
+import { WaitlistAddDialog } from "@/components/calendar/WaitlistAddDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,7 +65,7 @@ import { serviceService, type ServicePackage } from "@/services/serviceService";
 import { PackageBookingPanel } from "@/components/calendar/PackageBookingPanel";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { WaitingBlock } from "@/components/calendar/WaitingBlock";
-import { isFreed, placeWaiting, toHHmm, toMinutes, type BusyRange, type WaitingPlacement } from "@/lib/waitlistCalendar";
+import { isFreed, placeWaiting, waitsOn, toHHmm, toMinutes, type BusyRange, type WaitingPlacement } from "@/lib/waitlistCalendar";
 import { clientService, Client } from "@/services/clientService";
 import { useNavigation } from "@/utils/navigationUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -768,6 +770,7 @@ export default function CalendarPage() {
   const flags = useFeatureFlags();
   const offers = useServiceOffers(businessId);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [addWaiterOpen, setAddWaiterOpen] = useState(false);
 
   const reloadWaitlist = useCallback(() => {
     if (!businessId) return;
@@ -779,6 +782,27 @@ export default function CalendarPage() {
   }, [businessId]);
 
   useEffect(reloadWaitlist, [reloadWaitlist]);
+
+  // Live: a waiter who joins (or leaves, or whose offer lapses) shows up without a reload.
+  useEffect(() => {
+    if (!businessId) return;
+    let unsubscribe: (() => void) | null = null;
+    let alive = true;
+    websocketService
+      .connect()
+      .then(() => {
+        if (!alive) return;
+        unsubscribe = websocketService.subscribeToWaitlist(businessId, (msg) => {
+          reloadWaitlist();
+          if (msg?.event === "JOINED") toast.info(tr("waitlistCal.newWaiter"));
+        });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [businessId, reloadWaitlist]);
 
   /** Which waiting client this booking is for, so the card leaves the column when it is booked. */
   const [placingEntryId, setPlacingEntryId] = useState<Id | null>(null);
@@ -1505,7 +1529,7 @@ export default function CalendarPage() {
     if (!waitingVisible || viewType !== "Weekly") return [];
     const key = format(day, "yyyy-MM-dd");
     return waitlist.filter(w => {
-      if (w.preferredDate !== key) return false;
+      if (!waitsOn(w, key) || !w.preferredDate) return false;
       const owner = w.staffId
         ? String(w.staffId)
         : isFreed(w) && w.freedStaffId
@@ -1519,7 +1543,7 @@ export default function CalendarPage() {
     () =>
       waitingEnabled
         ? waitlist
-            .filter(w => !w.preferredDate || w.preferredDate === dayKey)
+            .filter(w => waitsOn(w, dayKey))
             .map(w => {
               const dur = w.serviceId ? serviceDuration(String(w.serviceId)) : 30;
               const hours = getBusinessHoursForDate(currentDate);
@@ -1953,6 +1977,16 @@ export default function CalendarPage() {
                   <Clock size={16} strokeWidth={1.75} aria-hidden />
                   <span className="hidden sm:inline">{tr("waitlistCal.showWaiting")}</span>
                   <span className="sm:hidden">{tr("waitlistCal.stripLabel")}</span>
+                </button>
+              )}
+              {(viewType === "Day" || viewType === "Weekly") && flags.waitlist !== false && (
+                <button
+                  type="button"
+                  onClick={() => setAddWaiterOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line))] transition-colors hover:ring-[rgb(var(--reg-brand)/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
+                >
+                  <Plus size={16} strokeWidth={1.75} aria-hidden />
+                  <span className="hidden sm:inline">{tr("waitlistCal.addButton")}</span>
                 </button>
               )}
 
@@ -4632,6 +4666,15 @@ export default function CalendarPage() {
           )}
         </div>
       </div>
+    <WaitlistAddDialog
+        open={addWaiterOpen}
+        onOpenChange={setAddWaiterOpen}
+        businessId={String(businessId)}
+        date={format(currentDate, "yyyy-MM-dd")}
+        services={services.map(sv => ({ id: String(sv.id), name: sv.name }))}
+        masters={staff.map(st => ({ id: String(st.id), name: st.name }))}
+        onAdded={reloadWaitlist}
+      />
     </AppLayout>
   );
 }

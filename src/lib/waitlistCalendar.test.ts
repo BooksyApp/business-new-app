@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { WaitlistEntry } from "@/services/waitlistService";
-import { isBusy, phoneDigits, placeWaiting, suggestSlots } from "./waitlistCalendar";
+import { isBusy, phoneDigits, placeWaiting, suggestSlots, waitsOn } from "./waitlistCalendar";
 
 const base = (over: Partial<WaitlistEntry>): WaitlistEntry => ({
   id: "w1", businessId: "b", staffId: "s1", serviceId: "svc", clientName: "Aysel", clientEmail: "a@x.test",
@@ -66,4 +66,13 @@ describe("suggestSlots", () => {
 
 describe("phoneDigits", () => {
   it("strips formatting", () => expect(phoneDigits("+994 (50) 123-45-67")).toBe("994501234567"));
+});
+
+describe("waitsOn", () => {
+  it("covers every day of a range, only the day otherwise", () => {
+    expect(waitsOn({ preferredDate: "2026-11-20", preferredEndDate: "2026-11-23" }, "2026-11-22")).toBe(true);
+    expect(waitsOn({ preferredDate: "2026-11-20", preferredEndDate: "2026-11-23" }, "2026-11-24")).toBe(false);
+    expect(waitsOn({ preferredDate: "2026-11-20" }, "2026-11-21")).toBe(false);
+    expect(waitsOn({ preferredDate: null }, "2026-11-21")).toBe(true);
+  });
 });

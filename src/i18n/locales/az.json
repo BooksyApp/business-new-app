@@ -117,7 +117,11 @@
     "needOptions": "Tək seçimli sualda ən azı iki variant olmalıdır."
   },
   "billing": {
-    "toPay": { "title": "Ödənilməli", "pay": "Ödə", "promoDays": "+{days} gün təşviq" },
+    "toPay": {
+      "title": "Ödənilməli",
+      "pay": "Ödə",
+      "promoDays": "+{days} gün təşviq"
+    },
     "specialPrice": "Xüsusi qiymət",
     "navRow": "Ödənişlər və tarif",
     "navHint": "booqi tarifiniz, hesablar, komissiya və mesaj paketləri",
@@ -5174,6 +5178,24 @@
     "saveFailed": "Dəyişiklik saxlanmadı",
     "back": "Geri",
     "freedAt": "{time} yeri boşaldı",
-    "heldUntil": "{time}-dək ona saxlanılır"
+    "heldUntil": "{time}-dək ona saxlanılır",
+    "newWaiter": "Gözləmə siyahısına yeni müştəri yazıldı",
+    "addButton": "Gözləmə siyahısına əlavə et",
+    "addTitle": "Gözləmə siyahısına əlavə et",
+    "addName": "Müştərinin adı",
+    "addPhone": "Telefon",
+    "addEmail": "E-poçt (ixtiyari, vaxt açılanda yazmaq üçün)",
+    "addService": "Xidmət",
+    "addMaster": "Usta",
+    "addFrom": "Tarixdən",
+    "addTo": "Tarixə qədər (ixtiyari)",
+    "addWhen": "Günün hissəsi",
+    "addAny": "İstənilən vaxt",
+    "addMorning": "Səhər",
+    "addAfternoon": "Gündüz",
+    "addEvening": "Axşam",
+    "addSave": "Əlavə et",
+    "addDone": "Gözləmə siyahısına əlavə olundu",
+    "addFailed": "Əlavə etmək alınmadı"
   }
 }

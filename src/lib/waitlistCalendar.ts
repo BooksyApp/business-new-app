@@ -70,7 +70,10 @@ export function placeWaiting(w: WaitlistEntry, durationMin: number, ctx: PlaceCo
     return { staffId, start: ws, end: toHHmm(toMinutes(ws) + len), freed, anyMaster };
   }
   const tried = hhmm(w.preferredTime);
-  const startMin = tried ? toMinutes(tried) : ctx.openMin;
+  // Only a part of the day asked for ("morning", "evening"): sit at the start of the first one.
+  const firstPart = (w.timeOfDay ?? "").split(",").map((p) => p.trim()).find(Boolean);
+  const partStart = firstPart === "MORNING" ? 9 * 60 : firstPart === "AFTERNOON" ? 12 * 60 : firstPart === "EVENING" ? 17 * 60 : null;
+  const startMin = tried ? toMinutes(tried) : partStart !== null ? Math.max(partStart, ctx.openMin) : ctx.openMin;
   const endMin = Math.min(startMin + dur, 24 * 60 - 1);
   return { staffId, start: toHHmm(startMin), end: toHHmm(endMin), freed, anyMaster };
 }
@@ -134,4 +137,11 @@ export function suggestSlots(opts: {
 /** Digits only, for tel: and wa.me links. */
 export function phoneDigits(phone?: string | null): string {
   return (phone || "").replace(/[^\d]/g, "");
+}
+
+/** Is this waiter wanting the given day (yyyy-MM-dd)? A range covers every day in it; no date = any day. */
+export function waitsOn(w: Pick<WaitlistEntry, "preferredDate" | "preferredEndDate">, dayKey: string): boolean {
+  if (!w.preferredDate) return true;
+  const last = w.preferredEndDate && w.preferredEndDate > w.preferredDate ? w.preferredEndDate : w.preferredDate;
+  return w.preferredDate <= dayKey && dayKey <= last;
 }

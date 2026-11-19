@@ -34,6 +34,24 @@ export interface WaitlistEntry {
   freedStartTime?: string | null;
   holdUntil?: string | null;
   offeredAt?: string | null;
+  /** Last day when the client asked for a range of days (preferredDate is the first). */
+  preferredEndDate?: string | null;
+  /** "MORNING,EVENING": the parts of the day the client can come in; empty = any time. */
+  timeOfDay?: string | null;
+  /** The salon added this person by hand. */
+  addedBySalon?: boolean;
+}
+
+export interface WaitlistAddInput {
+  serviceId: Id;
+  staffId?: Id | null;
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  preferredDate: string;
+  preferredEndDate?: string;
+  timeOfDay?: string[];
+  preferredTime?: string;
 }
 
 export interface WaitlistOfferSlot {
@@ -45,6 +63,11 @@ export interface WaitlistOfferSlot {
 class WaitlistService {
   async listForBusiness(businessId: Id): Promise<WaitlistEntry[]> {
     return apiClient.get<WaitlistEntry[]>(`/waitlist/business/${businessId}`);
+  }
+
+  /** Put a client on the waitlist by hand (a phone call, a walk-in). */
+  async add(businessId: Id, input: WaitlistAddInput): Promise<{ id: Id }> {
+    return apiClient.post<{ id: Id }>(`/waitlist/business/${businessId}`, input);
   }
 
   async setAutoNotify(businessId: Id, id: Id, autoNotify: boolean): Promise<void> {
