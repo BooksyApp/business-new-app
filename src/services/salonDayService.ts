@@ -153,6 +153,34 @@ export interface LowStockItem {
   days_left: number | null;
 }
 
+export interface StockLocation {
+  id: Id;
+  name: string;
+  is_default: boolean;
+}
+
+export interface StockLevel {
+  id: Id;
+  name: string;
+  sku: string | null;
+  quantity_on_hand: number;
+  low_stock_threshold: number;
+  low: boolean;
+}
+
+export interface StockTransfer {
+  id: Id;
+  product_id: Id;
+  product_name: string;
+  from_location_id: Id;
+  from_name: string;
+  to_location_id: Id;
+  to_name: string;
+  quantity: number;
+  note: string | null;
+  created_at: string;
+}
+
 export interface StockMovement {
   id: Id;
   product_id: Id;
@@ -361,17 +389,34 @@ export const salonDayService = {
     apiClient.delete<void>(`${base(businessId)}/client-photos/${photoId}`),
 
   // stock
-  getLowStock: (businessId: Id) =>
-    apiClient.get<{ items: LowStockItem[]; outOfStock: number }>(`${base(businessId)}/stock/low`),
-  getStockMovements: (businessId: Id, productId?: Id, limit = 100) => {
+  getLowStock: (businessId: Id, locationId?: Id) =>
+    apiClient.get<{ items: LowStockItem[]; outOfStock: number }>(
+      `${base(businessId)}/stock/low${locationId ? `?locationId=${locationId}` : ''}`,
+    ),
+  getStockMovements: (businessId: Id, productId?: Id, limit = 100, locationId?: Id) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (productId) params.set('productId', String(productId));
+    if (locationId) params.set('locationId', String(locationId));
     return apiClient.get<StockMovement[]>(`${base(businessId)}/stock/movements?${params}`);
   },
-  countStock: (businessId: Id, productId: Id, counted: number, note?: string) =>
-    apiClient.post<{ difference: number }>(`${base(businessId)}/stock/count`, { productId, counted, note }),
-  adjustStock: (businessId: Id, productId: Id, change: number, reason: string, note?: string) =>
-    apiClient.post<unknown>(`${base(businessId)}/stock/adjust`, { productId, change, reason, note }),
+  countStock: (businessId: Id, productId: Id, counted: number, note?: string, locationId?: Id) =>
+    apiClient.post<{ difference: number }>(`${base(businessId)}/stock/count`, { productId, counted, note, locationId }),
+  adjustStock: (businessId: Id, productId: Id, change: number, reason: string, note?: string, locationId?: Id) =>
+    apiClient.post<unknown>(`${base(businessId)}/stock/adjust`, { productId, change, reason, note, locationId }),
+  getStockLocations: (businessId: Id) =>
+    apiClient.get<StockLocation[]>(`${base(businessId)}/stock/locations`),
+  createStockLocation: (businessId: Id, name: string) =>
+    apiClient.post<StockLocation>(`${base(businessId)}/stock/locations`, { name }),
+  renameStockLocation: (businessId: Id, locationId: Id, name: string) =>
+    apiClient.put<StockLocation>(`${base(businessId)}/stock/locations/${locationId}`, { name }),
+  getStockLevels: (businessId: Id, locationId?: Id) =>
+    apiClient.get<StockLevel[]>(`${base(businessId)}/stock/levels${locationId ? `?locationId=${locationId}` : ''}`),
+  transferStock: (
+    businessId: Id,
+    body: { productId: Id; fromLocationId: Id; toLocationId: Id; quantity: number; note?: string },
+  ) => apiClient.post<unknown>(`${base(businessId)}/stock/transfers`, body),
+  getStockTransfers: (businessId: Id, limit = 10) =>
+    apiClient.get<StockTransfer[]>(`${base(businessId)}/stock/transfers?limit=${limit}`),
   getRecipe: (businessId: Id, serviceId: Id) =>
     apiClient.get<RecipeLine[]>(`${base(businessId)}/services/${serviceId}/products`),
   setRecipeLine: (businessId: Id, serviceId: Id, productId: Id, quantity: number) =>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Package, ScanLine } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -9,6 +10,7 @@ import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { cn } from "@/lib/utils";
+import { LocationSelect, useInvalidateStock, useStockLocations } from "@/components/inventory/StockLocations";
 import { productService, type Product } from "@/services/productService";
 import { salonDayService } from "@/services/salonDayService";
 import { t } from "@/i18n";
@@ -33,6 +35,13 @@ export default function StockCountPage() {
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const { locations, locationId, setLocationId } = useStockLocations(businessId);
+  const invalidateStock = useInvalidateStock(businessId);
+  const levelsQ = useQuery({
+    queryKey: ["stock-levels", businessId, locationId],
+    queryFn: () => salonDayService.getStockLevels(businessId, locationId),
+    enabled: !!locationId,
+  });
 
   const load = async () => {
     setProducts(await productService.list(businessId).catch(() => []));
@@ -43,7 +52,10 @@ export default function StockCountPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 
-  const list = (products ?? []).filter((p) => p.isActive);
+  const levels = new Map((levelsQ.data ?? []).map((l) => [String(l.id), l.quantity_on_hand]));
+  const list = (products ?? [])
+    .filter((p) => p.isActive)
+    .map((p) => (levels.has(String(p.id)) ? { ...p, quantityOnHand: levels.get(String(p.id)) as number } : p));
   const shown = list
     .filter((p) => [p.name, p.sku].filter(Boolean).join(" ").toLowerCase().includes(query.trim().toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -73,7 +85,7 @@ export default function StockCountPage() {
     let saved = 0;
     try {
       for (const change of changes) {
-        await salonDayService.countStock(businessId, change.product.id, change.counted);
+        await salonDayService.countStock(businessId, change.product.id, change.counted, undefined, locationId);
         saved += 1;
       }
       toast.success(t("inventory.countSaved", { count: saved }));
@@ -83,7 +95,13 @@ export default function StockCountPage() {
     } finally {
       setSaving(false);
       await load();
+      await invalidateStock();
     }
+  };
+
+  const pickLocation = (id: typeof locationId) => {
+    setLocationId(id as NonNullable<typeof id>);
+    setCounts({});
   };
 
   return (
@@ -112,6 +130,7 @@ export default function StockCountPage() {
                     onKeyDown={onSearchKey}
                   />
                 </div>
+                <LocationSelect locations={locations} value={locationId} onChange={pickLocation} />
                 <Button className={primaryBtn} disabled={saving || invalid || changes.length === 0} onClick={() => void save()}>
                   {t("inventory.countSave", { count: changes.length })}
                 </Button>

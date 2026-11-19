@@ -1,7 +1,8 @@
 import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Boxes, Coins, Minus, Package, Pencil, Plus, ScanLine, Search, Trash2, Truck } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Boxes, Coins, MapPin, Minus, Package, Pencil, Plus, ScanLine, Search, Trash2, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -13,7 +14,9 @@ import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { LocationSelect, LocationsSheet, RecentTransfers, TransferSheet, useInvalidateStock, useStockLocations } from "@/components/inventory/StockLocations";
 import { productService, type Product } from "@/services/productService";
+import { salonDayService } from "@/services/salonDayService";
 import { t } from "@/i18n";
 
 const EMPTY = { name: "", sku: "", price: "", quantityOnHand: "0", lowStockThreshold: "5" };
@@ -31,6 +34,15 @@ export default function InventoryPage() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [moving, setMoving] = useState<Id | null>(null);
+  const { locations, location, locationId, setLocationId } = useStockLocations(businessId);
+  const [transferring, setTransferring] = useState<Product | null>(null);
+  const [managing, setManaging] = useState(false);
+  const invalidateStock = useInvalidateStock(businessId);
+  const levelsQ = useQuery({
+    queryKey: ["stock-levels", businessId, locationId],
+    queryFn: () => salonDayService.getStockLevels(businessId, locationId),
+    enabled: !!locationId,
+  });
 
   const load = async () => {
     setProducts(await productService.list(businessId).catch(() => []));
@@ -41,7 +53,9 @@ export default function InventoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 
-  const open = (p?: Product) => {
+  const open = (picked?: Product) => {
+    // The edit form works on the product's own record, not the per-location overlay.
+    const p = picked ? (products ?? []).find((x) => x.id === picked.id) ?? picked : undefined;
     if (p) {
       setForm({ name: p.name, sku: p.sku ?? "", price: String(p.price ?? ""), quantityOnHand: String(p.quantityOnHand), lowStockThreshold: String(p.lowStockThreshold) });
       setSheet({ mode: "edit", product: p });
@@ -90,15 +104,20 @@ export default function InventoryPage() {
     if (next < 0) return;
     setMoving(product.id);
     try {
-      await productService.update(businessId, product.id, {
-        name: product.name,
-        sku: product.sku ?? undefined,
-        price: product.price,
-        quantityOnHand: next,
-        lowStockThreshold: product.lowStockThreshold,
-        isActive: product.isActive,
-      });
+      if (location && !location.is_default) {
+        await salonDayService.adjustStock(businessId, product.id, delta, "ADJUSTMENT", undefined, location.id);
+      } else {
+        await productService.update(businessId, product.id, {
+          name: product.name,
+          sku: product.sku ?? undefined,
+          price: product.price,
+          quantityOnHand: next,
+          lowStockThreshold: product.lowStockThreshold,
+          isActive: product.isActive,
+        });
+      }
       await load();
+      await invalidateStock();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t("inventory.couldNotUpdateTheCount"));
     } finally {
@@ -117,7 +136,12 @@ export default function InventoryPage() {
     }
   };
 
-  const list = products ?? [];
+  // Quantities and the reorder flag come from the picked location's levels.
+  const levels = new Map((levelsQ.data ?? []).map((l) => [String(l.id), l]));
+  const list = (products ?? []).map((p) => {
+    const lv = levels.get(String(p.id));
+    return lv ? { ...p, quantityOnHand: lv.quantity_on_hand, lowStock: lv.low } : p;
+  });
   const lowStock = list.filter((p) => p.lowStock && p.isActive);
   const stockValue = list.reduce((n, p) => n + Number(p.price ?? 0) * (p.quantityOnHand ?? 0), 0);
   const units = list.reduce((n, p) => n + (p.quantityOnHand ?? 0), 0);
@@ -144,6 +168,9 @@ export default function InventoryPage() {
                 <Link to="suppliers">
                   <Truck size={16} />{" "}{t("inventory.suppliersAndOrders")}
                 </Link>
+              </Button>
+              <Button variant="outline" className={sheetSecondary} onClick={() => setManaging(true)}>
+                <MapPin size={16} />{" "}{t("inventory.manageLocations")}
               </Button>
               <Button className={primaryBtn} onClick={() => open()}>
                 <Plus size={16} />{" "}{t("inventory.addProduct")}
@@ -182,6 +209,7 @@ export default function InventoryPage() {
                   <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
                   <input aria-label={t("inventory.searchProducts")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("inventory.searchByNameOrSku")} value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
+                <LocationSelect locations={locations} value={locationId} onChange={setLocationId} />
                 <FilterChips<"all" | "low">
                   label={t("inventory.filterProducts")}
                   value={filter}
@@ -250,6 +278,7 @@ export default function InventoryPage() {
                             label={t("common.moreFor", { name: p.name })}
                             actions={[
                               { label: t("common.edit"), icon: Pencil, onSelect: () => open(p) },
+                              ...(locations.length > 1 ? [{ label: t("inventory.transfer"), icon: ArrowRightLeft, onSelect: () => setTransferring(p) }] : []),
                               { label: t("common.delete"), icon: Trash2, danger: true, onSelect: () => void remove(p) },
                             ]}
                           />
@@ -261,7 +290,18 @@ export default function InventoryPage() {
               )}
             </>
           )}
+          <RecentTransfers businessId={businessId} />
         </div>
+
+        <TransferSheet
+          key={String(transferring?.id ?? "none")}
+          businessId={businessId}
+          product={transferring}
+          from={location}
+          locations={locations}
+          onClose={() => setTransferring(null)}
+        />
+        <LocationsSheet businessId={businessId} open={managing} locations={locations} onClose={() => setManaging(false)} />
 
         <FormSheet
           open={!!sheet}
