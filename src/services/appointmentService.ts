@@ -303,6 +303,11 @@ export const appointmentService = {
       apiClient.put<Appointment>(`/bookings/${id}`, override ? { ...request, override } : request));
   },
 
+  /** Move a whole multi-service visit: every part is re-planned from the new start. 409 = the chain no longer fits. */
+  async rescheduleVisit(visitId: string, businessId: Id, appointmentDate: string, startTime: string): Promise<void> {
+    return apiClient.put<void>(`/bookings/visit/${visitId}/reschedule`, { businessId, appointmentDate, startTime });
+  },
+
   async deleteAppointment(id: string): Promise<void> {
     return apiClient.delete<void>(`/bookings/${id}`);
   },

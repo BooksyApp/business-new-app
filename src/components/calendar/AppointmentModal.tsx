@@ -13,6 +13,7 @@ import { PaymentLinkDialog } from "@/components/money/PaymentLinkDialog";
 import { useOnlinePayments } from "@/services/platformService";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, CreditCard, Edit, TriangleAlert, Undo2, UserX, XCircle } from "lucide-react";
@@ -165,6 +166,35 @@ export function AppointmentModal({
       toast.error(error instanceof Error ? error.message : tr("calendar.couldNotUpdateTheAppointment"));
     } finally {
       setLifecycleBusy(false);
+    }
+  };
+  // Move the whole visit (2+ live parts, not a package): one date + start time, server re-plans every part.
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [moveDate, setMoveDate] = useState("");
+  const [moveTime, setMoveTime] = useState("");
+  const [moveBusy, setMoveBusy] = useState(false);
+  const liveParts = (appointment?.visitMates || []).filter((m) => (m.status || "").toUpperCase() !== "CANCELLED");
+  const canMoveVisit = !!appointment?.visitId && !appointment.isPackage && liveParts.length > 1;
+  const openMove = () => {
+    const first = [...liveParts].sort((x, y) => x.startTime.localeCompare(y.startTime))[0];
+    setMoveDate(fullAppointment?.appointmentDate?.slice(0, 10) || "");
+    setMoveTime((first?.startTime || fullAppointment?.startTime || "").slice(0, 5));
+    setMoveOpen(true);
+  };
+  const submitMove = async () => {
+    if (!appointment?.visitId || !fullAppointment?.businessId || !moveDate || !moveTime) return;
+    setMoveBusy(true);
+    try {
+      await appointmentService.rescheduleVisit(appointment.visitId, fullAppointment.businessId, moveDate, moveTime);
+      toast.success(tr("calendar.visitMoved"));
+      setMoveOpen(false);
+      onCancelled?.();   // same refresh callback as cancel/confirm
+      onClose();
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || (e instanceof Error && e.message) || tr("calendar.couldNotMoveVisit"));
+    } finally {
+      setMoveBusy(false);
     }
   };
   const [cancelReason, setCancelReason] = useState("");
@@ -617,6 +647,24 @@ export function AppointmentModal({
                   ? tr("calendar.takePayment", { repServiceName, dueNow, value: currencySymbol() })
                   : tr("calendar.takePayment2", { dueNow, value: currencySymbol() })}
             </Button>
+          )}
+          {!settled && canMoveVisit && (
+            moveOpen ? (
+              <div className="space-y-2 rounded-xl border p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="date" value={moveDate} onChange={(e) => setMoveDate(e.target.value)} />
+                  <Input type="time" value={moveTime} onChange={(e) => setMoveTime(e.target.value)} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="h-10 rounded-full" disabled={moveBusy} onClick={() => setMoveOpen(false)}>{tr("common.cancel")}</Button>
+                  <Button className="h-10 rounded-full" disabled={moveBusy || !moveDate || !moveTime} onClick={() => void submitMove()}>{tr("calendar.moveVisit")}</Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="outline" className="h-11 w-full rounded-full text-sm font-semibold" onClick={openMove}>
+                {tr("calendar.moveVisit")}
+              </Button>
+            )
           )}
           {!settled && (
           <div className="grid grid-cols-3 gap-2">
