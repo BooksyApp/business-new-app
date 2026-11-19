@@ -83,6 +83,31 @@ export interface CreateSaleRequest {
   splitCardAmount?: number;
 }
 
+export interface SaleRefundSummary {
+  status: string;
+  total: number;
+  refunded: number;
+  refundable: number;
+  onlinePayment: boolean;
+  refunds: Array<{ amount: number; method: string; reason: string }>;
+}
+
+export interface SaleRefundRequest {
+  lines?: Array<{ saleItemId: Id; quantity: number }>;
+  amount?: number;
+  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD';
+  reason: string;
+  giftCardCode?: string;
+}
+
+export interface SaleRefundResult {
+  amount: number;
+  method: string;
+  saleStatus: string;
+  refunded: number;
+  refundable: number;
+}
+
 export const saleService = {
   async getSalesByBusiness(businessId: Id, date?: Date): Promise<Sale[]> {
     if (date) {
@@ -108,6 +133,16 @@ export const saleService = {
 
   async cancelSale(id: Id): Promise<void> {
     return apiClient.delete<void>(`/sales/${id}`);
+  },
+
+  /** FG-W6-08: what is left to refund on a sale, and its refunds so far. */
+  async getRefundSummary(id: Id): Promise<SaleRefundSummary> {
+    return apiClient.get<SaleRefundSummary>(`/sales/${id}/refunds`);
+  },
+
+  /** FG-W6-08: refund by lines (sale item id + quantity) or by amount. Owner or manager only. */
+  async refundSale(id: Id, body: SaleRefundRequest): Promise<SaleRefundResult> {
+    return apiClient.post<SaleRefundResult>(`/sales/${id}/refunds`, body);
   },
 };
 

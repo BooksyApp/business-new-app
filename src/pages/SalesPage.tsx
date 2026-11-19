@@ -19,6 +19,8 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { useStaff } from "@/hooks/useStaff";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SaleRefundDialog } from "@/components/sales/SaleRefundDialog";
+import { myAccess } from "@/components/layout/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -298,6 +300,10 @@ export default function SalesPage() {
   const [rangeTo, setRangeTo] = useState(() => format(salonNow(), "yyyy-MM-dd"));
   const [voiding, setVoiding] = useState(false);
   const [txReload, setTxReload] = useState(0);
+  // FG-W6-08: a refund is for the owner or a manager; the server checks it again.
+  const [refundSale, setRefundSale] = useState<Sale | null>(null);
+  const access = myAccess();
+  const canRefund = access.isOwner || access.roleName.toLowerCase() === "manager";
   const [staffFilter, setStaffFilter] = useState("All");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
@@ -1916,6 +1922,15 @@ export default function SalesPage() {
                     <Button variant="outline" className="h-[52px] flex-1 rounded-full border-[rgb(var(--reg-line))] text-base font-semibold" onClick={() => window.print()}>
                       {tr("sales.printReceipt")}
                     </Button>
+                    {selectedTransaction.status === "PAID" && canRefund && (
+                      <Button
+                        variant="outline"
+                        className="h-[52px] flex-1 rounded-full border-[rgb(var(--reg-line))] text-base font-semibold"
+                        onClick={() => setRefundSale(selectedTransaction.sale)}
+                      >
+                        {tr("sales.saleRefund.open")}
+                      </Button>
+                    )}
                     {selectedTransaction.status === "PAID" && (
                       <Button
                         variant="outline"
@@ -1993,6 +2008,19 @@ export default function SalesPage() {
             </FormSheet>
           </div>
         ) : null}
+        {refundSale && (
+          <SaleRefundDialog
+            open
+            onOpenChange={(o) => { if (!o) setRefundSale(null); }}
+            sale={refundSale}
+            onRefunded={() => {
+              setRefundSale(null);
+              setSelectedTransaction(null);
+              setTxReload((n) => n + 1);
+            }}
+          />
+        )}
+
         {/* Edit Quick Sale Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
