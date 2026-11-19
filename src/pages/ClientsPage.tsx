@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
+import { consentFormService, type ClientConsentSubmission } from "@/services/consentFormService";
 import { membershipService } from "@/services/membershipService";
 import { salonDayService, type ClientRecord, type NoteKind } from "@/services/salonDayService";
 import { useServices } from "@/hooks/useServices";
@@ -106,6 +107,7 @@ export default function ClientsPage() {
   const [profileTab, setProfileTab] = useState<"overview" | "bookings" | "notes" | "marketing">("overview");
   const [benefits, setBenefits] = useState<ClientBenefits | null>(null);
   const [record, setRecord] = useState<ClientRecord | null>(null);
+  const [consentSubs, setConsentSubs] = useState<ClientConsentSubmission[] | null>(null);
   const [noteForm, setNoteForm] = useState<{ kind: NoteKind; body: string }>({ kind: "NOTE", body: "" });
   const [noteBusy, setNoteBusy] = useState(false);
   const noteRef = useRef<HTMLTextAreaElement>(null);
@@ -496,7 +498,10 @@ export default function ClientsPage() {
   const loadProfileExtras = (clientId: Id) => {
     setBenefits(null);
     setRecord(null);
+    setConsentSubs(null);
     if (!businessId || !clientId) return;
+    // FG-W4-02: signed forms; the server hides sensitive answers the caller may not see.
+    consentFormService.forClient(clientId).then(setConsentSubs).catch(() => setConsentSubs([]));
     tillBenefitsService.get(businessId, clientId).then(setBenefits).catch(() => setBenefits(null));
     salonDayService.getClientRecord(businessId, clientId).then(setRecord).catch(() => setRecord({ notes: [], photos: [], visits: [] }));
   };
@@ -1492,6 +1497,25 @@ export default function ClientsPage() {
                               )}
                             </div>
                           )}
+                        </section>
+                      )}
+
+                      {Boolean(c?.id) && consentSubs !== null && consentSubs.length > 0 && (
+                        <section className="space-y-2">
+                          <p className={label}>{tr("clients.digitalForms")}</p>
+                          {consentSubs.map((sub) => (
+                            <div key={String(sub.id)} className={cn(box, "space-y-2 text-sm")}>
+                              <p className="font-semibold">
+                                {sub.formName} · {tr("clients.formSignedBy", { name: sub.signedName, date: new Date(sub.signedAt).toLocaleDateString() })}
+                              </p>
+                              {sub.answers.map((a) => (
+                                <p key={a.key} className="flex justify-between gap-3">
+                                  <span className="text-[rgb(var(--reg-muted))]">{a.label}</span>
+                                  <span className="text-right font-medium">{a.hidden ? tr("clients.formAnswerHidden") : (a.value || "—")}</span>
+                                </p>
+                              ))}
+                            </div>
+                          ))}
                         </section>
                       )}
 
