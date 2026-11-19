@@ -74,6 +74,11 @@ class MembershipService {
   members(businessId: Id): Promise<MembershipMember[]> {
     return apiClient.get<MembershipMember[]>(`/businesses/${businessId}/memberships/members`);
   }
+
+  /** FG-W4-08: freeze a member's plan for some days; the renewal moves by the same days. */
+  freeze(businessId: Id, id: Id, days: number): Promise<{ frozen: boolean; days: number }> {
+    return apiClient.post(`/businesses/${businessId}/memberships/members/${id}/freeze`, { days });
+  }
 }
 
 export const membershipService = new MembershipService();

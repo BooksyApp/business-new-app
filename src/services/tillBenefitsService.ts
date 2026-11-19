@@ -14,6 +14,7 @@ export interface ClientBenefits {
     included_sessions: number;
     sessions_remaining: number;
     renews_at: string;
+    frozen_until?: string | null;
     serviceIds: Id[];
   }>;
   packages: Array<{ id: Id; name: string; service_id: Id | null; sessions_remaining: number }>;

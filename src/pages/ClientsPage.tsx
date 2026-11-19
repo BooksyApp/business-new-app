@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { tillBenefitsService, type ClientBenefits } from "@/services/tillBenefitsService";
+import { membershipService } from "@/services/membershipService";
 import { salonDayService, type ClientRecord, type NoteKind } from "@/services/salonDayService";
 import { useServices } from "@/hooks/useServices";
 import { useStaff } from "@/hooks/useStaff";
@@ -115,6 +116,7 @@ export default function ClientsPage() {
   const [detailClient, setDetailClient] = useState<ClientWithStats | null>(null);
   const [patchTestDate, setPatchTestDate] = useState("");
   const [isVip, setIsVip] = useState(false);
+  const [freezeDays, setFreezeDays] = useState(7);
   // This salon's bookings with them, and nothing from anywhere else.
   const [clientVisits, setClientVisits] = useState<ClientAppointmentRow[] | null>(null);
   // #28: LoyaltyController has served points per client all along with no caller, so a
@@ -476,6 +478,17 @@ export default function ClientsPage() {
       localStorage.setItem("booqi.clients.density", d);
     } catch {
       /* per-browser convenience only */
+    }
+  };
+
+  const freezeMembership = async (membershipId: Id) => {
+    if (!businessId || !detailClient?.id) return;
+    try {
+      await membershipService.freeze(businessId, membershipId, freezeDays);
+      toast.success(tr("clients.membershipFrozen"));
+      loadProfileExtras(detailClient.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : tr("clients.membershipFreezeFailed"));
     }
   };
 
@@ -1433,12 +1446,34 @@ export default function ClientsPage() {
                                 </div>
                               )}
                               <p className="flex justify-between"><span>{tr("clients.points")}</span><span className="font-semibold tabular-nums">{benefits.points}</span></p>
-                              {benefits.memberships.map((m) => (
-                                <p key={m.id} className="flex justify-between gap-3">
-                                  <span className="truncate">{m.name}</span>
-                                  <span className="shrink-0 text-[rgb(var(--reg-muted))]">{tr("clients.leftOff", { sessions_remaining: m.sessions_remaining, discount_percent: m.discount_percent })}</span>
-                                </p>
-                              ))}
+                              {benefits.memberships.map((m) => {
+                                const frozen = !!m.frozen_until && new Date(m.frozen_until) > new Date();
+                                return (
+                                  <div key={m.id} className="space-y-1">
+                                    <p className="flex justify-between gap-3">
+                                      <span className="truncate">{m.name}</span>
+                                      <span className="shrink-0 text-[rgb(var(--reg-muted))]">{tr("clients.leftOff", { sessions_remaining: m.sessions_remaining, discount_percent: m.discount_percent })}</span>
+                                    </p>
+                                    {frozen ? (
+                                      <p className="text-xs text-[rgb(var(--reg-muted))]">{tr("clients.frozenUntil", { date: formatDate(m.frozen_until ?? null) })}</p>
+                                    ) : (
+                                      <div className="flex items-center justify-end gap-2">
+                                        <select
+                                          aria-label={tr("clients.freezeDays")}
+                                          className="h-8 rounded-lg border border-[rgb(var(--reg-line))] bg-transparent px-2 text-xs"
+                                          value={freezeDays}
+                                          onChange={(e) => setFreezeDays(Number(e.target.value))}
+                                        >
+                                          {[7, 14, 30].map((d) => (
+                                            <option key={d} value={d}>{tr("clients.freezeDaysOption", { days: d })}</option>
+                                          ))}
+                                        </select>
+                                        <Button variant="outline" size="sm" onClick={() => void freezeMembership(m.id)}>{tr("clients.freezeMembership")}</Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                               {benefits.packages.map((p) => (
                                 <p key={p.id} className="flex justify-between gap-3">
                                   <span className="truncate">{p.name}</span>

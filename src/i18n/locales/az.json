@@ -1114,6 +1114,12 @@
   "clients": {
     "patchTestDate": "Patch test tarixi",
     "patchTestSaveFailed": "Patch test tarixi yadda saxlanmadı",
+    "frozenUntil": "Dondurulub: {date} tarixinədək",
+    "freezeDays": "Dondurma müddəti",
+    "freezeDaysOption": "{days} gün",
+    "freezeMembership": "Dondur",
+    "membershipFrozen": "Üzvlük donduruldu",
+    "membershipFreezeFailed": "Üzvlük dondurulmadı",
     "vipClient": "VIP müştəri",
     "vipHint": "VIP müştəri salonun minimum xəbərdarlıq vaxtından əvvəl də rezerv edə bilir. Maksimum rezerv müddəti yenə tətbiq olunur.",
     "vipSaveFailed": "VIP ayarı yadda saxlanmadı",

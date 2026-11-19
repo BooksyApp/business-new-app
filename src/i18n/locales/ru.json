@@ -1114,6 +1114,12 @@
   "clients": {
     "patchTestDate": "Дата пробы на чувствительность",
     "patchTestSaveFailed": "Не удалось сохранить дату пробы",
+    "frozenUntil": "Заморожено до {date}",
+    "freezeDays": "Срок заморозки",
+    "freezeDaysOption": "{days} дн.",
+    "freezeMembership": "Заморозить",
+    "membershipFrozen": "Членство заморожено",
+    "membershipFreezeFailed": "Не удалось заморозить членство",
     "vipClient": "VIP-клиент",
     "vipHint": "VIP-клиент может записаться раньше минимального срока предупреждения салона. Максимальный срок записи действует по-прежнему.",
     "vipSaveFailed": "Не удалось сохранить настройку VIP",
