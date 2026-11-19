@@ -462,6 +462,9 @@ export const salonDayService = {
   },
   addExpense: (businessId: Id, body: Record<string, unknown>) =>
     apiClient.post<Expense>(`${base(businessId)}/expenses`, body),
+  /** HUB-V3: change an expense; fields left out keep their value. */
+  updateExpense: (businessId: Id, expenseId: Id, body: Record<string, unknown>) =>
+    apiClient.put<Expense>(`${base(businessId)}/expenses/${expenseId}`, body),
   deleteExpense: (businessId: Id, expenseId: Id) =>
     apiClient.delete<void>(`${base(businessId)}/expenses/${expenseId}`),
   getProfitAndLoss: (businessId: Id, from: string, to: string) =>

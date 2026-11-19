@@ -16,6 +16,10 @@ const CreateBusinessPage = lazy(() => import("./pages/CreateBusinessPage"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const SalesPage = lazy(() => import("./pages/SalesPage"));
 const MoneyPage = lazy(() => import("./pages/MoneyPage"));
+const PaymentsPage = lazy(() => import("./pages/PaymentsPage"));
+const InvoicesPage = lazy(() => import("./pages/InvoicesPage"));
+const TaxPage = lazy(() => import("./pages/TaxPage"));
+const ProfitPage = lazy(() => import("./pages/ProfitPage"));
 const PromotionPage = lazy(() => import("./pages/PromotionPage"));
 const BillingPage = lazy(() => import("./pages/BillingPage"));
 const ItemsCategoryPage = lazy(() => import("./pages/ItemsCategoryPage"));
@@ -280,7 +284,13 @@ const App = () => (
               <Route path="report-builder" element={<Suspense fallback={<PageLoader />}><ReportBuilderPage /></Suspense>} />
               <Route path="integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsPage /></Suspense>} />
               <Route path="api-docs" element={<Suspense fallback={<PageLoader />}><ApiDocsPage /></Suspense>} />
-              <Route path="money" element={<Suspense fallback={<PageLoader />}><MoneyPage /></Suspense>} />
+              <Route path="money" element={<Suspense fallback={<PageLoader />}><PaymentsPage /></Suspense>} />
+              <Route path="money/tips" element={<Suspense fallback={<PageLoader />}><MoneyPage key="tips" section="tips" /></Suspense>} />
+              <Route path="money/cash" element={<Suspense fallback={<PageLoader />}><MoneyPage key="cash" section="cash" /></Suspense>} />
+              <Route path="money/more" element={<Suspense fallback={<PageLoader />}><MoneyPage key="more" section="more" /></Suspense>} />
+              <Route path="money/invoices" element={<Suspense fallback={<PageLoader />}><InvoicesPage /></Suspense>} />
+              <Route path="money/tax" element={<Suspense fallback={<PageLoader />}><TaxPage /></Suspense>} />
+              <Route path="money/profit" element={<Suspense fallback={<PageLoader />}><ProfitPage /></Suspense>} />
               <Route path="payroll" element={<Suspense fallback={<PageLoader />}><PayrollPage /></Suspense>} />
               <Route path="timesheet" element={<Suspense fallback={<PageLoader />}><TimesheetPage /></Suspense>} />
               <Route path="my-day" element={<Suspense fallback={<PageLoader />}><MyDayPage /></Suspense>} />

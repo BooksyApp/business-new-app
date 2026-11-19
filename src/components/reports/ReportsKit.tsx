@@ -9,14 +9,14 @@ import "./reports.css";
 
 const loc = () => getLocale();
 
-export function PeriodPicker({ value, onChange }: { value: RangeKey; onChange: (r: RangeKey) => void }) {
+export function PeriodPicker({ value, onChange, ranges = RANGES }: { value: RangeKey; onChange: (r: RangeKey) => void; ranges?: readonly RangeKey[] }) {
   return (
     <div
       role="radiogroup"
       aria-label={t("reports.period")}
       className="flex max-w-[calc(100vw-2rem)] gap-1 overflow-x-auto rounded-full bg-white p-1 ring-1 ring-[rgb(var(--reg-line)/0.8)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {RANGES.map((r) => {
+      {ranges.map((r) => {
         const on = r === value;
         return (
           <button

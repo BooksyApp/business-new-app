@@ -10,12 +10,16 @@ import { getLocale } from "@/i18n";
 /* ── period ─────────────────────────────────────────────────────────────── */
 
 export const RANGES = ["7d", "30d", "90d", "mtd", "lastMonth", "12m"] as const;
-export type RangeKey = (typeof RANGES)[number];
+/** Every period a page may offer (Payments also has "today"). */
+export const ALL_RANGES = ["today", ...RANGES] as const;
+export type RangeKey = (typeof ALL_RANGES)[number];
 
 const iso = (d: Date) => isoFormat(d, "yyyy-MM-dd");
 
 export function rangeDates(r: RangeKey, today = new Date()): { start: string; end: string } {
   switch (r) {
+    case "today":
+      return { start: iso(today), end: iso(today) };
     case "7d":
       return { start: iso(subDays(today, 6)), end: iso(today) };
     case "90d":
@@ -34,22 +38,22 @@ export function rangeDates(r: RangeKey, today = new Date()): { start: string; en
 }
 
 /** The period lives in the address (?range=90d), so a drill-down and a shared link keep it. */
-export function useReportPeriod() {
+export function useReportPeriod(fallback: RangeKey = "30d") {
   const [params, setParams] = useSearchParams();
   const raw = params.get("range");
-  const range: RangeKey = (RANGES as readonly string[]).includes(raw ?? "") ? (raw as RangeKey) : "30d";
+  const range: RangeKey = (ALL_RANGES as readonly string[]).includes(raw ?? "") ? (raw as RangeKey) : fallback;
   const { start, end } = useMemo(() => rangeDates(range), [range]);
   const setRange = (r: RangeKey) =>
     setParams(
       (p) => {
         const n = new URLSearchParams(p);
-        if (r === "30d") n.delete("range");
+        if (r === fallback) n.delete("range");
         else n.set("range", r);
         return n;
       },
       { replace: true },
     );
-  return { range, setRange, start, end, query: range === "30d" ? "" : `?range=${range}` };
+  return { range, setRange, start, end, query: range === fallback ? "" : `?range=${range}` };
 }
 
 /* ── numbers ────────────────────────────────────────────────────────────── */
@@ -62,7 +66,7 @@ export const fmtPct = (n: number) => `${formatNumber(loc(), n || 0, { maximumFra
 export const fmtDay = (d: string, opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }) =>
   formatDate(loc(), `${d}T12:00:00`, opts);
 export const fmtPeriod = (p: { start: string; end: string }) =>
-  `${fmtDay(p.start)} – ${fmtDay(p.end, { day: "numeric", month: "short", year: "numeric" })}`;
+  `${fmtDay(p.start, p.start.slice(0, 4) === p.end.slice(0, 4) ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" })} – ${fmtDay(p.end, { day: "numeric", month: "short", year: "numeric" })}`;
 
 export type Unit = "money" | "int" | "pct";
 export const fmtBy = (u: Unit, n: number) => (u === "money" ? fmtMoney(n) : u === "pct" ? fmtPct(n) : fmtInt(n));

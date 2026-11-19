@@ -49,6 +49,7 @@ export default function ExpensesPage() {
   const [pl, setPl] = useState<ProfitAndLoss | null>(null);
   const [prev, setPrev] = useState<ProfitAndLoss | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Expense | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ category: "RENT" as ExpenseCategory, amount: "", spentOn: "", description: "", recurs: false });
 
@@ -79,15 +80,18 @@ export default function ExpensesPage() {
     if (!businessId || !(amount > 0)) return toast.error(t("expenses.amountRequired"));
     setBusy(true);
     try {
-      await salonDayService.addExpense(businessId, {
+      const body = {
         category: form.category,
         amount,
         spentOn: form.spentOn || monthRange(month).from,
-        description: form.description.trim() || undefined,
+        description: form.description.trim() || (editing ? null : undefined),
         recursMonthly: form.recurs,
-      });
-      toast.success(t("expenses.added"));
+      };
+      if (editing) await salonDayService.updateExpense(businessId, editing.id, body);
+      else await salonDayService.addExpense(businessId, body);
+      toast.success(editing ? t("expenses.saved") : t("expenses.added"));
       setAdding(false);
+      setEditing(null);
       setForm({ ...form, amount: "", description: "", recurs: false });
       await load();
     } catch (e) {
@@ -107,6 +111,17 @@ export default function ExpensesPage() {
     }
   };
 
+  const edit = (e: Expense) => {
+    setEditing(e);
+    setForm({ category: e.category, amount: String(e.amount ?? ""), spentOn: String(e.spent_on ?? "").slice(0, 10), description: e.description ?? "", recurs: Boolean(e.recurs_monthly) });
+    setAdding(true);
+  };
+  const startAdd = () => {
+    setEditing(null);
+    setForm({ category: "RENT", amount: "", spentOn: "", description: "", recurs: false });
+    setAdding(true);
+  };
+
   const cat = (c: ExpenseCategory) => t(`expenses.cat.${c}`);
   const n = (v: number | undefined) => Number(v || 0);
 
@@ -117,7 +132,7 @@ export default function ExpensesPage() {
           title={t("expenses.title")}
           subtitle={t("expenses.subtitle")}
           actions={
-            <Button className={primaryBtn} onClick={() => setAdding(true)}>
+            <Button className={primaryBtn} onClick={startAdd}>
               <Plus size={16} />{" "}{t("expenses.add")}
             </Button>
           }
@@ -159,7 +174,9 @@ export default function ExpensesPage() {
                   {list.map((e) => (
                     <tr key={e.id} className="border-t border-[rgb(var(--reg-line)/0.6)] first:border-0">
                       <td className="px-4 py-2">{e.spent_on}</td>
-                      <td className="px-4 py-2 font-semibold">{cat(e.category)}</td>
+                      <td className="px-4 py-2 font-semibold">
+                        <button type="button" onClick={() => edit(e)} className="rounded text-left underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]">{cat(e.category)}</button>
+                      </td>
                       <td className="px-4 py-2 text-[rgb(var(--reg-muted))]">{e.description ?? ""}{e.recurs_monthly ? ` · ${t("expenses.monthly")}` : ""}</td>
                       <td className="px-4 py-2 text-right font-semibold">{money(n(e.amount), sym)}</td>
                       <td className="px-4 py-2 text-right">
@@ -177,8 +194,8 @@ export default function ExpensesPage() {
 
         <FormSheet
           open={adding}
-          onOpenChange={setAdding}
-          title={t("expenses.add")}
+          onOpenChange={(o) => { setAdding(o); if (!o) setEditing(null); }}
+          title={editing ? t("expenses.edit") : t("expenses.add")}
           footer={
             <>
               <Button className={sheetSecondary} variant="outline" onClick={() => setAdding(false)}>{t("common.cancel")}</Button>

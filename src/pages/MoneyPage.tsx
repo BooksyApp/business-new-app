@@ -36,60 +36,53 @@ import { useOnlinePayments } from "@/services/platformService";
 import { t } from "@/i18n";
 
 /**
- * Everything a salon does with money once the customer has paid.
- *
- * Six things lived nowhere: what the platform owes and when it lands, whose tips are
- * whose, whether the drawer balances, an invoice a business customer can expense, the
- * VAT rate, and which no-show deposits were kept. They are one screen because they are
- * one job — the owner sits down on a Sunday and does all six.
+ * The money pages that are not the ledger (HUB-V3, 2026-11-19): each is its own page now,
+ * opened from the "Payments & accounts" card page, not a tab of one long screen.
+ *   tips  — whose tips are whose, and paying them out
+ *   cash  — the cash drawer: open, cash in/out, count and close, the history of closes
+ *   more  — payouts and kept deposits (online payments only) and the tax & bank settings
  */
-export default function MoneyPage() {
+export default function MoneyPage({ section = "more" }: { section?: "tips" | "cash" | "more" }) {
   const businessId = getCurrentBusinessId();
   // v1 is pay-at-the-salon: payouts, platform fee and kept deposits only exist when the
   // platform has online payments on (the flag the web reads). Off = hidden, not zeroed.
   const onlinePayments = useOnlinePayments();
+  const head =
+    section === "tips"
+      ? { title: t("money.tips"), sub: t("ledger.tipsHint") }
+      : section === "cash"
+        ? { title: t("money.cashDrawer"), sub: t("ledger.cashHint") }
+        : { title: t("ledger.moreTitle"), sub: onlinePayments ? t("ledger.moreHintOnline") : t("ledger.moreHint") };
 
   return (
     <AppLayout>
       <BooqiScope>
-      <PageHeader
-        title={t("common.money")}
-        subtitle={onlinePayments ? t("money.payoutsTipsTheDrawerInvoices") : t("money.tipsTheDrawerInvoices")}
-      />
+      <PageHeader title={head.title} subtitle={head.sub} />
       <div className={pageBody}>
-        <Tabs key={onlinePayments ? "online" : "salon"} defaultValue={onlinePayments ? "payouts" : "tips"} className="w-full">
-          <TabsList className="mb-6 flex w-full flex-wrap justify-start gap-1">
+        {section === "tips" ? (
+          <TipsTab businessId={businessId} />
+        ) : section === "cash" ? (
+          <DrawerTab businessId={businessId} />
+        ) : (
+          <Tabs key={onlinePayments ? "online" : "salon"} defaultValue={onlinePayments ? "payouts" : "settings"} className="w-full">
             {onlinePayments && (
-              <TabsTrigger value="payouts" className="gap-2">
-                <Landmark className="h-4 w-4" />{" "}{t("money.payouts")}
-              </TabsTrigger>
+              <TabsList className="mb-6 flex w-full flex-wrap justify-start gap-1">
+                <TabsTrigger value="payouts" className="gap-2">
+                  <Landmark className="h-4 w-4" />{" "}{t("money.payouts")}
+                </TabsTrigger>
+                <TabsTrigger value="deposits" className="gap-2">
+                  <ShieldMinus className="h-4 w-4" />{" "}{t("money.depositsKept")}
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="gap-2">
+                  <Receipt className="h-4 w-4" />{" "}{t("money.taxBank")}
+                </TabsTrigger>
+              </TabsList>
             )}
-            <TabsTrigger value="tips" className="gap-2">
-              <HandCoins className="h-4 w-4" />{" "}{t("money.tips")}
-            </TabsTrigger>
-            <TabsTrigger value="drawer" className="gap-2">
-              <Coins className="h-4 w-4" />{" "}{t("money.cashDrawer")}
-            </TabsTrigger>
-            <TabsTrigger value="invoices" className="gap-2">
-              <FileText className="h-4 w-4" />{" "}{t("money.invoices")}
-            </TabsTrigger>
-            {onlinePayments && (
-              <TabsTrigger value="deposits" className="gap-2">
-                <ShieldMinus className="h-4 w-4" />{" "}{t("money.depositsKept")}
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="settings" className="gap-2">
-              <Receipt className="h-4 w-4" />{" "}{t("money.taxBank")}
-            </TabsTrigger>
-          </TabsList>
-
-          {onlinePayments && <TabsContent value="payouts"><PayoutsTab businessId={businessId} /></TabsContent>}
-          <TabsContent value="tips"><TipsTab businessId={businessId} /></TabsContent>
-          <TabsContent value="drawer"><DrawerTab businessId={businessId} /></TabsContent>
-          <TabsContent value="invoices"><InvoicesTab businessId={businessId} /></TabsContent>
-          {onlinePayments && <TabsContent value="deposits"><DepositsTab businessId={businessId} /></TabsContent>}
-          <TabsContent value="settings"><SettingsTab businessId={businessId} /></TabsContent>
-        </Tabs>
+            {onlinePayments && <TabsContent value="payouts"><PayoutsTab businessId={businessId} /></TabsContent>}
+            {onlinePayments && <TabsContent value="deposits"><DepositsTab businessId={businessId} /></TabsContent>}
+            <TabsContent value="settings"><SettingsTab businessId={businessId} /></TabsContent>
+          </Tabs>
+        )}
       </div>
     </BooqiScope>
     </AppLayout>
