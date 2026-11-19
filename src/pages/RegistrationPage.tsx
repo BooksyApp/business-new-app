@@ -102,7 +102,8 @@ const RegistrationPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   // The back office can close business signups. Nothing read that setting, so the switch
   // did nothing; this is the panel half of it.
-  const [signupsOpen, setSignupsOpen] = useState(true);
+  // null = not known yet; never assume open, or the form shows and then refuses on submit.
+  const [signupsOpen, setSignupsOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     getPlatformSettings().then((settings) => setSignupsOpen(settings.businessSignupsOpen));
@@ -623,6 +624,18 @@ const RegistrationPage = () => {
       setIsRegistering(false);
     }
   };
+
+  if (signupsOpen === null) {
+    return (
+      <AuthShell>
+        <div aria-busy="true" className="animate-pulse space-y-4">
+          <div className="h-9 w-3/4 rounded-xl bg-[rgb(var(--reg-ink)/0.06)]" />
+          <div className="h-5 w-full rounded-lg bg-[rgb(var(--reg-ink)/0.06)]" />
+          <div className="h-12 w-full rounded-full bg-[rgb(var(--reg-ink)/0.06)]" />
+        </div>
+      </AuthShell>
+    );
+  }
 
   if (!signupsOpen) {
     return (
