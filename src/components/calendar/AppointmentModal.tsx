@@ -186,6 +186,9 @@ export function AppointmentModal({
     }
   }, [isOpen, appointment?.apiId]);
 
+  // Hooks stay above the early return (rules-of-hooks).
+  const onlinePayments = useOnlinePayments();   // FG-W6-04: the link only exists when Stripe is on
+  const [linkOpen, setLinkOpen] = useState(false);
   if (!appointment) return null;
 
   // Use full appointment data if available, otherwise fallback to appointment prop
@@ -216,8 +219,6 @@ export function AppointmentModal({
   const paymentStatus = appointmentData.paymentStatus || "PENDING";
   const appointmentDate = appointmentData.appointmentDate || (appointment.date ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
   // LR-09: compared with the salon's today (market zone until the salon's is known).
-  const onlinePayments = useOnlinePayments();   // FG-W6-04: the link only exists when Stripe is on
-  const [linkOpen, setLinkOpen] = useState(false);
   const isFutureVisit = appointmentDate > format(salonNow(salonTz), 'yyyy-MM-dd');
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
   const repServiceName = appointmentData.serviceName || appointment.service;
