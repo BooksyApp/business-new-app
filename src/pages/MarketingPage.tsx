@@ -43,6 +43,7 @@ import { promoService, type PromoCode } from "@/services/promoService";
 import { useFeatureFlags } from "@/services/platformService";
 import { clientTagService, type ClientTag } from "@/services/clientTagService";
 import { campaignService, type Campaign, type CampaignResults, type AudiencePreview } from "@/services/campaignService";
+import { channelMessagingService, type SmsEstimate } from "@/services/channelMessagingService";
 import { t as tr, fmtDate as formatLocaleDate, getLocale } from "@/i18n";
 import { AutomationCard } from "@/components/page/AutomationCard";
 import { LoyaltyTiersCard } from "@/components/page/LoyaltyTiersCard";
@@ -118,6 +119,7 @@ export default function MarketingPage() {
   }, [businessId, campaigns]);
   const [campaignForm, setCampaignForm] = useState(EMPTY_CAMPAIGN);
   const [audience, setAudience] = useState<AudiencePreview | null>(null);
+  const [smsEstimate, setSmsEstimate] = useState<SmsEstimate | null>(null);
   const [clientTags, setClientTags] = useState<ClientTag[]>([]);
   const segmentLabel = (seg: string) =>
     seg.startsWith("TAG:")
@@ -152,6 +154,16 @@ export default function MarketingPage() {
       .then(setAudience)
       .catch(() => setAudience(null));
   }, [businessId, campaignForm.segment, campaignForm.channel, campaignSheetOpen]);
+
+  // SMS length and cost: segments (GSM-7 vs Unicode), recipients who can be reached, and the balance after.
+  const smsReachable = audience?.reachable ?? 0;
+  useEffect(() => {
+    if (!businessId || !campaignSheetOpen || campaignForm.channel !== "SMS") { setSmsEstimate(null); return; }
+    const timer = setTimeout(() => {
+      channelMessagingService.estimate(businessId, campaignForm.body, smsReachable).then(setSmsEstimate).catch(() => setSmsEstimate(null));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [businessId, campaignSheetOpen, campaignForm.channel, campaignForm.body, smsReachable]);
 
   /* ── promo codes ── */
 
@@ -581,12 +593,23 @@ export default function MarketingPage() {
           <Field
             label={tr("marketing.message")}
             htmlFor="cmp-body"
-            hint={campaignForm.channel === "SMS" ? tr("marketing.charactersSms", { count: campaignForm.body.length, value: Math.max(1, Math.ceil(campaignForm.body.length / 160)) }) : undefined}
+            hint={campaignForm.channel === "SMS" ? tr("marketing.charactersSms", { count: campaignForm.body.length, value: smsEstimate?.segmentsOfText ?? Math.max(1, Math.ceil(campaignForm.body.length / 160)) }) : undefined}
           >
             <Textarea id="cmp-body" rows={5} className="rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
               value={campaignForm.body} placeholder={tr("marketing.yourChairIsWaitingBook")}
               onChange={(e) => setCampaignForm((f) => ({ ...f, body: e.target.value }))} />
           </Field>
+          {campaignForm.channel === "SMS" && smsEstimate && (
+            <div className="space-y-1 rounded-2xl bg-[rgb(var(--reg-brand-soft)/0.5)] px-4 py-3 text-sm" aria-live="polite">
+              <p className="font-semibold">{tr("channels.estimateLine", { characters: smsEstimate.characters, segments: smsEstimate.segmentsPerMessage, encoding: smsEstimate.fullEncoding === "UCS2" ? "Unicode" : "GSM-7" })}</p>
+              <p>{tr("channels.estimateTotal", { recipients: smsEstimate.recipients, segments: smsEstimate.segmentsPerMessage, total: smsEstimate.totalSegments })}</p>
+              <p className={smsEstimate.enough ? "" : "font-bold text-red-700"}>{tr("channels.estimateBalance", { balance: smsEstimate.balance, after: smsEstimate.balanceAfter })}</p>
+              {smsEstimate.estimatedCost != null && <p>{tr("channels.estimateCost", { cost: smsEstimate.estimatedCost.toFixed(2), currency: smsEstimate.currency ?? "" })}</p>}
+              {!smsEstimate.enough && <p className="font-bold text-red-700">{tr("channels.estimateShort")}</p>}
+              {smsEstimate.fullEncoding === "UCS2" && <p className="text-xs text-[rgb(var(--reg-muted))]">{tr("channels.ucs2Warn")}</p>}
+              <p className="text-xs text-[rgb(var(--reg-muted))]">{tr("channels.stopNote")}</p>
+            </div>
+          )}
         </FormSheet>
 
         {/* ── new promo code ── */}

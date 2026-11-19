@@ -24,6 +24,12 @@ export interface NotificationSettings {
   /** Whether this deployment has a provider behind the channel at all. */
   smsAvailable: boolean;
   pushAvailable: boolean;
+  /** WhatsApp reminders (a salon must turn them on) and the order channels are tried in, comma separated. */
+  whatsappEnabled?: boolean;
+  channelOrder?: string;
+  aiReceptionistEnabled?: boolean;
+  whatsappAvailable?: boolean;
+  aiReceptionistAvailable?: boolean;
 }
 
 /** FG-W3-11: one salon paragraph per booking email kind and language; "" means none. */

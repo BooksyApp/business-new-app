@@ -16,6 +16,7 @@ import {
 import { getCurrentBusinessId } from "@/config/api";
 import { BackToSettings, SaveBar } from "@/components/page/SettingsChrome";
 import { NotificationTextsCard } from "@/components/page/NotificationTextsCard";
+import { ChannelsCard } from "@/components/page/ChannelsCard";
 import { t } from "@/i18n";
 
 const EMAIL_ROWS: Array<{ key: keyof NotificationSettings; label: string; hint: string }> = [
@@ -151,6 +152,8 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
                     ), "n-push")}
                   </>
                 ))}
+
+                {showSms && businessId && <ChannelsCard businessId={businessId} settings={settings} set={set} />}
               </div>
 
               {showEmail && <aside className="min-w-0 lg:sticky lg:top-[132px] lg:self-start">
