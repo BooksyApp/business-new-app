@@ -1,4 +1,20 @@
 {
+  "cmp": {
+    "compareSalons": "Salonları müqayisə et",
+    "compareHint": "Salonlarınız bir dövr üzrə yan-yana. Cəm işarələdiyiniz salonları əhatə edir.",
+    "from": "Başlanğıc",
+    "to": "Son",
+    "salon": "Salon",
+    "revenue": "Gəlir",
+    "bookings": "Rezervlər",
+    "cancellations": "Ləğvlər",
+    "noShows": "Gəlməyənlər",
+    "newClients": "Yeni müştərilər",
+    "averageTicket": "Orta çek",
+    "totalOfTicked": "İşarələnmiş salonların cəmi",
+    "noSalons": "Bu hesabda hələ salon yoxdur.",
+    "couldNotLoad": "Salon müqayisəsini yükləmək alınmadı. Bağlantını yoxlayıb yeniləyin."
+  },
   "consentForms": {
     "title": "Rəqəmsal formalar",
     "subtitle": "Rezervasiyadan sonra müştərinin imzaladığı razılıq və qəbul formaları.",

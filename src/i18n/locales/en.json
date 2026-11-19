@@ -1,4 +1,20 @@
 {
+  "cmp": {
+    "compareSalons": "Compare salons",
+    "compareHint": "Your salons side by side for one period. Totals cover the salons you tick.",
+    "from": "From",
+    "to": "To",
+    "salon": "Salon",
+    "revenue": "Revenue",
+    "bookings": "Bookings",
+    "cancellations": "Cancellations",
+    "noShows": "No-shows",
+    "newClients": "New clients",
+    "averageTicket": "Average ticket",
+    "totalOfTicked": "Total of ticked salons",
+    "noSalons": "No salons on this account yet.",
+    "couldNotLoad": "Could not load the salon comparison. Check the connection and refresh."
+  },
   "consentForms": {
     "title": "Digital forms",
     "subtitle": "Consent and intake forms clients sign after booking.",

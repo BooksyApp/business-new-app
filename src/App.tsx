@@ -48,6 +48,7 @@ const LoyaltyPage = lazy(() => import("./pages/MembershipsPage"));
 const SectionPage = lazy(() => import("./pages/SectionPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const LocationsPage = lazy(() => import("./pages/LocationsPage"));
+const BranchComparisonPage = lazy(() => import("./pages/BranchComparisonPage"));
 const BookingRulesPage = lazy(() => import("./pages/BookingRulesPage"));
 const ConsentFormsPage = lazy(() => import("./pages/ConsentFormsPage"));
 const SecurityPage = lazy(() => import("./pages/SecurityPage"));
@@ -278,6 +279,7 @@ const App = () => (
               <Route path="business-hours" element={<Suspense fallback={<PageLoader />}><BusinessHoursPage /></Suspense>} />
               <Route path="setup" element={<Suspense fallback={<PageLoader />}><SetupPage /></Suspense>} />
               <Route path="locations" element={<Suspense fallback={<PageLoader />}><LocationsPage /></Suspense>} />
+              <Route path="branch-comparison" element={<Suspense fallback={<PageLoader />}><BranchComparisonPage /></Suspense>} />
               <Route path="booking-rules" element={<Suspense fallback={<PageLoader />}><BookingRulesPage /></Suspense>} />
               {/* One Setup row, one page: each shows only its own section. */}
               <Route path="setup/online-booking" element={<Suspense fallback={<PageLoader />}><BookingRulesPage key="online" section="online" /></Suspense>} />
