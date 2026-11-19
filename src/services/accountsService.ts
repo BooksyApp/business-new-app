@@ -16,7 +16,7 @@ export interface ProfitMonth {
 
 export interface ProfitByMonth {
   months: ProfitMonth[];
-  totals: { revenue: Num; refunds: Num; expenses: Num; wages: Num; commission: Num; profit: Num };
+  totals: { renterRevenue?: Num; revenue: Num; refunds: Num; expenses: Num; wages: Num; commission: Num; profit: Num };
   byCategory: { category: string; amount: Num; entries: Num }[];
   /** False until salon billing (commission statements) is live. */
   commissionTracked: boolean;

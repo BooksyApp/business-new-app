@@ -168,6 +168,7 @@ function Totals({ d }: { d: Ledger }) {
         {tile(t("ledger.refunds"), fmtMoney(t0.refunds))}
         {tile(t("ledger.owedTotal"), fmtMoney(t0.owed), t("ledger.owedHint"), t0.owed > 0)}
         {tile(t("ledger.tips"), fmtMoney(t0.tips))}
+        {(t0.renterRevenue ?? 0) > 0 && tile(t("ledger.renterRevenue"), fmtMoney(t0.renterRevenue ?? 0), t("ledger.renterRevenueHint"))}
       </div>
       <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
         <p className="mb-3 text-[13px] font-semibold text-[rgb(var(--reg-muted))]">{t("ledger.byMethod")}</p>

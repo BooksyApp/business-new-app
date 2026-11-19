@@ -40,6 +40,8 @@ export interface Dashboard {
   period: { start: string; end: string };
   previousPeriod: { start: string; end: string };
   kpis: Record<KpiKey, KpiPair>;
+  /** Chair renters' takings in the period: not in any figure above (FG-W5-02). */
+  renterRevenue?: number;
   sources: { source: SourceKey; bookings: number }[];
   previousSources: { source: SourceKey; bookings: number }[];
   revenueTrend: { date: string; revenue: number; previous: number | null }[];

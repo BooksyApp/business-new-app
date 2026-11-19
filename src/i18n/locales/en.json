@@ -4842,6 +4842,8 @@
     "profitHint": "Revenue, refunds, expenses, wages and booqi's commission, month by month",
     "lastMonths": "{count} months",
     "revenueNet": "Revenue after refunds",
+    "renterRevenue": "Renter revenue",
+    "renterRevenueHint": "What chair renters took. Not part of the salon's revenue.",
     "costs": "Expenses & wages",
     "commission": "booqi commission",
     "profit": "Profit",

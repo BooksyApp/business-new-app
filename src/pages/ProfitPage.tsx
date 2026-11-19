@@ -75,6 +75,11 @@ export default function ProfitPage() {
                 {tile(t("ledger.commission"), n(d.totals.commission))}
                 {tile(t("ledger.profit"), n(d.totals.profit), true)}
               </div>
+              {n(d.totals.renterRevenue) > 0 && (
+                <p className="text-sm text-[rgb(var(--reg-muted))]">
+                  <span className="font-semibold text-[rgb(var(--reg-ink))]">{t("ledger.renterRevenue")}: {fmtMoney(n(d.totals.renterRevenue))}</span>{" · "}{t("ledger.renterRevenueHint")}
+                </p>
+              )}
 
               <Panel title={t("ledger.profitByMonth")} hint={t("ledger.profitByMonthHint")}>
                 <div style={{ height: 260 }} role="img" aria-label={t("ledger.profitByMonth")}>

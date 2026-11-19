@@ -4842,6 +4842,8 @@
     "profitHint": "Gəlir, geri qaytarmalar, xərclər, maaşlar və booqi komissiyası ay-ay",
     "lastMonths": "{count} ay",
     "revenueNet": "Gəlir (qaytarmalarsız)",
+    "renterRevenue": "İcarəçi gəliri",
+    "renterRevenueHint": "İcarəçi ustaların qazancı. Salonun gəlirinə daxil deyil.",
     "costs": "Xərclər və maaşlar",
     "commission": "booqi komissiyası",
     "profit": "Mənfəət",

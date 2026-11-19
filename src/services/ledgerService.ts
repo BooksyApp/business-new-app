@@ -32,7 +32,7 @@ export interface LedgerRow {
 
 export interface Ledger {
   period: { start: string; end: string };
-  totals: { takings: number; refunds: number; net: number; owed: number; tips: number; count: number; byMethod: Record<string, number> };
+  totals: { renterRevenue?: number; takings: number; refunds: number; net: number; owed: number; tips: number; count: number; byMethod: Record<string, number> };
   days: { date: string; takings: number; refunds: number; net: number; count: number }[];
   rows: LedgerRow[];
   truncated: boolean;

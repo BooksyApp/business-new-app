@@ -82,6 +82,11 @@ function DashboardBody({ d, to }: { d: Dashboard; to: (m: string) => string }) {
 
   return (
     <>
+      {(d.renterRevenue ?? 0) > 0 && (
+        <p className="mb-3 text-sm text-[rgb(var(--reg-muted))]">
+          <span className="font-semibold text-[rgb(var(--reg-ink))]">{t("ledger.renterRevenue")}: {fmtMoney(d.renterRevenue ?? 0)}</span>{" · "}{t("ledger.renterRevenueHint")}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         <KpiTile to={to("revenue")} label={t("reports.m.revenue")} value={k.revenue.value} previous={k.revenue.previous} unit="money" />
         <KpiTile to={to("bookings")} label={t("reports.m.bookings")} value={k.bookings.value} previous={k.bookings.previous} unit="int" />
