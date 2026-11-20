@@ -2048,11 +2048,22 @@ export default function StaffPage() {
                       ruleData.staffId = null; // Explicitly set to null for "all staff"
                     }
                     
+                    if (commissionRuleForm.type === CommissionType.PERCENTAGE && commissionRuleForm.value > 100) {
+                      toast.error(tr("staff.failedToSaveCommissionRule"));
+                      return;
+                    }
+
                     if (editingCommissionRule) {
-                      await updateCommissionRule(editingCommissionRule.id!, ruleData);
+                      if (!(await updateCommissionRule(editingCommissionRule.id!, ruleData))) {
+                        toast.error(tr("staff.failedToSaveCommissionRule"));
+                        return;
+                      }
                       toast.success(tr("staff.commissionRuleUpdatedSuccessfully"));
                     } else {
-                      await createCommissionRule(ruleData);
+                      if (!(await createCommissionRule(ruleData))) {
+                        toast.error(tr("staff.failedToSaveCommissionRule"));
+                        return;
+                      }
                       toast.success(commissionRuleForm.staffId 
                         ? tr("staff.staffSpecificCommissionRuleCreated") 
                         : tr("staff.commissionRuleCreatedSuccessfully"));
