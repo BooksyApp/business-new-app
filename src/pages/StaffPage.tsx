@@ -48,6 +48,7 @@ import { staffService } from "@/services/staffService";
 import { t as tr, fmtDate as formatLocaleDate, formatMinutes } from "@/i18n";
 
 import { roleName, roleDescription } from "@/lib/roleLabel";
+import { hasPermission, myAccess } from "@/components/layout/navigation";
 // Helper function to format duration
 const formatDuration = (minutes?: number): string => {
   if (!minutes) return tr("common.nA");
@@ -198,6 +199,8 @@ export default function StaffPage() {
   /** A shift row overrides the staff member's default weekly hours for that date. */
   useEffect(() => {
     if (!businessId) return;
+    // Invitations are a MARKETING-permission endpoint on the server; avoid a 403 for other roles.
+    if (!hasPermission(myAccess(), "MARKETING")) return;
     invitationService
       .getInvitationsByBusiness(businessId)
       .then((data) => setInvitations(data || []))

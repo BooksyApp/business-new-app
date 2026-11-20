@@ -244,6 +244,8 @@ export default function ClientsPage() {
   };
 
   const loadInvitations = async () => {
+    // The server lists invitations for MARKETING only; skip the call (a 403 for plain staff).
+    if (!hasPermission(myAccess(), "MARKETING")) { setInvitations([]); return; }
     try {
       const data = await invitationService.getInvitationsByBusiness(businessId);
       setInvitations(data || []);
