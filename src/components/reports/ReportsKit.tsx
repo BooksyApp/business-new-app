@@ -256,7 +256,7 @@ export function Heatmap({ cells }: { cells: { dow: number; hour: number; booking
   const at = (d: number, h: number) => cells.find((c) => c.dow === d && c.hour === h)?.bookings ?? 0;
   const dayName = (d: number) => formatDate(loc(), new Date(2024, 0, d), { weekday: "short" }); // 2024-01-01 is a Monday
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[520px] border-separate border-spacing-[3px] text-[11.5px]">
         <caption className="sr-only">{t("reports.heatmapCaption")}</caption>
         <thead>
