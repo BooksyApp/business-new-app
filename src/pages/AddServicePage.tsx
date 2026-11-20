@@ -39,7 +39,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useStaff } from "@/hooks/useStaff";
 import { useNavigation } from "@/utils/navigationUtils";
 import { toast } from "sonner";
-import { t as tr, formatMinutes } from "@/i18n";
+import { t as tr, formatMinutes, getLocale } from "@/i18n";
 import { useOnlinePayments } from "@/services/platformService";
 import { salonDayService, type RecipeLine } from "@/services/salonDayService";
 import { productService, type Product } from "@/services/productService";
@@ -485,7 +485,7 @@ export default function AddServicePage() {
           label={tr("addService.serviceSections")}
           value={activeSidebarItem}
           onChange={setActiveSidebarItem}
-          items={sidebarItems.filter((i) => i.id !== "materials" || isEditMode).map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
+          items={sidebarItems.filter((i) => i.id !== "materials" || isEditMode).map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLocaleLowerCase(getLocale()) }))}
         />
       }
       footer={

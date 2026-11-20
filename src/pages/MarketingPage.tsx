@@ -80,7 +80,7 @@ const campaignStatus = (c: Campaign): Lifecycle =>
 const campaignLabel = (c: Campaign) => (c.status === "QUEUED" && (c.sentCount ?? 0) > 0 && (c.queuedCount ?? 0) > 0 ? tr("marketing.campaignSending", { sent: c.sentCount, total: c.recipientCount }) : c.status === "SENT" ? tr("marketing.campaignSent") : c.status === "CANCELLED" ? tr("marketing.campaignCancelled") : undefined);
 
 const valueLabel = (type: string, value: number | string) =>
-  type === "PERCENT" ? `${Number(value) || 0}% off` : `${money(value, currencySymbol())} off`;
+  type === "PERCENT" ? tr("offers.off2", { value: Number(value) || 0 }) : tr("offers.moneyOff", { value: money(value, currencySymbol()) });
 
 function randomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -359,7 +359,7 @@ export default function MarketingPage() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard icon={Ticket} label={tr("marketing.liveCodes")} value={byStatus.active ?? 0} hint={byStatus.scheduled ? `${byStatus.scheduled} scheduled` : tr("marketing.usableAtCheckoutToday")} tone="violet" />
             <StatCard icon={Percent} label={tr("marketing.redemptions")} value={redemptions} hint={tr("marketing.acrossEveryCode")} tone="emerald" />
-            <StatCard icon={Megaphone} label={tr("marketing.campaigns")} value={campaignList.length} hint={drafts ? `${drafts} draft${drafts === 1 ? "" : "s"}` : tr("marketing.noneWaiting")} tone="sky" />
+            <StatCard icon={Megaphone} label={tr("marketing.campaigns")} value={campaignList.length} hint={drafts ? tr("marketing.draftCount", { count: drafts }) : tr("marketing.noneWaiting")} tone="sky" />
             <StatCard icon={Send} label={tr("marketing.clientsReached")} value={reached} hint={tr("marketing.queuedOrSent")} tone="amber" />
           </div>
 

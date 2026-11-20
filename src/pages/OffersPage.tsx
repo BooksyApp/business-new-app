@@ -230,7 +230,7 @@ export default function OffersPage() {
               <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
                 <p className="truncate text-lg font-extrabold tracking-[-0.02em]">{salonName()}</p>
                 <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[#ffe0e6] px-3 py-1 text-xs font-semibold text-[#c4294f]">
-                  <Percent size={13} /> {label.trim() || `${pctNum || "—"}% off`}
+                  <Percent size={13} /> {label.trim() || tr("offers.off2", { value: pctNum || "—" })}
                 </span>
               </div>
               {previewRow && (
@@ -308,7 +308,7 @@ function ServiceList({
                       {money(row.sale_price ?? salePrice(row.price, pct), sym)}
                     </span>{" "}
                     <span className="line-through">{money(row.price, sym)}</span>
-                    <span className="font-semibold"> · {row.discount_label || `${pct}% off`}</span>
+                    <span className="font-semibold"> · {row.discount_label || tr("offers.off2", { value: pct })}</span>
                   </>
                 ) : (
                   <span className="font-semibold text-[rgb(var(--reg-ink))]">{money(row.price, sym)}</span>
