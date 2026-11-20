@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -10,6 +11,9 @@ import { fmtDay, fmtMoney, fmtPeriod, useReportPeriod, type RangeKey } from "@/c
 import { PaymentSheet, StatusPill } from "@/components/payments/PaymentSheet";
 import { LEDGER_METHODS, LEDGER_STATUSES, ledgerService, methodLabel, type Ledger, type LedgerRow } from "@/services/ledgerService";
 import { staffService } from "@/services/staffService";
+import { booqiWalletService } from "@/services/booqiWalletService";
+import { useWalletEnabled } from "@/services/platformService";
+import { useNavigation } from "@/utils/navigationUtils";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { cn } from "@/lib/utils";
 import { t, type TKey } from "@/i18n";
@@ -50,6 +54,16 @@ export default function PaymentsPage() {
   });
   const staff = useQuery({ queryKey: ["staff-list", businessId], queryFn: () => staffService.getStaffByBusiness(businessId), enabled: Boolean(businessId), staleTime: 300_000 });
 
+  // "Pending payout from booqi": only while the platform has the booqi wallet on.
+  const walletOn = useWalletEnabled();
+  const { getPath } = useNavigation();
+  const owed = useQuery({
+    queryKey: ["booqi-payouts", businessId],
+    queryFn: () => booqiWalletService.payouts(businessId),
+    enabled: Boolean(businessId) && walletOn,
+    retry: false,
+  });
+
   const d = q.data;
   const days = (strip.data ?? d)?.days ?? [];
   const groups = useMemo(() => groupByDay(d?.rows ?? []), [d]);
@@ -63,6 +77,15 @@ export default function PaymentsPage() {
       <BooqiScope>
         <PageHeader helpSlug="odenisler-ve-qebzler" title={t("ledger.title")} subtitle={t("ledger.subtitle")} actions={<PeriodPicker value={range} onChange={changeRange} ranges={PAY_RANGES} />} />
         <div className={pageBody}>
+          {walletOn && owed.data && (
+            <Link to={getPath("/money/booqi")} data-testid="booqi-owed-card" className="flex items-center justify-between gap-4 rounded-[20px] bg-white px-5 py-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] transition-colors hover:bg-[rgb(var(--reg-canvas)/0.7)]">
+              <span>
+                <span className="block text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.pendingTitle")}</span>
+                <span className="block text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.navHint")}</span>
+              </span>
+              <span className="text-[22px] font-extrabold tabular-nums">{fmtMoney(owed.data.pending)}</span>
+            </Link>
+          )}
           {d && <Totals d={d} />}
 
           {days.length > 1 && <DayStrip days={days} picked={day} onPick={(x) => setDay(x === day ? null : x)} />}
