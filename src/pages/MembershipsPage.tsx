@@ -504,7 +504,7 @@ function StampCard({
       )}
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/35 pt-3 text-sm">
         <span className="truncate">
-          {tr("memberships.free2", { value: decorative ? `${visits} visits` : `${stamps}/${visits}`, value2: reward ?? tr("memberships.aService") })}
+          {tr("memberships.free2", { value: decorative ? tr("memberships.decorVisits", { value: visits }) : `${stamps}/${visits}`, value2: reward ?? tr("memberships.aService") })}
         </span>
         {!decorative && <span className="shrink-0 text-white/80">{validUntil ? tr("memberships.until", { value: fmtDate(validUntil) }) : tr("memberships.noEndDate")}</span>}
       </div>

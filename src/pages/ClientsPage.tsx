@@ -1306,10 +1306,10 @@ export default function ClientsPage() {
             const consent = (v: boolean | null | undefined) =>
               v == null ? <span className="text-[rgb(var(--reg-muted))]">{tr("clients.notAsked")}</span> : v ? <span className="font-semibold text-[rgb(var(--reg-success))]">{tr("clients.yes")}</span> : <span className="font-semibold text-rose-700">{tr("clients.no")}</span>;
             const NOTE_KINDS: { v: NoteKind; l: string }[] = [
-              { v: "NOTE", l: "Note" },
-              { v: "FORMULA", l: "Formula" },
-              { v: "ALLERGY", l: "Allergy" },
-              { v: "PREFERENCE", l: "Preference" },
+              { v: "NOTE", l: tr("clients.noteKindNote") },
+              { v: "FORMULA", l: tr("clients.noteKindFormula") },
+              { v: "ALLERGY", l: tr("clients.noteKindAllergy") },
+              { v: "PREFERENCE", l: tr("clients.noteKindPreference") },
             ];
             return (
               <>
@@ -1392,9 +1392,11 @@ export default function ClientsPage() {
                           </a>
                         )}
                         {!c.phone && !c.email && <p className="text-[rgb(var(--reg-muted))]">{tr("clients.noContactInfo")}</p>}
-                        <p className="flex items-center gap-2 text-[rgb(var(--reg-muted))]">
-                          <Clock size={15} />{" "}{tr("clients.clientSince2", { value: shortDate(ins.since) ?? "—" })}
-                        </p>
+                        {shortDate(ins.since) && (
+                          <p className="flex items-center gap-2 text-[rgb(var(--reg-muted))]">
+                            <Clock size={15} />{" "}{tr("clients.clientSince2", { value: shortDate(ins.since) })}
+                          </p>
+                        )}
                       </section>
 
                       {ins.next && (
@@ -1624,7 +1626,7 @@ export default function ClientsPage() {
                                     <li key={n.id} className={cn(box, "p-3.5")}>
                                       <div className="flex items-center justify-between gap-2">
                                         <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", n.kind === "ALLERGY" ? "bg-rose-100 text-rose-900" : n.kind === "FORMULA" ? "bg-[rgb(var(--reg-brand)/0.12)] text-[rgb(var(--reg-brand-strong))]" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]")}>
-                                          {n.kind.charAt(0) + n.kind.slice(1).toLowerCase()}
+                                          {tr("clients.noteKind" + n.kind.charAt(0) + n.kind.slice(1).toLowerCase())}
                                         </span>
                                         <span className="text-xs text-[rgb(var(--reg-muted))]">{shortDate(n.created_at)}{n.author_name ? ` · ${n.author_name}` : ""}</span>
                                       </div>

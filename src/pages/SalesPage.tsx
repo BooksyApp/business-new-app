@@ -730,7 +730,7 @@ export default function SalesPage() {
           // Format payment method - for split payments, show cash and card amounts
           let paymentMethodDisplay: string;
           if (sale.paymentMethod === 'SPLIT' && sale.splitCashAmount && sale.splitCardAmount) {
-            paymentMethodDisplay = `Cash: ${sale.splitCashAmount.toFixed(2)} ${currencySymbol()}, Card: ${sale.splitCardAmount.toFixed(2)} ${currencySymbol()}`;
+            paymentMethodDisplay = `${tr("common.cash")}: ${sale.splitCashAmount.toFixed(2)} ${currencySymbol()}, ${tr("common.card")}: ${sale.splitCardAmount.toFixed(2)} ${currencySymbol()}`;
           } else {
             const paymentMethodMap: Record<string, string> = {
               get 'CASH'() { return tr("common.cash"); },
@@ -1710,7 +1710,7 @@ export default function SalesPage() {
                             onClick={() => {
                               const amount = parseFloat(giftCardAmount) || 0;
                               if (amount <= 0) return;
-                              setBasket((b) => [...b, { id: `gift-card-${Date.now()}`, name: `Gift card ${amount} ${currencySymbol()}`, price: String(amount), type: "gift-card", giftCardAmount: amount }]);
+                              setBasket((b) => [...b, { id: `gift-card-${Date.now()}`, name: `${tr("paymentMethod.giftCard")} ${amount} ${currencySymbol()}`, price: String(amount), type: "gift-card", giftCardAmount: amount }]);
                             }}
                             className="inline-flex h-11 items-center gap-1.5 rounded-full bg-[rgb(var(--reg-ink))] px-5 text-sm font-semibold text-white"
                           >
@@ -1982,7 +1982,7 @@ export default function SalesPage() {
                       <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"><User size={18} /></span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-bold">{t.clientName}</p>
-                        <p className="truncate text-sm text-[rgb(var(--reg-muted))]">{[t.staffName ? `Done by ${t.staffName}` : null, t.address || null].filter(Boolean).join(" · ") || "—"}</p>
+                        <p className="truncate text-sm text-[rgb(var(--reg-muted))]">{[t.staffName ? tr("sales.doneByValue", { value: t.staffName }) : null, t.address || null].filter(Boolean).join(" · ") || "—"}</p>
                       </div>
                       {saleStatusChip(t.status)}
                     </div>
