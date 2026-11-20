@@ -1203,12 +1203,18 @@ export default function CalendarPage() {
       i = j;
       const savedIds: string[] = [];
       let failure: unknown = null;
+      // The first service of a visit makes the server resolve/create the client record; the
+      // next services must carry that client id, or the server answers "Unknown visit" (the
+      // visit's client no longer matches a request that only has a typed name and phone).
+      let visitClientId: string | undefined;
       for (const [k, r] of group.entries()) {
         try {
           // Only the visit's last service triggers the (one) confirmation email.
-          const req = visitId && k < group.length - 1 ? { ...r, visitPending: true } : r;
+          const withClient = visitClientId ? { ...r, clientId: visitClientId } : r;
+          const req = visitId && k < group.length - 1 ? { ...withClient, visitPending: true } : withClient;
           const saved = await createAppointmentAPI(req, { silent: true });
           if (saved?.apiId) savedIds.push(saved.apiId);
+          if (visitId && !visitClientId && saved?.clientId) visitClientId = String(saved.clientId);
         } catch (err) {
           failure = err;
           break;

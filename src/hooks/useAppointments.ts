@@ -354,6 +354,7 @@ export function useAppointments(businessIdParam?: Id, date?: Date) {
     appointmentDate: string;
     startTime: string;
     endTime: string;
+    clientId?: Id;
     clientName?: string;
     clientPhone?: string;
     clientEmail?: string;
@@ -371,6 +372,7 @@ export function useAppointments(businessIdParam?: Id, date?: Date) {
         appointmentDate: request.appointmentDate,
         startTime: request.startTime,
         endTime: request.endTime,
+        ...(request.clientId ? { clientId: request.clientId } : {}),
         clientName: request.clientName,
         clientPhone: request.clientPhone,
         clientEmail: request.clientEmail,
