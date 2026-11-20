@@ -312,7 +312,10 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
                               className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
                               checked={methods.includes(m.key)}
                               onCheckedChange={v =>
-                                setMethods(prev => (v ? [...prev, m.key] : prev.filter(x => x !== m.key)))
+                                {
+                                if (!v && methods.length <= 1 && methods.includes(m.key)) { toast.error(t("bookingRules.keepOneMethod")); return; }
+                                setMethods(prev => (v ? [...prev, m.key] : prev.filter(x => x !== m.key)));
+                              }
                               }
                             />
                           </label>

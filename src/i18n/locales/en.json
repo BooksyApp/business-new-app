@@ -921,6 +921,7 @@
     "day7": "Sunday"
   },
   "bookingRules": {
+    "keepOneMethod": "Keep at least one payment method on.",
     "googleReviewLink": "Google review link",
     "googleReviewLinkHint": "After a 4 or 5 star review, the customer may be offered this link to post on Google. It is optional, and nothing is given for posting.",
     "reviewLinkSaved": "Review link saved",

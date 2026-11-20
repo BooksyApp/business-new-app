@@ -921,6 +921,7 @@
     "day7": "Bazar"
   },
   "bookingRules": {
+    "keepOneMethod": "Ən azı bir ödəniş üsulu seçili qalmalıdır.",
     "googleReviewLink": "Google rəy linki",
     "googleReviewLinkHint": "Müştəri 4 və ya 5 ulduz verdikdən sonra bu linki Google-da rəy yazmaq üçün görə bilər. Seçimlidir, rəy yazana heç nə verilmir.",
     "reviewLinkSaved": "Rəy linki yadda saxlanıldı",

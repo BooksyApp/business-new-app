@@ -1378,8 +1378,9 @@ export default function SalesPage() {
               setLastSale({
                 saleId: response.saleId,
                 total: Number(response.totalAmount ?? paymentData.amount),
-                change: paymentData.paymentMethod === "cash" ? Math.max(0, paymentData.change) : 0,
-                method: paymentData.paymentMethod,
+                change: paymentData.paymentMethod === "cash" && !((paymentData.payments ?? []).length > 0 && (paymentData.payments ?? []).every((p) => p.method === "GIFT_CARD")) ? Math.max(0, paymentData.change) : 0,
+                // Paid only with a gift card: say so, not the till default ("cash").
+                method: (paymentData.payments ?? []).length > 0 && (paymentData.payments ?? []).every((p) => p.method === "GIFT_CARD") ? "gift-card" : paymentData.paymentMethod,
                 client: selectedClient ? getClientDisplayName(selectedClient) : null,
                 lines: basket.map((item) => {
                   const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
