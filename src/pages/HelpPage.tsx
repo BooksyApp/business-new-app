@@ -8,6 +8,7 @@ import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyle
 import { fieldCls } from "@/components/page/kitStyles";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { useBusinessId } from "@/hooks/useBusinessId";
 import { HelpMarkdown } from "@/components/HelpMarkdown";
 import { getLocale, t, tDynamic } from "@/i18n";
 import { helpService, type HelpArticle } from "@/services/helpService";
@@ -89,7 +90,9 @@ function ServerArticles({ query, initialSlug }: { query: string; initialSlug?: s
 
 /** Kömək: articles from the back office and short static answers, and the way to Support when they are not enough. */
 export default function HelpPage() {
-  const { salonKey: businessId, articleSlug } = useParams<{ salonKey?: string; articleSlug?: string }>();
+  const { salonKey: businessKey, articleSlug } = useParams<{ salonKey?: string; articleSlug?: string }>();
+  // The URL carries the salon KEY (/<slug>_<uuid>); the API takes the UUID — the raw key was a 403 on /support.
+  const businessId = useBusinessId() || undefined;
   const [query, setQuery] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [priority, setPriority] = useState(false);
@@ -150,7 +153,7 @@ export default function HelpPage() {
                     <AccordionTrigger className="text-left">{q(a.id)}</AccordionTrigger>
                     <AccordionContent>
                       <p className="text-sm leading-relaxed">{body(a.id)}</p>
-                      <Link to={`/${businessId}/${a.to}`} className="mt-3 inline-block text-sm font-semibold underline underline-offset-2">
+                      <Link to={`/${businessKey}/${a.to}`} className="mt-3 inline-block text-sm font-semibold underline underline-offset-2">
                         {linkLabel(a.id)}
                       </Link>
                     </AccordionContent>
@@ -174,7 +177,7 @@ export default function HelpPage() {
                   {t("help.priority")}
                 </span>
               )}
-              <Link to={`/${businessId}/support`} className={cn(primaryBtn, "inline-flex items-center justify-center")}>{t("help.writeSupport")}</Link>
+              <Link to={`/${businessKey}/support`} className={cn(primaryBtn, "inline-flex items-center justify-center")}>{t("help.writeSupport")}</Link>
               {whatsapp && (
                 <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className={cn(secondaryBtn, "inline-flex items-center justify-center gap-2")}>
                   <MessageCircle className="h-4 w-4" aria-hidden />{t("help.whatsapp")}
