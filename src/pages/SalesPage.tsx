@@ -1208,7 +1208,7 @@ export default function SalesPage() {
               <Check className="h-8 w-8" aria-hidden />
             </span>
             <h1 className="mt-5 text-[28px] font-extrabold tracking-[-0.03em]">{tr("sales.paid", { value: lastSale.total.toFixed(2), value2: currencySymbol() })}</h1>
-            <p className="mt-1 text-[rgb(var(--reg-muted))]">{methodName[lastSale.method] ?? lastSale.method}{lastSale.client ? ` · ${lastSale.client}` : tr("sales.walkIn")}</p>
+            <p className="mt-1 text-[rgb(var(--reg-muted))]">{lastSale.tenders.length > 1 ? tr("paymentMethod.splitPayment") : (methodName[lastSale.method] ?? lastSale.method)}{lastSale.client ? ` · ${lastSale.client}` : tr("sales.walkIn")}</p>
             {lastSale.change > 0 && (
               <div className="mx-auto mt-5 inline-flex items-baseline gap-3 rounded-2xl bg-[rgb(var(--reg-canvas))] px-5 py-3 text-[rgb(var(--reg-ink))] ring-1 ring-inset ring-[rgb(var(--reg-line))]">
                 <span className="text-sm font-semibold">{tr("sales.changeToGive")}</span>
@@ -1419,12 +1419,20 @@ export default function SalesPage() {
                 // Discount = whatever makes lines + tip add up to the charged total (covers promo codes too).
                 discount: Math.max(0, Math.round((subtotal + tipValue - Number(response.totalAmount ?? paymentData.amount)) * 100) / 100),
                 tip: tipValue,
-                tenders: (paymentData.payments ?? [])
-                  .filter((p) => p.method === "POINTS" || p.method === "GIFT_CARD" || p.method === "WALLET")
-                  .map((p) => ({
-                    label: p.method === "POINTS" ? tr("pos.bonusPoints", { points: p.points ?? 0 }) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.giftCardCode ?? "" }) : tr("pos.wallet"),
-                    amount: Number(p.amount) || 0,
-                  })),
+                tenders: (() => {
+                  const nonCash = (paymentData.payments ?? [])
+                    .filter((p) => p.method === "POINTS" || p.method === "GIFT_CARD" || p.method === "WALLET")
+                    .map((p) => ({
+                      label: p.method === "POINTS" ? tr("pos.bonusPoints", { points: p.points ?? 0 }) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.giftCardCode ?? "" }) : tr("pos.wallet"),
+                      amount: Number(p.amount) || 0,
+                    }));
+                  // UI2-HUBB-036: the rest of the bill, paid in cash/card, so the split adds up to the total.
+                  const rest = Math.round((Number(response.totalAmount ?? paymentData.amount) - nonCash.reduce((a, x) => a + x.amount, 0)) * 100) / 100;
+                  if (nonCash.length > 0 && rest > 0.004) {
+                    nonCash.push({ label: paymentData.paymentMethod === "card-terminal" ? tr("common.card") : tr("common.cash"), amount: rest });
+                  }
+                  return nonCash;
+                })(),
                 at: new Date(),
               });
               // The shelf just changed; show what is left, not what was there before the sale.
@@ -2041,6 +2049,14 @@ export default function SalesPage() {
               {selectedTransaction && (() => {
                 const t = selectedTransaction;
                 const tax = receiptTax(t.sale, salonInfo.taxRate, services);
+                // UI2-HUBB-036: how the bill was settled, from the sale's own payments[].
+                const payBreakdown = (refundInfo?.payments ?? t.sale.payments ?? [])
+                  .filter((p) => Number(p.amount) > 0)
+                  .map((p) => ({
+                    cashLike: p.method !== "POINTS" && p.method !== "GIFT_CARD" && p.method !== "WALLET",
+                    amount: Number(p.amount),
+                    label: p.method === "POINTS" ? (p.reference ? tr("pos.bonusPoints", { points: String(p.reference).replace(/\D/g, "") || p.reference }) : tr("pos.bonusLine")) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.reference ?? "" }) : p.method === "WALLET" ? tr("pos.wallet") : p.method.startsWith("CARD") ? tr("common.card") : tr("common.cash"),
+                  }));
                 return (
                   <>
                     <div className="flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
@@ -2071,7 +2087,13 @@ export default function SalesPage() {
 
                     <section className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                       <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("sales.payment")}</h3>
-                      {t.splitCashAmount && t.splitCardAmount ? (
+                      {payBreakdown.length > 1 ? (
+                        <ul className="space-y-1 text-sm">
+                          {payBreakdown.map((p, i) => (
+                            <li key={i} className="flex justify-between"><span>{p.label}</span><span className="tabular-nums">{p.amount.toFixed(2)} {currencySymbol()}</span></li>
+                          ))}
+                        </ul>
+                      ) : t.splitCashAmount && t.splitCardAmount ? (
                         <ul className="space-y-1 text-sm">
                           <li className="flex justify-between"><span>{tr("common.cash")}</span><span className="tabular-nums">{t.splitCashAmount.toFixed(2)} {currencySymbol()}</span></li>
                           <li className="flex justify-between"><span>{tr("common.card")}</span><span className="tabular-nums">{t.splitCardAmount.toFixed(2)} {currencySymbol()}</span></li>
@@ -2095,6 +2117,9 @@ export default function SalesPage() {
                           {/* UI2-HUBB-036: bonus points / gift card / balance that paid part of the bill. */}
                           {(refundInfo?.payments ?? []).filter((p) => ["POINTS", "GIFT_CARD", "WALLET"].includes(p.method) && Number(p.amount) > 0).map((p, i) => (
                             <p key={`tn${i}`} className="flex justify-between text-[rgb(var(--reg-muted))]"><span>{p.method === "POINTS" ? (p.reference ? tr("pos.bonusPoints", { points: String(p.reference).replace(/\D/g, "") || p.reference }) : tr("pos.bonusLine")) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.reference ?? "" }) : tr("pos.wallet")}</span><span>{Number(p.amount).toFixed(2)}</span></p>
+                          ))}
+                          {payBreakdown.length > 1 && payBreakdown.filter((p) => p.cashLike).map((p, i) => (
+                            <p key={`cl${i}`} className="flex justify-between text-[rgb(var(--reg-muted))]"><span>{p.label}</span><span>{p.amount.toFixed(2)}</span></p>
                           ))}
                           {t.status === "REFUNDED" && <p className="flex justify-between text-rose-700"><span>{tr("sales.refunded")}</span><span>−{t.total}</span></p>}
                           {partlyRefunded && refundInfo?.refundedAmount ? <p className="flex justify-between text-rose-700"><span>{tr("sales.partiallyRefunded")}</span><span>−{Number(refundInfo.refundedAmount).toFixed(2)}</span></p> : null}
