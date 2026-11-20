@@ -38,6 +38,7 @@ import "@/components/auth/auth-tokens.css";
 
 import { SettingsIcon, isSettingsPath, myAccess, pageAllowed, openQuickSearch, useVisibleNav, useVisibleSettings, type NavEntry } from "./navigation";
 import { t } from "@/i18n";
+import { NotificationBell } from "./NotificationBell";
 import { useSupportHref } from "@/services/platformService";
 import { keyForId, salonPath } from "@/lib/salonKey";
 
@@ -267,6 +268,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           )}
           {!collapsed && (
             <span className="flex items-center gap-0.5">
+            <NotificationBell side="right" />
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <button
@@ -334,6 +336,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 
         {/* Quick search (⌘K / Ctrl+K) */}
         {collapsed && <div className="px-3 pb-1">
+          <div className="mb-1 flex justify-center"><NotificationBell side="right" /></div>
           <MaybeTip show={collapsed} label={t("nav.search.open")}>
             <button
               type="button"
@@ -497,11 +500,12 @@ export function MobileTopBar() {
         <span className="truncate text-[15px] font-bold">{m.businessName}</span>
         <ChevronsUpDown size={16} className="shrink-0 text-[rgb(var(--reg-muted))]" />
       </button>
+      <NotificationBell className="ml-auto h-11 w-11" />
       <button
         type="button"
         onClick={openQuickSearch}
         aria-label={t("nav.search.open")}
-        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.7)] hover:bg-[rgb(var(--reg-ink)/0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.7)] hover:bg-[rgb(var(--reg-ink)/0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]"
       >
         <Search size={20} strokeWidth={1.9} />
       </button>

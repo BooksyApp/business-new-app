@@ -60,7 +60,9 @@ import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useServiceOffers } from "@/hooks/useServiceOffers";
 import { useFeatureFlags } from "@/services/platformService";
-import { appointmentService, BookingConflictDeclined } from "@/services/appointmentService";
+import { appointmentService, BookingConflictDeclined, type BookingConflict } from "@/services/appointmentService";
+import { describeConflict } from "@/components/calendar/BookingConflictDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { serviceService, type ServicePackage } from "@/services/serviceService";
 import { PackageBookingPanel } from "@/components/calendar/PackageBookingPanel";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
@@ -934,6 +936,98 @@ export default function CalendarPage() {
   const [recurrence, setRecurrence] = useState<{ frequency: "DAILY" | "WEEKLY" | "MONTHLY"; interval: number; count: number }>({ frequency: "WEEKLY", interval: 1, count: 4 });
   const [isBatchSubmitting, setIsBatchSubmitting] = useState(false);
 
+  // Recurring booking: conflicts of every date, looked up before anything is saved.
+  const [seriesPreview, setSeriesPreview] = useState<{ date: string; conflicts: BookingConflict[] }[] | null>(null);
+  useEffect(() => {
+    setSeriesPreview(null);
+    if (bookingMode !== "recurring" || !isNewAppointmentOpen || !businessId) return;
+    if (!appointmentForm.staffId || !appointmentForm.serviceId || !appointmentForm.startTime || !appointmentForm.endTime) return;
+    const dates = computeRecurrenceDates(appointmentForm.date, recurrence);
+    if (dates.length === 0) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      appointmentService
+        .previewSeries({ businessId, staffId: appointmentForm.staffId, serviceId: appointmentForm.serviceId, startTime: appointmentForm.startTime, endTime: appointmentForm.endTime, dates })
+        .then((r) => { if (!cancelled) setSeriesPreview(r.dates); })
+        .catch(() => { if (!cancelled) setSeriesPreview(null); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [bookingMode, isNewAppointmentOpen, businessId, appointmentForm.staffId, appointmentForm.serviceId, appointmentForm.startTime, appointmentForm.endTime, appointmentForm.date, recurrence]);
+
+  // Calendar drag & resize (desktop). `dnd` is the live gesture; `pendingMove` waits for the confirm step.
+  const [dnd, setDnd] = useState<{ id: string; mode: "move" | "resize"; dx: number; dy: number } | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ apt: Appointment; staffId: string; startTime: string; endTime: string } | null>(null);
+  const [movingBusy, setMovingBusy] = useState(false);
+  const justDragged = useRef(false);
+  const beginDnd = (e: React.PointerEvent, apt: Appointment, mode: "move" | "resize") => {
+    if (e.button !== 0 || window.innerWidth < 768) return;
+    const st = (apt.status || "").toUpperCase();
+    if (!apt.apiId || apt.isClass || apt.isPackage || apt.visitId || ["CANCELLED", "COMPLETED", "NO_SHOW"].includes(st)) return;
+    e.stopPropagation();
+    const startX = e.clientX, startY = e.clientY;
+    const origStart = parseTime(normalizeTime(apt.startTime));
+    const origEnd = parseTime(normalizeTime(apt.endTime));
+    let active = false;
+    const snapDy = (dy: number) => Math.round(dy / SLOT_HEIGHT) * 15;
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if (!active && Math.hypot(dx, dy) < 6) return;
+      active = true;
+      setDnd({ id: apt.id, mode, dx: mode === "move" ? dx : 0, dy: Math.round(dy / SLOT_HEIGHT) * SLOT_HEIGHT });
+    };
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      setDnd(null);
+      if (!active) return;
+      justDragged.current = true;
+      setTimeout(() => { justDragged.current = false; }, 80);
+      const delta = snapDy(ev.clientY - startY);
+      let ns = origStart, ne = origEnd, staffId = apt.staffId;
+      if (mode === "move") {
+        const dur = origEnd - origStart;
+        ns = Math.max(0, Math.min(24 * 60 - dur, origStart + delta));
+        ne = ns + dur;
+        const col = document.elementsFromPoint(ev.clientX, ev.clientY).find((el) => (el as HTMLElement).dataset?.staffCol) as HTMLElement | undefined;
+        if (col?.dataset.staffCol) staffId = col.dataset.staffCol;
+      } else {
+        ne = Math.max(origStart + 15, Math.min(24 * 60, origEnd + delta));
+      }
+      if (ns === origStart && ne === origEnd && staffId === apt.staffId) return;
+      const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+      setPendingMove({ apt, staffId, startTime: hhmm(ns), endTime: hhmm(ne) });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+  const confirmMove = async () => {
+    if (!pendingMove?.apt.apiId) return;
+    const { apt, staffId, startTime, endTime } = pendingMove;
+    setMovingBusy(true);
+    try {
+      await updateAppointmentAPI(apt.apiId!, {
+        staffId,
+        serviceId: apt.serviceId as string,
+        appointmentDate: format(apt.date ?? currentDate, "yyyy-MM-dd"),
+        startTime,
+        endTime,
+        clientId: apt.clientId || undefined,
+        clientName: apt.clientName || undefined,
+        clientPhone: apt.clientPhone || undefined,
+        clientEmail: apt.clientEmail || undefined,
+        price: apt.price,
+        notes: apt.notes,
+      });
+      setPendingMove(null);
+    } catch (err) {
+      // 409 / validation: the hook already showed a localized message; the declined override just closes.
+      setPendingMove(null);
+      refreshAppointments();
+    } finally {
+      setMovingBusy(false);
+    }
+  };
+
   // FG-W3-01: package services (several specialists in one visit). Picking one swaps the staff/time
   // pickers for the package slot finder; the server plans who does which step.
   const [packages, setPackages] = useState<Map<string, ServicePackage>>(new Map());
@@ -1159,6 +1253,7 @@ export default function CalendarPage() {
         ...extraServices,
       ];
       const dates = bookingMode === "recurring" ? computeRecurrenceDates(base.date, recurrence) : [base.date];
+      const seriesId = bookingMode === "recurring" ? crypto.randomUUID() : undefined;
       for (const d of dates) {
         // H-01: 2+ services on one date are ONE visit — the same visit_id grouping a web
         // cart gets, so the calendar card, details, till (one ticket) and partial cancel
@@ -1178,6 +1273,7 @@ export default function CalendarPage() {
             price: servicePrice(l.serviceId),
             notes,
             ...(visitId ? { visitId } : {}),
+            ...(seriesId ? { seriesId } : {}),
           });
         }
       }
@@ -2165,6 +2261,7 @@ export default function CalendarPage() {
                     {/* Appointments Area */}
                     <div 
                       className="relative select-none" 
+                      data-staff-col={staff.id}
                       style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
                       onMouseDown={(e) => {
                         // Allow selection even if clicking on or near appointments
@@ -2463,11 +2560,17 @@ export default function CalendarPage() {
                               return (
                                 <div
                                   key={item.item.id}
-                                  className="absolute z-15"
+                                  className={`absolute z-15 ${dnd?.id === item.item.id ? "opacity-80 shadow-xl ring-2 ring-[rgb(var(--reg-brand))] rounded-[10px]" : ""}`}
                                   data-appointment-block="true"
+                                  data-testid="appointment-block"
+                                  data-apt-id={item.item.apiId}
+                                  onPointerDown={(e) => { if (!(e.target as HTMLElement).closest('[data-resize-handle]')) beginDnd(e, item.item, "move"); }}
                                   style={{
                                     top: `${top}px`,
-                                    height: `${height}px`,
+                                    height: `${dnd?.id === item.item.id && dnd.mode === "resize" ? Math.max(SLOT_HEIGHT, height + dnd.dy) : height}px`,
+                                    transform: dnd?.id === item.item.id && dnd.mode === "move" ? `translate(${dnd.dx}px, ${dnd.dy}px)` : undefined,
+                                    zIndex: dnd?.id === item.item.id ? 40 : undefined,
+                                    touchAction: "pan-y",
                                     left: groupSize === 1 
                                       ? '0.25rem' 
                                       : `calc(0.25rem + ${leftPercent}%)`,
@@ -2479,7 +2582,7 @@ export default function CalendarPage() {
                                   }}
                                   onClick={(e) => {
                                     // Only handle click if not dragging
-                                    if (!isDragging) {
+                                    if (!isDragging && !justDragged.current) {
                                       e.stopPropagation();
                                       e.preventDefault();
                                       handleAppointmentClick(item.item);
@@ -2504,12 +2607,24 @@ export default function CalendarPage() {
                                     appointment={item.item} 
                                     onClick={(e) => {
                                       // Only handle click if not dragging
-                                      if (!isDragging) {
+                                      if (!isDragging && !justDragged.current) {
                                         e?.stopPropagation?.();
                                         handleAppointmentClick(item.item);
                                       }
                                     }}
                       />
+                      {item.item.apiId && !item.item.isClass && !item.item.isPackage && !item.item.visitId && !["CANCELLED", "COMPLETED", "NO_SHOW"].includes((item.item.status || "").toUpperCase()) && (
+                        <div
+                          data-resize-handle="true"
+                          data-testid="resize-handle"
+                          title={tr("calendar.dnd.resizeHint")}
+                          className="absolute inset-x-0 bottom-0 hidden h-2 cursor-ns-resize items-end justify-center md:flex"
+                          onPointerDown={(e) => beginDnd(e, item.item, "resize")}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="mb-0.5 h-0.5 w-8 rounded-full bg-black/25" />
+                        </div>
+                      )}
                     </div>
                   );
                             } else if (item.type === 'waiting') {
@@ -2891,6 +3006,33 @@ export default function CalendarPage() {
           />
         </Suspense>
       )}
+
+      {/* Drag / resize: nothing is saved until the person confirms */}
+      <AlertDialog open={!!pendingMove} onOpenChange={(o) => { if (!o && !movingBusy) { setPendingMove(null); } }}>
+        <AlertDialogContent data-testid="move-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr("calendar.dnd.confirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-1 text-sm">
+                {pendingMove && (
+                  <>
+                    <p className="font-semibold text-foreground">{pendingMove.apt.clientName} · {pendingMove.apt.service}</p>
+                    <p>{tr("calendar.dnd.from")}: {staff.find((x) => x.id === pendingMove.apt.staffId)?.name} · {normalizeTime(pendingMove.apt.startTime)}–{normalizeTime(pendingMove.apt.endTime)}</p>
+                    <p>{tr("calendar.dnd.to")}: {staff.find((x) => x.id === pendingMove.staffId)?.name} · {pendingMove.startTime}–{pendingMove.endTime}</p>
+                    <p className="text-xs">{tr("calendar.dnd.notifyHint")}</p>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={movingBusy}>{tr("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction data-testid="move-confirm-ok" disabled={movingBusy} onClick={(e) => { e.preventDefault(); void confirmMove(); }}>
+              {tr("calendar.dnd.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Day Appointments Popup */}
       <Sheet open={isDayPopupOpen} onOpenChange={setIsDayPopupOpen}>
@@ -3403,73 +3545,63 @@ export default function CalendarPage() {
               })()}
             </section>
 
-            {/* Booking mode: single / group / recurring */}
-            {/* Group and recurring are off for now. The machinery below stays — turning
-                either back on is putting its tab back, not rebuilding the flow. With one mode
-                there is nothing to choose, so the switch stays hidden until a second returns. */}
-            <div className="hidden">
-              {([
-                { key: "single", get label() { return tr("calendar.single"); }, Icon: User },
-              ] as const).map((m) => (
-                <Button
-                  key={m.key}
-                  type="button"
-                  variant={bookingMode === m.key ? "default" : "outline"}
-                  className="h-8 text-xs px-2"
-                  onClick={() => {
-                    setBookingMode(m.key);
-                    // Only "single" is offered for now (group/recurring stay off), kept for when they return.
-                    if ((m.key as string) === "group") setExtraServices([]);
-                  }}
-                >
-                  <m.Icon className="h-3 w-3 mr-1" />
-                  <span className="hidden sm:inline">{m.label}</span>
-                </Button>
-              ))}
-            </div>
+            {/* Repeat: weekly / every 2 weeks / monthly x N (new bookings only; not for package services) */}
+            {!editingAppointmentId && !selectedPackage && (
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" htmlFor="repeat-booking">
+                <Checkbox
+                  id="repeat-booking"
+                  data-testid="repeat-toggle"
+                  checked={bookingMode === "recurring"}
+                  onCheckedChange={(c) => setBookingMode(c === true ? "recurring" : "single")}
+                />
+                {tr("calendar.series.repeatBooking")}
+              </label>
+            )}
 
             {/* Recurrence config */}
             {bookingMode === "recurring" && (
-              <div className="space-y-2 rounded-md border border-gray-200 p-2">
+              <div className="space-y-2 rounded-md border border-gray-200 p-2" data-testid="recurrence-config">
                 <Label className={FIELD_LABEL}>{tr("calendar.repeat")}</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <Label className="text-[10px] text-gray-500">{tr("calendar.frequency")}</Label>
                     <Select
-                      value={recurrence.frequency}
-                      onValueChange={(v) => setRecurrence(prev => ({ ...prev, frequency: v as "DAILY" | "WEEKLY" | "MONTHLY" }))}
+                      value={recurrence.frequency === "MONTHLY" ? "MONTHLY" : recurrence.interval === 2 ? "BIWEEKLY" : "WEEKLY"}
+                      onValueChange={(v) => setRecurrence(prev => ({ ...prev, frequency: v === "MONTHLY" ? "MONTHLY" : "WEEKLY", interval: v === "BIWEEKLY" ? 2 : 1 }))}
                     >
-                      <SelectTrigger className={FIELD}><SelectValue /></SelectTrigger>
+                      <SelectTrigger className={FIELD} data-testid="recurrence-pattern"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="DAILY">{tr("common.daily")}</SelectItem>
                         <SelectItem value="WEEKLY">{tr("calendar.weekly")}</SelectItem>
+                        <SelectItem value="BIWEEKLY">{tr("calendar.series.biweekly")}</SelectItem>
                         <SelectItem value="MONTHLY">{tr("calendar.monthly")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">{tr("calendar.every")}</Label>
-                    <Input
-                      type="number" min={1} max={12} value={recurrence.interval}
-                      onChange={(e) => setRecurrence(prev => ({ ...prev, interval: Math.max(1, parseInt(e.target.value) || 1) }))}
-                      className={FIELD}
-                    />
-                  </div>
-                  <div className="space-y-1">
                     <Label className="text-[10px] text-gray-500">{tr("calendar.occurrences")}</Label>
                     <Input
-                      type="number" min={1} max={52} value={recurrence.count}
-                      onChange={(e) => setRecurrence(prev => ({ ...prev, count: Math.max(1, Math.min(52, parseInt(e.target.value) || 1)) }))}
+                      type="number" min={2} max={52} value={recurrence.count}
+                      data-testid="recurrence-count"
+                      onChange={(e) => setRecurrence(prev => ({ ...prev, count: Math.max(2, Math.min(52, parseInt(e.target.value) || 2)) }))}
                       className={FIELD}
                     />
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-500">
-                  {(() => {
-                    const ds = computeRecurrenceDates(appointmentForm.date, recurrence);
-                    return `${ds.length} date${ds.length > 1 ? "s" : ""}: ${ds.slice(0, 3).join(", ")}${ds.length > 3 ? "…" : ""}`;
-                  })()}
-                </p>
+                <ul className="max-h-40 space-y-0.5 overflow-y-auto text-xs" data-testid="recurrence-dates">
+                  {computeRecurrenceDates(appointmentForm.date, recurrence).map((d) => {
+                    const row = seriesPreview?.find((r) => r.date === d);
+                    const bad = row && row.conflicts.length > 0;
+                    return (
+                      <li key={d} className={bad ? "text-amber-700" : "text-gray-600"}>
+                        <span className="font-medium">{d}</span>
+                        {bad ? ` · ${row!.conflicts.map(describeConflict).join("; ")}` : row ? " ✓" : ""}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {seriesPreview?.some((r) => r.conflicts.length > 0) && (
+                  <p className="text-xs text-amber-700" data-testid="recurrence-conflicts">{tr("calendar.series.conflictsHint")}</p>
+                )}
               </div>
             )}
 

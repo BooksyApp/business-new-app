@@ -17,6 +17,8 @@ export interface Appointment {
   serviceName?: string;
   /** Set when the customer booked several services in one visit: one appointment each, same id here. */
   visitId?: string | null;
+  /** Shared by every occurrence of a recurring booking, else null. */
+  seriesId?: string | null;
   /** True when the system picked the master ("any master" booking). */
   staffAutoAssigned?: boolean;
   /** Part of a package service (several specialists in one visit). */
@@ -185,6 +187,8 @@ export interface CreateAppointmentRequest {
   visitId?: string;
   /** H-01: more services of this visit follow — the backend holds the confirmation email. */
   visitPending?: boolean;
+  /** Recurring booking: the same id on every occurrence. */
+  seriesId?: string;
 }
 
 /** FG-W1-01: one row of the WhatsApp reminder list. */
@@ -306,6 +310,17 @@ export const appointmentService = {
   /** Move a whole multi-service visit: every part is re-planned from the new start. 409 = the chain no longer fits. */
   async rescheduleVisit(visitId: string, businessId: Id, appointmentDate: string, startTime: string): Promise<void> {
     return apiClient.put<void>(`/bookings/visit/${visitId}/reschedule`, { businessId, appointmentDate, startTime });
+  },
+
+  /** Recurring booking: schedule conflicts of one slot on every date, before anything is saved. */
+  async previewSeries(req: { businessId: Id; staffId: Id; serviceId: Id; startTime: string; endTime: string; dates: string[] }):
+    Promise<{ dates: { date: string; conflicts: BookingConflict[] }[] }> {
+    return apiClient.post('/bookings/series-preview', req);
+  },
+
+  /** Cancel every upcoming, unpaid occurrence of a recurring booking. */
+  async cancelSeries(seriesId: string, businessId: Id, reason: string): Promise<{ cancelled: number; skipped: number }> {
+    return apiClient.post(`/bookings/series/${seriesId}/cancel?businessId=${encodeURIComponent(String(businessId))}`, { reason });
   },
 
   async deleteAppointment(id: string): Promise<void> {

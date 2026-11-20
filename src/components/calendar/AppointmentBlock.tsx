@@ -45,6 +45,7 @@ export interface Appointment {
   categoryId?: Id;
   categoryName?: string;
   visitId?: string | null;
+  seriesId?: string | null;
   /** The system picked this master ("any master" booking). */
   staffAutoAssigned?: boolean;
   /** Number of active services in the visit (multi-service group badge). */

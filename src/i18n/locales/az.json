@@ -1405,7 +1405,23 @@
     "chargeCancellationFee": "Ləğv haqqı tutulsun",
     "chargeCancellationFeeHint": "Əvvəlcə depozit saxlanılır, sonra saxlanmış kartdan çıxılır; alınmasa borc kimi qeyd olunur.",
     "groupBadge": "Qrup ({count} xidmət)",
-    "autoAssigned": "Avtomatik təyin"
+    "autoAssigned": "Avtomatik təyin",
+    "dnd": {
+      "confirmTitle": "Bu rezerv köçürülsün?",
+      "from": "Əvvəl",
+      "to": "Sonra",
+      "notifyHint": "Müştəriyə yeni vaxt barədə bildiriş göndəriləcək.",
+      "confirm": "Köçür",
+      "resizeHint": "Müddəti dəyişmək üçün sürüşdürün"
+    },
+    "series": {
+      "repeatBooking": "Bu rezervi təkrarla",
+      "biweekly": "2 həftədən bir",
+      "conflictsHint": "Bəzi tarixlərdə uyğunsuzluq var. Saxlayanda hər biri üçün soruşulacaq.",
+      "cancelAll": "Bütün seriyanı ləğv et",
+      "cancelAllHint": "Qarşıdakı, ödənilməmiş bütün təkrarlar ləğv olunur.",
+      "cancelled": "Seriyada {count} rezerv ləğv edildi"
+    }
   },
   "checkout": {
     "pickAClientToUse": "Abonement, paket, bonus və ya qazanılmış pulsuz xidmətdən istifadə üçün müştəri seçin.",
@@ -1865,7 +1881,8 @@
     "timeOffDeletedSuccessfully": "İstirahət silindi",
     "failedToDeleteTimeOff": "İstirahəti silmək alınmadı",
     "timeOffApprovedSuccessfully": "İstirahət təsdiqləndi",
-    "failedToApproveTimeOff": "İstirahəti təsdiqləmək alınmadı"
+    "failedToApproveTimeOff": "İstirahəti təsdiqləmək alınmadı",
+    "slotTakenConflict": "Bu vaxt artıq boş deyil. Başqa vaxt və ya usta seçin."
   },
   "inventory": {
     "addLine": "Məhsul əlavə et",
@@ -5351,5 +5368,17 @@
     "addSave": "Əlavə et",
     "addDone": "Gözləmə siyahısına əlavə olundu",
     "addFailed": "Əlavə etmək alınmadı"
+  },
+  "bell": {
+    "title": "Bildirişlər",
+    "open": "Bildirişlər",
+    "openUnread": "Bildirişlər, {count} oxunmamış",
+    "markRead": "Hamısını oxunmuş et",
+    "empty": "Son 30 gündə yenilik yoxdur.",
+    "someone": "Kimsə",
+    "bookingNew": "Yeni onlayn rezerv",
+    "bookingCancelled": "Müştəri rezervi ləğv etdi",
+    "waitlist": "Gözləmə siyahısına yeni sorğu",
+    "review": "Yeni rəy {rating}/5"
   }
 }

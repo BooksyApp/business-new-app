@@ -14,6 +14,7 @@ export interface Appointment {
   id: string;
   clientName: string;
   clientAlert?: boolean;
+  seriesId?: string | null;
   service: string;
   startTime: string;
   endTime: string;
@@ -79,6 +80,7 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     status: apiAppt.status,   // #30
     serviceId: apiAppt.serviceId,
     visitId: apiAppt.visitId ?? null,
+    seriesId: apiAppt.seriesId ?? null,
     staffAutoAssigned: apiAppt.staffAutoAssigned === true,
     isPackage: apiAppt.isPackage === true,
     packageStep: apiAppt.packageStep ?? null,
@@ -363,6 +365,7 @@ export function useAppointments(businessIdParam?: Id, date?: Date) {
     notes?: string;
     visitId?: string;
     visitPending?: boolean;
+    seriesId?: string;
   }, opts?: { silent?: boolean }) => {
     try {
       const apiRequest = {
@@ -381,6 +384,7 @@ export function useAppointments(businessIdParam?: Id, date?: Date) {
         notes: request.notes,
         ...(request.visitId ? { visitId: request.visitId } : {}),
         ...(request.visitId && request.visitPending ? { visitPending: true } : {}),
+        ...(request.seriesId ? { seriesId: request.seriesId } : {}),
       };
 
       const created = await appointmentService.createAppointment(apiRequest);
@@ -423,7 +427,10 @@ export function useAppointments(businessIdParam?: Id, date?: Date) {
       toast.success(t("hooks.appointmentUpdatedSuccessfully"));
       return converted;
     } catch (err) {
-      if (!(err instanceof BookingConflictDeclined)) toast.error((err instanceof Error && err.message) || t("hooks.failedToUpdateAppointment"));
+      if (!(err instanceof BookingConflictDeclined)) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        toast.error(status === 409 ? t("hooks.slotTakenConflict") : ((err instanceof Error && err.message) || t("hooks.failedToUpdateAppointment")));
+      }
       throw err;
     }
   }, [businessId]);

@@ -199,6 +199,7 @@ export function AppointmentModal({
   };
   const [cancelReason, setCancelReason] = useState("");
   const [chargeFee, setChargeFee] = useState(false);
+  const [cancelSeries, setCancelSeries] = useState(false);
 
   useEffect(() => {
     if (isOpen && appointment?.apiId) {
@@ -760,6 +761,15 @@ export function AppointmentModal({
                 className="min-h-[100px]"
               />
             </div>
+            {appointmentData.seriesId && !cancelOnly && (
+              <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-2">
+                <Checkbox id="cancel-series" data-testid="cancel-series" checked={cancelSeries} onCheckedChange={(v) => setCancelSeries(v === true)} />
+                <div className="grid gap-0.5">
+                  <Label htmlFor="cancel-series" className="cursor-pointer">{tr("calendar.series.cancelAll")}</Label>
+                  <span className="text-xs text-muted-foreground">{tr("calendar.series.cancelAllHint")}</span>
+                </div>
+              </div>
+            )}
             <div className="flex items-start gap-2">
               <Checkbox id="cancel-charge-fee" checked={chargeFee} onCheckedChange={(v) => setChargeFee(v === true)} />
               <div className="grid gap-0.5">
@@ -788,6 +798,17 @@ export function AppointmentModal({
                   
                   if (appointment?.apiId) {
                     try {
+                      if (cancelSeries && appointmentData.seriesId) {
+                        const res = await appointmentService.cancelSeries(String(appointmentData.seriesId), appointmentData.businessId, cancelReason);
+                        toast.success(tr("calendar.series.cancelled", { count: res.cancelled }));
+                        setCancelSeries(false);
+                        setCancelDialogOpen(false);
+                        setCancelReason("");
+                        setChargeFee(false);
+                        onClose();
+                        onCancelled?.();
+                        return;
+                      }
                       const ids = cancelOnly ? [cancelOnly] : visitIds();
                       // The whole visit is ONE call, so the customer gets one message; a single
                       // service of it is cancelled on its own and the rest stands.

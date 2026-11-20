@@ -1405,7 +1405,23 @@
     "chargeCancellationFee": "Charge cancellation fee",
     "chargeCancellationFeeHint": "The deposit is kept first, then the saved card is charged; otherwise it is recorded as owed.",
     "groupBadge": "Group ({count} services)",
-    "autoAssigned": "Auto-assigned"
+    "autoAssigned": "Auto-assigned",
+    "dnd": {
+      "confirmTitle": "Move this booking?",
+      "from": "From",
+      "to": "To",
+      "notifyHint": "The client will be notified of the new time.",
+      "confirm": "Move",
+      "resizeHint": "Drag to change the duration"
+    },
+    "series": {
+      "repeatBooking": "Repeat this booking",
+      "biweekly": "Every 2 weeks",
+      "conflictsHint": "Some dates have conflicts. You will be asked about each one when you save.",
+      "cancelAll": "Cancel the whole series",
+      "cancelAllHint": "All upcoming, unpaid occurrences are cancelled.",
+      "cancelled": "{count} bookings in the series cancelled"
+    }
   },
   "checkout": {
     "pickAClientToUse": "Pick a client to use a membership, a package, points or an earned free service.",
@@ -1865,7 +1881,8 @@
     "timeOffDeletedSuccessfully": "Time off deleted successfully",
     "failedToDeleteTimeOff": "Failed to delete time off",
     "timeOffApprovedSuccessfully": "Time off approved successfully",
-    "failedToApproveTimeOff": "Failed to approve time off"
+    "failedToApproveTimeOff": "Failed to approve time off",
+    "slotTakenConflict": "That time is no longer free. Pick another time or master."
   },
   "inventory": {
     "addLine": "Add product",
@@ -5351,5 +5368,17 @@
     "addSave": "Add",
     "addDone": "Added to the waiting list",
     "addFailed": "Could not add"
+  },
+  "bell": {
+    "title": "Notifications",
+    "open": "Notifications",
+    "openUnread": "Notifications, {count} unread",
+    "markRead": "Mark all as read",
+    "empty": "Nothing new in the last 30 days.",
+    "someone": "Someone",
+    "bookingNew": "New online booking",
+    "bookingCancelled": "Booking cancelled by the client",
+    "waitlist": "New waitlist request",
+    "review": "New review {rating}/5"
   }
 }
