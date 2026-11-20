@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 
-import { t } from "@/i18n";
+import { t, fmtDate } from "@/i18n";
 import type { Id } from "@/types/id";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/page/kit";
@@ -94,7 +94,7 @@ export function PayrollAdvances({ businessId, onChanged }: { businessId: Id; onC
           {list.map((a) => (
             <li key={a.id} className="flex items-center justify-between gap-3 py-2">
               <span className="min-w-0">
-                <span className="font-semibold">{a.staff_name}</span> · {a.given_on} · {money(Number(a.amount), sym)}
+                <span className="font-semibold">{a.staff_name}</span> · {fmtDate(`${a.given_on}T00:00`, { day: "numeric", month: "short", year: "numeric" })} · {money(Number(a.amount), sym)}
                 {a.note ? <span className="text-[rgb(var(--reg-muted))]"> · {a.note}</span> : null}
               </span>
               <span className="flex shrink-0 items-center gap-2">
