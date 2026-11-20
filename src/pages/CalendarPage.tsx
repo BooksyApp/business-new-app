@@ -1004,6 +1004,8 @@ export default function CalendarPage() {
     if (!pendingMove?.apt.apiId) return;
     const { apt, staffId, startTime, endTime } = pendingMove;
     setMovingBusy(true);
+    // Close this step first: a schedule conflict opens its own "book anyway?" dialog, which must not sit under this one.
+    setPendingMove(null);
     try {
       await updateAppointmentAPI(apt.apiId!, {
         staffId,
@@ -1018,10 +1020,8 @@ export default function CalendarPage() {
         price: apt.price,
         notes: apt.notes,
       });
-      setPendingMove(null);
     } catch (err) {
       // 409 / validation: the hook already showed a localized message; the declined override just closes.
-      setPendingMove(null);
       refreshAppointments();
     } finally {
       setMovingBusy(false);
