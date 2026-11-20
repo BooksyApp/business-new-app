@@ -5404,5 +5404,32 @@
     "bookingCancelled": "Клиент отменил запись",
     "waitlist": "Новая заявка в листе ожидания",
     "review": "Новый отзыв {rating}/5"
+  },
+  "bwallet": {
+    "navTitle": "Ожидается от booqi",
+    "navHint": "Платежи клиентов балансом booqi",
+    "method": "Баланс booqi",
+    "codeLabel": "Платёжный код клиента",
+    "codeHint": "Клиент открывает баланс booqi на сайте booqi и показывает 8-значный код.",
+    "codeInvalid": "Введите 8-значный код клиента",
+    "pendingTitle": "Ожидаемая выплата от booqi",
+    "pendingHint": "Платежи клиентов балансом booqi. booqi переводит эту сумму вашему салону; каждый платёж виден здесь, пока не выплачен.",
+    "paidTotal": "Выплачено всего",
+    "payments": "Платежи",
+    "payouts": "Выплаты от booqi",
+    "empty": "Платежей балансом booqi пока нет.",
+    "colDate": "Дата",
+    "colKind": "Тип",
+    "colGross": "Платёж",
+    "colCommission": "Комиссия booqi",
+    "colNet": "Вам",
+    "colStatus": "Статус",
+    "k_PAYMENT": "Платёж",
+    "k_REFUND": "Возврат",
+    "s_PENDING": "Ожидает",
+    "s_PAID": "Выплачено",
+    "batch": "Выплата",
+    "ref": "Референс",
+    "loadFailed": "Не удалось загрузить. Повторите."
   }
 }

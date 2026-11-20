@@ -28,6 +28,8 @@ export interface PlatformSettings {
   supportWhatsapp?: string;
   /** A-06: support address ops set in the admin; absent/empty until configured. */
   supportEmail?: string;
+  /** booqi-wide customer wallet; false (default) hides every wallet screen. */
+  walletEnabled?: boolean;
   /** Which features the platform has switched on for this panel. */
   flags: Record<string, boolean>;
 }
@@ -80,6 +82,21 @@ let cached: Promise<PlatformSettings> | null = null;
 export function platformSettings(): Promise<PlatformSettings> {
   if (!cached) cached = getPlatformSettings();
   return cached;
+}
+
+/** True only when the platform has the booqi wallet switched on; false until the answer arrives. */
+export function useWalletEnabled(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    platformSettings().then((s) => {
+      if (live) setOn(s.walletEnabled === true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return on;
 }
 
 export function useFeatureFlags(): Record<string, boolean> {

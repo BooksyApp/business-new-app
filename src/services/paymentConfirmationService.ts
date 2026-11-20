@@ -4,12 +4,14 @@ import { apiClient } from '@/config/api';
 /** One tender on a bill. A bill can have several: 20 off a gift card, 80 in cash. */
 export interface SalePayment {
   // PREPAID: taken from a gift card when the booking was made (V114); never charged again.
-  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS' | 'PREPAID' | 'WALLET';
+  method: 'CASH' | 'CARD_TERMINAL' | 'CHECK' | 'GIFT_CARD' | 'POINTS' | 'PREPAID' | 'WALLET' | 'BOOQI_WALLET';
   amount: number;
   /** Gift card code, when the method is GIFT_CARD. */
   giftCardCode?: string;
   /** Points spent, when the method is POINTS. */
   points?: number;
+  /** The customer's one-time code, when the method is BOOQI_WALLET. */
+  reference?: string;
 }
 
 export interface PaymentConfirmationRequest {

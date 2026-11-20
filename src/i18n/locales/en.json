@@ -5404,5 +5404,32 @@
     "bookingCancelled": "Booking cancelled by the client",
     "waitlist": "New waitlist request",
     "review": "New review {rating}/5"
+  },
+  "bwallet": {
+    "navTitle": "Pending from booqi",
+    "navHint": "Customer payments made with booqi balance",
+    "method": "booqi balance",
+    "codeLabel": "Customer's payment code",
+    "codeHint": "The customer opens booqi balance on the booqi site and shows an 8-digit code.",
+    "codeInvalid": "Enter the customer's 8-digit code",
+    "pendingTitle": "Pending payout from booqi",
+    "pendingHint": "Payments customers made with booqi balance. booqi pays this amount out to your salon; each payment shows here until it is paid.",
+    "paidTotal": "Paid out so far",
+    "payments": "Payments",
+    "payouts": "Payouts from booqi",
+    "empty": "No booqi balance payments yet.",
+    "colDate": "Date",
+    "colKind": "Type",
+    "colGross": "Payment",
+    "colCommission": "booqi fee",
+    "colNet": "To you",
+    "colStatus": "Status",
+    "k_PAYMENT": "Payment",
+    "k_REFUND": "Refund",
+    "s_PENDING": "Pending",
+    "s_PAID": "Paid",
+    "batch": "Payout",
+    "ref": "Reference",
+    "loadFailed": "Could not load. Try again."
   }
 }

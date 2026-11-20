@@ -162,6 +162,7 @@ export const NAV: NavSection[] = [
         item(TrendingUp, "ledger.profitTitle", "/money/profit", "ledger.profitHint"),
         item(ShoppingBag, "nav.shopOrders", "/shop-orders", "onlineSales.navOrdersHint"),
         item(Gift, "nav.giftCards", "/gift-cards", "onlineSales.navGiftCardsHint"),
+        item(Landmark, "bwallet.navTitle", "/money/booqi", "bwallet.navHint", { flag: "booqi_wallet" }),
         item(Wallet, "ledger.moreTitle", "/money/more", "ledger.moreHint"),
       ]),
       entry("marketing", item(Megaphone, "nav.g.marketing", "/marketing", "nav.cat.marketing"), [
@@ -346,7 +347,7 @@ export function useVisibleNav(): NavSection[] {
   const flags = useFeatureFlags();
   const access = myAccess();
   const ok = (i: NavItem) =>
-    (!i.flag || flags[i.flag] !== false) && pageAllowed(access, i.path) && (!i.staffOnly || myStaffRecord() !== undefined);
+    (!i.flag || (i.flag === "booqi_wallet" ? flags[i.flag] === true : flags[i.flag] !== false)) && pageAllowed(access, i.path) && (!i.staffOnly || myStaffRecord() !== undefined);
   return NAV.map((sec) => ({
     ...sec,
     entries: sec.entries

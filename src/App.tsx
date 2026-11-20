@@ -18,6 +18,7 @@ const CalendarPage = lazyWithReload(() => import("./pages/CalendarPage"));
 const SalesPage = lazyWithReload(() => import("./pages/SalesPage"));
 const MoneyPage = lazyWithReload(() => import("./pages/MoneyPage"));
 const PaymentsPage = lazyWithReload(() => import("./pages/PaymentsPage"));
+const BooqiPayoutsPage = lazyWithReload(() => import("./pages/BooqiPayoutsPage"));
 const InvoicesPage = lazyWithReload(() => import("./pages/InvoicesPage"));
 const TaxPage = lazyWithReload(() => import("./pages/TaxPage"));
 const ProfitPage = lazyWithReload(() => import("./pages/ProfitPage"));
@@ -289,6 +290,7 @@ const App = () => (
               <Route path="integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsPage /></Suspense>} />
               <Route path="api-docs" element={<Suspense fallback={<PageLoader />}><ApiDocsPage /></Suspense>} />
               <Route path="money" element={<Suspense fallback={<PageLoader />}><PaymentsPage /></Suspense>} />
+              <Route path="money/booqi" element={<Suspense fallback={<PageLoader />}><BooqiPayoutsPage /></Suspense>} />
               <Route path="money/tips" element={<Suspense fallback={<PageLoader />}><MoneyPage key="tips" section="tips" /></Suspense>} />
               <Route path="money/cash" element={<Suspense fallback={<PageLoader />}><MoneyPage key="cash" section="cash" /></Suspense>} />
               <Route path="money/more" element={<Suspense fallback={<PageLoader />}><MoneyPage key="more" section="more" /></Suspense>} />

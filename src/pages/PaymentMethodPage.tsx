@@ -12,6 +12,7 @@ import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { businessService } from "@/services/businessService";
 import { checkoutQuoteService, type CheckoutQuote } from "@/services/checkoutQuoteService";
+import { useWalletEnabled } from "@/services/platformService";
 import type { SalePayment } from "@/services/paymentConfirmationService";
 import "@/components/auth/auth-tokens.css";
 import { t } from "@/i18n";
@@ -107,7 +108,9 @@ export default function PaymentMethodPage({
   const takesCard = accepted.includes("CARD");
 
   // ── the cashier's few choices ──
-  const [method, setMethod] = useState<"cash" | "card">(() => {
+  const walletEnabled = useWalletEnabled();
+  const [walletCode, setWalletCode] = useState("");
+  const [method, setMethod] = useState<"cash" | "card" | "wallet">(() => {
     try {
       return localStorage.getItem(LAST_METHOD_KEY) === "card-terminal" ? "card" : "cash";
     } catch {
@@ -117,7 +120,8 @@ export default function PaymentMethodPage({
   useEffect(() => {
     if (method === "cash" && !takesCash && takesCard) setMethod("card");
     if (method === "card" && !takesCard && takesCash) setMethod("cash");
-  }, [method, takesCash, takesCard]);
+    if (method === "wallet" && !walletEnabled) setMethod(takesCash ? "cash" : "card");
+  }, [method, takesCash, takesCard, walletEnabled]);
   const [removed, setRemoved] = useState<string[]>([]);
   const [usePoints, setUsePoints] = useState(false);
   const [includeDebt, setIncludeDebt] = useState(false);
@@ -207,11 +211,21 @@ export default function PaymentMethodPage({
   const handleConfirm = () => {
     if (busy || !quote || !onConfirm) return;
     const base: SalePayment[] = (quote.payments ?? []).map((p) => ({ ...p, amount: Number(p.amount) }));
-    const cashCard = (m: "cash" | "card") => (m === "card" ? "CARD_TERMINAL" : "CASH") as "CASH" | "CARD_TERMINAL";
+    const cashCard = (m: "cash" | "card" | "wallet") => (m === "card" ? "CARD_TERMINAL" : "CASH") as "CASH" | "CARD_TERMINAL";
     let payments = base;
     let leaveBalance = false;
     let paymentMethod = method === "card" ? "card-terminal" : "cash";
-    if (owing !== null) {
+    const walletSale = method === "wallet" && walletEnabled && saleDue > 0.009 && split === null && owing === null;
+    if (walletSale) {
+      // The customer's booqi balance: authorised by the 8-digit code they show, charged for the whole bill.
+      const code = walletCode.replace(/\D/g, "");
+      if (code.length !== 8) {
+        toast.error(t("bwallet.codeInvalid"));
+        return;
+      }
+      paymentMethod = "booqi-wallet";
+      payments = [...base, { method: "BOOQI_WALLET", amount: round2(saleDue), reference: code }];
+    } else if (owing !== null) {
       const now = Math.min(saleDue, owing);
       payments = [...base, ...(now > 0 ? [{ method: cashCard(method), amount: round2(now) }] : [])];
       leaveBalance = saleDue - now > 0.009;
@@ -472,14 +486,23 @@ export default function PaymentMethodPage({
         {/* Nothing to take (package, wallet, deposit covered it): no method to choose. */}
         {quote && !nothingToTake && (
           <>
-            {split === null && owing === null && takesCash && takesCard && (
+            {split === null && owing === null && ((takesCash && takesCard) || walletEnabled) && (
               <div className="mt-6 flex gap-1 rounded-xl bg-[rgb(var(--reg-canvas))] p-1" role="radiogroup" aria-label={t("pos.method")}>
-                <button type="button" role="radio" aria-checked={method === "cash"} className={segBtn(method === "cash")} onClick={() => { setMethod("cash"); setCashText(null); }}>
-                  {t("common.cash")}
-                </button>
-                <button type="button" role="radio" aria-checked={method === "card"} className={segBtn(method === "card")} onClick={() => setMethod("card")}>
-                  {t("common.card")}
-                </button>
+                {takesCash && (
+                  <button type="button" role="radio" aria-checked={method === "cash"} className={segBtn(method === "cash")} onClick={() => { setMethod("cash"); setCashText(null); }}>
+                    {t("common.cash")}
+                  </button>
+                )}
+                {takesCard && (
+                  <button type="button" role="radio" aria-checked={method === "card"} className={segBtn(method === "card")} onClick={() => setMethod("card")}>
+                    {t("common.card")}
+                  </button>
+                )}
+                {walletEnabled && (
+                  <button type="button" role="radio" aria-checked={method === "wallet"} className={segBtn(method === "wallet")} onClick={() => setMethod("wallet")} data-testid="method-booqi-wallet">
+                    {t("bwallet.method")}
+                  </button>
+                )}
               </div>
             )}
             <div className="mt-4">
@@ -493,6 +516,23 @@ export default function PaymentMethodPage({
                   {t("pos.debtSummary", { value: money(Math.max(0, saleDue - owing)) })}{" "}
                   <button type="button" className={textBtn} onClick={() => setOwing(null)}>{t("pos.undo")}</button>
                 </p>
+              ) : method === "wallet" && walletEnabled ? (
+                <>
+                  <label htmlFor="wallet-code" className={label}>{t("bwallet.codeLabel")}</label>
+                  <input
+                    id="wallet-code"
+                    data-testid="booqi-wallet-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    autoFocus
+                    maxLength={9}
+                    value={walletCode}
+                    onChange={(e) => setWalletCode(e.target.value.replace(/[^0-9 ]/g, ""))}
+                    className={cn(field, "mt-1.5 tracking-[0.2em]")}
+                  />
+                  <p className={cn(label, "mt-2")}>{t("bwallet.codeHint")}</p>
+                </>
               ) : method === "cash" ? (
                 <>
                   <label htmlFor="cash-received" className={label}>{t("pos.received")}</label>

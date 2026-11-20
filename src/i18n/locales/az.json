@@ -5404,5 +5404,32 @@
     "bookingCancelled": "Müştəri rezervi ləğv etdi",
     "waitlist": "Gözləmə siyahısına yeni sorğu",
     "review": "Yeni rəy {rating}/5"
+  },
+  "bwallet": {
+    "navTitle": "booqi-dən gözlənilən",
+    "navHint": "Müştərilərin booqi balansı ilə etdiyi ödənişlər",
+    "method": "booqi balansı",
+    "codeLabel": "Müştərinin ödəniş kodu",
+    "codeHint": "Müştəri booqi saytında booqi balansını açıb 8 rəqəmli kodu göstərir.",
+    "codeInvalid": "Müştərinin 8 rəqəmli kodunu daxil edin",
+    "pendingTitle": "booqi-dən gözlənilən ödəniş",
+    "pendingHint": "Müştərilərin booqi balansı ilə etdiyi ödənişlər. booqi bu məbləği salonunuza köçürür; hər ödəniş köçürülənə qədər burada görünür.",
+    "paidTotal": "İndiyədək ödənilib",
+    "payments": "Ödənişlər",
+    "payouts": "booqi-dən köçürmələr",
+    "empty": "Hələ booqi balansı ilə ödəniş yoxdur.",
+    "colDate": "Tarix",
+    "colKind": "Növ",
+    "colGross": "Ödəniş",
+    "colCommission": "booqi haqqı",
+    "colNet": "Sizə",
+    "colStatus": "Status",
+    "k_PAYMENT": "Ödəniş",
+    "k_REFUND": "Geri qaytarma",
+    "s_PENDING": "Gözləyir",
+    "s_PAID": "Ödənilib",
+    "batch": "Köçürmə",
+    "ref": "İstinad",
+    "loadFailed": "Yüklənmədi. Yenidən cəhd edin."
   }
 }
