@@ -18,7 +18,7 @@ import { format } from "@/i18n/dateFns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { SetupGuide } from "@/components/SetupGuide";
-import { myAccess, pageAllowed } from "@/components/layout/navigation";
+import { hasPermission, myAccess, pageAllowed } from "@/components/layout/navigation";
 import { VisibilityBanner } from "@/components/VisibilityBanner";
 import { idForKey, salonPath } from "@/lib/salonKey";
 
@@ -56,7 +56,8 @@ export default function HomePage() {
         const now = salonNow(salonTz);
         const today = format(now, "yyyy-MM-dd");
         const [overviewData, appts] = await Promise.all([
-          analysisService.getAnalyticsOverview(numericBusinessId, today, today),
+          // UI2-HUBA-009: staff have no ANALYTICS permission; the call would only 403.
+          hasPermission(myAccess(), "ANALYTICS") ? analysisService.getAnalyticsOverview(numericBusinessId, today, today) : Promise.resolve(null),
           appointmentService.getAppointmentsByBusiness(numericBusinessId, now),
         ]);
         setOverview(overviewData);

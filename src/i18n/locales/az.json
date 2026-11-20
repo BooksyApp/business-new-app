@@ -4586,6 +4586,11 @@
     "val_REFUNDED": "Geri qaytarılıb",
     "val_ACTIVE": "Aktiv",
     "val_admin": "Salon (admin)",
+    "val_hub": "Salon paneli",
+    "val_import": "İdxal",
+    "val_qr": "QR kod",
+    "val_web_link": "Salon linki",
+    "val_web_marketplace": "Marketplace",
     "val_api": "API",
     "val_web": "Vebsayt",
     "val_widget": "Vidjet",
@@ -4937,6 +4942,9 @@
     "errorsBody": "401 açar yoxdur və ya ləğv edilib · 403 səlahiyyət yoxdur · 404 naməlum id · 409 vaxt əlçatan deyil · 422 rezerv etmək olmur · 429 limit aşılıb."
   },
   "pos": {
+    "giftCodeInvalid": "Bu kodla hədiyyə kartı tapılmadı.",
+    "giftOtherSalon": "Bu hədiyyə kartı başqa salona aiddir və yalnız orada xərclənə bilər.",
+    "bonusLine": "Bonus bal",
     "discountNoLetters": "Burada yalnız məbləğ və ya % yazılır. Promo kod kassada yox, rezervdə tətbiq olunur.",
     "bonusPoints": "{points} bonus bal",
     "walkIn": "Yazılmadan gələn müştəri",

@@ -4586,6 +4586,11 @@
     "val_REFUNDED": "Refunded",
     "val_ACTIVE": "Active",
     "val_admin": "Salon (admin)",
+    "val_hub": "Salon panel",
+    "val_import": "Import",
+    "val_qr": "QR code",
+    "val_web_link": "Salon link",
+    "val_web_marketplace": "Marketplace",
     "val_api": "API",
     "val_web": "Website",
     "val_widget": "Widget",
@@ -4937,6 +4942,9 @@
     "errorsBody": "401 missing or revoked key · 403 scope missing · 404 unknown id · 409 slot not available · 422 cannot be booked · 429 rate limit."
   },
   "pos": {
+    "giftCodeInvalid": "There is no gift card with that code.",
+    "giftOtherSalon": "That gift card is for another salon and can only be spent there.",
+    "bonusLine": "Bonus points",
     "discountNoLetters": "Only an amount or a % goes here. Promo codes are applied to the booking, not at the till.",
     "bonusPoints": "{points} bonus points",
     "walkIn": "Walk-in client",

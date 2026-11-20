@@ -14,8 +14,16 @@ export function printReceipt(sale: Sale, opts: { salonName: string; salonAddress
   const w = window.open("", "_blank", "noopener=no,width=480,height=720");
   if (!w) return false;
   const title = opts.invoiceNumber ? `${t("ledger.invoice")} ${opts.invoiceNumber}` : t("ledger.receipt");
-  const lines = (sale.items ?? [])
-    .map((i) => `<tr><td>${esc(i.serviceName)}${i.quantity > 1 ? ` × ${i.quantity}` : ""}</td><td class="r">${esc(formatPrice(i.totalPrice ?? i.unitPrice * i.quantity))}</td></tr>`)
+  // UI2-HUBB-028: the same item rung up twice prints once, "2 × 12.50".
+  const grouped: { name: string; unit: number; qty: number }[] = [];
+  for (const i of sale.items ?? []) {
+    const unit = Number(i.unitPrice ?? 0);
+    const hit = grouped.find((g) => g.name === i.serviceName && g.unit === unit);
+    if (hit) hit.qty += i.quantity || 1;
+    else grouped.push({ name: i.serviceName ?? "", unit, qty: i.quantity || 1 });
+  }
+  const lines = grouped
+    .map((g) => `<tr><td>${esc(g.name)}${g.qty > 1 ? ` × ${g.qty}` : ""}</td><td class="r">${esc(formatPrice(g.unit * g.qty))}</td></tr>`)
     .join("");
   const tenders = opts.methods.map((m) => `<tr><td>${esc(m.label)}</td><td class="r">${esc(formatPrice(m.amount))}</td></tr>`).join("");
   const row = (label: string, v: number) => (v ? `<tr><td>${esc(label)}</td><td class="r">${esc(formatPrice(v))}</td></tr>` : "");

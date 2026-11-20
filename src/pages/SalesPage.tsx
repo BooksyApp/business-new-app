@@ -322,7 +322,7 @@ export default function SalesPage() {
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   // UI2-HUBB-029: the list rows carry no refund info; the sale detail does.
-  const [refundInfo, setRefundInfo] = useState<Pick<Sale, "refundedAmount" | "refundStatus"> | null>(null);
+  const [refundInfo, setRefundInfo] = useState<Pick<Sale, "refundedAmount" | "refundStatus" | "payments"> | null>(null);
   const selectedSaleId = selectedTransaction?.sale?.id;
   useEffect(() => {
     setRefundInfo(null);
@@ -330,7 +330,7 @@ export default function SalesPage() {
     let live = true;
     saleService
       .getSaleById(selectedSaleId)
-      .then((d) => live && setRefundInfo({ refundedAmount: d.refundedAmount, refundStatus: d.refundStatus }))
+      .then((d) => live && setRefundInfo({ refundedAmount: d.refundedAmount, refundStatus: d.refundStatus, payments: d.payments }))
       .catch(() => {});
     return () => {
       live = false;
@@ -2031,8 +2031,8 @@ export default function SalesPage() {
                     <section className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                       <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("sales.items")}</h3>
                       <ul className="space-y-1.5 text-sm">
-                        {t.items.map((it, i) => (
-                          <li key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{it.quantity > 1 ? `${it.quantity}× ` : ""}{it.name}</span><span className="shrink-0 tabular-nums">{it.price}</span></li>
+                        {groupReceiptLines(t.items.flatMap((it) => Array.from({ length: Math.max(1, it.quantity) }, () => ({ name: it.name, price: (parseFloat(it.price) / Math.max(1, it.quantity)).toFixed(2) })))).map((l, i) => (
+                          <li key={i} className="flex justify-between gap-3"><span className="min-w-0 truncate">{l.name}</span><span className="shrink-0 tabular-nums">{l.qty > 1 ? `${l.qty} × ${l.price}` : l.price} {currencySymbol()}</span></li>
                         ))}
                       </ul>
                       <dl className="mt-3 space-y-1 border-t border-[rgb(var(--reg-line)/0.6)] pt-3 text-sm">
@@ -2067,6 +2067,10 @@ export default function SalesPage() {
                           {groupReceiptLines(t.items.map((it) => ({ name: it.name, price: it.price }))).map((l, i) => <p key={i} className="flex justify-between gap-3"><span className="truncate">{l.name}</span><span>{l.qty > 1 ? `${l.qty} × ${l.price}` : l.price}</span></p>)}
                           <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
                           <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span>{t.total}</span></p>
+                          {/* UI2-HUBB-036: bonus points / gift card / balance that paid part of the bill. */}
+                          {(refundInfo?.payments ?? []).filter((p) => ["POINTS", "GIFT_CARD", "WALLET"].includes(p.method) && Number(p.amount) > 0).map((p, i) => (
+                            <p key={`tn${i}`} className="flex justify-between text-[rgb(var(--reg-muted))]"><span>{p.method === "POINTS" ? (p.reference ? tr("pos.bonusPoints", { points: p.reference }) : tr("pos.bonusLine")) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.reference ?? "" }) : tr("pos.wallet")}</span><span>{Number(p.amount).toFixed(2)}</span></p>
+                          ))}
                           {t.status === "REFUNDED" && <p className="flex justify-between text-rose-700"><span>{tr("sales.refunded")}</span><span>−{t.total}</span></p>}
                           {partlyRefunded && refundInfo?.refundedAmount ? <p className="flex justify-between text-rose-700"><span>{tr("sales.partiallyRefunded")}</span><span>−{Number(refundInfo.refundedAmount).toFixed(2)}</span></p> : null}
                           {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}

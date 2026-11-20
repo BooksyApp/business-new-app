@@ -46,6 +46,8 @@ export interface Sale {
   /** Detail only: sum of partial/full refunds, NONE | PARTIALLY_REFUNDED | REFUNDED, and each refund. */
   refundedAmount?: number;
   refundStatus?: 'NONE' | 'PARTIALLY_REFUNDED' | 'REFUNDED';
+  /** Detail only: the tenders the bill was settled with (CASH, POINTS, GIFT_CARD...). */
+  payments?: Array<{ method: string; amount: number; reference?: string }>;
   refunds?: Array<{ amount: number; method?: string; reason?: string; created_at?: string }>;
 }
 

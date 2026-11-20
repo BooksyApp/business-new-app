@@ -34,6 +34,17 @@ import {
 } from "@/services/moneyService";
 import { useOnlinePayments } from "@/services/platformService";
 import { t } from "@/i18n";
+import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
+
+/** The drawer stamps opened_at in UTC without an offset; show it in the salon zone (Asia/Baku by default). */
+function inSalonZone(raw: string, tz: string): string {
+  const iso = /(Z|[+-]\d\d:?\d\d)$/.test(raw) ? raw : `${raw}Z`;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return raw.slice(0, 16).replace("T", " ");
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d);
+  const g = (k: string) => p.find((x) => x.type === k)?.value ?? "";
+  return `${g("year")}-${g("month")}-${g("day")} ${g("hour")}:${g("minute")}`;
+}
 
 /**
  * The money pages that are not the ledger (HUB-V3, 2026-11-19): each is its own page now,
@@ -361,6 +372,7 @@ function TipsTab({ businessId }: { businessId: Id }) {
 // ---------------------------------------------------------------------------
 
 function DrawerTab({ businessId }: { businessId: Id }) {
+  const salonTz = useSalonTimeZone(businessId);
   const [session, setSession] = useState<DrawerSession | null>(null);
   const [history, setHistory] = useState<DrawerSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -441,7 +453,7 @@ function DrawerTab({ businessId }: { businessId: Id }) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Banknote className="h-4 w-4" />{" "}{t("money.openSince", { value: String(session.opened_at).slice(0, 16).replace("T", " ") })}
+              <Banknote className="h-4 w-4" />{" "}{t("money.openSince", { value: inSalonZone(String(session.opened_at), salonTz) })}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -557,7 +569,7 @@ function DrawerTab({ businessId }: { businessId: Id }) {
                 return (
                   <div key={past.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
                     <div>
-                      <p className="font-medium">{String(past.opened_at).slice(0, 10)}</p>
+                      <p className="font-medium">{inSalonZone(String(past.opened_at), salonTz).slice(0, 10)}</p>
                       <p className="text-xs text-muted-foreground">
                         {t("money.expectedCounted", { value: formatPrice(past.expected_cash ?? 0), value2: formatPrice(past.counted_cash ?? 0), value3: past.notes ? ` · ${past.notes}` : "" })}
                       </p>

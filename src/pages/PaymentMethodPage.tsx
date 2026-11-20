@@ -182,7 +182,7 @@ export default function PaymentMethodPage({
           const msg = e instanceof Error ? e.message : String(e);
           // A bad gift card code: say so at the field and price without it.
           if (giftApplied) {
-            setGiftError(msg);
+            setGiftError(/no gift card with that code/i.test(msg) ? t("pos.giftCodeInvalid") : /another salon/i.test(msg) ? t("pos.giftOtherSalon") : msg);
             setGiftApplied("");
             setGiftOpen(true);
             return;
