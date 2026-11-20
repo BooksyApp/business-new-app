@@ -10,7 +10,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { booqiWalletService } from "@/services/booqiWalletService";
 import { t, type TKey } from "@/i18n";
 
-const day = (iso: string) => new Date(iso.endsWith("Z") ? iso : `${iso}Z`).toLocaleDateString();
+const day = (iso: string) => new Date(/(?:[zZ]|[+-]\d\d:?\d\d)$/.test(iso) ? iso : `${iso}Z`).toLocaleDateString();
 
 /** Money › "Pending payout from booqi": customer payments made with booqi balance, and when booqi pays them out. */
 export default function BooqiPayoutsPage() {
