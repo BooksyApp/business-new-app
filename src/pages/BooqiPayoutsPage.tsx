@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BooqiScope, PageHeader } from "@/components/page/booqi";
@@ -20,6 +22,11 @@ export default function BooqiPayoutsPage() {
     retry: false,
   });
   const d = q.data;
+  // The route answers 404 while the platform has the wallet off: the page must not exist then either.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (q.isError) navigate("..", { relative: "path", replace: true });
+  }, [q.isError, navigate]);
   return (
     <AppLayout>
       <BooqiScope>
