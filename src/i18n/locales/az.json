@@ -1141,6 +1141,7 @@
     "couldNotChangeTheClient": "Müştərini dəyişmək alınmadı",
     "appointmentConfirmed": "Rezerv təsdiqləndi",
     "markedAsNoShow": "\"Gəlmədi\" qeyd olundu",
+    "noShowTooEarly": "Rezerv hələ başlamayıb — \"Gəlmədi\" yalnız vaxtı başlayandan sonra qeyd olunur",
     "couldNotUpdateTheAppointment": "Rezervi yeniləmək alınmadı",
     "failedToLoadAppointmentDetails": "Rezervin məlumatlarını yükləmək alınmadı",
     "appointmentDetails": "Rezerv haqqında",

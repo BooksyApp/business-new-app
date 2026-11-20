@@ -1141,6 +1141,7 @@
     "couldNotChangeTheClient": "Не удалось сменить клиента",
     "appointmentConfirmed": "Запись подтверждена",
     "markedAsNoShow": "Отмечено: не пришёл",
+    "noShowTooEarly": "Запись ещё не началась — «не пришёл» можно отметить только после начала",
     "couldNotUpdateTheAppointment": "Не удалось обновить запись",
     "failedToLoadAppointmentDetails": "Не удалось загрузить запись",
     "appointmentDetails": "Запись",

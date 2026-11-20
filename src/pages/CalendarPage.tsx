@@ -2677,10 +2677,10 @@ export default function CalendarPage() {
                                   className={`text-xs p-1.5 rounded cursor-pointer truncate border-l-4 hover:opacity-80 ${
                                     blockVisuals(apt).colorClasses
                                   }`}
-                                  title={`${apt.startTime} - ${apt.endTime}: ${apt.service}`}
+                                  title={`${apt.startTime?.slice(0, 5)} - ${apt.endTime?.slice(0, 5)}: ${apt.service}`}
                                 >
                                   <div className="text-[10px] font-medium">
-                                    {apt.startTime} - {apt.endTime}
+                                    {apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}
                                   </div>
                                   <div className="flex items-center gap-1 text-[10px] font-semibold">
                                     <span className="truncate">{apt.clientName}</span>
@@ -2822,10 +2822,10 @@ export default function CalendarPage() {
                                         className={`text-xs p-1.5 rounded cursor-pointer border-l-4 hover:opacity-80 ${
                                           blockVisuals(apt).colorClasses
                                         }`}
-                                        title={`${apt.startTime} - ${apt.endTime}: ${apt.service}`}
+                                        title={`${apt.startTime?.slice(0, 5)} - ${apt.endTime?.slice(0, 5)}: ${apt.service}`}
                                       >
                                         <div className="text-[10px] font-medium truncate">
-                                          {apt.startTime} - {apt.endTime}
+                                          {apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}
                                         </div>
                                         <div className="flex items-center gap-1 text-[10px] font-semibold">
                                           <span className="truncate">{apt.clientName}</span>
@@ -2975,7 +2975,7 @@ export default function CalendarPage() {
                   {staff && (
                     <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
                       <span>{tr("calendar.time")}</span>
-                      <span className="font-medium">{apt.startTime} - {apt.endTime}</span>
+                      <span className="font-medium">{apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}</span>
                     </div>
                   )}
                 </div>
@@ -3052,6 +3052,16 @@ export default function CalendarPage() {
               onClick={() => {
                 if (finalSelection) {
                   setIsSelectionDialogOpen(false);
+                  // A controlled Sheet never fires onOpenChange(true) for this call, so the
+                  // chosen master/time must be copied here (it used to default to 10:00-11:00,
+                  // first master, whatever slot was clicked).
+                  setReservationForm((prev) => ({
+                    ...prev,
+                    staffId: finalSelection.staffId || prev.staffId,
+                    startTime: finalSelection.startTime || prev.startTime,
+                    endTime: finalSelection.endTime || prev.endTime,
+                    date: format(currentDate, "yyyy-MM-dd"),
+                  }));
                   setIsAddReservationOpen(true);
                 }
               }}

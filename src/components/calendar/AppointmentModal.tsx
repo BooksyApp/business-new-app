@@ -256,6 +256,14 @@ export function AppointmentModal({
   const appointmentDate = appointmentData.appointmentDate || (appointment.date && isValid(new Date(appointment.date)) ? format(appointment.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
   // LR-09: compared with the salon's today (market zone until the salon's is known).
   const isFutureVisit = appointmentDate > format(salonNow(salonTz), 'yyyy-MM-dd');
+  // A no-show can only be recorded once the booking has started (the server refuses earlier).
+  const notStartedYet = (() => {
+    const nowSalon = salonNow(salonTz);
+    const today = format(nowSalon, 'yyyy-MM-dd');
+    if (appointmentDate !== today) return appointmentDate > today;
+    const st = (appointmentData.startTime || appointment.startTime || "").slice(0, 5);
+    return !!st && st > format(nowSalon, 'HH:mm');
+  })();
   const staffName = appointmentData.staffName || staff?.name || "Unassigned";
   const repServiceName = appointmentData.serviceName || appointment.service;
   // The API sends "10:00:00"; a receptionist reads "10:00".
@@ -687,7 +695,8 @@ export function AppointmentModal({
             <Button
               variant="outline"
               className="h-11 gap-1.5 rounded-full text-sm font-semibold"
-              disabled={lifecycleBusy || status === "NO_SHOW"}
+              disabled={lifecycleBusy || status === "NO_SHOW" || notStartedYet}
+              title={notStartedYet ? tr("calendar.noShowTooEarly") : undefined}
               onClick={() => void runLifecycle("no-show")}
             >
               <UserX className="h-3.5 w-3.5" />

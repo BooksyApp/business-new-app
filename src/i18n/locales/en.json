@@ -1141,6 +1141,7 @@
     "couldNotChangeTheClient": "Could not change the client",
     "appointmentConfirmed": "Appointment confirmed",
     "markedAsNoShow": "Marked as no-show",
+    "noShowTooEarly": "This booking has not started yet — a no-show can only be recorded once it has",
     "couldNotUpdateTheAppointment": "Could not update the appointment",
     "failedToLoadAppointmentDetails": "Failed to load appointment details",
     "appointmentDetails": "Appointment details",
