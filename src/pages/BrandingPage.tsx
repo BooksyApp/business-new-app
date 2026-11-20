@@ -25,6 +25,8 @@ export default function BrandingPage() {
   const businessId = getCurrentBusinessId();
   // The widget is one script tag on the salon's own site; it draws the booking button in an iframe.
   const widgetCode = `<script src="https://getbooqi.tech/embed.js" data-salon="${businessId ?? ""}" async></script>`;
+  const iframeCode = `<iframe src="https://getbooqi.tech/widget/${businessId ?? ""}" title="booqi" style="width:100%;max-width:380px;height:420px;border:0" loading="lazy"></iframe>`;
+  const linkCode = `<a href="https://getbooqi.tech/salon/${businessId ?? ""}?src=widget" target="_blank" rel="noopener" style="display:inline-block;padding:12px 22px;border-radius:999px;background:#111827;color:#fff;font:600 14px sans-serif;text-decoration:none">${t("branding.widgetButtonText")}</a>`;
   const { getPath } = useNavigation();
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -189,18 +191,27 @@ export default function BrandingPage() {
                     <p className="text-sm font-bold">{t("branding.widgetTitle")}</p>
                     <p className="text-xs text-[rgb(var(--reg-muted))]">{t("branding.widgetHint")}</p>
                   </div>
-                  <textarea readOnly rows={5} className={cn(fieldCls, "font-mono text-xs")} value={widgetCode} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={secondaryBtn}
-                    onClick={() => {
-                      navigator.clipboard?.writeText(widgetCode);
-                      toast.success(t("branding.widgetCopied"));
-                    }}
-                  >
-                    {t("branding.widgetCopy")}
-                  </Button>
+                  {([
+                    ["script", t("branding.widgetScript"), widgetCode],
+                    ["iframe", t("branding.widgetIframe"), iframeCode],
+                    ["link", t("branding.widgetLink"), linkCode],
+                  ] as const).map(([k, label, code]) => (
+                    <div key={k} className="space-y-1.5">
+                      <p className="text-xs font-semibold">{label}</p>
+                      <textarea readOnly rows={k === "link" ? 4 : 3} aria-label={label} className={cn(fieldCls, "font-mono text-xs")} value={code} />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={secondaryBtn}
+                        onClick={() => {
+                          navigator.clipboard?.writeText(code);
+                          toast.success(t("branding.widgetCopied"));
+                        }}
+                      >
+                        {t("branding.widgetCopy")}
+                      </Button>
+                    </div>
+                  ))}
                 </section>
               </div>
 

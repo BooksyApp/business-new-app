@@ -155,6 +155,103 @@ export function TransferSheet({
   );
 }
 
+/** Header-level transfer: pick the product, where it leaves from, where it goes and how many. */
+export function QuickTransferSheet({
+  businessId,
+  products,
+  locations,
+  open,
+  onClose,
+}: {
+  businessId: Id;
+  products: { id: Id; name: string }[];
+  locations: StockLocation[];
+  open: boolean;
+  onClose: () => void;
+}) {
+  const invalidate = useInvalidateStock(businessId);
+  const [productId, setProductId] = useState("");
+  const [from, setFrom] = useState<Id | "">("");
+  const [to, setTo] = useState<Id | "">("");
+  const [qty, setQty] = useState("1");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const fromLoc = locations.find((l) => String(l.id) === String(from));
+  const levelQ = useQuery({
+    queryKey: ["stock-levels", businessId, from],
+    queryFn: () => salonDayService.getStockLevels(businessId, from as Id),
+    enabled: open && !!from,
+  });
+  const available = levelQ.data?.find((r) => String(r.id) === productId)?.quantity_on_hand;
+
+  const submit = async () => {
+    const quantity = Number(qty);
+    if (!productId || !from || !to) {
+      toast.error(t("inventory.transferPickAll"));
+      return;
+    }
+    if (String(from) === String(to)) {
+      toast.error(t("inventory.pickDestination"));
+      return;
+    }
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      toast.error(t("inventory.transferQuantityInvalid"));
+      return;
+    }
+    setSaving(true);
+    try {
+      await salonDayService.transferStock(businessId, {
+        productId, fromLocationId: from, toLocationId: to, quantity, note: note.trim() || undefined,
+      });
+      toast.success(t("inventory.transferDone"));
+      await invalidate();
+      setProductId(""); setFrom(""); setTo(""); setQty("1"); setNote("");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("inventory.transferFailed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <FormSheet
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      title={t("inventory.transfer")}
+      description={fromLoc ? t("inventory.transferFrom", { from: locationLabel(fromLoc) }) : ""}
+      footer={
+        <>
+          <Button variant="outline" className={sheetSecondary} onClick={onClose}>{t("common.cancel")}</Button>
+          <Button className={sheetPrimary} onClick={() => void submit()} disabled={saving}>
+            {saving ? t("common.saving") : t("inventory.transfer")}
+          </Button>
+        </>
+      }
+    >
+      <Field label={t("inventory.transferProduct")} htmlFor="qt-product">
+        <select id="qt-product" className={fieldCls} value={productId} onChange={(e) => setProductId(e.target.value)}>
+          <option value="" />
+          {products.map((p) => <option key={String(p.id)} value={String(p.id)}>{p.name}</option>)}
+        </select>
+      </Field>
+      <Field label={t("inventory.transferFromLabel")} htmlFor="qt-from">
+        <LocationSelect locations={locations} value={from || undefined} onChange={setFrom} className="h-11 w-full rounded-xl" />
+      </Field>
+      <Field label={t("inventory.transferTo")} htmlFor="qt-to">
+        <LocationSelect locations={locations.filter((l) => String(l.id) !== String(from))} value={to || undefined} onChange={setTo} className="h-11 w-full rounded-xl" />
+      </Field>
+      <Field label={t("inventory.transferQuantity")} htmlFor="qt-qty">
+        <input id="qt-qty" type="number" inputMode="numeric" min={1} step={1} className={fieldCls} value={qty} onChange={(e) => setQty(e.target.value)} />
+        {available != null && productId && <p className="mt-1 text-xs text-muted-foreground">{t("inventory.inStock2")}: {available}</p>}
+      </Field>
+      <Field label={t("inventory.transferNote")} htmlFor="qt-note">
+        <input id="qt-note" className={fieldCls} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />
+      </Field>
+    </FormSheet>
+  );
+}
+
 export function LocationsSheet({
   businessId,
   open,

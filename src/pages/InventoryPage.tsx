@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { cn } from "@/lib/utils";
-import { LocationSelect, LocationsSheet, RecentTransfers, TransferSheet, useInvalidateStock, useStockLocations } from "@/components/inventory/StockLocations";
+import { LocationSelect, LocationsSheet, QuickTransferSheet, RecentTransfers, TransferSheet, useInvalidateStock, useStockLocations } from "@/components/inventory/StockLocations";
 import { productService, type Product } from "@/services/productService";
 import { salonDayService } from "@/services/salonDayService";
 import { t } from "@/i18n";
@@ -37,6 +37,7 @@ export default function InventoryPage() {
   const { locations, location, locationId, setLocationId } = useStockLocations(businessId);
   const [transferring, setTransferring] = useState<Product | null>(null);
   const [managing, setManaging] = useState(false);
+  const [quickTransfer, setQuickTransfer] = useState(false);
   const invalidateStock = useInvalidateStock(businessId);
   const levelsQ = useQuery({
     queryKey: ["stock-levels", businessId, locationId],
@@ -168,6 +169,13 @@ export default function InventoryPage() {
                 <Link to="suppliers">
                   <Truck size={16} />{" "}{t("inventory.suppliersAndOrders")}
                 </Link>
+              </Button>
+              <Button
+                variant="outline"
+                className={sheetSecondary}
+                onClick={() => (locations.length > 1 ? setQuickTransfer(true) : (toast.info(t("inventory.transferNeedTwo")), setManaging(true)))}
+              >
+                <ArrowRightLeft size={16} />{" "}{t("inventory.transfer")}
               </Button>
               <Button variant="outline" className={sheetSecondary} onClick={() => setManaging(true)}>
                 <MapPin size={16} />{" "}{t("inventory.manageLocations")}
@@ -301,6 +309,7 @@ export default function InventoryPage() {
           locations={locations}
           onClose={() => setTransferring(null)}
         />
+        <QuickTransferSheet businessId={businessId} products={products ?? []} locations={locations} open={quickTransfer} onClose={() => setQuickTransfer(false)} />
         <LocationsSheet businessId={businessId} open={managing} locations={locations} onClose={() => setManaging(false)} />
 
         <FormSheet

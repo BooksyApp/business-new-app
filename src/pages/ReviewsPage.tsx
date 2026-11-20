@@ -8,7 +8,7 @@ import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyle
 import { fieldCls } from "@/components/page/kitStyles";
 import { Empty } from "@/components/reports/ReportsKit";
 import { fmtDay, loc } from "@/components/reports/reportsFormat";
-import { reviewService, type Review } from "@/services/reviewService";
+import { reviewService, type Review, type ReviewReport } from "@/services/reviewService";
 import { businessService } from "@/services/businessService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { assetUrl } from "@/config/api";
@@ -40,6 +40,8 @@ export default function ReviewsPage() {
   const businessId = useBusinessId();
   const qc = useQueryClient();
   const reviewsQ = useQuery({ queryKey: ["reviews", businessId], queryFn: () => reviewService.getByBusiness(businessId), enabled: Boolean(businessId) });
+  const reportsQ = useQuery({ queryKey: ["review-reports", businessId], queryFn: () => reviewService.getReports(businessId), enabled: Boolean(businessId), retry: false });
+  const reportOf = (id: Id) => (reportsQ.data ?? []).find((x) => String(x.reviewRef) === String(id));
   const preview = useQuery({ queryKey: ["review-requests", businessId], queryFn: () => reviewService.requestPreview(businessId), enabled: Boolean(businessId), retry: false });
   const [stars, setStars] = useState<number | null>(null);
   const [staff, setStaff] = useState("");
@@ -140,7 +142,7 @@ export default function ReviewsPage() {
               ) : (
                 <ul className="space-y-3">
                   {list.map((r) => (
-                    <ReviewCard key={String(r.id)} review={r} businessId={businessId} onSaved={() => qc.invalidateQueries({ queryKey: ["reviews", businessId] })} />
+                    <ReviewCard key={String(r.id)} review={r} businessId={businessId} report={reportOf(r.id)} onReported={() => qc.invalidateQueries({ queryKey: ["review-reports", businessId] })} onSaved={() => qc.invalidateQueries({ queryKey: ["reviews", businessId] })} />
                   ))}
                 </ul>
               )}
@@ -215,8 +217,30 @@ function Summary({ reviews, onPick, picked }: { reviews: Review[]; onPick: (s: n
   );
 }
 
-function ReviewCard({ review: r, businessId, onSaved }: { review: Review; businessId: Id; onSaved: () => void }) {
+const REPORT_REASONS = ["SPAM", "ABUSE", "FAKE", "PERSONAL_DATA", "OTHER"] as const;
+const REASON_KEY: Record<string, string> = { SPAM: "reasonSpam", ABUSE: "reasonAbuse", FAKE: "reasonFake", PERSONAL_DATA: "reasonPersonal", OTHER: "reasonOther" };
+
+function ReviewCard({ review: r, businessId, report, onReported, onSaved }: { review: Review; businessId: Id; report?: ReviewReport; onReported: () => void; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reason, setReason] = useState<string>("SPAM");
+  const [reportText, setReportText] = useState("");
+  const [sendingReport, setSendingReport] = useState(false);
+  const sendReport = async () => {
+    setSendingReport(true);
+    try {
+      await reviewService.report(businessId, r.id, reason, reportText.trim());
+      toast.success(t("reviews.v3.reportSent"));
+      setReporting(false);
+      setReportText("");
+      onReported();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("reviews.v3.reportFailed"));
+    } finally {
+      setSendingReport(false);
+    }
+  };
+  const caseOpen = report && report.status !== "CLOSED";
   const [text, setText] = useState(r.reply ?? "");
   const [saving, setSaving] = useState(false);
   const save = async (value: string) => {
@@ -267,6 +291,43 @@ function ReviewCard({ review: r, businessId, onSaved }: { review: Review; busine
           <div className="mt-2 flex gap-3 text-[13px] font-semibold">
             <button type="button" className="text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => { setText(r.reply ?? ""); setOpen(true); }}>{t("reviews.v3.edit")}</button>
             <button type="button" className="text-[rgb(var(--reg-muted))] hover:underline" disabled={saving} onClick={() => void save("")}>{t("reviews.v3.remove")}</button>
+          </div>
+        </div>
+      )}
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px]">
+        {report && (
+          <span
+            data-testid="review-case-status"
+            className="rounded-full bg-[rgb(var(--reg-canvas))] px-2.5 py-0.5 font-semibold ring-1 ring-[rgb(var(--reg-line)/0.8)]"
+          >
+            {t("reviews.v3.caseLabel")}: {t(report.status === "OPEN" ? "reviews.v3.caseOpen" : report.status === "REVIEWING" ? "reviews.v3.caseReviewing" : "reviews.v3.caseClosed")}
+          </span>
+        )}
+        {!caseOpen && !reporting && (
+          <button type="button" className="font-semibold text-[rgb(var(--reg-muted))] hover:underline" onClick={() => setReporting(true)}>
+            {t("reviews.v3.report")}
+          </button>
+        )}
+      </div>
+      {reporting && (
+        <div className="mt-2 space-y-2 rounded-2xl bg-[rgb(var(--reg-canvas))] p-3.5">
+          <label className="text-[13px] font-semibold" htmlFor={`rr-${r.id}`}>{t("reviews.v3.reportReason")}</label>
+          <select id={`rr-${r.id}`} className={cn(fieldCls, "h-10 w-full text-[14px]")} value={reason} onChange={(e) => setReason(e.target.value)}>
+            {REPORT_REASONS.map((k) => <option key={k} value={k}>{t(`reviews.v3.${REASON_KEY[k]}`)}</option>)}
+          </select>
+          <textarea
+            rows={3}
+            maxLength={2000}
+            aria-label={t("reviews.v3.reportComment")}
+            className={cn(fieldCls, "h-auto w-full py-2.5 text-[14px]")}
+            placeholder={t("reviews.v3.reportComment")}
+            value={reportText}
+            onChange={(e) => setReportText(e.target.value)}
+          />
+          <p className="text-[12px] text-[rgb(var(--reg-muted))]">{t("reviews.v3.reportHint")}</p>
+          <div className="flex justify-end gap-2">
+            <button type="button" className={secondaryBtn} onClick={() => setReporting(false)}>{t("common.cancel")}</button>
+            <button type="button" className={primaryBtn} disabled={sendingReport} onClick={() => void sendReport()}>{t("reviews.v3.reportSend")}</button>
           </div>
         </div>
       )}

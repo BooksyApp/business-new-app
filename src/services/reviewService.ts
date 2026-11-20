@@ -30,6 +30,14 @@ export interface Review {
   photos?: string[];
 }
 
+export interface ReviewReport {
+  ref: string;
+  reviewRef: string;
+  reason: string;
+  status: "OPEN" | "REVIEWING" | "CLOSED";
+  resolution: "HIDDEN" | "REJECTED" | null;
+}
+
 export interface ReviewRequestPreview {
   count: number;
   windowDays: number;
@@ -56,6 +64,15 @@ class ReviewService {
     // Under /businesses, not /reviews: GET /api/reviews/** is public and the prefix is a
     // tenant exemption, so a salon-side write there was callable in any salon's name.
     return apiClient.put<Review>(`/businesses/${businessId}/reviews/${reviewId}/reply`, { reply });
+  }
+
+  /** The salon cannot delete or hide a review; it can open a case for the platform team. */
+  async report(businessId: Id, reviewId: Id, reason: string, comment: string): Promise<{ status: string }> {
+    return apiClient.post<{ status: string }>(`/businesses/${businessId}/reviews/${reviewId}/report`, { reason, comment });
+  }
+
+  async getReports(businessId: Id): Promise<ReviewReport[]> {
+    return apiClient.get<ReviewReport[]>(`/businesses/${businessId}/reviews/reports`);
   }
 
   /** Who would be asked to review, so the count is visible before anything is sent. */
