@@ -362,6 +362,9 @@ export default function SalesPage() {
     method: string;
     client: string | null;
     lines: { name: string; price: number }[];
+    /** What the checkout took off / added on top, so the receipt adds up to its total. */
+    discount: number;
+    tip: number;
     at: Date;
   } | null>(null);
 
@@ -1181,6 +1184,8 @@ export default function SalesPage() {
                 {lastSale.lines.map((l, i) => (
                   <p key={i} className="flex justify-between gap-3"><span className="truncate">{l.name}</span><span className="tabular-nums">{l.price.toFixed(2)}</span></p>
                 ))}
+                {lastSale.discount > 0 && <p className="flex justify-between"><span>{tr("common.discount")}</span><span className="tabular-nums">−{lastSale.discount.toFixed(2)}</span></p>}
+                {lastSale.tip > 0 && <p className="flex justify-between"><span>{tr("sales.tip")}</span><span className="tabular-nums">+{lastSale.tip.toFixed(2)}</span></p>}
                 <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
                 <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span className="tabular-nums">{lastSale.total.toFixed(2)} {currencySymbol()}</span></p>
                 {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}
@@ -1353,6 +1358,7 @@ export default function SalesPage() {
 
               // Success
               toast.success(tr("sales.paymentProcessedSuccessfully"));
+              const tipValue = Math.round((Number(paymentData.tip) > 0 ? Number(paymentData.tip) : (subtotal * Number(paymentData.tipPercent || 0)) / 100) * 100) / 100;
               setLastSale({
                 saleId: response.saleId,
                 total: Number(response.totalAmount ?? paymentData.amount),
@@ -1363,6 +1369,9 @@ export default function SalesPage() {
                   const raw = parseFloat(String(item.price ?? "0").replace(/[^0-9.,]/g, "").replace(",", "."));
                   return { name: item.name, price: isNaN(raw) ? 0 : raw };
                 }),
+                // Discount = whatever makes lines + tip add up to the charged total (covers promo codes too).
+                discount: Math.max(0, Math.round((subtotal + tipValue - Number(response.totalAmount ?? paymentData.amount)) * 100) / 100),
+                tip: tipValue,
                 at: new Date(),
               });
               // The shelf just changed; show what is left, not what was there before the sale.
