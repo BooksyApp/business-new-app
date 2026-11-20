@@ -5406,14 +5406,14 @@
     "review": "New review {rating}/5"
   },
   "bwallet": {
-    "navTitle": "Pending from booqi",
-    "navHint": "Customer payments made with booqi balance",
+    "navTitle": "Online & booqi payments",
+    "navHint": "Card and booqi balance payments, and your payouts",
     "method": "booqi balance",
     "codeLabel": "Customer's payment code",
     "codeHint": "The customer opens booqi balance on the booqi site and shows an 8-digit code.",
     "codeInvalid": "Enter the customer's 8-digit code",
     "pendingTitle": "Pending payout from booqi",
-    "pendingHint": "Payments customers made with booqi balance. booqi pays this amount out to your salon; each payment shows here until it is paid.",
+    "pendingHint": "Payments customers made online by card or with booqi balance. booqi collects them and pays you the amount minus booqi's fee; each payment shows here until it is paid out.",
     "paidTotal": "Paid out so far",
     "payments": "Payments",
     "payouts": "Payouts from booqi",
@@ -5430,6 +5430,22 @@
     "s_PAID": "Paid",
     "batch": "Payout",
     "ref": "Reference",
-    "loadFailed": "Could not load. Try again."
+    "loadFailed": "Could not load. Try again.",
+    "splitTitle": "Where customers paid (last 30 days)",
+    "splitNote": "Money paid at your salon (cash or card at your till) has no booqi fee.",
+    "atSalon": "Paid at the salon",
+    "online": "Online (via booqi)",
+    "wallet": "booqi balance",
+    "sumTitle": "Via booqi: online and booqi balance",
+    "sumGross": "Paid by customers",
+    "sumCommission": "booqi fee",
+    "sumNet": "Net to you",
+    "sumPaid": "Already paid out",
+    "sumPending": "Pending payout",
+    "rate": "Your booqi fee rate",
+    "colSource": "Source",
+    "src_ONLINE": "Online",
+    "src_WALLET": "booqi balance",
+    "refundNote": "A refund reverses the fee in proportion."
   }
 }

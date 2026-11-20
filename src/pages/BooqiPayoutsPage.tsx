@@ -21,7 +21,17 @@ export default function BooqiPayoutsPage() {
     enabled: Boolean(businessId),
     retry: false,
   });
+  const to = new Date();
+  const from = new Date(to.getTime() - 29 * 86400000);
+  const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const split = useQuery({
+    queryKey: ["booqi-revenue-split", businessId, iso(from), iso(to)],
+    queryFn: () => booqiWalletService.revenueSplit(businessId, iso(from), iso(to)),
+    enabled: Boolean(businessId) && q.isSuccess,
+    retry: false,
+  });
   const d = q.data;
+  const via = d ? d.bySource.reduce((a, r) => ({ gross: a.gross + Number(r.gross), commission: a.commission + Number(r.commission), net: a.net + Number(r.net), paid: a.paid + Number(r.paid), pending: a.pending + Number(r.pending) }), { gross: 0, commission: 0, net: 0, paid: 0, pending: 0 }) : null;
   // The route answers 404 while the platform has the wallet off: the page must not exist then either.
   const navigate = useNavigate();
   useEffect(() => {
@@ -30,7 +40,7 @@ export default function BooqiPayoutsPage() {
   return (
     <AppLayout>
       <BooqiScope>
-        <PageHeader title={t("bwallet.pendingTitle")} subtitle={t("bwallet.pendingHint")} />
+        <PageHeader title={t("bwallet.navTitle")} subtitle={t("bwallet.pendingHint")} />
         <div className={pageBody}>
           {q.isError ? (
             <Empty>{t("bwallet.loadFailed")}</Empty>
@@ -38,13 +48,37 @@ export default function BooqiPayoutsPage() {
             <div className="h-[200px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy="true" />
           ) : (
             <>
+              {split.data && (
+                <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]" data-testid="revenue-split">
+                  <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{t("bwallet.splitTitle")}</h2>
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.atSalon")}</p><p className="text-[22px] font-extrabold tabular-nums" data-testid="split-salon">{fmtMoney(split.data.atSalon)}</p></div>
+                    <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.online")}</p><p className="text-[22px] font-extrabold tabular-nums" data-testid="split-online">{fmtMoney(split.data.online)}</p></div>
+                    <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.wallet")}</p><p className="text-[22px] font-extrabold tabular-nums" data-testid="split-wallet">{fmtMoney(split.data.wallet)}</p></div>
+                  </div>
+                  <p className="mt-3 text-[12px] text-[rgb(var(--reg-muted))]">{t("bwallet.splitNote")}</p>
+                </section>
+              )}
+
+              {via && (
+                <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]" data-testid="via-booqi">
+                  <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{t("bwallet.sumTitle")}</h2>
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumGross")}</p><p className="text-[20px] font-extrabold tabular-nums" data-testid="via-gross">{fmtMoney(via.gross)}</p></div>
+                    <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumCommission")} ({Number(d.commissionPercent)}%)</p><p className="text-[20px] font-extrabold tabular-nums" data-testid="via-commission">{fmtMoney(via.commission)}</p></div>
+                    <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumNet")}</p><p className="text-[20px] font-extrabold tabular-nums" data-testid="via-net">{fmtMoney(via.net)}</p></div>
+                  </div>
+                  <p className="mt-2 text-[12px] text-[rgb(var(--reg-muted))]">{t("bwallet.refundNote")}</p>
+                </section>
+              )}
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]" data-testid="booqi-pending">
-                  <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.pendingTitle")}</p>
+                  <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumPending")}</p>
                   <p className="mt-1 text-[32px] font-extrabold tabular-nums">{fmtMoney(d.pending)}</p>
                 </div>
                 <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                  <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.paidTotal")}</p>
+                  <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumPaid")}</p>
                   <p className="mt-1 text-[32px] font-extrabold tabular-nums">{fmtMoney(d.paidTotal)}</p>
                 </div>
               </div>
@@ -58,7 +92,7 @@ export default function BooqiPayoutsPage() {
                     <li key={i.id} className="flex items-center gap-3 border-t border-[rgb(var(--reg-line)/0.6)] px-4 py-3 first:border-t-0 md:px-5">
                       <span className="w-24 shrink-0 text-[13px] tabular-nums text-[rgb(var(--reg-muted))]">{day(i.created_at)}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[15px] font-semibold">{t(`bwallet.k_${i.kind}` as TKey)}</span>
+                        <span className="block truncate text-[15px] font-semibold">{t(`bwallet.k_${i.kind}` as TKey)} · {t(`bwallet.src_${i.source ?? "WALLET"}` as TKey)}</span>
                         <span className="block truncate text-[13px] text-[rgb(var(--reg-muted))]">
                           {fmtMoney(i.gross_amount)}
                           {Number(i.commission_amount) !== 0 ? ` · ${t("bwallet.colCommission")} ${fmtMoney(Math.abs(i.commission_amount))}` : ""}

@@ -5406,14 +5406,14 @@
     "review": "Yeni rəy {rating}/5"
   },
   "bwallet": {
-    "navTitle": "booqi-dən gözlənilən",
-    "navHint": "Müştərilərin booqi balansı ilə etdiyi ödənişlər",
+    "navTitle": "Onlayn və booqi ödənişləri",
+    "navHint": "Kart və booqi balansı ilə ödənişlər, köçürmələriniz",
     "method": "booqi balansı",
     "codeLabel": "Müştərinin ödəniş kodu",
     "codeHint": "Müştəri booqi saytında booqi balansını açıb 8 rəqəmli kodu göstərir.",
     "codeInvalid": "Müştərinin 8 rəqəmli kodunu daxil edin",
     "pendingTitle": "booqi-dən gözlənilən ödəniş",
-    "pendingHint": "Müştərilərin booqi balansı ilə etdiyi ödənişlər. booqi bu məbləği salonunuza köçürür; hər ödəniş köçürülənə qədər burada görünür.",
+    "pendingHint": "Müştərilərin kartla onlayn və ya booqi balansı ilə etdiyi ödənişlər. booqi onları toplayır və booqi haqqı çıxılmaqla sizə köçürür; hər ödəniş köçürülənə qədər burada görünür.",
     "paidTotal": "İndiyədək ödənilib",
     "payments": "Ödənişlər",
     "payouts": "booqi-dən köçürmələr",
@@ -5430,6 +5430,22 @@
     "s_PAID": "Ödənilib",
     "batch": "Köçürmə",
     "ref": "İstinad",
-    "loadFailed": "Yüklənmədi. Yenidən cəhd edin."
+    "loadFailed": "Yüklənmədi. Yenidən cəhd edin.",
+    "splitTitle": "Müştərilər harada ödəyib (son 30 gün)",
+    "splitNote": "Salonda (kassanızda nağd və ya kartla) ödənilən məbləğdən booqi haqqı tutulmur.",
+    "atSalon": "Salonda ödənilib",
+    "online": "Onlayn (booqi vasitəsilə)",
+    "wallet": "booqi balansı",
+    "sumTitle": "booqi vasitəsilə: onlayn və booqi balansı",
+    "sumGross": "Müştərilərin ödədiyi",
+    "sumCommission": "booqi komissiyası",
+    "sumNet": "Sizə qalan (xalis)",
+    "sumPaid": "Artıq ödənilib",
+    "sumPending": "Gözlənilən ödəniş",
+    "rate": "booqi komissiya faizi",
+    "colSource": "Mənbə",
+    "src_ONLINE": "Onlayn",
+    "src_WALLET": "booqi balansı",
+    "refundNote": "Geri qaytarmada haqq mütənasib geri götürülür."
   }
 }
