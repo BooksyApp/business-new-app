@@ -26,7 +26,6 @@
     "/businesses/{b}",
     "/services/business/{b}",
     "/staff/business/{b}",
-    "/bookings/business/{b}/clients?limit=1000&offset=0",
-    "/invitations/business/{b}"
+    "/bookings/business/{b}/clients?limit=1000&offset=0"
   ]
 }
