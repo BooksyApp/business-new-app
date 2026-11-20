@@ -1,4 +1,5 @@
 import { idTone } from "@/lib/idTone";
+import { positionLabel } from "@/lib/positionLabel";
 import type { Id } from "@/types/id";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { salonNow } from "@/lib/salonClock";
@@ -1014,7 +1015,7 @@ export default function StaffPage() {
                           <MemberAvatar name={staff.name} id={staff.id} url={staff.avatarUrl} size="h-14 w-14 text-lg" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[16px] font-bold">{staff.name}</span>
-                            <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{staff.position || tr("staff.noPositionSet")}</span>
+                            <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{positionLabel(staff.position) || tr("staff.noPositionSet")}</span>
                             <span className="mt-1.5 flex flex-wrap gap-1.5">
                               {role && (
                                 <span className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-2 py-0.5 text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">{roleName(role)}</span>
@@ -1049,7 +1050,7 @@ export default function StaffPage() {
           open={memberOpen && !!selectedStaff}
           onOpenChange={setMemberOpen}
           title={selectedStaff?.name ?? tr("common.teamMember")}
-          description={selectedStaff ? [selectedStaff.position, (() => { const ro = roleOf(selectedStaff.id); return ro ? roleName(ro) : undefined; })()].filter(Boolean).join(" · ") || undefined : undefined}
+          description={selectedStaff ? [positionLabel(selectedStaff.position), (() => { const ro = roleOf(selectedStaff.id); return ro ? roleName(ro) : undefined; })()].filter(Boolean).join(" · ") || undefined : undefined}
           footer={
             memberTab === "profile" ? (
               <>

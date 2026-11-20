@@ -1,4 +1,5 @@
 import type { Id } from "@/types/id";
+import { positionLabel } from "@/lib/positionLabel";
 import { salonToday } from "@/lib/salonClock";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { addDays, parseISO, startOfWeek } from "date-fns";
@@ -184,7 +185,7 @@ export function ShiftsWeek({
                 <tr key={row.id} className="border-t border-[rgb(var(--reg-line)/0.6)]">
                   <th scope="row" className="sticky left-0 z-[1] bg-white px-4 py-2.5 text-left font-normal">
                     <span className="block truncate font-semibold">{row.name}</span>
-                    <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{row.position || "—"}</span>
+                    <span className="block truncate text-xs text-[rgb(var(--reg-muted))]">{positionLabel(row.position) || "—"}</span>
                   </th>
                   {row.days.map((day) => {
                     const p = PILL[day.state] ?? PILL.OFF;

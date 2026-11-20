@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { toast } from "sonner";
 
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { channelMessagingService, type MessageLogRow, type ReminderDeliveryRow, type WhatsAppTemplate } from "@/services/channelMessagingService";
 import type { NotificationSettings } from "@/services/notificationSettingsService";
-import { t } from "@/i18n";
+import { getLocale, t } from "@/i18n";
 import type { Id } from "@/types/id";
 
 const ALL = ["push", "whatsapp", "sms", "email"] as const;
@@ -34,7 +35,7 @@ const sw = "data-[state=checked]:bg-[rgb(var(--reg-brand))]";
 /** WhatsApp and AI switches, the reminder channel order, the WhatsApp template and the recent message log. */
 export function ChannelsCard({ businessId, settings, set }: Props) {
   const order = parseOrder(settings.channelOrder);
-  const [lang, setLang] = useState<"az" | "ru" | "en">("az");
+  const [lang, setLang] = useState<"az" | "ru" | "en">(() => (["az", "ru", "en"].includes(getLocale()) ? (getLocale() as "az" | "ru" | "en") : "az"));
   const [template, setTemplate] = useState<WhatsAppTemplate | null>(null);
   const [log, setLog] = useState<{ messages: MessageLogRow[]; reminders: ReminderDeliveryRow[] } | null>(null);
 
@@ -104,7 +105,15 @@ export function ChannelsCard({ businessId, settings, set }: Props) {
         {template && (
           <>
             <p className="rounded-2xl rounded-tl-sm bg-[#dcf8c6] px-4 py-3 text-sm text-[#111]">{template.preview}</p>
-            <p className="mt-2 break-words font-mono text-[11px] text-[rgb(var(--reg-muted))]">{template.body}</p>
+            {/* UI2-HUBA-028: the preview above has sample values; the raw {{n}} text is only for copying to Meta. */}
+            <details className="mt-2 text-xs text-[rgb(var(--reg-muted))]" data-testid="wa-raw-template">
+              <summary className="cursor-pointer font-semibold">{t("channels.templateRaw")}</summary>
+              <p className="mt-1 break-words font-mono text-[11px]">{template.body}</p>
+              <p className="mt-1">{t("channels.templateParams")}</p>
+              <button type="button" className="mt-1 font-bold underline" onClick={() => { void navigator.clipboard?.writeText(template.body).then(() => toast.success(t("channels.templateCopied"))).catch(() => undefined); }}>
+                {t("channels.templateCopy")}
+              </button>
+            </details>
             <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">
               {t("channels.templateName", { name: template.name })} · {t("channels.templateBalance", { count: template.balance })}
             </p>

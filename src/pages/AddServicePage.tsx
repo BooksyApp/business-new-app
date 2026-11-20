@@ -558,8 +558,11 @@ export default function AddServicePage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="standard">{tr("addService.standard")}</SelectItem>
-                      <SelectItem value="package">{tr("addService.package")}</SelectItem>
-                      <SelectItem value="course">{tr("addService.course")}</SelectItem>
+                      {/* UI2-WEBA-041: real prepaid packages live on /passes and visit packages in the
+                          editor below; the legacy "package"/"course" types stay selectable only on a
+                          service that already has one, so they can't be picked for new services. */}
+                      {formData.serviceType === "package" && <SelectItem value="package">{tr("addService.package")}</SelectItem>}
+                      {formData.serviceType === "course" && <SelectItem value="course">{tr("addService.course")}</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>

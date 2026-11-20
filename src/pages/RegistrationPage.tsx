@@ -1,4 +1,5 @@
 import type { Id } from "@/types/id";
+import { positionLabel } from "@/lib/positionLabel";
 import { API_BASE_URL } from '@/config/api';
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useMarket } from "@/services/platformService";
@@ -1174,7 +1175,7 @@ const RegistrationPage = () => {
                       <li key={staff.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
                         <span className="min-w-0 text-sm">
                           <span className="block truncate font-semibold">{staff.name}</span>
-                          <span className="block text-[rgb(var(--reg-muted))]">{staff.position || tr("common.teamMember")}</span>
+                          <span className="block text-[rgb(var(--reg-muted))]">{positionLabel(staff.position) || tr("common.teamMember")}</span>
                         </span>
                         <button type="button" aria-label={tr("registration.remove", { name: staff.name })} onClick={() => updateFormData("staffMembers", formData.staffMembers.filter((s) => s.id !== staff.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
                           <X className="h-4 w-4" aria-hidden />

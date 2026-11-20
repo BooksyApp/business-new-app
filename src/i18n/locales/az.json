@@ -2052,7 +2052,26 @@
     "cutsColourAndStyling": "Kəsim, boyama və ukladka",
     "allServices": "Bütün xidmətlər",
     "notCategorisedName": "Kateqoriyasız",
-    "servicesInCategories": "{services, plural, one {# xidmət} other {# xidmət}}, {categories, plural, one {# kateqoriya} other {# kateqoriya}}"
+    "servicesInCategories": "{services, plural, one {# xidmət} other {# xidmət}}, {categories, plural, one {# kateqoriya} other {# kateqoriya}}",
+    "serviceActions": "Xidmət üzrə əməliyyatlar",
+    "archiveAction": "Arxivlə",
+    "archivedFilter": "Arxiv ({count})",
+    "archivedBack": "Xidmətlərə qayıt",
+    "archivedEmpty": "Arxivdə xidmət yoxdur.",
+    "archivedHint": "Arxivlənmiş xidmətlər rezerv səhifəsində, vidcetdə və yeni rezervdə görünmür. Keçmiş rezerv, satış və hesabatlar saxlanılır.",
+    "restore": "Bərpa et",
+    "deletePermanently": "Birdəfəlik sil",
+    "archiveConfirmTitle": "“{name}” arxivlənsin?",
+    "archiveConfirmBody": "Müştərilər onu artıq sayt və vidcet vasitəsilə seçə bilməyəcək, yeni rezervdə də çıxmayacaq. Keçmiş rezerv, satış və hesabatlar dəyişmir. Sonra Arxivdən bərpa edə bilərsiniz.",
+    "deleteConfirmTitle": "“{name}” birdəfəlik silinsin?",
+    "deleteConfirmBody": "Bu xidmət heç vaxt rezerv və ya satış olunmayıb, ona görə heç nə itmir. Geri qaytarmaq mümkün deyil.",
+    "cannotDeleteHistory": "Keçmiş rezerv və ya satışda istifadə olunub — silmək olmaz, arxivləyin.",
+    "archivedToast": "“{name}” arxivləndi",
+    "restoredToast": "“{name}” bərpa olundu",
+    "deletedToast": "“{name}” silindi",
+    "restoreNameClash": "Eyni adlı aktiv xidmət var. Əvvəlcə onu dəyişin.",
+    "archivedTag": "Arxivdə",
+    "confirmCancel": "Ləğv et"
   },
   "layout": {
     "installApp": "Tətbiqi quraşdır",
@@ -2574,7 +2593,11 @@
     "estimateCost": "Paket qiymətləri ilə təxminən {cost} {currency}",
     "ucs2Warn": "ə ğ ı ş ç kimi hərflər mesajı Unicode edir: SMS başına 160 yox, 70 simvol.",
     "stopNote": "\"Reply STOP to opt out\" avtomatik əlavə olunur. STOP yazan müştəriyə bir daha SMS getmir.",
-    "unavailable": "SMS xidməti hələ qoşulmayıb, bu kampaniya göndərilə bilməz."
+    "unavailable": "SMS xidməti hələ qoşulmayıb, bu kampaniya göndərilə bilməz.",
+    "templateRaw": "Meta şablon mətni (kopyalamaq üçün)",
+    "templateCopy": "Kopyala",
+    "templateCopied": "Kopyalandı",
+    "templateParams": "1 = ad, 2 = salon, 3 = xidmət, 4 = tarix, 5 = saat, 6 = idarə linki"
   },
   "notifications": {
     "replyToInvalid": "Cavab ünvanı üçün düzgün e-poçt daxil edin.",
@@ -3820,7 +3843,8 @@
     "rowMemberships": "Abonementlər",
     "rowPackages": "Paketlər",
     "roleUpdated": "{name} yeniləndi",
-    "mostlyRange": "çox vaxt {range}"
+    "mostlyRange": "çox vaxt {range}",
+    "masterTitle": "Usta"
   },
   "team": {
     "shiftSaved": "{name}: {day}, {start}–{end}",

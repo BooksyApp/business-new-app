@@ -212,6 +212,25 @@ export const serviceService = {
     return apiClient.delete<void>(`/services/${id}/business/${businessId}`);
   },
 
+  /** Archived (soft-deleted) services, for the Archived filter. */
+  async getArchivedServices(businessId: Id): Promise<Service[]> {
+    return apiClient.get<Service[]>(`/services/business/${businessId}/archived`);
+  },
+
+  async restoreService(id: Id, businessId: Id): Promise<Service> {
+    return apiClient.put<Service>(`/services/${id}/business/${businessId}/restore`, {});
+  },
+
+  /** True when the service was never booked or sold, so a permanent delete is allowed. */
+  async canDeleteService(id: Id, businessId: Id): Promise<boolean> {
+    const r = await apiClient.get<{ canDelete: boolean }>(`/services/${id}/business/${businessId}/can-delete`);
+    return !!r?.canDelete;
+  },
+
+  async deleteServicePermanently(id: Id, businessId: Id): Promise<void> {
+    return apiClient.delete<void>(`/services/${id}/business/${businessId}/permanent`);
+  },
+
   async getComboServiceItems(serviceId: Id): Promise<ComboServiceItem[]> {
     return apiClient.get<ComboServiceItem[]>(`/services/${serviceId}/combo-items`);
   },

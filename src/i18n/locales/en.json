@@ -2052,7 +2052,26 @@
     "cutsColourAndStyling": "Cuts, colour and styling",
     "allServices": "All services",
     "notCategorisedName": "Not categorised",
-    "servicesInCategories": "{services, plural, one {# service} other {# services}} in {categories, plural, one {# category} other {# categories}}"
+    "servicesInCategories": "{services, plural, one {# service} other {# services}} in {categories, plural, one {# category} other {# categories}}",
+    "serviceActions": "Service actions",
+    "archiveAction": "Archive",
+    "archivedFilter": "Archived ({count})",
+    "archivedBack": "Back to services",
+    "archivedEmpty": "No archived services.",
+    "archivedHint": "Archived services are hidden from the booking page, the widget and new bookings. Past bookings, sales and reports keep their history.",
+    "restore": "Restore",
+    "deletePermanently": "Delete permanently",
+    "archiveConfirmTitle": "Archive “{name}”?",
+    "archiveConfirmBody": "Clients can no longer pick it on your site or widget, and it will not appear in new bookings. Past bookings, sales and reports stay as they are. You can restore it from Archived.",
+    "deleteConfirmTitle": "Delete “{name}” permanently?",
+    "deleteConfirmBody": "This service was never booked or sold, so nothing is lost. This cannot be undone.",
+    "cannotDeleteHistory": "Used in past bookings or sales, so it cannot be deleted. Archive it instead.",
+    "archivedToast": "“{name}” archived",
+    "restoredToast": "“{name}” restored",
+    "deletedToast": "“{name}” deleted",
+    "restoreNameClash": "An active service with the same name exists. Rename it first.",
+    "archivedTag": "Archived",
+    "confirmCancel": "Cancel"
   },
   "layout": {
     "installApp": "Install app",
@@ -2347,7 +2366,7 @@
     "couldNotChangeTheStamps": "Could not change the stamps",
     "comeASetNumberOf": "Come a set number of times, one service is free",
     "newLoyaltyCard": "New loyalty card",
-    "decorVisits": "{value} visits",
+    "decorVisits": "{value, plural, one {# visit} other {# visits}}",
     "cardsRunning": "Cards running",
     "cardHolders": "Card holders",
     "acrossRunningCards": "Across running cards",
@@ -2363,7 +2382,7 @@
     "members": "Members",
     "changeColour": "Change colour",
     "endCard": "End card",
-    "visitsForAFree": "{visits_required} visits for a free {value}{value2}",
+    "visitsForAFree": "{visits_required, plural, one {# visit} other {# visits}} for a free {value}{value2}",
     "service": "service",
     "until2": " · until {value}",
     "searchMembers": "Search members",
@@ -2574,7 +2593,11 @@
     "estimateCost": "About {cost} {currency} at pack prices",
     "ucs2Warn": "Letters like ə ğ ı ş ç make the message Unicode: 70 characters per SMS instead of 160.",
     "stopNote": "\"Reply STOP to opt out\" is added automatically. Clients who reply STOP are never texted again.",
-    "unavailable": "No SMS provider is connected yet, so this campaign cannot be sent."
+    "unavailable": "No SMS provider is connected yet, so this campaign cannot be sent.",
+    "templateRaw": "Template text for Meta (to copy)",
+    "templateCopy": "Copy",
+    "templateCopied": "Copied",
+    "templateParams": "1 = first name, 2 = salon, 3 = service, 4 = date, 5 = time, 6 = manage link"
   },
   "notifications": {
     "replyToInvalid": "Enter a valid reply-to email address.",
@@ -3820,7 +3843,8 @@
     "rowMemberships": "Memberships",
     "rowPackages": "Packages",
     "roleUpdated": "{name} was updated",
-    "mostlyRange": "mostly {range}"
+    "mostlyRange": "mostly {range}",
+    "masterTitle": "Master"
   },
   "team": {
     "shiftSaved": "{name}: {start}–{end} on {day}",

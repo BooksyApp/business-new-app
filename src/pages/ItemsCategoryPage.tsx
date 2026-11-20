@@ -1,8 +1,8 @@
 import { idTone } from "@/lib/idTone";
 import type { Id } from "@/types/id";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronRight, FolderPlus, Layers, MapPin, Package, Pencil, Plus, Scissors, Search, Sparkles, Trash2, Video } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronDown, ChevronRight, FolderPlus, Layers, MapPin, Package, Pencil, Plus, Scissors, Search, Sparkles, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -13,6 +13,8 @@ import { fieldCls, money } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useBusinessId } from "@/hooks/useBusinessId";
 import { useCategories } from "@/hooks/useCategories";
 import { useServices } from "@/hooks/useServices";
 import { useStaff } from "@/hooks/useStaff";
@@ -62,6 +64,73 @@ export default function ItemsCategoryPage() {
   const [catName, setCatName] = useState("");
   const [catDesc, setCatDesc] = useState("");
   const [catBusy, setCatBusy] = useState(false);
+
+  // UI2-HUBA-006: archive (soft delete) / restore / permanent delete of a service.
+  const [showArchived, setShowArchived] = useState(false);
+  const [archived, setArchived] = useState<Service[]>([]);
+  const [confirm2, setConfirm2] = useState<{ kind: "archive" | "delete"; s: Service } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const routeBusinessId = useBusinessId();
+  const loadArchived = async (bid?: Id) => {
+    const b = bid ?? routeBusinessId;
+    if (b == null) return;
+    try {
+      setArchived(await serviceService.getArchivedServices(b));
+    } catch {
+      /* keep the previous list */
+    }
+  };
+  useEffect(() => {
+    void loadArchived();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeBusinessId, showArchived]);
+
+  const askDelete = async (s: Service) => {
+    try {
+      if (!(await serviceService.canDeleteService(s.id, s.businessId))) {
+        toast.error(t("itemsCategory.cannotDeleteHistory"));
+        return;
+      }
+    } catch {
+      toast.error(t("itemsCategory.couldNotChangeThat"));
+      return;
+    }
+    setConfirm2({ kind: "delete", s });
+  };
+
+  const runConfirm = async () => {
+    if (!confirm2) return;
+    const { kind, s } = confirm2;
+    setConfirmBusy(true);
+    try {
+      if (kind === "archive") {
+        await serviceService.deleteService(s.id, s.businessId);
+        toast.success(t("itemsCategory.archivedToast", { name: s.name }));
+      } else {
+        await serviceService.deleteServicePermanently(s.id, s.businessId);
+        toast.success(t("itemsCategory.deletedToast", { name: s.name }));
+      }
+      setConfirm2(null);
+      void refresh();
+      void loadArchived(s.businessId);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("itemsCategory.couldNotChangeThat"));
+    } finally {
+      setConfirmBusy(false);
+    }
+  };
+
+  const restore = async (s: Service) => {
+    try {
+      await serviceService.restoreService(s.id, s.businessId);
+      toast.success(t("itemsCategory.restoredToast", { name: s.name }));
+      void refresh();
+      void loadArchived(s.businessId);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "";
+      toast.error(/same name|already|409|conflict/i.test(m) ? t("itemsCategory.restoreNameClash") : m || t("itemsCategory.couldNotChangeThat"));
+    }
+  };
 
   const staffById = useMemo(() => new Map(staff.map((s) => [s.id, s])), [staff]);
   const countIn = (id: Sel) =>
@@ -190,7 +259,43 @@ export default function ItemsCategoryPage() {
         />
 
         <div className={pageBody}>
-          {loading ? (
+          {(archived.length > 0 || showArchived) && (
+            <div className="mb-3 flex justify-end">
+              <Button variant="outline" className={secondaryBtn} onClick={() => setShowArchived((v) => !v)} aria-pressed={showArchived} data-testid="archived-toggle">
+                <Archive size={15} />{" "}
+                {showArchived ? t("itemsCategory.archivedBack") : t("itemsCategory.archivedFilter", { count: archived.length })}
+              </Button>
+            </div>
+          )}
+          {showArchived ? (
+            <div data-testid="archived-list">
+              <p className="mb-3 px-1 text-sm text-[rgb(var(--reg-muted))]">{t("itemsCategory.archivedHint")}</p>
+              {archived.length === 0 ? (
+                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{t("itemsCategory.archivedEmpty")}</p>
+              ) : (
+                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  {archived.map((s, i) => (
+                    <li key={s.id} className={cn("flex items-center gap-3 px-3 py-3 md:px-4", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-x-2">
+                          <span className="truncate text-[15px] font-semibold text-[rgb(var(--reg-ink)/0.7)]">{s.name}</span>
+                          <Tag icon={Archive}>{t("itemsCategory.archivedTag")}</Tag>
+                        </span>
+                        <span className="mt-0.5 block truncate text-sm text-[rgb(var(--reg-muted))]">{formatDuration(s.durationMinutes)} · {priceText(s)}</span>
+                      </span>
+                      <Button variant="outline" size="sm" onClick={() => void restore(s)}>
+                        <ArchiveRestore size={14} /> {t("itemsCategory.restore")}
+                      </Button>
+                      <ActionMenu
+                        label={t("itemsCategory.serviceActions")}
+                        actions={[{ label: t("itemsCategory.deletePermanently"), icon: Trash2, danger: true, onSelect: () => void askDelete(s) }]}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : loading ? (
             <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
           ) : services.length === 0 ? (
             <EmptyState
@@ -339,6 +444,12 @@ export default function ItemsCategoryPage() {
                                 />
                                 <span className="text-[10px] font-semibold text-[rgb(var(--reg-muted))]">{t("itemsCategory.online")}</span>
                               </label>
+                              <ActionMenu
+                                label={t("itemsCategory.serviceActions")}
+                                actions={[
+                                  { label: t("itemsCategory.archiveAction"), icon: Archive, danger: true, onSelect: () => setConfirm2({ kind: "archive", s }) },
+                                ]}
+                              />
                               <ChevronRight size={18} className="hidden shrink-0 text-[rgb(var(--reg-ink)/0.35)] md:block" aria-hidden />
                             </li>
                           );
@@ -351,6 +462,30 @@ export default function ItemsCategoryPage() {
             </div>
           )}
         </div>
+
+        <AlertDialog open={!!confirm2} onOpenChange={(o) => !o && !confirmBusy && setConfirm2(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirm2 ? t(confirm2.kind === "archive" ? "itemsCategory.archiveConfirmTitle" : "itemsCategory.deleteConfirmTitle", { name: confirm2.s.name }) : ""}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirm2 ? t(confirm2.kind === "archive" ? "itemsCategory.archiveConfirmBody" : "itemsCategory.deleteConfirmBody") : ""}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={confirmBusy}>{t("itemsCategory.confirmCancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirmBusy}
+                onClick={(e) => { e.preventDefault(); void runConfirm(); }}
+                className="bg-rose-600 text-white hover:bg-rose-700"
+                data-testid="service-confirm"
+              >
+                {confirm2?.kind === "archive" ? t("itemsCategory.archiveAction") : t("itemsCategory.deletePermanently")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <FormSheet
           open={!!catSheet}

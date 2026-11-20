@@ -2052,7 +2052,26 @@
     "cutsColourAndStyling": "Стрижки, окрашивание и укладки",
     "allServices": "Все услуги",
     "notCategorisedName": "Без категории",
-    "servicesInCategories": "{services, plural, one {# услуга} few {# услуги} many {# услуг} other {# услуги}} в {categories, plural, one {# категории} few {# категориях} many {# категориях} other {# категории}}"
+    "servicesInCategories": "{services, plural, one {# услуга} few {# услуги} many {# услуг} other {# услуги}} в {categories, plural, one {# категории} few {# категориях} many {# категориях} other {# категории}}",
+    "serviceActions": "Действия с услугой",
+    "archiveAction": "В архив",
+    "archivedFilter": "Архив ({count})",
+    "archivedBack": "К услугам",
+    "archivedEmpty": "В архиве нет услуг.",
+    "archivedHint": "Архивные услуги скрыты на странице записи, в виджете и в новой записи. Прошлые записи, продажи и отчёты сохраняются.",
+    "restore": "Восстановить",
+    "deletePermanently": "Удалить навсегда",
+    "archiveConfirmTitle": "Отправить «{name}» в архив?",
+    "archiveConfirmBody": "Клиенты больше не смогут выбрать её на сайте и в виджете, в новой записи она не появится. Прошлые записи, продажи и отчёты не меняются. Позже её можно восстановить из архива.",
+    "deleteConfirmTitle": "Удалить «{name}» навсегда?",
+    "deleteConfirmBody": "Эту услугу никогда не бронировали и не продавали, поэтому ничего не потеряется. Отменить это нельзя.",
+    "cannotDeleteHistory": "Услуга использовалась в записях или продажах, удалить нельзя. Отправьте её в архив.",
+    "archivedToast": "«{name}» в архиве",
+    "restoredToast": "«{name}» восстановлена",
+    "deletedToast": "«{name}» удалена",
+    "restoreNameClash": "Уже есть активная услуга с таким названием. Сначала переименуйте её.",
+    "archivedTag": "В архиве",
+    "confirmCancel": "Отмена"
   },
   "layout": {
     "installApp": "Установить приложение",
@@ -2347,7 +2366,7 @@
     "couldNotChangeTheStamps": "Не удалось изменить отметки",
     "comeASetNumberOf": "Определённое число визитов — одна услуга бесплатно",
     "newLoyaltyCard": "Новая карта лояльности",
-    "decorVisits": "{value} визитов",
+    "decorVisits": "{value, plural, one {# визит} few {# визита} many {# визитов} other {# визита}}",
     "cardsRunning": "Активные карты",
     "cardHolders": "Владельцы карт",
     "acrossRunningCards": "По активным картам",
@@ -2363,7 +2382,7 @@
     "members": "Участники",
     "changeColour": "Сменить цвет",
     "endCard": "Остановить карту",
-    "visitsForAFree": "{visits_required} визитов — бесплатно {value}{value2}",
+    "visitsForAFree": "{visits_required, plural, one {# визит} few {# визита} many {# визитов} other {# визита}} — бесплатно {value}{value2}",
     "service": "услуга",
     "until2": " · до {value}",
     "searchMembers": "Поиск участников",
@@ -2574,7 +2593,11 @@
     "estimateCost": "Около {cost} {currency} по ценам пакетов",
     "ucs2Warn": "Буквы вроде ə ğ ı ş ç делают сообщение Unicode: 70 символов в SMS вместо 160.",
     "stopNote": "\"Reply STOP to opt out\" добавляется автоматически. Кто ответил STOP, тому больше не пишем.",
-    "unavailable": "SMS-сервис пока не подключён, эту рассылку отправить нельзя."
+    "unavailable": "SMS-сервис пока не подключён, эту рассылку отправить нельзя.",
+    "templateRaw": "Текст шаблона для Meta (для копирования)",
+    "templateCopy": "Копировать",
+    "templateCopied": "Скопировано",
+    "templateParams": "1 = имя, 2 = салон, 3 = услуга, 4 = дата, 5 = время, 6 = ссылка управления"
   },
   "notifications": {
     "replyToInvalid": "Введите корректный адрес для ответов.",
@@ -3820,7 +3843,8 @@
     "rowMemberships": "Абонементы",
     "rowPackages": "Пакеты",
     "roleUpdated": "{name}: обновлено",
-    "mostlyRange": "чаще {range}"
+    "mostlyRange": "чаще {range}",
+    "masterTitle": "Мастер"
   },
   "team": {
     "shiftSaved": "{name}: {day}, {start}–{end}",
