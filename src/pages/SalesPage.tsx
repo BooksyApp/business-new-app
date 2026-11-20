@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import { quickSaleService, type QuickSaleItem as QuickSaleItemAPI } from "@/services/quickSaleService";
 import { membershipService, type Membership } from "@/services/membershipService";
+import { packageService, type ServicePackage } from "@/services/packageService";
+import { useFeatureFlags } from "@/services/platformService";
 import { appointmentService, type Appointment } from "@/services/appointmentService";
 import { businessService } from "@/services/businessService";
 import { promoService } from "@/services/promoService";
@@ -177,6 +179,8 @@ interface BasketItem {
   serviceId?: Id;
   productId?: Id;
   membershipId?: Id;
+  /** Set when the line IS a prepaid package being sold; the sale gives the client its sessions. */
+  packageId?: Id;
   giftCardAmount?: number;
   appointmentId?: string;
 }
@@ -284,13 +288,14 @@ export default function SalesPage() {
   const [activeCategory, setActiveCategory] = useState("quick-sale");
   
   // Sidebar categories - defined inside component to ensure accessibility
+  const passFlags = useFeatureFlags();
   const sidebarCategories = [
     { id: "quick-sale", get name() { return tr("sales.tabQuickSale"); }, active: true },
     { id: "to-be-settled", get name() { return tr("sales.tabToBeSettled"); } },
     { id: "services", get name() { return tr("sales.tabServices"); } },
     { id: "extras", get name() { return tr("sales.tabExtras"); } },
-    // Memberships are off until the plans and their billing are signed off.
-    // { id: "memberships", name: "MEMBERSHIPS" },
+    ...(passFlags.memberships === true ? [{ id: "memberships", get name() { return tr("passes.tabMemberships"); } }] : []),
+    ...(passFlags.packages === true ? [{ id: "packages", get name() { return tr("passes.tabPackages"); } }] : []),
     { id: "gift-cards", get name() { return tr("sales.tabGiftCards"); } },
     // Retail from Inventory. It was commented out, so a product could be stocked but
     // never sold, while Inventory promised that a sale takes it off the shelf.
@@ -347,6 +352,7 @@ export default function SalesPage() {
   // Sellable at the till, not just bookable: a membership and a gift card are things the
   // salon takes money for over the counter, which the basket had no way to represent.
   const [sellableMemberships, setSellableMemberships] = useState<Membership[]>([]);
+  const [sellablePackages, setSellablePackages] = useState<ServicePackage[]>([]);
   const [giftCardAmount, setGiftCardAmount] = useState("100");
   const [loadingQuickSale, setLoadingQuickSale] = useState(false);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
@@ -502,6 +508,10 @@ export default function SalesPage() {
       .list(businessId, true)
       .then(setSellableMemberships)
       .catch(() => setSellableMemberships([]));
+    packageService
+      .list(businessId)
+      .then((rows) => setSellablePackages(rows.filter((p) => p.active)))
+      .catch(() => setSellablePackages([]));
   }, [businessId, services, servicesLoading]);
 
 
@@ -1024,7 +1034,7 @@ export default function SalesPage() {
     for (const item of basket) {
       const key = item.appointmentId
         ? `appt-${item.appointmentId}`
-        : [item.type, item.serviceId, item.productId, item.membershipId, item.giftCardAmount, item.name, item.price].join("|");
+        : [item.type, item.serviceId, item.productId, item.membershipId, item.packageId, item.giftCardAmount, item.name, item.price].join("|");
       const g = groups.find((x) => x.key === key);
       if (g) g.items.push(item);
       else groups.push({ key, items: [item] });
@@ -1123,7 +1133,7 @@ export default function SalesPage() {
                       type="button"
                       aria-label={tr("sales.oneMore", { name: first.name })}
                       disabled={!canRepeat}
-                      onClick={() => setBasket((b) => [...b, { ...first, id: first.id.startsWith("product-") || first.id.startsWith("membership-") || first.id.startsWith("gift-card-") ? `${first.id}-${Date.now()}` : first.id, basketId: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }])}
+                      onClick={() => setBasket((b) => [...b, { ...first, id: first.id.startsWith("product-") || first.id.startsWith("membership-") || first.id.startsWith("package-") || first.id.startsWith("gift-card-") ? `${first.id}-${Date.now()}` : first.id, basketId: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` }])}
                       className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-[rgb(var(--reg-canvas))] disabled:opacity-30"
                     >
                       <Plus size={14} />
@@ -1313,6 +1323,8 @@ export default function SalesPage() {
                       ? 'COMBO'
                       : item.type === 'membership'
                         ? 'MEMBERSHIP'
+                        : item.type === 'package'
+                        ? 'PACKAGE'
                         : item.type === 'gift-card'
                           ? 'GIFT_CARD'
                           : item.type === 'product'
@@ -1331,6 +1343,7 @@ export default function SalesPage() {
                   // and the reward stayed unspent.
                   coveredBy: paymentData.coverage?.[lineKey(item)],
                   membershipId: item.membershipId,
+                  packageId: item.packageId,
                   giftCardAmount: item.giftCardAmount,
                   // Which booking this line is, so the receipt and the commission follow it.
                   appointmentId: item.appointmentId,
@@ -1713,6 +1726,18 @@ export default function SalesPage() {
                         price: `${plan.price} ${currencySymbol()}`,
                         onAdd: () =>
                           setBasket((b) => [...b, { id: `membership-${plan.id}-${Date.now()}`, name: plan.name, price: String(plan.price), type: "membership", membershipId: plan.id }]),
+                      }),
+                    ));
+                  }
+                  if (activeCategory === "packages") {
+                    if (sellablePackages.length === 0) return empty(tr("passes.noPackagesForSale"), tr("passes.packagesAppearHere"));
+                    return grid(sellablePackages.map((pack) =>
+                      tile(`pk-${pack.id}`, {
+                        name: pack.name,
+                        meta: tr("passes.sessionsCount", { n: pack.sessions_total }),
+                        price: `${Number(pack.price).toFixed(2)} ${currencySymbol()}`,
+                        onAdd: () =>
+                          setBasket((b) => [...b, { id: `package-${pack.id}-${Date.now()}`, name: pack.name, price: String(pack.price), type: "package", packageId: pack.id }]),
                       }),
                     ));
                   }

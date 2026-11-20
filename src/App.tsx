@@ -58,6 +58,7 @@ const MarketingPage = lazyWithReload(() => import("./pages/MarketingPage"));
 const OffersPage = lazyWithReload(() => import("./pages/OffersPage"));
 const ReferralProgramPage = lazyWithReload(() => import("./pages/ReferralProgramPage"));
 const LoyaltyPage = lazyWithReload(() => import("./pages/MembershipsPage"));
+const PassesPage = lazyWithReload(() => import("./pages/PassesPage"));
 const SectionPage = lazyWithReload(() => import("./pages/SectionPage"));
 const ReviewsPage = lazyWithReload(() => import("./pages/ReviewsPage"));
 const LocationsPage = lazyWithReload(() => import("./pages/LocationsPage"));
@@ -275,6 +276,7 @@ const App = () => (
               <Route path="offers" element={<Suspense fallback={<PageLoader />}><OffersPage /></Suspense>} />
               <Route path="referral-program" element={<Suspense fallback={<PageLoader />}><ReferralProgramPage /></Suspense>} />
               <Route path="loyalty" element={<Suspense fallback={<PageLoader />}><LoyaltyPage /></Suspense>} />
+              <Route path="passes" element={<Suspense fallback={<PageLoader />}><PassesPage /></Suspense>} />
               <Route path="section/:section" element={<Suspense fallback={<PageLoader />}><SectionPage /></Suspense>} />
               <Route path="contacts" element={<Navigate to="../clients" replace />} />
               <Route path="consent-forms" element={<Navigate to="../setup/consent-forms" replace />} />
