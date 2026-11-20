@@ -2069,7 +2069,7 @@ export default function SalesPage() {
                           <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span>{t.total}</span></p>
                           {/* UI2-HUBB-036: bonus points / gift card / balance that paid part of the bill. */}
                           {(refundInfo?.payments ?? []).filter((p) => ["POINTS", "GIFT_CARD", "WALLET"].includes(p.method) && Number(p.amount) > 0).map((p, i) => (
-                            <p key={`tn${i}`} className="flex justify-between text-[rgb(var(--reg-muted))]"><span>{p.method === "POINTS" ? (p.reference ? tr("pos.bonusPoints", { points: p.reference }) : tr("pos.bonusLine")) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.reference ?? "" }) : tr("pos.wallet")}</span><span>{Number(p.amount).toFixed(2)}</span></p>
+                            <p key={`tn${i}`} className="flex justify-between text-[rgb(var(--reg-muted))]"><span>{p.method === "POINTS" ? (p.reference ? tr("pos.bonusPoints", { points: String(p.reference).replace(/\D/g, "") || p.reference }) : tr("pos.bonusLine")) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.reference ?? "" }) : tr("pos.wallet")}</span><span>{Number(p.amount).toFixed(2)}</span></p>
                           ))}
                           {t.status === "REFUNDED" && <p className="flex justify-between text-rose-700"><span>{tr("sales.refunded")}</span><span>−{t.total}</span></p>}
                           {partlyRefunded && refundInfo?.refundedAmount ? <p className="flex justify-between text-rose-700"><span>{tr("sales.partiallyRefunded")}</span><span>−{Number(refundInfo.refundedAmount).toFixed(2)}</span></p> : null}
