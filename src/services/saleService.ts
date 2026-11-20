@@ -43,6 +43,10 @@ export interface Sale {
   notes?: string;
   billNumber?: string;
   billId?: string;
+  /** Detail only: sum of partial/full refunds, NONE | PARTIALLY_REFUNDED | REFUNDED, and each refund. */
+  refundedAmount?: number;
+  refundStatus?: 'NONE' | 'PARTIALLY_REFUNDED' | 'REFUNDED';
+  refunds?: Array<{ amount: number; method?: string; reason?: string; created_at?: string }>;
 }
 
 export interface CreateSaleRequest {

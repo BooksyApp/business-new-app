@@ -56,10 +56,27 @@ export function PaymentSheet({ row, onClose, onChanged, businessId }: { row: Led
       setIssuing(false);
     }
   };
-  const print = () => {
+  const print = async () => {
     if (!sale.data || !row) return;
+    // UI2-HUBB-076: an invoice carries the salon's address and VÖEN (when set).
+    let salonAddress: string | null = null;
+    let salonVoen: string | null = null;
+    if (row.invoiceNumber) {
+      try {
+        const hit = (await moneyService.getInvoices(businessId)).find((i) => i.number === row.invoiceNumber);
+        if (hit) {
+          const inv = (await moneyService.getInvoice(businessId, hit.id)) as { salon_address?: string | null; salon_voen?: string | null };
+          salonAddress = inv.salon_address || null;
+          salonVoen = inv.salon_voen || null;
+        }
+      } catch {
+        // the invoice prints without them
+      }
+    }
     const ok = printReceipt(sale.data, {
       salonName,
+      salonAddress,
+      salonVoen,
       invoiceNumber: row.invoiceNumber,
       methods: row.methods.filter((m) => m.method !== "DEBT").map((m) => ({ label: methodLabel(m.method), amount: m.amount })),
       refunded: row.refunded,

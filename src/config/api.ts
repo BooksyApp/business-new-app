@@ -165,8 +165,14 @@ class ApiClient {
         // The API answers RFC 7807 problem details: the sentence meant for a person is
         // `detail`. Reading only message/error showed "HTTP error! status: 409" instead of
         // "This time slot is already booked" across the whole panel.
+        // UI2-HUBA-019: known conflict codes get a sentence in the panel's language.
+        const codeKey: Record<string, "utils.staffEmailExists" | "utils.staffPhoneExists"> = {
+          STAFF_EMAIL_EXISTS: "utils.staffEmailExists",
+          STAFF_PHONE_EXISTS: "utils.staffPhoneExists",
+        };
+        const localized = response.status === 409 && errorData.code ? codeKey[String(errorData.code)] : undefined;
         const error = new Error(
-          errorData.detail || errorData.message || errorData.error || t("utils.httpErrorStatus", { status: response.status })
+          (localized ? t(localized) : undefined) || errorData.detail || errorData.message || errorData.error || t("utils.httpErrorStatus", { status: response.status })
         );
         (error as Error & { response?: unknown }).response = { data: errorData, status: response.status };
         throw error;

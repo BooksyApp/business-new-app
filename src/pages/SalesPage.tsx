@@ -321,6 +321,23 @@ export default function SalesPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  // UI2-HUBB-029: the list rows carry no refund info; the sale detail does.
+  const [refundInfo, setRefundInfo] = useState<Pick<Sale, "refundedAmount" | "refundStatus"> | null>(null);
+  const selectedSaleId = selectedTransaction?.sale?.id;
+  useEffect(() => {
+    setRefundInfo(null);
+    if (selectedSaleId == null) return;
+    let live = true;
+    saleService
+      .getSaleById(selectedSaleId)
+      .then((d) => live && setRefundInfo({ refundedAmount: d.refundedAmount, refundStatus: d.refundStatus }))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [selectedSaleId]);
+  const partlyRefunded = refundInfo?.refundStatus === "PARTIALLY_REFUNDED";
+  const refundedLabel = refundInfo?.refundedAmount ? tr("sales.refundedAmount", { value: `${Number(refundInfo.refundedAmount).toFixed(2)} ${currencySymbol()}` }) : null;
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showPaymentMethod, setShowPaymentMethod] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -2007,8 +2024,9 @@ export default function SalesPage() {
                         <p className="truncate font-bold">{t.clientName}</p>
                         <p className="truncate text-sm text-[rgb(var(--reg-muted))]">{[t.staffName ? tr("sales.doneByValue", { value: t.staffName }) : null, t.address || null].filter(Boolean).join(" · ") || "—"}</p>
                       </div>
-                      {saleStatusChip(t.status)}
+                      {partlyRefunded ? <StatusChip status="failed" label={tr("sales.partiallyRefunded")} /> : saleStatusChip(t.status)}
                     </div>
+                    {partlyRefunded && refundedLabel && <p className="-mt-2 px-1 text-sm font-semibold text-rose-700">{tr("sales.partiallyRefunded")} · {refundedLabel}</p>}
 
                     <section className="rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
                       <h3 className="mb-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("sales.items")}</h3>
@@ -2050,6 +2068,7 @@ export default function SalesPage() {
                           <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
                           <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span>{t.total}</span></p>
                           {t.status === "REFUNDED" && <p className="flex justify-between text-rose-700"><span>{tr("sales.refunded")}</span><span>−{t.total}</span></p>}
+                          {partlyRefunded && refundInfo?.refundedAmount ? <p className="flex justify-between text-rose-700"><span>{tr("sales.partiallyRefunded")}</span><span>−{Number(refundInfo.refundedAmount).toFixed(2)}</span></p> : null}
                           {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}
                         </div>
                       </div>
