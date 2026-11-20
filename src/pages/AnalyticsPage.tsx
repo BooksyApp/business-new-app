@@ -117,7 +117,7 @@ function DashboardBody({ d, to }: { d: Dashboard; to: (m: string) => string }) {
         {k.revenue.value > 0 || k.revenue.previous > 0 ? <TrendChart data={trend} unit="money" /> : <Empty>{t("reports.noSales")}</Empty>}
       </Panel>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title={t("reports.topServices")} hint={t("reports.topServicesHint")} action={<PanelLink to={to("ticket")}>{t("reports.open")}</PanelLink>}>
           {d.topServices.length ? (
             <BarRows rows={d.topServices.slice(0, 6).map((s) => ({ label: s.name, value: Number(s.revenue), sub: t("reports.visitsN", { count: Number(s.bookings) }) }))} unit="money" />
@@ -130,7 +130,7 @@ function DashboardBody({ d, to }: { d: Dashboard; to: (m: string) => string }) {
         </Panel>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel title={t("reports.busiestHours")} hint={t("reports.busiestHoursHint")}>
           {hasVisits ? <Heatmap cells={d.heatmap} /> : <Empty>{t("reports.noVisits")}</Empty>}
         </Panel>
