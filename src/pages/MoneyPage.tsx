@@ -409,7 +409,7 @@ function DrawerTab({ businessId }: { businessId: Id }) {
       const diff = Number(closed.variance ?? 0);
       if (Math.abs(diff) < 0.005) toast.success(t("money.drawerBalancedExactly"));
       else if (diff > 0) toast.warning(t("money.moreThanExpected", { value: formatPrice(diff) }));
-      else toast.warning(`${formatPrice(Math.abs(diff))} short`);
+      else toast.warning(`${t("money.short")}: ${formatPrice(Math.abs(diff))}`);
       setCounted(""); setNotes("");
       load();
     } catch (e) {

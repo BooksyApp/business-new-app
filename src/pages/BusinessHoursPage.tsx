@@ -206,7 +206,7 @@ export default function BusinessHoursPage() {
                             checked={day.enabled}
                             onCheckedChange={() => toggle(d.key)}
                             id={`toggle-${d.key}`}
-                            aria-label={`${d.label} open`}
+                            aria-label={d.label}
                             className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
                           />
                           <label htmlFor={`toggle-${d.key}`} className="w-24 cursor-pointer text-[15px] font-semibold">
@@ -216,7 +216,7 @@ export default function BusinessHoursPage() {
                             <div className="ml-auto flex items-center gap-2 sm:ml-0 sm:flex-1">
                               <input
                                 type="time"
-                                aria-label={`${d.label} opens`}
+                                aria-label={`${d.label} ${tr("businessHours.opens")}`}
                                 value={day.startTime}
                                 onChange={(e) => setTime(d.key, "startTime", e.target.value)}
                                 className={cn(fieldCls, "h-11 w-[118px] px-3", day.endTime <= day.startTime && "ring-2 ring-rose-400")}
@@ -224,7 +224,7 @@ export default function BusinessHoursPage() {
                               <span className="text-sm text-[rgb(var(--reg-muted))]">–</span>
                               <input
                                 type="time"
-                                aria-label={`${d.label} closes`}
+                                aria-label={`${d.label} ${tr("businessHours.closes")}`}
                                 value={day.endTime}
                                 onChange={(e) => setTime(d.key, "endTime", e.target.value)}
                                 className={cn(fieldCls, "h-11 w-[118px] px-3", day.endTime <= day.startTime && "ring-2 ring-rose-400")}

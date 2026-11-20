@@ -96,6 +96,11 @@ export default function SuppliersOrdersPage() {
       toast.error(t("inventory.supplierNameRequired"));
       return;
     }
+    const emailTrim = supplierForm.email.trim();
+    if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+      toast.error(t("inventory.supplierEmailInvalid"));
+      return;
+    }
     const body: SupplierInput = {
       name,
       contactName: supplierForm.contactName.trim(),

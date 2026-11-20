@@ -142,6 +142,12 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
       // Blank means "leave as it was" — the backend COALESCEs nulls, so an empty field
       // must not be sent as 0 and quietly turn a 30% deposit into none.
       const num = (v: string) => (v.trim() === "" ? undefined : Number(v));
+      const bad = (v: string, max?: number) => v.trim() !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0 || (max !== undefined && Number(v) > max));
+      if (bad(form.depositPercent, 100) || bad(form.taxRate, 100) || bad(form.cancellationWindowHours) || bad(form.lateCancellationFee) || bad(form.minBookingNoticeMinutes) || bad(form.maxBookingDaysAhead)) {
+        toast.error(t("bookingRules.invalidRange"));
+        setSaving(false);
+        return;
+      }
       const updated = await businessService.updateBusiness(businessId, {
         depositPercent: num(form.depositPercent),
         cancellationWindowHours: num(form.cancellationWindowHours),

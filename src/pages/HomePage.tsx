@@ -182,6 +182,7 @@ export default function HomePage() {
         value: statsLoading ? null : overview ? (overview.totalRevenue ?? 0).toFixed(2) : "0.00",
         change: overview ? t("home.fromAvg2", { value: overview.revenueChange >= 0 ? "+" : "", revenueChange: overview.revenueChange }) : t("home.noRevenueYet"),
         icon: DollarSign,
+        money: true,
         color: "text-status-completed",
         bgColor: "bg-status-completed/10",
       },
@@ -198,10 +199,11 @@ export default function HomePage() {
         value: statsLoading ? null : overview ? (overview.averageTicket ?? 0).toFixed(2) : "0.00",
         change: overview ? t("home.fromAvg4", { value: overview.averageTicketChange >= 0 ? "+" : "", averageTicketChange: overview.averageTicketChange }) : t("home.noDataYet"),
         icon: Star,
+        money: true,
         color: "text-appointment-yellow",
         bgColor: "bg-appointment-yellow/10",
       },
-    ];
+    ].filter((st) => !("money" in st && st.money) || statsLoading || overview); // no analytics access -> no misleading 0.00
 
     return (
       <AppLayout>

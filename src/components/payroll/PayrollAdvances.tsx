@@ -52,9 +52,11 @@ export function PayrollAdvances({ businessId, onChanged }: { businessId: Id; onC
   };
 
   const remove = async (id: Id) => {
+    if (!window.confirm(t("payroll.advanceDeleteConfirm"))) return;
     setBusy(true);
     try {
       await salonDayService.deleteAdvance(businessId, id);
+      toast.success(t("payroll.advanceDeleted"));
       await load();
     } catch {
       toast.error(t("payroll.advanceLocked"));
