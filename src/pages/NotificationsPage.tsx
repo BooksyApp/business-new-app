@@ -53,6 +53,8 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
 
   const save = async () => {
     if (!businessId || !settings) return;
+    const rt = (settings.replyTo ?? "").trim();
+    if (rt && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rt)) { toast.error(t("notifications.replyToInvalid")); return; }
     setSaving(true);
     try {
       const v = await notificationSettingsService.save(businessId, settings);

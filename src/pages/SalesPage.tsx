@@ -223,6 +223,17 @@ function receiptTax(
   };
 }
 
+/** Identical lines (same name and price) collapse into one "2 × 12.50" row. Display only. */
+function groupReceiptLines<P extends string | number>(lines: { name: string; price: P }[]): { name: string; price: P; qty: number }[] {
+  const out: { name: string; price: P; qty: number }[] = [];
+  for (const l of lines) {
+    const hit = out.find((o) => o.name === l.name && o.price === l.price);
+    if (hit) hit.qty += 1;
+    else out.push({ ...l, qty: 1 });
+  }
+  return out;
+}
+
 function saleStatusChip(status: string) {
   if (status === "PAID") return <StatusChip status="active" label={tr("common.paid")} />;
   if (status === "CANCELLED") return <StatusChip status="ended" label={tr("sales.voided")} />;
@@ -362,6 +373,8 @@ export default function SalesPage() {
     method: string;
     client: string | null;
     lines: { name: string; price: number }[];
+    /** Non-cash tenders (bonus points, gift card, balance), so the receipt says how it was paid. */
+    tenders: { label: string; amount: number }[];
     /** What the checkout took off / added on top, so the receipt adds up to its total. */
     discount: number;
     tip: number;
@@ -1181,13 +1194,16 @@ export default function SalesPage() {
                 <p className="text-center text-[13px] font-bold">{(() => { try { return JSON.parse(localStorage.getItem("currentBusiness") || "{}").name || ""; } catch { return ""; } })()}</p>
                 <p className="text-center text-[rgb(var(--reg-muted))]">{formatLocaleDate(lastSale.at, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })} · #{lastSale.saleId}</p>
                 <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
-                {lastSale.lines.map((l, i) => (
-                  <p key={i} className="flex justify-between gap-3"><span className="truncate">{l.name}</span><span className="tabular-nums">{l.price.toFixed(2)}</span></p>
+                {groupReceiptLines(lastSale.lines).map((l, i) => (
+                  <p key={i} className="flex justify-between gap-3"><span className="truncate">{l.name}</span><span className="tabular-nums">{l.qty > 1 ? `${l.qty} × ${Number(l.price).toFixed(2)}` : Number(l.price).toFixed(2)}</span></p>
                 ))}
                 {lastSale.discount > 0 && <p className="flex justify-between"><span>{tr("common.discount")}</span><span className="tabular-nums">−{lastSale.discount.toFixed(2)}</span></p>}
                 {lastSale.tip > 0 && <p className="flex justify-between"><span>{tr("sales.tip")}</span><span className="tabular-nums">+{lastSale.tip.toFixed(2)}</span></p>}
                 <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
                 <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span className="tabular-nums">{lastSale.total.toFixed(2)} {currencySymbol()}</span></p>
+                {lastSale.tenders.map((tn, i) => (
+                  <p key={i} className="flex justify-between text-[rgb(var(--reg-muted))]"><span>{tn.label}</span><span className="tabular-nums">{tn.amount.toFixed(2)}</span></p>
+                ))}
                 {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}
               </div>
             </div>
@@ -1372,6 +1388,12 @@ export default function SalesPage() {
                 // Discount = whatever makes lines + tip add up to the charged total (covers promo codes too).
                 discount: Math.max(0, Math.round((subtotal + tipValue - Number(response.totalAmount ?? paymentData.amount)) * 100) / 100),
                 tip: tipValue,
+                tenders: (paymentData.payments ?? [])
+                  .filter((p) => p.method === "POINTS" || p.method === "GIFT_CARD" || p.method === "WALLET")
+                  .map((p) => ({
+                    label: p.method === "POINTS" ? tr("pos.bonusPoints", { points: p.points ?? 0 }) : p.method === "GIFT_CARD" ? tr("pos.giftCard", { code: p.giftCardCode ?? "" }) : tr("pos.wallet"),
+                    amount: Number(p.amount) || 0,
+                  })),
                 at: new Date(),
               });
               // The shelf just changed; show what is left, not what was there before the sale.
@@ -2023,9 +2045,10 @@ export default function SalesPage() {
                         <div className="px-5 py-4">
                           <p className="text-center text-[rgb(var(--reg-muted))]">{t.paidDate} · #{t.id}</p>
                           <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
-                          {t.items.map((it, i) => <p key={i} className="flex justify-between gap-3"><span className="truncate">{it.name}</span><span>{it.price}</span></p>)}
+                          {groupReceiptLines(t.items.map((it) => ({ name: it.name, price: it.price }))).map((l, i) => <p key={i} className="flex justify-between gap-3"><span className="truncate">{l.name}</span><span>{l.qty > 1 ? `${l.qty} × ${l.price}` : l.price}</span></p>)}
                           <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
                           <p className="flex justify-between font-bold"><span>{tr("common.total")}</span><span>{t.total}</span></p>
+                          {t.status === "REFUNDED" && <p className="flex justify-between text-rose-700"><span>{tr("sales.refunded")}</span><span>−{t.total}</span></p>}
                           {salonInfo.receiptFooter.trim() && <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">{salonInfo.receiptFooter}</p>}
                         </div>
                       </div>

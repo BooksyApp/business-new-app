@@ -6,8 +6,7 @@ import { clientColorClasses } from "@/lib/appointmentVisuals";
 import { currencySymbol } from "@/lib/currency";
 import type { ClientAppointmentRow } from "@/services/clientService";
 import { EmptyState, StatCard } from "@/components/ui/stat-card";
-import { MomentLine } from "@/components/moments/Moments";
-import { CalendarCheck, Check, Coins, Download, Star, Upload, UserPlus, Users } from "lucide-react";
+import { CalendarCheck, Coins, Download, Star, Upload, UserPlus, Users } from "lucide-react";
 import { loyaltyService } from "@/services/growthService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -720,11 +719,7 @@ export default function ClientsPage() {
             </div>
           ) : allClientsWithPending.length === 0 ? (
             <div className="mx-auto max-w-sm py-16 text-center">
-              {/* What will land here: two small "moments" instead of an empty icon. */}
-              <div aria-hidden className="relative mx-auto h-[118px] w-[280px]">
-                <MomentLine icon={Users} tone="glow" title={tr("auth.mNewClientsTitle")} body={tr("auth.mNewClientsBody")} className="absolute left-0 top-0 w-[260px] -rotate-[2deg]" />
-                <MomentLine icon={Check} tone="brand" title={tr("auth.mConfirmTitle")} body={tr("auth.mConfirmBody")} className="absolute bottom-0 right-0 w-[250px] rotate-[1.5deg]" />
-              </div>
+              <span aria-hidden className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"><Users className="h-6 w-6" /></span>
               <h2 className="mt-6 text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.noClientsYet")}</h2>
               <p className="mt-2 text-[rgb(var(--reg-muted))]">{tr("clients.anyoneWhoBooksLandsHere")}</p>
               <button type="button" onClick={() => setAddClientDialogOpen(true)} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-6 font-semibold text-white">

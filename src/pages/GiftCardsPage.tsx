@@ -5,8 +5,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { BooqiScope, EmptyState, PageHeader } from "@/components/page/booqi";
 import { pageBody } from "@/components/page/booqiStyles";
 import { useBusinessId } from "@/hooks/useBusinessId";
-import { fmtDate, t } from "@/i18n";
+import { fmtDate, t, tDynamic } from "@/i18n";
+import { currencySymbol } from "@/lib/currency";
 import { onlineSalesService, type GiftCardRow } from "@/services/onlineSalesService";
+
+const SYMS: Record<string, string> = { AZN: "₼", PLN: "zł", USD: "$", EUR: "€", GBP: "£", CZK: "Kč" };
+const sym = (c: string) => SYMS[(c || "").toUpperCase()] ?? c ?? currencySymbol();
 
 /** The salon's gift cards, newest first. Cards bought on the salon page say who bought them and for whom. */
 export default function GiftCardsPage() {
@@ -62,9 +66,9 @@ export default function GiftCardsPage() {
                           g.issued_to_email ?? "—"
                         )}
                       </td>
-                      <td className="px-4 py-3 tabular-nums">{g.initial_amount.toFixed(2)} {g.currency}</td>
-                      <td className="px-4 py-3 tabular-nums">{g.balance.toFixed(2)} {g.currency}</td>
-                      <td className="px-4 py-3">{g.status}</td>
+                      <td className="px-4 py-3 tabular-nums">{g.initial_amount.toFixed(2)} {sym(g.currency)}</td>
+                      <td className="px-4 py-3 tabular-nums">{g.balance.toFixed(2)} {sym(g.currency)}</td>
+                      <td className="px-4 py-3">{tDynamic(`onlineSales.gc${g.status.charAt(0)}${g.status.slice(1).toLowerCase()}`, g.status)}</td>
                     </tr>
                   ))}
                 </tbody>

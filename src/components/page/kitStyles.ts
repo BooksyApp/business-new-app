@@ -17,8 +17,8 @@ export function lifecycleOf(opts: { active?: boolean; from?: string | null; to?:
 export function dateRange(from?: string | null, to?: string | null, fallback = t("kit.noEndDate")): string {
   const f = (d: string) => formatLocaleDate(new Date(d.slice(0, 10) + "T12:00:00"), { day: "numeric", month: "short" });
   if (from && to) return `${f(from)} – ${f(to)}`;
-  if (from) return `From ${f(from)}`;
-  if (to) return `Until ${f(to)}`;
+  if (from) return t("kit.from", { value: f(from) });
+  if (to) return t("kit.until", { value: f(to) });
   return fallback;
 }
 

@@ -18,6 +18,7 @@ import { format } from "@/i18n/dateFns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { SetupGuide } from "@/components/SetupGuide";
+import { myAccess, pageAllowed } from "@/components/layout/navigation";
 import { VisibilityBanner } from "@/components/VisibilityBanner";
 import { idForKey, salonPath } from "@/lib/salonKey";
 
@@ -221,7 +222,7 @@ export default function HomePage() {
 
       <div className="p-6 space-y-6">
         {numericBusinessId ? <VisibilityBanner businessId={numericBusinessId} /> : null}
-        {numericBusinessId ? <SetupGuide businessId={numericBusinessId} /> : null}
+        {numericBusinessId && pageAllowed(myAccess(), "/setup") ? <SetupGuide businessId={numericBusinessId} /> : null}
         {/* Stats Grid */}
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {liveStats.map((stat, index) => {

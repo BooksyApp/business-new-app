@@ -87,7 +87,7 @@ export function ShiftsWeek({
     if (form.end <= form.start) return toast.error(tr("team.theShiftMustEndAfter"));
     void run(
       salonDayService.setShift(businessId, { staffId: edit.row.id, date: edit.day.date, start: form.start, end: form.end, notes: form.notes.trim() || undefined }),
-      `${edit.row.name}: ${form.start}–${form.end} on ${format(parseISO(edit.day.date), "EEE d MMM")}`,
+      tr("team.shiftSaved", { name: edit.row.name, start: form.start, end: form.end, day: format(parseISO(edit.day.date), "EEE d MMM") }),
     );
   };
 

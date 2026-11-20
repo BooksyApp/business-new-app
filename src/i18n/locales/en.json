@@ -2502,6 +2502,7 @@
     "unavailable": "No SMS provider is connected yet, so this campaign cannot be sent."
   },
   "notifications": {
+    "replyToInvalid": "Enter a valid reply-to email address.",
     "remindHoursBefore": "We'll remind you {count, plural, one {# hour} other {# hours}} before.",
     "bookingConfirmed": "Booking confirmed",
     "sentTheMomentACustomer": "Sent the moment a customer books.",
@@ -3729,6 +3730,7 @@
     "mostlyRange": "mostly {range}"
   },
   "team": {
+    "shiftSaved": "{name}: {start}–{end} on {day}",
     "clearWeekConfirm": "Clear {count, plural, one {# shift} other {# shifts}} this week? Everyone goes back to their usual hours.",
     "shift": "Shift",
     "timeOff": "Time off",
@@ -3796,6 +3798,8 @@
     "anUnexpectedErrorOccurredPlease": "An unexpected error occurred. Please try again."
   },
   "kit": {
+    "from": "From {value}",
+    "until": "Until {value}",
     "clientsSee": "Clients see",
     "noEndDate": "No end date"
   },
@@ -4505,6 +4509,11 @@
     }
   },
   "onlineSales": {
+    "gcActive": "Active",
+    "gcRedeemed": "Used up",
+    "gcExpired": "Expired",
+    "gcDisabled": "Disabled",
+    "gcCancelled": "Cancelled",
     "title": "Online sales",
     "subtitle": "Gift cards and wallet top-ups customers can buy on your salon page",
     "noStripe": "Online payments are not switched on for the platform yet, so nothing below is shown to customers.",
@@ -4563,6 +4572,22 @@
     "navSettingsHint": "Gift cards and wallet top-ups on your salon page"
   },
   "reportBuilder": {
+    "val_PENDING": "Pending",
+    "val_CONFIRMED": "Confirmed",
+    "val_COMPLETED": "Completed",
+    "val_CANCELLED": "Cancelled",
+    "val_NO_SHOW": "No-show",
+    "val_PAID": "Paid",
+    "val_REFUNDED": "Refunded",
+    "val_ACTIVE": "Active",
+    "val_admin": "Salon (admin)",
+    "val_api": "API",
+    "val_web": "Website",
+    "val_widget": "Widget",
+    "val_app": "App",
+    "val_unknown": "Unknown",
+    "val_ONLINE": "Online",
+    "val_WALK_IN": "Walk-in",
     "title": "Report builder",
     "subtitle": "Build your own report from bookings, sales, clients or team performance, then save it or export it to CSV.",
     "dataset": "What to report on",
@@ -4907,6 +4932,8 @@
     "errorsBody": "401 missing or revoked key · 403 scope missing · 404 unknown id · 409 slot not available · 422 cannot be booked · 429 rate limit."
   },
   "pos": {
+    "discountNoLetters": "Only an amount or a % goes here. Promo codes are applied to the booking, not at the till.",
+    "bonusPoints": "{points} bonus points",
     "walkIn": "Walk-in client",
     "edit": "Edit",
     "staff": "Staff",
@@ -5056,6 +5083,7 @@
     "workingHours": "Working, h"
   },
   "ledger": {
+    "noneSearch": "No payments matching \"{query}\" in {period}.",
     "title": "Payments",
     "subtitle": "Every payment taken: cash, card, online, gift card, wallet, refunds and debts",
     "search": "Client or receipt number",

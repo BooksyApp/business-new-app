@@ -133,6 +133,7 @@ export default function PaymentMethodPage({
   const [owing, setOwing] = useState<number | null>(null); // paid now, when the rest stays owing
   const [extrasOpen, setExtrasOpen] = useState(false);
   const [discountDraft, setDiscountDraft] = useState("");
+  const [discountLetters, setDiscountLetters] = useState(false);
   const [splitDraft, setSplitDraft] = useState("");
   const [owingDraft, setOwingDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -562,8 +563,9 @@ export default function PaymentMethodPage({
             {!quote?.promoCode && (
               <div>
                 <label htmlFor="disc" className={label}>{t("pos.discountAmount")}</label>
+                {discountLetters && <p role="alert" className="mt-1 text-xs font-semibold text-amber-700">{t("pos.discountNoLetters")}</p>}
                 <div className="mt-1.5 flex gap-2">
-                  <input id="disc" type="text" inputMode="decimal" autoComplete="off" value={discountDraft} placeholder={discount > 0 ? discount.toFixed(2) : "0"} onChange={(e) => setDiscountDraft(e.target.value.replace(/[^0-9.,%]/g, ""))} className={field} />
+                  <input id="disc" type="text" inputMode="decimal" autoComplete="off" value={discountDraft} placeholder={discount > 0 ? discount.toFixed(2) : "0"} onChange={(e) => { setDiscountLetters(/[^0-9.,%\s]/.test(e.target.value)); setDiscountDraft(e.target.value.replace(/[^0-9.,%]/g, "")); }} className={field} />
                   <Button
                     variant="ghost"
                     className="h-12 rounded-xl px-4 text-[15px] font-semibold"
@@ -572,6 +574,7 @@ export default function PaymentMethodPage({
                       const amt = discountDraft.trim().endsWith("%") ? round2((sub * num(discountDraft)) / 100) : round2(num(discountDraft));
                       setDiscount(Math.min(sub, amt));
                       setDiscountDraft("");
+                      setDiscountLetters(false);
                       setCashText(null);
                       setExtrasOpen(false);
                     }}

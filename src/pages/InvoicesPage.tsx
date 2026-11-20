@@ -83,7 +83,7 @@ export default function InvoicesPage() {
           ) : !q.data ? (
             <div className="h-[320px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
           ) : rows.length === 0 ? (
-            <Empty>{t("ledger.none", { period: fmtPeriod(q.data.period) })}</Empty>
+            <Empty>{query.trim() ? t("ledger.noneSearch", { period: fmtPeriod(q.data.period), query: query.trim() }) : t("ledger.none", { period: fmtPeriod(q.data.period) })}</Empty>
           ) : (
             <div className="overflow-x-auto rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
               <table className="w-full min-w-[620px] text-[14px]">

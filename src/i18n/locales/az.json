@@ -2502,6 +2502,7 @@
     "unavailable": "SMS xidməti hələ qoşulmayıb, bu kampaniya göndərilə bilməz."
   },
   "notifications": {
+    "replyToInvalid": "Cavab ünvanı üçün düzgün e-poçt daxil edin.",
     "remindHoursBefore": "{count, plural, one {# saat} other {# saat}} əvvəl xatırladacağıq.",
     "bookingConfirmed": "Rezerv təsdiqləndi",
     "sentTheMomentACustomer": "Müştəri yazılan kimi göndərilir.",
@@ -3729,6 +3730,7 @@
     "mostlyRange": "çox vaxt {range}"
   },
   "team": {
+    "shiftSaved": "{name}: {day}, {start}–{end}",
     "clearWeekConfirm": "Bu həftənin {count, plural, one {# növbəsi} other {# növbəsi}} silinsin? Hamı adi saatlarına qayıdacaq.",
     "shift": "Növbə",
     "timeOff": "İstirahət",
@@ -3796,6 +3798,8 @@
     "anUnexpectedErrorOccurredPlease": "Gözlənilməz xəta. Yenidən cəhd edin."
   },
   "kit": {
+    "from": "{value} tarixindən",
+    "until": "{value} tarixinədək",
     "clientsSee": "Müştərilər görür",
     "noEndDate": "Bitmə tarixi yoxdur"
   },
@@ -4505,6 +4509,11 @@
     }
   },
   "onlineSales": {
+    "gcActive": "Aktiv",
+    "gcRedeemed": "İstifadə olunub",
+    "gcExpired": "Vaxtı bitib",
+    "gcDisabled": "Deaktiv",
+    "gcCancelled": "Ləğv edilib",
     "title": "Onlayn satışlar",
     "subtitle": "Müştərilərin salon səhifəsindən ala biləcəyi hədiyyə kartları və balans artımı",
     "noStripe": "Platformada onlayn ödəniş hələ aktiv deyil, ona görə aşağıdakılar müştərilərə göstərilmir.",
@@ -4563,6 +4572,22 @@
     "navSettingsHint": "Salon səhifəsində hədiyyə kartları və balans artımı"
   },
   "reportBuilder": {
+    "val_PENDING": "Gözləmədə",
+    "val_CONFIRMED": "Təsdiqlənib",
+    "val_COMPLETED": "Tamamlanıb",
+    "val_CANCELLED": "Ləğv edilib",
+    "val_NO_SHOW": "Gəlmədi",
+    "val_PAID": "Ödənilib",
+    "val_REFUNDED": "Geri qaytarılıb",
+    "val_ACTIVE": "Aktiv",
+    "val_admin": "Salon (admin)",
+    "val_api": "API",
+    "val_web": "Vebsayt",
+    "val_widget": "Vidjet",
+    "val_app": "Tətbiq",
+    "val_unknown": "Naməlum",
+    "val_ONLINE": "Onlayn",
+    "val_WALK_IN": "Növbəsiz",
     "title": "Hesabat qurucusu",
     "subtitle": "Rezervlərdən, satışlardan, müştərilərdən və komanda göstəricilərindən öz hesabatınızı qurun, saxlayın və ya CSV-yə ixrac edin.",
     "dataset": "Hesabatın mövzusu",
@@ -4907,6 +4932,8 @@
     "errorsBody": "401 açar yoxdur və ya ləğv edilib · 403 səlahiyyət yoxdur · 404 naməlum id · 409 vaxt əlçatan deyil · 422 rezerv etmək olmur · 429 limit aşılıb."
   },
   "pos": {
+    "discountNoLetters": "Burada yalnız məbləğ və ya % yazılır. Promo kod kassada yox, rezervdə tətbiq olunur.",
+    "bonusPoints": "{points} bonus bal",
     "walkIn": "Yazılmadan gələn müştəri",
     "edit": "Dəyiş",
     "staff": "Usta",
@@ -5056,6 +5083,7 @@
     "workingHours": "İş, saat"
   },
   "ledger": {
+    "noneSearch": "{period} üçün \"{query}\" axtarışına uyğun ödəniş yoxdur.",
     "title": "Ödənişlər",
     "subtitle": "Alınan hər ödəniş: nağd, kart, onlayn, hədiyyə kartı, balans, geri qaytarma və borc",
     "search": "Müştəri və ya çek nömrəsi",

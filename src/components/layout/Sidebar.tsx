@@ -36,7 +36,7 @@ import { assetUrl } from "@/config/api";
 import { BRAND_FONT, useBrandFont } from "@/components/auth/useBrandFont";
 import "@/components/auth/auth-tokens.css";
 
-import { SettingsIcon, isSettingsPath, openQuickSearch, useVisibleNav, useVisibleSettings, type NavEntry } from "./navigation";
+import { SettingsIcon, isSettingsPath, myAccess, pageAllowed, openQuickSearch, useVisibleNav, useVisibleSettings, type NavEntry } from "./navigation";
 import { t } from "@/i18n";
 import { useSupportHref } from "@/services/platformService";
 import { keyForId, salonPath } from "@/lib/salonKey";
@@ -132,7 +132,10 @@ function useNavModel() {
   // The salon-relative path ("/setup/email"), for the Settings entry.
   const relPath = salonKey && location.pathname.startsWith(`/${salonKey}`) ? location.pathname.slice(salonKey.length + 1) || "/" : location.pathname;
   const settingsActive = isSettingsPath(relPath) && relPath !== "/support";
-  const hasSettings = useVisibleSettings().length > 0;
+  const visibleSettings = useVisibleSettings();
+  const hasSettings = visibleSettings.length > 0;
+  // A role without the /setup hub (staff) gets the first settings page it may open, not a link that bounces to the calendar.
+  const settingsPath = pageAllowed(myAccess(), "/setup") ? "/setup" : visibleSettings[0]?.rows[0]?.path ?? "/setup";
 
   const currentUser = getCurrentUser();
   const initials = currentUser?.fullName
@@ -172,7 +175,7 @@ function useNavModel() {
   const addSalon = () => navigate("/create-business");
 
   return {
-    sections, findEntry, getPath, matches, entryActive, navigate, location, settingsActive, hasSettings,
+    sections, findEntry, getPath, matches, entryActive, navigate, location, settingsActive, hasSettings, settingsPath,
     currentUser, initials, businessName, businessMark, businessLogo: business.logoUrl, handleLogout, switchTo, addSalon, businessId,
   };
 }
@@ -393,7 +396,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           {m.hasSettings && (
             <MaybeTip show={collapsed} label={t("nav.settings")}>
               <NavLink
-                to={m.getPath("/setup")}
+                to={m.getPath(m.settingsPath)}
                 aria-current={m.settingsActive ? "page" : undefined}
                 className={cn(itemBase, m.settingsActive ? itemOn : itemIdle, collapsed && "justify-center px-0")}
               >
@@ -640,7 +643,7 @@ export function MobileTabBar() {
             {m.hasSettings && (
               <ul className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
                 <li>
-                  <NavLink to={m.getPath("/setup")} onClick={() => setMoreOpen(false)} className={cn("flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold", m.settingsActive && "text-[rgb(var(--reg-brand-strong))]")}>
+                  <NavLink to={m.getPath(m.settingsPath)} onClick={() => setMoreOpen(false)} className={cn("flex min-h-[48px] items-center gap-3 px-4 text-[15px] font-semibold", m.settingsActive && "text-[rgb(var(--reg-brand-strong))]")}>
                     <SettingsIcon size={18} strokeWidth={1.75} className="text-[rgb(var(--reg-ink)/0.5)]" aria-hidden />
                     {t("nav.settings")}
                   </NavLink>

@@ -275,7 +275,7 @@ export default function ReportBuilderPage() {
                   <div className="flex flex-wrap gap-2">
                     {ds.statuses.map((s) => (
                       <button key={s} type="button" className={chip(statuses.includes(s))} aria-pressed={statuses.includes(s)} onClick={() => setStatuses(toggle(statuses, s))}>
-                        {s}
+                        {tDynamic(`reportBuilder.val_${s}`, s)}
                       </button>
                     ))}
                   </div>
@@ -287,7 +287,7 @@ export default function ReportBuilderPage() {
                   <div className="flex flex-wrap gap-2">
                     {ds.sources.map((s) => (
                       <button key={s} type="button" className={chip(sources.includes(s))} aria-pressed={sources.includes(s)} onClick={() => setSources(toggle(sources, s))}>
-                        {s}
+                        {tDynamic(`reportBuilder.val_${s}`, s)}
                       </button>
                     ))}
                   </div>
@@ -367,7 +367,7 @@ export default function ReportBuilderPage() {
                           <tr key={ri} className="border-t border-[rgb(var(--reg-line)/0.8)]">
                             {row.map((cell, ci) => (
                               <td key={ci} className={`px-4 py-2.5 ${result.columns[ci].type === "number" || result.columns[ci].type === "money" ? "text-right tabular-nums" : ""}`}>
-                                {cell === null ? "" : String(cell)}
+                                {cell === null ? "" : result.columns[ci].key === "status" || result.columns[ci].key === "source" ? tDynamic(`reportBuilder.val_${String(cell)}`, String(cell)) : String(cell)}
                               </td>
                             ))}
                           </tr>
