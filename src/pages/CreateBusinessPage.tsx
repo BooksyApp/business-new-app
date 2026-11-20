@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/config/api';
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { SalonPreview } from "@/components/auth/SalonPreview";
@@ -11,8 +11,9 @@ import { ArrowLeft, Sparkles, Scissors, Heart, Stethoscope, MapPin } from "lucid
 import { toast } from "sonner";
 import AddressMapPicker from "@/components/AddressMapPicker";
 import { businessService } from "@/services/businessService";
+import { categoryService, type BusinessCategory } from "@/services/categoryService";
 import { getCurrentUser } from "@/utils/businessUtils";
-import { t, tOpt } from "@/i18n";
+import { t } from "@/i18n";
 import { salonPath } from "@/lib/salonKey";
 
 // #9 (salon-hub QA follow-up): "Add a business" used to be a bare name field on the
@@ -22,19 +23,19 @@ import { salonPath } from "@/lib/salonKey";
 // AddServicePage/AddStaffPage's "dedicated page for Add X" pattern) so a new business
 // starts with real details instead of a name-only stub.
 
-const featuredCategories = [
-  { id: "nail-salons", get name() { return t("createBusiness.catNailSalons"); }, icon: Sparkles },
-  { id: "brows-lashes", get name() { return t("createBusiness.catBrowsLashes"); }, icon: Heart },
-  { id: "skin-care", get name() { return t("createBusiness.catSkinCare"); }, icon: Heart },
-  { id: "hair-salons", get name() { return t("createBusiness.catHairSalons"); }, icon: Scissors },
-  { id: "aesthetic-medicine", get name() { return t("createBusiness.catAestheticMedicine"); }, icon: Stethoscope },
-  { id: "barbers", get name() { return t("createBusiness.catBarbers"); }, icon: Scissors },
-];
-
-const otherCategories = [
-  "Automotive", "Dental", "Diet & training", "Hair Removal", "Health",
-  "Massage", "Tattoo & Piercing", "Wellness", "Yoga & Fitness",
-];
+// Same backend list as the registration wizard: the server only accepts its own slugs
+// (nail-salon, hair-salon, ...), so a hard-coded list here made "Create salon" fail with "Unknown category".
+const CATEGORY_ICONS: Record<string, typeof Scissors> = {
+  "hair-salon": Scissors,
+  barbershop: Scissors,
+  "nail-salon": Sparkles,
+  "brows-lashes": Heart,
+  "skin-care": Heart,
+  massage: Heart,
+  "spa-wellness": Heart,
+  "aesthetic-medicine": Stethoscope,
+  dental: Stethoscope,
+};
 
 export default function CreateBusinessPage() {
   const navigate = useNavigate();
@@ -42,6 +43,11 @@ export default function CreateBusinessPage() {
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [allCategories, setAllCategories] = useState<BusinessCategory[]>([]);
+  useEffect(() => {
+    categoryService.list().then(setAllCategories).catch(() => setAllCategories([]));
+  }, []);
+  const featuredCategories = allCategories.slice(0, 6).map((c) => ({ id: c.slug, name: c.label ?? c.name, icon: CATEGORY_ICONS[c.slug] ?? Sparkles }));
   const [phone, setPhone] = useState("");
 
   const [addressSearch, setAddressSearch] = useState("");
@@ -108,13 +114,14 @@ export default function CreateBusinessPage() {
     }
   };
 
-  const categoryName = [...featuredCategories.map((c) => ({ id: c.id, name: c.name })), ...otherCategories.map((c) => ({ id: c.toLowerCase().replace(/\s+/g, "-"), name: tOpt("category", c) }))].find((c) => c.id === category)?.name ?? "";
+  const categoryName = allCategories.find((c) => c.slug === category);
+  const categoryLabel = categoryName ? (categoryName.label ?? categoryName.name) : "";
   const user = getCurrentUser();
   const preview = (
     <SalonPreview
       data={{
         businessName: name.trim(),
-        category: categoryName,
+        category: categoryLabel,
         address: [address.split(",").slice(0, 2).join(","), buildingNumber].filter(Boolean).join(" "),
         ownerName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
         businessHours: {},
@@ -154,14 +161,13 @@ export default function CreateBusinessPage() {
               );
             })}
           </div>
-          {/* A featured tile id is not one of these items; handing it to Radix made its hidden native select reset the value to "" and the tile never stayed selected. */}
-          <Select value={otherCategories.some((c) => c.toLowerCase().replace(/\s+/g, "-") === category) ? category : ""} onValueChange={setCategory}>
+          <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className={cn(authInput, "mt-2.5")} aria-label={t("createBusiness.otherCategory")}>
               <SelectValue placeholder={t("createBusiness.orPickAnotherCategory")} />
             </SelectTrigger>
             <SelectContent>
-              {otherCategories.map((cat) => (
-                <SelectItem key={cat} value={cat.toLowerCase().replace(/\s+/g, "-")}>{tOpt("category", cat)}</SelectItem>
+              {allCategories.map((cat) => (
+                <SelectItem key={cat.slug} value={cat.slug}>{cat.label ?? cat.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
