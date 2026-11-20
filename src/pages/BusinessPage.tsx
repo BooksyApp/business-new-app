@@ -516,7 +516,7 @@ export default function BusinessPage() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label={t("business.description")} htmlFor="bz-desc" hint={`${editForm.description.length} characters`}>
+            <Field label={t("business.description")} htmlFor="bz-desc" hint={t("business.charactersCount", { n: editForm.description.length })}>
               <Textarea id="bz-desc" rows={4} className="rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base" value={editForm.description} onChange={setF("description")} placeholder={t("business.whatYouDoBestIn")} />
             </Field>
           </FormSection>

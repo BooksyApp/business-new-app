@@ -9,6 +9,7 @@ import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp, CalendarCheck, CreditCard, Receipt, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { currencySymbol } from "@/lib/currency";
 import { Switch } from "@/components/ui/switch";
 import { businessService, type Business, type StaffAssignmentMode } from "@/services/businessService";
 import { staffService } from "@/services/staffService";
@@ -230,7 +231,7 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
   const hours = form.cancellationWindowHours.trim() === "" ? null : Number(form.cancellationWindowHours);
   const fee = form.lateCancellationFee.trim() === "" ? 0 : Number(form.lateCancellationFee);
   const deposit = form.depositPercent.trim() === "" ? 0 : Number(form.depositPercent);
-  const sym = form.currency || "";
+  const sym = currencySymbol();
   const methodLabel: Record<string, string> = { get CASH() { return t("common.cash"); }, get CARD() { return t("bookingRules.cardInTheSalon"); }, get ONLINE() { return t("bookingRules.paidOnline"); }, get GIFT_CARD() { return t("bookingRules.giftCard"); } };
 
   return (
@@ -412,7 +413,7 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
                 </ClientPreview>
                 <p className="mt-3 px-1 text-xs text-[rgb(var(--reg-muted))]">
                   {t("bookingRules.theTillTakes")}{" "}{methods.length ? methods.map((m) => methodLabel[m] ?? m).join(", ") : t("bookingRules.nothingSelected")}
-                  {business?.currency ? t("bookingRules.pricesIn", { currency: business.currency }) : ""}
+                  {business?.currency ? t("bookingRules.pricesIn", { currency: currencySymbol() }) : ""}
                 </p>
               </aside>}
             </div>

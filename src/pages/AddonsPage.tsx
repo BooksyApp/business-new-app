@@ -21,7 +21,7 @@ const EMPTY = { name: "", description: "", price: "", priceType: "FIXED" as Pric
 const priceOf = (a: { price?: number | string; priceType?: string }) => {
   if (a.price == null || a.price === "") return "—";
   const p = money(a.price, currencySymbol());
-  return a.priceType === "FROM" ? `from ${p}` : p;
+  return a.priceType === "FROM" ? `${t("common.from")}${p}` : p;
 };
 
 /**

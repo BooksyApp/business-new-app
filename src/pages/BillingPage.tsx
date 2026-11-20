@@ -37,7 +37,7 @@ const date = (iso: string | null | undefined) =>
 function money(amount: number, currency: string | null | undefined): string {
   const n = Number.isFinite(amount) ? amount : 0;
   try {
-    return new Intl.NumberFormat(getLocale(), { style: "currency", currency: currency || "AZN" }).format(n);
+    return new Intl.NumberFormat(getLocale(), { style: "currency", currency: currency || "AZN", currencyDisplay: "narrowSymbol" }).format(n);
   } catch {
     return `${n.toFixed(2)} ${currency ?? ""}`.trim();
   }

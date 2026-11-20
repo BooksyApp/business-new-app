@@ -187,8 +187,8 @@ export default function BusinessHoursPage() {
                 <SectionTitle
                   aside={
                     <div className="flex flex-wrap gap-2">
-                      <RowAction tone="ink" icon={Copy} onClick={() => copyTo("MONDAY", WEEKDAYS.slice(1), "Tue–Fri")}>{tr("businessHours.monWeekdays")}</RowAction>
-                      <RowAction tone="ink" icon={Copy} onClick={() => copyTo("MONDAY", DAYS.slice(1).map((d) => d.key), "every day")}>{tr("businessHours.monAll")}</RowAction>
+                      <RowAction tone="ink" icon={Copy} onClick={() => copyTo("MONDAY", WEEKDAYS.slice(1), tr("businessHours.targetTueFri"))}>{tr("businessHours.monWeekdays")}</RowAction>
+                      <RowAction tone="ink" icon={Copy} onClick={() => copyTo("MONDAY", DAYS.slice(1).map((d) => d.key), tr("businessHours.targetEveryDay"))}>{tr("businessHours.monAll")}</RowAction>
                     </div>
                   }
                 >
@@ -236,8 +236,8 @@ export default function BusinessHoursPage() {
                           <ActionMenu
                             label={tr("businessHours.copy", { label: d.label })}
                             actions={[
-                              { label: tr("businessHours.copyToAllDays"), icon: Copy, onSelect: () => copyTo(d.key, DAYS.filter((x) => x.key !== d.key).map((x) => x.key), "every day") },
-                              { label: tr("businessHours.copyToWeekdays"), icon: Copy, onSelect: () => copyTo(d.key, WEEKDAYS.filter((k) => k !== d.key), "weekdays") },
+                              { label: tr("businessHours.copyToAllDays"), icon: Copy, onSelect: () => copyTo(d.key, DAYS.filter((x) => x.key !== d.key).map((x) => x.key), tr("businessHours.targetEveryDay")) },
+                              { label: tr("businessHours.copyToWeekdays"), icon: Copy, onSelect: () => copyTo(d.key, WEEKDAYS.filter((k) => k !== d.key), tr("businessHours.targetWeekdays")) },
                             ]}
                           />
                         </li>
@@ -341,7 +341,7 @@ export default function BusinessHoursPage() {
             ]}
           />
           <div className="grid grid-cols-2 gap-3">
-            <Field label={tr("common.from2")} htmlFor="ex-from">
+            <Field label={tr("common.fromDate")} htmlFor="ex-from">
               <input id="ex-from" type="date" className={fieldCls} value={exc.startDate} min={today()} onChange={(e) => setExc({ ...exc, startDate: e.target.value })} />
             </Field>
             <Field label={tr("businessHours.until")} htmlFor="ex-to" hint={tr("businessHours.emptyOneDay")}>

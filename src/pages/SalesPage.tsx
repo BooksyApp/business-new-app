@@ -1840,7 +1840,7 @@ export default function SalesPage() {
               </div>
               {periodFilter === "Another period" && (
                 <div className="flex items-center gap-1.5">
-                  <input aria-label={tr("common.from2")} type="date" value={rangeFrom} max={rangeTo} onChange={(e) => setRangeFrom(e.target.value)} className="h-10 rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm" />
+                  <input aria-label={tr("common.fromDate")} type="date" value={rangeFrom} max={rangeTo} onChange={(e) => setRangeFrom(e.target.value)} className="h-10 rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm" />
                   <span className="text-[rgb(var(--reg-muted))]">–</span>
                   <input aria-label={tr("sales.to")} type="date" value={rangeTo} min={rangeFrom} onChange={(e) => setRangeTo(e.target.value)} className="h-10 rounded-[12px] border border-[rgb(var(--reg-line))] bg-white px-3 text-sm" />
                 </div>

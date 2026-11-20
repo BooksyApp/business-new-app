@@ -834,7 +834,7 @@ export default function StaffPage() {
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <StatCard icon={TrendingUp} label={tr("staff.earnedThisMonth")} value={money(Math.round(monthEarned * 100) / 100, currencySymbol())} hint={selectedStaffer === "All" ? tr("staff.wholeTeam") : apiStaff.find((s) => String(s.id) === selectedStaffer)?.name} tone="violet" />
-              <StatCard icon={Clock} label={tr("staff.waitingToBePaid")} value={money(Math.round(totalPending * 100) / 100, currencySymbol())} hint={`${pendingCommissions.length} item${pendingCommissions.length === 1 ? "" : "s"}`} tone="amber" />
+              <StatCard icon={Clock} label={tr("staff.waitingToBePaid")} value={money(Math.round(totalPending * 100) / 100, currencySymbol())} hint={tr("staff.pendingItemsCount", { n: pendingCommissions.length })} tone="amber" />
               <StatCard icon={Coins} label={tr("staff.paidOutThisMonth")} value={money(Math.round(monthPaid * 100) / 100, currencySymbol())} tone="emerald" />
               <StatCard icon={Percent} label={tr("staff.rules")} value={commissionRules.length} hint={rulesError ? tr("staff.couldNotLoad") : tr("staff.defaultAndPerPerson")} tone="sky" />
             </div>

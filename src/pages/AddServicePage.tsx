@@ -617,7 +617,6 @@ export default function AddServicePage() {
                       <SelectContent>
                         <SelectItem value="FIXED">{tr("common.fixed")}</SelectItem>
                         <SelectItem value="FROM">{tr("common.from2")}</SelectItem>
-                        <SelectItem value="RANGE">{tr("addService.range")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <span className="text-sm text-[rgb(var(--reg-muted))]">{currencySymbol()}</span>

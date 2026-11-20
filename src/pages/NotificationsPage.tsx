@@ -160,7 +160,7 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
                 <ClientPreview where={t("notifications.theirInbox")}>
                   <div className="overflow-hidden rounded-2xl bg-white">
                     <div className="border-b border-[rgb(var(--reg-line)/0.7)] px-4 py-3 text-sm">
-                      <p><span className="text-[rgb(var(--reg-muted))]">{t("common.from2")}{" "}</span><span className="font-bold">{settings.senderName?.trim() || salonName()}</span></p>
+                      <p><span className="text-[rgb(var(--reg-muted))]">{t("common.fromSender")}{" "}</span><span className="font-bold">{settings.senderName?.trim() || salonName()}</span></p>
                       {settings.replyTo?.trim() && <p className="truncate text-xs text-[rgb(var(--reg-muted))]">{t("notifications.replyTo", { replyTo: settings.replyTo })}</p>}
                       <p className="mt-1 font-semibold">{settings.emailConfirmation ? t("notifications.yourBookingIsConfirmed") : t("notifications.noConfirmationEmail")}</p>
                     </div>

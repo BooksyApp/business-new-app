@@ -260,7 +260,7 @@ export default function OffersPage() {
             <input id="offer-pct" className={fieldCls} value={percent} onChange={(e) => setPercent(e.target.value.replace(/[^\d.]/g, ""))} inputMode="numeric" placeholder="20" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label={tr("common.from2")} htmlFor="offer-from">
+            <Field label={tr("common.fromDate")} htmlFor="offer-from">
               <input id="offer-from" className={fieldCls} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             </Field>
             <Field label={tr("offers.until")} htmlFor="offer-to" hint={tr("offers.emptyUntilYouStopIt")}>

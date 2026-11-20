@@ -154,7 +154,8 @@ export default function CreateBusinessPage() {
               );
             })}
           </div>
-          <Select value={category} onValueChange={setCategory}>
+          {/* A featured tile id is not one of these items; handing it to Radix made its hidden native select reset the value to "" and the tile never stayed selected. */}
+          <Select value={otherCategories.some((c) => c.toLowerCase().replace(/\s+/g, "-") === category) ? category : ""} onValueChange={setCategory}>
             <SelectTrigger className={cn(authInput, "mt-2.5")} aria-label={t("createBusiness.otherCategory")}>
               <SelectValue placeholder={t("createBusiness.orPickAnotherCategory")} />
             </SelectTrigger>

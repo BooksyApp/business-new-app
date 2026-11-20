@@ -981,7 +981,6 @@ export default function AddComboServicePage() {
                             <SelectContent>
                               <SelectItem value="FIXED">{t("common.fixed")}</SelectItem>
                               <SelectItem value="FROM">{t("common.from2")}</SelectItem>
-                              <SelectItem value="RANGE">{t("addComboService.range")}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1042,7 +1041,6 @@ export default function AddComboServicePage() {
                             <SelectContent>
                               <SelectItem value="FIXED">{t("common.fixed")}</SelectItem>
                               <SelectItem value="FROM">{t("common.from2")}</SelectItem>
-                              <SelectItem value="RANGE">{t("addComboService.range")}</SelectItem>
                             </SelectContent>
                               </Select>
                             </div>
