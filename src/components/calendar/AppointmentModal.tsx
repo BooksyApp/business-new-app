@@ -360,6 +360,11 @@ export function AppointmentModal({
                       {tr("calendar.regularVisits", { visits })}
                     </Badge>
                   )}
+                  {appointmentData.lateMinutes ? (
+                    <Badge className="bg-amber-500 text-[10px] text-white hover:bg-amber-500">
+                      {tr("calendar.lateBadge", { min: appointmentData.lateMinutes })}
+                    </Badge>
+                  ) : null}
                   {requested && (
                     <Badge className="bg-amber-500 text-[10px] text-white hover:bg-amber-500">
                       {tr("calendar.askedFor", { staffName })}

@@ -235,6 +235,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   S("business", "common.business", "setup.whoYouAreAndWhere", Store, [
     R("common.businessProfile", "setup.nameCategoryDescriptionContact", "/business", Store),
     R("common.photos", "setup.coverLogoAndGallery", "/photos", ImageIcon),
+    R("looks.title", "looks.subtitle", "/looks", ImageIcon),
     R("common.openingHours", "setup.weeklyHoursClosedDays", "/business-hours", Clock),
     R("nav.set.branding", "setup.yourColourTheLineUnder", "/branding", Palette),
   ]),
@@ -486,6 +487,7 @@ const PAGE_NEEDS: Record<string, string[] | null> = {
   "/business": ["SETTINGS"],
   "/setup/consent-forms": ["SETTINGS"],
   "/photos": ["SETTINGS"],
+  "/looks": ["SETTINGS"],
   "/branding": ["SETTINGS"],
   "/business-hours": ["SETTINGS"],
   "/setup": ["SETTINGS"],

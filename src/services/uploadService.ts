@@ -8,7 +8,8 @@ export type UploadPurpose =
   | "BUSINESS_COVER"
   | "BUSINESS_PHOTO"
   | "STAFF_PORTFOLIO"
-  | "CLIENT_PHOTO";
+  | "CLIENT_PHOTO"
+  | "LOOK";
 
 export interface UploadedImage {
   id: string;
@@ -26,6 +27,7 @@ interface ImageRule { minW: number; minH: number; minAspect?: number; maxAspect?
 const RULES: Partial<Record<UploadPurpose, ImageRule>> = {
   BUSINESS_COVER: { minW: 1200, minH: 500, minAspect: 1.6, maxAspect: 3.2, get message() { return t("services.theCoverPhotoMustBe"); } },
   BUSINESS_PHOTO: { minW: 800, minH: 600, get message() { return t("services.aGalleryPhotoMustBe"); } },
+  LOOK: { minW: 600, minH: 600, get message() { return t("looks.req"); } },
   STAFF_PORTFOLIO: { minW: 400, minH: 400, get message() { return t("services.aPortfolioPhotoMustBe"); } },
   STAFF_AVATAR: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, get message() { return t("services.theProfilePhotoMustBe"); } },
   BUSINESS_LOGO: { minW: 256, minH: 256, minAspect: 0.8, maxAspect: 1.25, get message() { return t("services.theLogoMustBeAt"); } },

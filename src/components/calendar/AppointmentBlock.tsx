@@ -22,6 +22,7 @@ export interface Appointment {
   id: string;
   clientName: string;
   clientAlert?: boolean;
+  lateMinutes?: number | null;
   service: string;
   startTime: string;
   endTime: string;
@@ -243,6 +244,11 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
               {appointment.clientAlert && (
                 <TriangleAlert aria-label={t("calendar.clientAlert")} role="img" className="h-3.5 w-3.5 shrink-0 text-amber-700" />
               )}
+              {appointment.lateMinutes ? (
+                <span className="inline-flex h-4 shrink-0 items-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                  {t("calendar.lateBadge", { min: appointment.lateMinutes })}
+                </span>
+              ) : null}
               {appointment.isPackage && (
                 <span
                   title={appointment.guestName ? t("calendar.packageGuest", { name: appointment.guestName }) : t("calendar.packageStepTitle", { step: appointment.packageStep ?? 1 })}

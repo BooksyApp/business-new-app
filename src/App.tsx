@@ -73,6 +73,7 @@ const SupportPage = lazyWithReload(() => import("./pages/SupportPage"));
 const HelpPage = lazyWithReload(() => import("./pages/HelpPage"));
 const NotificationsPage = lazyWithReload(() => import("./pages/NotificationsPage"));
 const BrandingPage = lazyWithReload(() => import("./pages/BrandingPage"));
+const LooksPage = lazyWithReload(() => import("./pages/LooksPage"));
 const PhotosPage = lazyWithReload(() => import("./pages/PhotosPage"));
 const BusinessPage = lazyWithReload(() => import("./pages/BusinessPage"));
 const BusinessHoursPage = lazyWithReload(() => import("./pages/BusinessHoursPage"));
@@ -332,6 +333,7 @@ const App = () => (
               <Route path="audit-log" element={<Suspense fallback={<PageLoader />}><AuditLogPage /></Suspense>} />
               <Route path="notifications" element={<Navigate to="../setup/email" replace />} />
               <Route path="branding" element={<Suspense fallback={<PageLoader />}><BrandingPage /></Suspense>} />
+              <Route path="looks" element={<Suspense fallback={<PageLoader />}><LooksPage /></Suspense>} />
               <Route path="photos" element={<Suspense fallback={<PageLoader />}><PhotosPage /></Suspense>} />
               <Route path="support" element={<Suspense fallback={<PageLoader />}><SupportPage /></Suspense>} />
               <Route path="help" element={<Suspense fallback={<PageLoader />}><HelpPage /></Suspense>} />

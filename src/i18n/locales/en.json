@@ -1421,7 +1421,8 @@
       "cancelAll": "Cancel the whole series",
       "cancelAllHint": "All upcoming, unpaid occurrences are cancelled.",
       "cancelled": "{count} bookings in the series cancelled"
-    }
+    },
+    "lateBadge": "Late: {min} min"
   },
   "checkout": {
     "pickAClientToUse": "Pick a client to use a membership, a package, points or an earned free service.",
@@ -5447,5 +5448,38 @@
     "src_ONLINE": "Online",
     "src_WALLET": "booqi balance",
     "refundNote": "A refund reverses the fee in proportion."
+  },
+  "looks": {
+    "title": "Looks",
+    "subtitle": "Show your best work. Photos go public after booqi approves them.",
+    "add": "Add a look",
+    "edit": "Edit look",
+    "empty": "No looks yet. Upload your first work photo.",
+    "photo": "Photo",
+    "choosePhoto": "Choose a photo",
+    "titleLabel": "Title",
+    "service": "Service",
+    "staff": "Staff member",
+    "none": "Not tagged",
+    "desc": "Description (optional)",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteQ": "Delete this look?",
+    "deleteHint": "It will disappear from your page and from the feed.",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "reason": "Reason",
+    "reeditNote": "Saving changes sends the look for approval again.",
+    "loadFail": "Could not load looks",
+    "saveFail": "Could not save the look",
+    "saved": "Look saved",
+    "deleted": "Look deleted",
+    "deleteFail": "Could not delete the look",
+    "needPhoto": "Choose a photo first",
+    "needTitle": "Add a title",
+    "req": "At least 600x600 px, JPEG or PNG."
   }
 }

@@ -1421,7 +1421,8 @@
       "cancelAll": "Bütün seriyanı ləğv et",
       "cancelAllHint": "Qarşıdakı, ödənilməmiş bütün təkrarlar ləğv olunur.",
       "cancelled": "Seriyada {count} rezerv ləğv edildi"
-    }
+    },
+    "lateBadge": "Gecikir: {min} dəq"
   },
   "checkout": {
     "pickAClientToUse": "Abonement, paket, bonus və ya qazanılmış pulsuz xidmətdən istifadə üçün müştəri seçin.",
@@ -5447,5 +5448,38 @@
     "src_ONLINE": "Onlayn",
     "src_WALLET": "booqi balansı",
     "refundNote": "Geri qaytarmada haqq mütənasib geri götürülür."
+  },
+  "looks": {
+    "title": "İşlər / Görünüşlər",
+    "subtitle": "Ən yaxşı işlərinizi göstərin. Şəkillər booqi təsdiq etdikdən sonra ictimai olur.",
+    "add": "Görünüş əlavə et",
+    "edit": "Görünüşü redaktə et",
+    "empty": "Hələ görünüş yoxdur. İlk iş şəklinizi yükləyin.",
+    "photo": "Şəkil",
+    "choosePhoto": "Şəkil seçin",
+    "titleLabel": "Başlıq",
+    "service": "Xidmət",
+    "staff": "Usta",
+    "none": "Seçilməyib",
+    "desc": "Təsvir (ixtiyari)",
+    "save": "Yadda saxla",
+    "saving": "Saxlanılır...",
+    "cancel": "Ləğv et",
+    "delete": "Sil",
+    "deleteQ": "Bu görünüş silinsin?",
+    "deleteHint": "O, səhifənizdən və lentdən yoxa çıxacaq.",
+    "pending": "Gözləyir",
+    "approved": "Təsdiqlənib",
+    "rejected": "Rədd edildi",
+    "reason": "Səbəb",
+    "reeditNote": "Dəyişikliyi saxlasanız görünüş yenidən təsdiqə göndərilir.",
+    "loadFail": "Görünüşlər yüklənmədi",
+    "saveFail": "Görünüş saxlanmadı",
+    "saved": "Görünüş saxlanıldı",
+    "deleted": "Görünüş silindi",
+    "deleteFail": "Görünüş silinmədi",
+    "needPhoto": "Əvvəlcə şəkil seçin",
+    "needTitle": "Başlıq yazın",
+    "req": "Ən azı 600x600 px, JPEG və ya PNG."
   }
 }

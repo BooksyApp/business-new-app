@@ -14,6 +14,7 @@ export interface Appointment {
   id: string;
   clientName: string;
   clientAlert?: boolean;
+  lateMinutes?: number | null;
   seriesId?: string | null;
   service: string;
   startTime: string;
@@ -63,6 +64,7 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     id: apiAppt.id.toString(),
     clientName: apiAppt.clientName || t("sales.walkInClient"),
     clientAlert: apiAppt.clientAlert === true,
+    lateMinutes: apiAppt.lateMinutes ?? null,
     service: apiAppt.serviceName || 'Service',
     startTime: apiAppt.startTime,
     endTime: apiAppt.endTime,

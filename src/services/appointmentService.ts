@@ -11,6 +11,9 @@ export interface Appointment {
   clientId?: Id;
   clientName?: string;
   clientAlert?: boolean;
+  /** Customer tapped "running late": minutes, and when it was noted (ISO). */
+  lateMinutes?: number | null;
+  lateNotedAt?: string | null;
   clientPhone?: string;
   clientEmail?: string;
   serviceId: Id;
