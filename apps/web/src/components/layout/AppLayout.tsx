@@ -62,6 +62,8 @@ interface PageHeaderProps {
   subtitle?: string;
   actions?: ReactNode;
   className?: string;
+  /** Help-centre article slug (not rendered here yet). */
+  helpSlug?: string;
 }
 
 export function PageHeader({ title, subtitle, actions, className }: PageHeaderProps) {

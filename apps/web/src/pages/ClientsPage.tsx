@@ -53,7 +53,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { t as tr } from "@/i18n";
+import { t as tr, tDynamic } from "@/i18n";
 import { ClientPhotosSection } from "@/components/clients/ClientPhotosSection";
 import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
 import { BookingImportDialog } from "@/components/bookings/BookingImportDialog";
@@ -1621,7 +1621,7 @@ export default function ClientsPage() {
                                     <li key={n.id} className={cn(box, "p-3.5")}>
                                       <div className="flex items-center justify-between gap-2">
                                         <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-bold", n.kind === "ALLERGY" ? "bg-rose-100 text-rose-900" : n.kind === "FORMULA" ? "bg-[rgb(var(--reg-brand)/0.12)] text-[rgb(var(--reg-brand-strong))]" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]")}>
-                                          {tr("clients.noteKind" + n.kind.charAt(0) + n.kind.slice(1).toLowerCase())}
+                                          {tDynamic("clients.noteKind" + n.kind.charAt(0) + n.kind.slice(1).toLowerCase())}
                                         </span>
                                         <span className="text-xs text-[rgb(var(--reg-muted))]">{shortDate(n.created_at)}{n.author_name ? ` · ${n.author_name}` : ""}</span>
                                       </div>

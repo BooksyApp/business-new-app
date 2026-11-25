@@ -14,7 +14,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { assetUrl } from "@/config/api";
 import { formatDate, formatNumber } from "@/i18n/format";
 import { cn } from "@/lib/utils";
-import { t } from "@/i18n";
+import { t, tDynamic } from "@/i18n";
 import type { Id } from "@/types/id";
 
 /** Stars as one shape filled by the score; the number beside them carries the value. */
@@ -313,7 +313,7 @@ function ReviewCard({ review: r, businessId, report, onReported, onSaved }: { re
         <div className="mt-2 space-y-2 rounded-2xl bg-[rgb(var(--reg-canvas))] p-3.5">
           <label className="text-[13px] font-semibold" htmlFor={`rr-${r.id}`}>{t("reviews.v3.reportReason")}</label>
           <select id={`rr-${r.id}`} className={cn(fieldCls, "h-10 w-full text-[14px]")} value={reason} onChange={(e) => setReason(e.target.value)}>
-            {REPORT_REASONS.map((k) => <option key={k} value={k}>{t(`reviews.v3.${REASON_KEY[k]}`)}</option>)}
+            {REPORT_REASONS.map((k) => <option key={k} value={k}>{tDynamic(`reviews.v3.${REASON_KEY[k]}`)}</option>)}
           </select>
           <textarea
             rows={3}
