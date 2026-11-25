@@ -14,13 +14,13 @@ describe("authService.login — role isolation", () => {
     vi.unstubAllGlobals();
   });
 
-  it("sends app: 'hub'", async () => {
+  it("sends app: 'WEB_BUSINESS'", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ accessToken: "a" }), { status: 200, headers: { "content-type": "application/json" } })
     );
     vi.stubGlobal("fetch", fetchMock);
     await authService.login({ email: "o@x.test", password: "pw" });
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).app).toBe("hub");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).app).toBe("WEB_BUSINESS");
   });
 
   it("a customer account gets the customer-account message, not the raw code", async () => {

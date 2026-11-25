@@ -185,14 +185,14 @@ class AuthService {
 
   private async loginOnce(data: LoginRequest): Promise<AuthResponse> {
     // Backend AuthController: /api/public/auth/login expects { emailOrPhone, password }.
-    // `app: 'hub'`: the panel signs in salon owners and their team only (role isolation).
+    // `app: 'WEB_BUSINESS'`: the panel signs in salon owners and their team only (role isolation).
     try {
       return await this.request<AuthResponse>('/public/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           emailOrPhone: data.email,
           password: data.password,
-          app: 'hub',
+          app: 'WEB_BUSINESS',
         }),
       });
     } catch (primaryError) {
@@ -209,7 +209,7 @@ class AuthService {
         body: JSON.stringify({
           emailOrPhone: data.email,
           password: data.password,
-          app: 'hub',
+          app: 'WEB_BUSINESS',
         }),
       });
     }
