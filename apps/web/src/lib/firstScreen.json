@@ -1,0 +1,31 @@
+{
+  "calendar": [
+    "/businesses/{b}",
+    "/businesses/{b}/readiness",
+    "/bookings/business/{b}?startDate={day}&endDate={day}",
+    "/staff/business/{b}",
+    "/services/business/{b}",
+    "/time-off/business/{b}",
+    "/business-hours/business/{b}",
+    "/services/business/{b}/discounts",
+    "/waitlist/business/{b}",
+    "/clients/business/{b}"
+  ],
+  "sales": [
+    "/businesses/{b}",
+    "/services/business/{b}",
+    "/addons/business/{b}",
+    "/staff/business/{b}",
+    "/services/business/{b}/discounts",
+    "/bookings/business/{b}/clients?limit=1000&offset=0",
+    "/businesses/{b}/memberships?activeOnly=true",
+    "/quick-sale/business/{b}",
+    "/bookings/business/{b}?startDate={day}&endDate={day}"
+  ],
+  "clients": [
+    "/businesses/{b}",
+    "/services/business/{b}",
+    "/staff/business/{b}",
+    "/bookings/business/{b}/clients?limit=1000&offset=0"
+  ]
+}

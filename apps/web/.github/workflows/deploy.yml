@@ -1,0 +1,62 @@
+name: Deploy
+
+# Builds the SPA and syncs it straight onto the VPS's Caddy static-file dir — no
+# container, no server runtime for this app. See booksy-backend/docs/DEPLOY.md §9.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      # Types were never checked, so 57 errors piled up — some of them real bugs.
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 14
+
+  deploy:
+    name: sync to the VPS
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: rsync dist/ to /opt/booksy/web
+        uses: burnett01/rsync-deployments@7.0.2
+        with:
+          switches: -avz --delete
+          path: dist/
+          remote_path: /opt/booksy/web/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_SSH_KEY }}
+      - name: smoke check
+        run: |
+          sleep 3
+          # Hit the real hostname (needed for TLS SNI to pick the right cert) — an
+          # -H "Host:" override on a bare-IP URL only rewrites the HTTP layer, not
+          # the SNI the TLS handshake uses, and fails the connection outright.
+          code=$(curl -s -o /dev/null -w "%{http_code}" "https://srv1946733.hstgr.cloud/")
+          echo "root path -> HTTP $code"
+          test "$code" = "200"

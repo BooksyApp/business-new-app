@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "booqi Business",
+  "short_name": "booqi Biz",
+  "description": "Salon business management: calendar, clients, staff, services and point of sale.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#FBF7F2",
+  "background_color": "#FBF7F2",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

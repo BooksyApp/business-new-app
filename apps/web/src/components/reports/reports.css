@@ -1,0 +1,26 @@
+/* Reports charts (HUB-V3): one accent, recessive structure. Light values here; .dark gets its
+   own steps from the same violet ramp rather than an automatic flip. */
+:root {
+  --rp-surface: 255 255 255;
+  --rp-accent: 111 82 237;        /* the series: brand violet */
+  --rp-accent-strong: 91 63 214;
+  --rp-prev: 150 140 160;         /* the previous period: quiet grey, dashed */
+  --rp-grid: 236 230 222;
+  --rp-track: 244 241 255;
+  --rp-good: 18 112 75;
+  --rp-good-soft: 233 247 240;
+  --rp-bad: 176 42 55;
+  --rp-bad-soft: 253 238 240;
+}
+.dark {
+  --rp-surface: 28 24 38;
+  --rp-accent: 160 140 255;
+  --rp-accent-strong: 186 172 255;
+  --rp-prev: 128 120 140;
+  --rp-grid: 52 46 64;
+  --rp-track: 44 38 62;
+  --rp-good: 110 214 160;
+  --rp-good-soft: 22 52 40;
+  --rp-bad: 255 140 150;
+  --rp-bad-soft: 64 28 34;
+}

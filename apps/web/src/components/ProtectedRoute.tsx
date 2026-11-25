@@ -1,0 +1,90 @@
+import { Navigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { clearAuthData, getAccessToken } from "@/utils/authUtils";
+import { refreshSession } from "@/config/api";
+import { authService } from "@/services/authService";
+import { takeValidation } from "@/lib/authPrefetch";
+import { t } from "@/i18n";
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const [isAuth, setIsAuth] = useState<boolean | null>(null);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const validateAuth = async () => {
+      const accessToken = getAccessToken();
+      const user = localStorage.getItem("user");
+
+      if (!accessToken || !user) {
+        clearAuthData();
+        if (isMounted) { setIsAuth(false); setShouldRedirect(true); }
+        return;
+      }
+
+      try {
+        // The startup check (lib/authPrefetch) answers the first time; later checks ask anew.
+        let validationResult = (await takeValidation(accessToken)) ?? (await authService.validateToken(accessToken));
+        // Expired after a day: renew with the refresh token instead of signing out.
+        if (!validationResult.valid) {
+          const renewed = await refreshSession();
+          if (renewed) validationResult = await authService.validateToken(renewed);
+        }
+
+        if (!isMounted) return;
+
+        if (!validationResult.valid) {
+          clearAuthData();
+          setIsAuth(false);
+          setShouldRedirect(true);
+          return;
+        }
+
+        if (validationResult.user) {
+          localStorage.setItem('user', JSON.stringify(validationResult.user));
+        }
+
+        setIsAuth(true);
+        setShouldRedirect(false);
+      } catch {
+        if (isMounted) {
+          clearAuthData();
+          setIsAuth(false);
+          setShouldRedirect(true);
+        }
+      }
+    };
+
+    validateAuth();
+    const interval = setInterval(validateAuth, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [location.pathname]);
+
+  // Show loading while checking authentication
+  if (isAuth === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-500">{t("common.loading")}</div>
+      </div>
+    );
+  }
+
+  if (!isAuth || shouldRedirect) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return <>{children}</>;
+};
+
+export default ProtectedRoute;
+

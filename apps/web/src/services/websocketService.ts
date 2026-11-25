@@ -1,0 +1,667 @@
+import type { Id } from "@/types/id";
+import { WS_BASE_URL } from '@/config/api';
+import { Appointment } from './appointmentService';
+import { Sale } from './saleService';
+import type { Client, Subscription } from 'stompjs';
+import { TimeOff } from './timeOffService';
+import { t } from "@/i18n";
+import type { InboxMessage } from './messagingService';
+
+/** What the server pushes when a message is sent in one of this salon's conversations. */
+export interface InboxMessageEvent {
+  conversationId: string;
+  message: InboxMessage;
+}
+
+type MessageHandler<T> = (data: T) => void;
+
+/*
+ * SockJS + STOMP (~20 KB gzipped) used to sit on the critical path of every panel screen.
+ * They are fetched on the first connect, after the first paint and an idle moment: live
+ * updates start a second or two later, while the page's own data is already fresh.
+ */
+let realtimeLibs: Promise<{ SockJS: typeof import('sockjs-client'); Stomp: typeof import('stompjs') }> | null = null;
+function loadRealtimeLibs() {
+  if (!realtimeLibs) {
+    realtimeLibs = new Promise<void>((resolve) => {
+      const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
+        .requestIdleCallback;
+      requestAnimationFrame(() => (idle ? idle(() => resolve(), { timeout: 2000 }) : setTimeout(resolve, 500)));
+    })
+      .then(() => Promise.all([import('sockjs-client'), import('stompjs')]))
+      .then(([sockjs, stomp]) => {
+        // CommonJS packages: the value is on .default once bundled, on the module itself otherwise.
+        const pick = <T,>(m: unknown): T => ((m as { default?: T }).default ?? m) as T;
+        return { SockJS: pick<typeof import('sockjs-client')>(sockjs), Stomp: pick<typeof import('stompjs')>(stomp) };
+      });
+    realtimeLibs.catch(() => {
+      realtimeLibs = null; // a later connect may try again
+    });
+  }
+  return realtimeLibs;
+}
+
+class WebSocketService {
+  private socket: WebSocket | null = null;
+  private stompClient: Client | null = null;
+  private connected = false;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private isConnecting = false;
+  private isManualDisconnect = false; // Flag to prevent reconnection on manual disconnect
+  private connectionListeners: Array<() => void> = [];
+  private disconnectListeners: Array<() => void> = [];
+  private lostListeners: Array<() => void> = [];
+  private heartbeatInterval: NodeJS.Timeout | null = null;
+
+  async connect(): Promise<void> {
+    console.log('🔌 [websocketService] connect() called');
+    console.log(`  - Already connected: ${this.connected}`);
+    console.log(`  - Is connecting: ${this.isConnecting}`);
+    
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) {
+      console.log('⏳ [websocketService] Already connecting, waiting...');
+      return new Promise((resolve) => {
+        const checkConnection = () => {
+          if (this.connected) {
+            resolve();
+          } else if (!this.isConnecting) {
+            this.connect().then(resolve).catch(() => {});
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
+    }
+
+    if (this.connected && this.stompClient) {
+      return Promise.resolve();
+    }
+
+    this.isConnecting = true;
+    let SockJS: typeof import('sockjs-client') | undefined;
+    let Stomp: typeof import('stompjs') | undefined;
+    try {
+      ({ SockJS, Stomp } = await loadRealtimeLibs());
+    } catch {
+      /* handled below as "libraries not loaded" */
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        // Clean up existing connection if any (without triggering reconnection)
+        if (this.stompClient || this.socket) {
+          this.cleanupConnection(false);
+        }
+
+        // #53: SockJS and Stomp used to arrive as globals from two <script> tags
+        // pointing at cdn.jsdelivr.net with a floating major version and no SRI, so
+        // whatever that CDN returned executed with full privileges in an authenticated
+        // admin session. They are bundled now; the API is unchanged.
+
+        if (!SockJS || !Stomp) {
+          console.warn('SockJS or Stomp not available. WebSocket features disabled.');
+          this.isConnecting = false;
+          reject(new Error(t("services.websocketLibrariesNotLoaded")));
+          return;
+        }
+
+        // Use WebSocket URL from config
+        // SockJS requires HTTP/HTTPS URLs, not ws:// URLs - it handles WebSocket upgrade internally
+        // In production, use full URL; in development, use relative path for Vite proxy
+        const wsUrl = WS_BASE_URL || '';
+        let socketUrl: string;
+        
+        if (wsUrl) {
+          // Convert ws:// to http:// or wss:// to https://
+          if (wsUrl.startsWith('ws://')) {
+            socketUrl = wsUrl.replace('ws://', 'http://');
+          } else if (wsUrl.startsWith('wss://')) {
+            socketUrl = wsUrl.replace('wss://', 'https://');
+          } else {
+            socketUrl = wsUrl;
+          }
+          // SockJS endpoint is always /ws
+          socketUrl = `${socketUrl}/ws`;
+        } else {
+          // Development: use relative path (Vite proxy handles it)
+          socketUrl = '/ws';
+        }
+        
+        console.log('🔌 Connecting to WebSocket via SockJS:', socketUrl);
+        
+        const socket = new SockJS(socketUrl);
+        this.stompClient = Stomp.over(socket);
+        this.stompClient.debug = () => {}; // Disable debug logging
+
+        // Set connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (!this.connected) {
+            console.error('WebSocket connection timeout');
+            this.isConnecting = false;
+            this.cleanupConnection(false);
+            this.lostListeners.forEach(listener => listener());
+            this.handleReconnect();
+            reject(new Error(t("services.connectionTimeout")));
+          }
+        }, 10000); // 10 second timeout
+
+        // Monitor socket close events - only set after socket is created
+        // SockJS handles onclose internally, but we can monitor through STOMP
+        // The socket's onclose will be handled by SockJS/STOMP client automatically
+
+        // The broker authenticates the STOMP CONNECT frame and authorizes each
+        // subscription by business ownership, so we must present the JWT here — the
+        // SockJS handshake itself carries no identity.
+        const token = (typeof localStorage !== 'undefined' && localStorage.getItem('accessToken')) || '';
+        const connectHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+        this.stompClient.connect(
+          connectHeaders,
+          () => {
+            clearTimeout(connectionTimeout);
+            this.connected = true;
+            this.isConnecting = false;
+            this.isManualDisconnect = false;
+            this.reconnectAttempts = 0;
+            console.log(`✅ WebSocket connected to ${socketUrl}`);
+            console.log(`📡 STOMP client ready for subscriptions`);
+            
+            // Start heartbeat monitoring
+            this.startHeartbeatMonitoring();
+            
+            // Notify listeners
+            this.connectionListeners.forEach(listener => listener());
+            
+            resolve();
+          },
+          (error: unknown) => {
+            clearTimeout(connectionTimeout);
+            this.connected = false;
+            this.isConnecting = false;
+            console.error(`❌ WebSocket connection error to ${socketUrl}:`, error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            this.lostListeners.forEach(listener => listener());
+            
+            // Only reconnect if not manually disconnected
+            if (!this.isManualDisconnect) {
+              this.cleanupConnection(false);
+              this.handleReconnect();
+            }
+            reject(error);
+          }
+        );
+
+        // Store socket reference for cleanup
+        this.socket = socket as unknown as WebSocket;
+        
+        // Monitor socket close through SockJS events (if available)
+        // Note: SockJS handles connection lifecycle, STOMP handles protocol
+        // We rely on STOMP's error callback and connection state
+      } catch (error) {
+        this.isConnecting = false;
+        console.error('Failed to initialize WebSocket:', error);
+        reject(error);
+      }
+    });
+  }
+
+  private startHeartbeatMonitoring(): void {
+    this.stopHeartbeatMonitoring();
+    // Note: STOMP heartbeats are handled at protocol level (10s interval from server)
+    // We don't need to monitor heartbeats manually - STOMP client handles connection state
+    // This is kept for potential future use but currently disabled to avoid false timeouts
+    // The socket.onclose event will handle actual disconnections
+  }
+
+  private stopHeartbeatMonitoring(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  private handleReconnect(): void {
+    // Don't reconnect if manually disconnected
+    if (this.isManualDisconnect) {
+      return;
+    }
+
+    // Clear any existing reconnect timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('Max reconnection attempts reached. WebSocket will not reconnect.');
+      return;
+    }
+
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+    console.log(`🔄 Reconnecting in ${delay}ms... (Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    
+    this.reconnectTimeout = setTimeout(() => {
+      // Check again before reconnecting
+      if (!this.isManualDisconnect) {
+        this.connect().catch((error) => {
+          console.error('Reconnection attempt failed:', error);
+          // Will retry again if max attempts not reached
+        });
+      }
+    }, delay);
+  }
+
+  private cleanupConnection(manual: boolean = true): void {
+    if (manual) {
+      this.isManualDisconnect = true;
+    }
+
+    // Stop heartbeat monitoring
+    this.stopHeartbeatMonitoring();
+
+    // Disconnect STOMP client
+    if (this.stompClient) {
+      try {
+        if (manual) {
+          this.stompClient.disconnect(() => {
+            console.log('WebSocket disconnected');
+          });
+        }
+        this.stompClient = null;
+      } catch (error) {
+        this.stompClient = null;
+      }
+    }
+
+    // Always close the underlying socket — not just on manual disconnect.
+    // Leaving it open causes "WebSocket is closed before connection established"
+    // when React cleanup runs mid-handshake (StrictMode, fast navigation).
+    if (this.socket) {
+      try {
+        const readyState = this.socket.readyState;
+        // CONNECTING=0, OPEN=1 — close both; CLOSING=2 and CLOSED=3 are already handled
+        if (readyState === 0 || readyState === 1) {
+          this.socket.close(1000, manual ? 'Manual disconnect' : 'Cleanup');
+        }
+      } catch (error) {
+        // Ignore — socket may already be gone
+      }
+      this.socket = null;
+    }
+
+    if (manual) {
+      this.connected = false;
+      this.isConnecting = false;
+      this.reconnectAttempts = 0;
+      this.disconnectListeners.forEach(listener => listener());
+    }
+  }
+
+  onConnect(listener: () => void): () => void {
+    this.connectionListeners.push(listener);
+    return () => {
+      this.connectionListeners = this.connectionListeners.filter(l => l !== listener);
+    };
+  }
+
+  /** The socket dropped or never opened (not a deliberate disconnect). */
+  onConnectionLost(listener: () => void): () => void {
+    this.lostListeners.push(listener);
+    return () => {
+      this.lostListeners = this.lostListeners.filter(l => l !== listener);
+    };
+  }
+
+  onDisconnect(listener: () => void): () => void {
+    this.disconnectListeners.push(listener);
+    return () => {
+      this.disconnectListeners = this.disconnectListeners.filter(l => l !== listener);
+    };
+  }
+
+  subscribeToAppointments(businessId: Id, handler: MessageHandler<Appointment>): () => void {
+    let subscription: Subscription | null = null;
+    let unsubscribeCalled = false;
+    let connectListener: (() => void) | null = null;
+
+    const doSubscribe = () => {
+      if (unsubscribeCalled || !this.connected || !this.stompClient) {
+        return;
+      }
+
+      // Unsubscribe from previous subscription if exists (e.g., on reconnection)
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          // Ignore errors from previous subscription cleanup
+        }
+      }
+
+      try {
+        subscription = this.stompClient.subscribe(
+          appointmentsTopic(businessId),
+          (message) => {
+            if (unsubscribeCalled) return;
+            
+            console.log(`📨 Received WebSocket message on /topic/appointments/${businessId}:`, message.body);
+            try {
+              const appointment = JSON.parse(message.body);
+              console.log(`✅ Parsed appointment:`, appointment);
+              handler(appointment);
+            } catch (error) {
+              console.error('❌ Error parsing appointment message:', error, message.body);
+            }
+          }
+        );
+        console.log(`✅ Subscribed to appointments for business ${businessId} on /topic/appointments/${businessId}`);
+      } catch (error) {
+        console.error('Error subscribing to appointments:', error);
+      }
+    };
+
+    // If already connected, subscribe immediately
+    if (this.connected && this.stompClient) {
+      doSubscribe();
+    } else {
+      // Wait for connection
+      console.log('WebSocket not connected. Subscription will be attempted on connect.');
+      
+      // Set up connection listener
+      connectListener = this.onConnect(() => {
+        if (!unsubscribeCalled) {
+          setTimeout(doSubscribe, 200); // Small delay to ensure STOMP is ready
+        }
+      });
+      
+      // Try to connect if not already connecting
+      if (!this.isConnecting) {
+        this.connect().catch((error) => {
+          if (!unsubscribeCalled) {
+            console.error('Failed to connect WebSocket for subscription:', error);
+          }
+        });
+      }
+    }
+
+    // Return unsubscribe function
+    return () => {
+      unsubscribeCalled = true;
+      
+      // Remove connection listener
+      if (connectListener) {
+        connectListener();
+        connectListener = null;
+      }
+      
+      // Unsubscribe from topic
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+          console.log(`Unsubscribed from appointments for business ${businessId}`);
+        } catch (error) {
+          console.error('Error unsubscribing from appointments:', error);
+        }
+        subscription = null;
+      }
+    };
+  }
+
+  /**
+   * The destination is `/topic/appointments/{businessId}/staff/{staffId}` — with the
+   * business id, which this used to omit. Two things were broken by that: nothing
+   * publishes to `/topic/appointments/staff/{id}` (BookingController and
+   * CustomerBookingService both send to the four-segment form), and the broker's
+   * subscription authorizer cannot read a tenant out of the short form, so it fails
+   * closed and throws. A throw on SUBSCRIBE makes Spring send an ERROR frame and close
+   * the STOMP session, which took every other live subscription down with it — the
+   * "websocket disconnected" the dashboard kept showing.
+   */
+  subscribeToStaffAppointments(
+    businessId: Id,
+    staffId: Id,
+    handler: MessageHandler<Appointment>
+  ): () => void {
+    if (!this.connected || !this.stompClient) {
+      return () => {};
+    }
+
+    const subscription = this.stompClient.subscribe(
+      `/topic/appointments/${businessId}/staff/${staffId}`,
+      (message) => {
+        try {
+          const appointment = JSON.parse(message.body);
+          handler(appointment);
+        } catch (error) {
+          console.error('Error parsing staff appointment message:', error);
+        }
+      }
+    );
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }
+
+  subscribeToSales(businessId: Id, handler: MessageHandler<Sale>): () => void {
+    if (!this.connected || !this.stompClient) {
+      return () => {};
+    }
+
+    const subscription = this.stompClient.subscribe(
+      `/topic/sales/${businessId}`,
+      (message) => {
+        try {
+          const sale = JSON.parse(message.body);
+          handler(sale);
+        } catch (error) {
+          console.error('Error parsing sale message:', error);
+        }
+      }
+    );
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
+  }
+
+  subscribeToTimeOffs(businessId: Id, handler: MessageHandler<TimeOff>): () => void {
+    let subscription: Subscription | null = null;
+    let unsubscribeCalled = false;
+    let connectListener: (() => void) | null = null;
+
+    const doSubscribe = () => {
+      if (unsubscribeCalled || !this.connected || !this.stompClient) return;
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+      }
+      try {
+        subscription = this.stompClient.subscribe(
+          `/topic/time-off/${businessId}`,
+          (message) => {
+            if (unsubscribeCalled) return;
+            try {
+              handler(JSON.parse(message.body));
+            } catch (error) {
+              console.error('Error parsing time off message:', error);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error subscribing to time-offs:', error);
+      }
+    };
+
+    if (this.connected && this.stompClient) {
+      doSubscribe();
+    } else {
+      connectListener = this.onConnect(() => {
+        if (!unsubscribeCalled) setTimeout(doSubscribe, 200);
+      });
+      if (!this.isConnecting) {
+        this.connect().catch(() => {});
+      }
+    }
+
+    return () => {
+      unsubscribeCalled = true;
+      if (connectListener) { connectListener(); connectListener = null; }
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+        subscription = null;
+      }
+    };
+  }
+
+  subscribeToWaitlist(businessId: Id, handler: MessageHandler<{ event: string }>): () => void {
+    let subscription: Subscription | null = null;
+    let unsubscribeCalled = false;
+    let connectListener: (() => void) | null = null;
+
+    const doSubscribe = () => {
+      if (unsubscribeCalled || !this.connected || !this.stompClient) return;
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+      }
+      try {
+        subscription = this.stompClient.subscribe(
+          `/topic/waitlist/${businessId}`,
+          (message) => {
+            if (unsubscribeCalled) return;
+            try {
+              handler(JSON.parse(message.body));
+            } catch (error) {
+              console.error('Error parsing waitlist message:', error);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error subscribing to the waitlist:', error);
+      }
+    };
+
+    if (this.connected && this.stompClient) {
+      doSubscribe();
+    } else {
+      connectListener = this.onConnect(() => {
+        if (!unsubscribeCalled) setTimeout(doSubscribe, 200);
+      });
+      if (!this.isConnecting) {
+        this.connect().catch(() => {});
+      }
+    }
+
+    return () => {
+      unsubscribeCalled = true;
+      if (connectListener) { connectListener(); connectListener = null; }
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+        subscription = null;
+      }
+    };
+  }
+
+  /**
+   * FG-W4-04: new inbox messages for the open salon, `/topic/messages/{businessId}` (owner, or a
+   * team member with CLIENTS_VIEW). `onStatus(true)` once subscribed, `false` when the socket
+   * drops, so the caller polls only while it is not live.
+   */
+  subscribeToMessages(
+    businessId: Id,
+    handler: MessageHandler<InboxMessageEvent>,
+    onStatus?: (live: boolean) => void
+  ): () => void {
+    let subscription: Subscription | null = null;
+    let unsubscribeCalled = false;
+
+    const doSubscribe = () => {
+      if (unsubscribeCalled || !this.connected || !this.stompClient) return;
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+      }
+      try {
+        subscription = this.stompClient.subscribe(`/topic/messages/${businessId}`, (message) => {
+          if (unsubscribeCalled) return;
+          try {
+            handler(JSON.parse(message.body));
+          } catch (error) {
+            console.error('Error parsing message event:', error);
+          }
+        });
+        onStatus?.(true);
+      } catch (error) {
+        console.error('Error subscribing to messages:', error);
+      }
+    };
+
+    const offConnect = this.onConnect(() => {
+      if (!unsubscribeCalled) setTimeout(doSubscribe, 200);
+    });
+    const offLost = this.onConnectionLost(() => {
+      if (!unsubscribeCalled) onStatus?.(false);
+    });
+    const offDisconnect = this.onDisconnect(() => {
+      if (!unsubscribeCalled) onStatus?.(false);
+    });
+
+    if (this.connected && this.stompClient) {
+      doSubscribe();
+    } else if (!this.isConnecting) {
+      this.connect().catch(() => {});
+    }
+
+    return () => {
+      unsubscribeCalled = true;
+      offConnect();
+      offLost();
+      offDisconnect();
+      if (subscription) {
+        try { subscription.unsubscribe(); } catch { /* ignore */ }
+        subscription = null;
+      }
+    };
+  }
+
+  disconnect(): void {
+    // Clear reconnect timeout
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+
+    // Cleanup connection (manual disconnect)
+    this.cleanupConnection(true);
+  }
+
+  isConnected(): boolean {
+    return this.connected;
+  }
+}
+
+export const websocketService = new WebSocketService();
+
+/**
+ * Where the open salon's live booking updates come from for the signed-in person. A team
+ * member whose role shows only their own calendar may not subscribe to the whole salon
+ * (the server refuses it), so they listen to their own column instead.
+ */
+function appointmentsTopic(businessId: Id): string {
+  try {
+    const b = JSON.parse(localStorage.getItem("currentBusiness") || "{}");
+    const own = !b?.isOwner && Array.isArray(b?.myPermissions) && !b.myPermissions.includes("CALENDAR_ALL");
+    if (own && b?.myStaffId && String(b.id) === String(businessId)) {
+      return `/topic/appointments/${businessId}/staff/${b.myStaffId}`;
+    }
+  } catch {
+    // fall through to the salon-wide topic
+  }
+  return `/topic/appointments/${businessId}`;
+}

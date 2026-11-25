@@ -1,0 +1,6 @@
+# #54: this is a salon business management dashboard, not a marketing site. Every
+# route behind /login holds another business's calendar, clients and revenue. The
+# previous file explicitly invited Googlebot, Bingbot, Twitterbot and
+# facebookexternalhit with Allow: / — a leftover scaffold default.
+User-agent: *
+Disallow: /
