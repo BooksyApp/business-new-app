@@ -1,4 +1,4 @@
-import { Switch, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
 import { Text } from '@/components/Text';
 import { Chip } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeContext';
@@ -46,3 +46,23 @@ export function SectionTitle({ children }: { children: string }) {
 
 /** Parses a decimal typed with comma or dot; NaN when empty/invalid. */
 export const num = (s: string) => (s.trim() === '' ? NaN : Number(s.replace(',', '.')));
+
+/** Horizontal tab chips for multi-section screens. */
+export function TabBar<T extends string>({ tabs, value, onChange }: { tabs: { k: T; label: string }[]; value: T; onChange: (k: T) => void }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+      {tabs.map((x) => <Chip key={x.k} label={x.label} active={value === x.k} onPress={() => onChange(x.k)} />)}
+    </ScrollView>
+  );
+}
+
+/** Two-column label / value line inside a card. */
+export function Line({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  const { t } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 5 }}>
+      <Text style={{ flex: 1, fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{label}</Text>
+      <Text style={{ fontFamily: bold ? font.x : font.s, fontSize: 14.5, color: t.ink, textAlign: 'right' }}>{value}</Text>
+    </View>
+  );
+}

@@ -1,6 +1,7 @@
 import type { Strings } from './en';
 import { extraAz } from './extra';
 import { moreAz } from './more';
+import { bizAz } from './biz';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends string ? string : DeepPartial<T[K]> };
 
@@ -228,4 +229,5 @@ export const az: DeepPartial<Strings> = {
   },
   ...extraAz,
   ...moreAz,
+  ...bizAz,
 };

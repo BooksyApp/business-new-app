@@ -32,6 +32,14 @@
       "expo-secure-store",
       "expo-notifications",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Salon \u015f\u0259kill\u0259ri v\u0259 hekay\u0259l\u0259r \u00fc\u00e7\u00fcn qalereyaya giri\u015f laz\u0131md\u0131r.",
+          "cameraPermission": "\u015e\u0259kil \u00e7\u0259km\u0259k \u00fc\u00e7\u00fcn kameraya icaz\u0259 laz\u0131md\u0131r.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",

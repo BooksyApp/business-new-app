@@ -1,6 +1,15 @@
 import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header, Screen, StateView } from '@/components/ui';
+import { CustomReports } from '@/screens/CustomReports';
+import { Expenses } from '@/screens/Expenses';
+import { Finance } from '@/screens/Finance';
+import { Integrations } from '@/screens/Integrations';
+import { Inventory } from '@/screens/Inventory';
+import { Marketing } from '@/screens/Marketing';
+import { Payroll } from '@/screens/Payroll';
+import { Profile } from '@/screens/Profile';
+import { Roles } from '@/screens/Roles';
 import { Looks } from '@/screens/Looks';
 import { Reports } from '@/screens/Reports';
 import { Reviews } from '@/screens/Reviews';
@@ -20,6 +29,15 @@ export default function Section() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/more'));
   switch (key) {
     case 'services': return <Services onBack={back} />;
+    case 'inventory': return <Inventory onBack={back} />;
+    case 'expenses': return <Expenses onBack={back} />;
+    case 'marketing': return <Marketing onBack={back} />;
+    case 'finance': return <Finance onBack={back} />;
+    case 'payroll': return <Payroll onBack={back} />;
+    case 'roles': return <Roles onBack={back} />;
+    case 'integrations': return <Integrations onBack={back} />;
+    case 'custom': return <CustomReports onBack={back} />;
+    case 'profile': return <Profile onBack={back} />;
     case 'views': return <Looks onBack={back} />;
     case 'reviews': return <Reviews onBack={back} />;
     case 'reports': return <Reports onBack={back} />;

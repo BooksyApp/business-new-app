@@ -1,6 +1,7 @@
 import type { Strings } from './en';
 import { extraRu } from './extra';
 import { moreRu } from './more';
+import { bizRu } from './biz';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends string ? string : DeepPartial<T[K]> };
 
@@ -164,4 +165,5 @@ export const ru: DeepPartial<Strings> = {
   days: { mon: 'Пн', tue: 'Вт', wed: 'Ср', thu: 'Чт', fri: 'Пт', sat: 'Сб', sun: 'Вс' },
   ...extraRu,
   ...moreRu,
+  ...bizRu,
 };

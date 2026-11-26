@@ -301,6 +301,25 @@ export async function request<T>(path: string, opts?: Parameters<typeof core.req
   }
 }
 
+/** Multipart upload (RN FormData with {uri,name,type} file parts). One token renewal on 401, 60s timeout. */
+export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
+  const go = async (tok: string | null) => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 60000);
+    try {
+      return await fetch(`${API_BASE}/api${path}`, { method: 'POST', signal: ctl.signal, headers: { Accept: 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) }, body: form });
+    } catch { throw new ApiError('offline', 0); } finally { clearTimeout(timer); }
+  };
+  let res = await go(accessToken);
+  if (res.status === 401) { const nt = await renew().catch(() => null); if (nt) res = await go(nt); }
+  const text = await res.text();
+  let data: unknown = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) { const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>; throw new ApiError(String(d.detail ?? d.message ?? d.error ?? `HTTP ${res.status}`), res.status, data); }
+  setOnline(true);
+  return data as T;
+}
+
 const day = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export { day as toDay };
