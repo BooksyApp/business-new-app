@@ -1,0 +1,5 @@
+/* Viewer for generated artifact frames (src/bz-static). Natural sizes: mobile 390, desktop 1440; scaling is done by the viewer. */
+.bz-frame .dz,.bz-frame .mz{zoom:1}
+.bz-frame .dz{width:1440px}
+.bz-frame .mz{width:390px}
+.bz-frame{display:block;width:max-content}
