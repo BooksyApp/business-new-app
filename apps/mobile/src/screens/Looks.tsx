@@ -7,6 +7,8 @@ import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Btn, Chip, ErrorState, Field, Header, Pill, Screen, ServiceThumb, Skeleton, StateView, photoUrl } from '@/components/ui';
+import { BackBar, Chip as KChip, ChipRow, EmptyState, IconBtn, Photo as KPhoto, Pill as KPill, Skeleton as KSkel, Title } from '@/components/kit';
+import { useRouter } from 'expo-router';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
@@ -19,6 +21,7 @@ import { font } from '@/theme/tokens';
 /** Görünüşlər: the salon portfolio (looks) and 24h stories - review and remove; uploading stays in the web panel. */
 export function Looks({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
+  const router = useRouter();
   const { salon } = useApp();
   const sid = salon?.id ?? '';
   const [tab, setTab] = useState<'photos' | 'stories'>('photos');
@@ -45,27 +48,23 @@ export function Looks({ onBack }: { onBack: () => void }) {
   } }]);
   return (
     <Screen>
-      <Header title={tr('sections.views')} subtitle={salon?.name} onBack={onBack} />
-      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 14 }}>
-        <Chip label={tr('lk.photos')} active={tab === 'photos'} onPress={() => setTab('photos')} />
-        <Chip label={tr('lk.stories')} active={tab === 'stories'} onPress={() => setTab('stories')} />
-      </View>
-      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={3} height={160} /> : (
-        <FlatList data={list.data ?? []} numColumns={2} keyExtractor={(x) => String(x.id)} columnWrapperStyle={{ gap: 10 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
+      <BackBar label={tr('v2.tabMore')} onBack={onBack} right={<IconBtn icon="plus" label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} onPress={() => { if (tab === 'stories') router.push('/story/create'); else { setPick(null); setSheet(true); } }} />} />
+      <Title sub={salon?.name} style={{ paddingBottom: 12 }}>{tr('sections.views')}</Title>
+      <ChipRow style={{ marginBottom: 12 }}>
+        <KChip label={tr('lk.photos')} on={tab === 'photos'} onPress={() => setTab('photos')} />
+        <KChip label={tr('lk.stories')} on={tab === 'stories'} onPress={() => setTab('stories')} />
+      </ChipRow>
+      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <KSkel blocks={[{ h: 160, r: 0 }, { h: 160, r: 0 }]} /> : (
+        <FlatList data={list.data ?? []} numColumns={3} keyExtractor={(x) => String(x.id)} columnWrapperStyle={{ gap: 2 }} contentContainerStyle={{ paddingBottom: 60, gap: 2 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListHeaderComponent={<Btn label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} icon="plus" variant="secondary" loading={upBusy} onPress={() => { setPick(null); setSheet(true); }} style={{ marginBottom: 10 }} />}
-          ListEmptyComponent={<StateView icon="img" title={tr('lk.empty')} />}
-          renderItem={({ item: x }) => (
-            <View style={{ flex: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: t.surface }}>
-              {photoSource(x.url) ? <Image source={photoSource(x.url)!} style={{ width: '100%', aspectRatio: 0.85, backgroundColor: t.fill }} accessibilityLabel={x.cap || undefined} /> : <View style={{ width: '100%', aspectRatio: 0.85, overflow: 'hidden' }}><ServiceThumb name={x.cap || 'look'} cat={x.cap} size={400} /></View>}
-              <View style={{ padding: 8, gap: 4 }}>
-                {x.cap ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13, color: t.ink }}>{x.cap}</Text> : null}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  {x.tag ? <Pill text={tr(`lk.${x.tag.toLowerCase() === 'rejected' ? 'rejected' : x.tag.toLowerCase() === 'approved' || x.tag.toLowerCase() === 'live' ? 'approved' : 'pending'}` as 'lk.pending')} tone={x.tag.toLowerCase() === 'rejected' ? 'guava' : 'muted'} /> : x.views != null ? <Text style={{ fontFamily: font.m, fontSize: 12, color: t.muted }}>{tr('lk.views', { n: x.views })}</Text> : <View />}
-                  <Pressable onPress={() => del(x.id)} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
-                </View>
-              </View>
-            </View>
+          ListEmptyComponent={<EmptyState photo="demo:f03" title={tr('lk.empty')} body={tr('v2.firstWorkBody')} action={{ label: tab === 'photos' ? tr('ad.upload') : tr('ad.story'), icon: 'plus', onPress: () => { if (tab === 'stories') router.push('/story/create'); else { setPick(null); setSheet(true); } } }} />}
+          renderItem={({ item: x, index }) => (
+            <Pressable onPress={() => (tab === 'photos' ? router.push(`/post/${x.id}`) : router.push(`/story/view?mode=own&i=${index}`))} onLongPress={() => del(x.id)} noScale accessibilityRole="imagebutton" accessibilityLabel={x.cap || tr('lk.photos')} style={{ flex: 1 / 3 }}>
+              <KPhoto src={x.url} style={{ width: '100%', aspectRatio: 0.8 }}>
+                {x.tag && !/approved|live|published/i.test(x.tag) ? <View style={{ position: 'absolute', left: 6, top: 6 }}><KPill tone={/rejected/i.test(x.tag) ? 'g' : 'wh'} text={tr(`lk.${/rejected/i.test(x.tag) ? 'rejected' : 'pending'}` as 'lk.pending')} /></View> : null}
+                {x.views != null ? <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}><Icon name="eye" size={14} color="#fff" /><Text style={{ fontFamily: font.b, fontSize: 12, color: '#fff' }}>{x.views}</Text></View> : null}
+              </KPhoto>
+            </Pressable>
           )} />
       )}
       <BottomSheet open={sheet} onClose={() => { setSheet(false); setPick(null); }}>

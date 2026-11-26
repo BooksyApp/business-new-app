@@ -8,6 +8,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Avatar, ServiceThumb, Btn, Chip, ErrorState, Field, Skeleton, StateView } from '@/components/ui';
 import { DayStrip } from '@/components/calendar';
+import { BackBar, IconBtn } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import { api, ApiError, toDay, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
@@ -136,23 +137,12 @@ export default function NewBooking() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flex: 1, paddingTop: ins.top + 10, paddingHorizontal: 20 }}>
-        <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="back" size={22} color={t.ink} /></Pressable>
-          <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink }}>{tr('create.title')}</Text>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('common.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="x" size={22} color={t.ink} /></Pressable>
+        <View style={{ marginHorizontal: -20 }}><BackBar label={tr('common.back')} onBack={back} right={<IconBtn icon="x" label={tr('common.close')} onPress={() => router.back()} />} /></View>
+        <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+          {STEPS.map((_, i) => <View key={i} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i <= step ? t.ink : t.track }} />)}
         </View>
-        <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
-          {STEPS.map((_, i) => <View key={i} style={{ flex: 1, height: 4, borderRadius: 4, backgroundColor: i <= step ? t.violet : t.fill2 }} />)}
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
-          {STEPS.map((k, i) => (
-            <React.Fragment key={k}>
-              <Text style={{ fontFamily: font.b, fontSize: 14, color: i === step ? t.vtext : t.muted }}>{i + 1} · {tr(k)}</Text>
-              {i < STEPS.length - 1 ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>·</Text> : null}
-            </React.Fragment>
-          ))}
-        </View>
-        <Text style={{ fontFamily: font.x, fontSize: 30, lineHeight: 33, letterSpacing: -0.9, color: t.ink, marginTop: 18, marginBottom: 16 }}>{titles[step]}</Text>
+        <Text style={{ fontFamily: font.r, fontSize: 12.5, color: t.muted, marginTop: 10 }}>{step + 1}/4 · {tr(STEPS[step])}</Text>
+        <Text accessibilityRole="header" style={{ fontFamily: font.b, fontSize: 26, lineHeight: 31, letterSpacing: -0.65, color: t.ink, marginTop: 2, marginBottom: 14 }}>{titles[step]}</Text>
         <View style={{ flex: 1 }}>
           {step === 0 ? <ClientStep sid={sid} sel={client} onPick={setClient} /> : null}
           {step === 1 ? <ServiceStep sid={sid} sel={picked} cur={salon?.currency} onToggle={(s) => { setPicked((p) => (p.some((x) => x.id === s.id) ? p.filter((x) => x.id !== s.id) : [...p, s])); setMaster(null); setTime(null); }} /> : null}
@@ -207,12 +197,12 @@ export default function NewBooking() {
 function Row({ name, sub, on, onPress, uri, thumb }: { name: string; sub?: string; on: boolean; onPress: () => void; uri?: string | null; thumb?: React.ReactNode }) {
   const { t } = useTheme();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 84, borderRadius: 26, backgroundColor: t.surface, borderWidth: on ? 2 : 0, borderColor: t.violet, ...cardShadow }}>
-      {thumb ?? <Avatar name={name} size={56} uri={uri} />}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }} noScale
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 18, backgroundColor: on ? t.vsoft : 'transparent', borderWidth: on ? 1.5 : 0, borderColor: t.violet }}>
+      {thumb ?? <Avatar name={name} size={48} uri={uri} />}
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{name}</Text>
-        {sub ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{sub}</Text> : null}
+        <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{name}</Text>
+        {sub ? <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13, color: t.muted }}>{sub}</Text> : null}
       </View>
       {on ? <Icon name="check" size={22} color={t.vtext} /> : null}
     </Pressable>
@@ -260,7 +250,7 @@ function ClientStep({ sid, sel, onPick }: { sid: string; sel: Pick | null; onPic
   }
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, paddingHorizontal: 16, borderRadius: 26, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 46, paddingHorizontal: 14, borderRadius: 16, backgroundColor: t.fill }}>
         <Icon name="search" size={20} color={t.muted} />
         <TextInput value={q} onChangeText={setQ} placeholder={tr('create.searchClient')} placeholderTextColor={t.ink3} autoCorrect={false} style={{ flex: 1, fontFamily: font.m, fontSize: 15, color: t.ink }} />
       </View>
@@ -269,7 +259,7 @@ function ClientStep({ sid, sel, onPick }: { sid: string; sel: Pick | null; onPic
         <Text style={{ fontFamily: font.b, fontSize: 15, color: t.vtext }}>{tr('create.newClient')}</Text>
       </Pressable>
       {list.error ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={4} height={72} /> : (
-        <FlatList data={rows} keyExtractor={(c, i) => String(c.id ?? i)} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 10, paddingBottom: 140 }}
+        <FlatList data={rows} keyExtractor={(c, i) => String(c.id ?? i)} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 2, paddingBottom: 140 }}
           renderItem={({ item: c }) => {
             const name = `${c.firstName} ${c.lastName ?? ''}`.trim();
             return <Row uri={(recallClient(String(c.id)) as { avatarUrl?: string | null } | undefined)?.avatarUrl} name={name} sub={c.phone ?? undefined} on={sel?.id === c.id} onPress={() => onPick({ id: c.id, name })} />;
@@ -289,7 +279,7 @@ function ServiceStep({ sid, sel, cur, onToggle }: { sid: string; sel: Service[];
   return (
     <View style={{ flex: 1 }}>
       <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted, marginTop: -6, marginBottom: 10 }}>{tr('create.multiHint')}</Text>
-      <FlatList data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ gap: 10, paddingBottom: 140 }}
+      <FlatList data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ gap: 2, paddingBottom: 140 }}
         renderItem={({ item: s }) => <Row thumb={<ServiceThumb name={s.name} cat={s.categoryName} size={56} />} name={s.name} sub={`${s.durationMinutes ?? 30} ${tr('common.min')} · ${money(s.price, cur)}`} on={sel.some((x) => x.id === s.id)} onPress={() => onToggle(s)} />} />
     </View>
   );

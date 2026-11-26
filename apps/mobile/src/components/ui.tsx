@@ -275,16 +275,11 @@ export function Skeleton({ rows = 5, height = 68 }: { rows?: number; height?: nu
 export function StateView({ icon, title, body, actionLabel, onAction, secondary }: { icon: string; title: string; body?: string; actionLabel?: string; onAction?: () => void; secondary?: boolean }) {
   const { t } = useTheme();
   return (
-    <View accessibilityLiveRegion="polite" style={{ alignItems: 'center', paddingHorizontal: 36, paddingTop: 56, paddingBottom: 24, gap: 10 }}>
-      <View style={{ width: 148, height: 148, alignItems: 'center', justifyContent: 'center', marginBottom: 12, transform: [{ scale: 0.7 }] }}>
-        <View style={{ position: 'absolute', width: 148, height: 148, borderRadius: 74, backgroundColor: t.vsoft, opacity: 0.7 }} />
-        <View style={{ position: 'absolute', left: 6, top: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: t.blush, opacity: 0.8 }} />
-        <View style={{ position: 'absolute', right: 10, bottom: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: t.lilac }} />
-        <LinearGradient colors={[t.dark ? '#2a2538' : '#e6deff', t.dark ? '#33263a' : '#ffe0e7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[{ width: 108, height: 108, borderRadius: 54, alignItems: 'center', justifyContent: 'center' }, cardShadow]}>
-          <Icon name={icon} size={46} color={t.vtext} />
-        </LinearGradient>
+    <View accessibilityLiveRegion="polite" style={{ alignItems: 'center', paddingHorizontal: 36, paddingTop: 64, paddingBottom: 24, gap: 8 }}>
+      <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+        <Icon name={icon} size={34} color={t.vtext} />
       </View>
-      <Text style={{ fontFamily: font.b, fontSize: 19, lineHeight: 24, color: t.ink, textAlign: 'center', letterSpacing: -0.4 }}>{title}</Text>
+      <Text accessibilityRole="header" style={{ fontFamily: font.b, fontSize: 19, lineHeight: 24, color: t.ink, textAlign: 'center', letterSpacing: -0.38 }}>{title}</Text>
       {body ? <Text style={{ fontFamily: font.r, fontSize: 14, lineHeight: 20, color: t.muted, textAlign: 'center' }}>{body}</Text> : null}
       {actionLabel && onAction ? <View style={{ marginTop: 14, alignSelf: 'stretch' }}><Btn label={actionLabel} variant={secondary ? 'secondary' : 'primary'} onPress={onAction} /></View> : null}
     </View>
