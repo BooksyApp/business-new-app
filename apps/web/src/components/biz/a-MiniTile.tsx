@@ -16,12 +16,15 @@ export function MiniTile({
   flagCtx,
   onClick,
   className,
+  placed,
 }: {
   appointment: Appointment;
   visits?: number | null;
   flagCtx?: FlagContext;
   onClick: () => void;
   className?: string;
+  /** Week grid: the tile is the absolutely placed element itself (BF40 week frame). */
+  placed?: { top: number; height: number; left: number; width: number };
 }) {
   const s = appointmentStatusStyle(appointment.status);
   const tint = categoryTint(appointment.categoryId, appointment.serviceId);
@@ -48,10 +51,9 @@ export function MiniTile({
         ["--bz-sc" as string]: s.dot,
         ["--bz-so" as string]: 1,
         opacity: statusKey === "COMPLETED" ? 0.82 : undefined,
-        height: "auto",
-        minHeight: 44,
+        ...(placed ? { position: "absolute" as const, top: placed.top, height: placed.height, left: placed.left, width: placed.width, zIndex: 3 } : { height: "auto", minHeight: 44 }),
       }}
-      className={cn("tile in tw cursor-pointer focus-visible:outline-none", cancelled && "a-x", className)}
+      className={cn("tile tw cursor-pointer focus-visible:outline-none", !placed && "in", cancelled && "a-x", className)}
     >
       <div className="hr2">
         <b style={cancelled ? { textDecoration: "line-through" } : undefined}>{appointment.clientName}</b>
@@ -59,9 +61,11 @@ export function MiniTile({
           <FlagIcons bare keys={keys} max={3} size={13} />
         </span>
       </div>
-      <span>
-        {start}–{end} · {appointmentServiceLabel(appointment)}
-      </span>
+      {placed ? <span>{start}</span> : (
+        <span>
+          {start}–{end} · {appointmentServiceLabel(appointment)}
+        </span>
+      )}
     </div>
   );
 }

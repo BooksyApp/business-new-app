@@ -1547,7 +1547,7 @@ export default function CalendarPage() {
   const dayGridRef = useRef<HTMLDivElement>(null);
   const openingHour = getBusinessHoursForDate(currentDate).startHour;
   useEffect(() => {
-    if (viewType !== "Day" || loading || !dayGridRef.current) return;
+    if ((viewType !== "Day" && viewType !== "Weekly") || loading || !dayGridRef.current) return;
     const nowHour = salonNow(salonTz).getHours();
     const target = isCurrentDate ? Math.max(openingHour, Math.min(nowHour - 1, 23)) : openingHour;
     dayGridRef.current.scrollTop = Math.max(0, target) * 4 * SLOT_HEIGHT;
@@ -1565,13 +1565,13 @@ export default function CalendarPage() {
     setGridW(el.clientWidth);
     return () => ro.disconnect();
   }, [viewType, loading, isMobile]);
-  const colCount = Math.max(1, visibleStaff.length);
-  const colW = Math.max(isMobile ? 120 : 200, Math.floor((gridW - 12 - HOUR_COL) / colCount) - COL_GAP);
+  const colCount = viewType === "Weekly" ? 7 : Math.max(1, visibleStaff.length);
+  const colW = Math.max(viewType === "Weekly" ? 134 : isMobile ? 120 : 200, Math.floor((gridW - 12 - HOUR_COL) / colCount) - COL_GAP);
   const gridInnerW = HOUR_COL + colCount * (colW + COL_GAP);
 
   // Get current time position
-  const getCurrentTimePosition = (): number | null => {
-    if (!isCurrentDate) return null;
+  const getCurrentTimePosition = (anyDay = false): number | null => {
+    if (!isCurrentDate && !anyDay) return null;
     
     const now = currentTime;
     const hours = now.getHours();
@@ -2033,7 +2033,7 @@ export default function CalendarPage() {
                     </span>
                   ))}
                 </div>
-                {viewType === "Day" && !isMobile && staff.length > 1 && (
+                {!isMobile && staff.length > 1 && (
                 <Popover>
                   <PopoverTrigger asChild>
                     <button type="button" className="chip">
@@ -2313,7 +2313,7 @@ export default function CalendarPage() {
 
             {(viewType === "Day" || viewType === "Weekly") && (
               <div className="a-tb" style={{ marginBottom: 0 }}>
-                {viewType === "Day" && !isMobile && staff.length > 1 && staff.map((member) => {
+                {!isMobile && staff.length > 1 && staff.map((member) => {
                   const shown = !hiddenStaffIds.includes(member.id);
                   return (
                     <button
@@ -2903,229 +2903,150 @@ export default function CalendarPage() {
           )}
 
           {viewType === "Month" && (
-            <div className="flex flex-1 overflow-auto bg-white p-6">
-              <div className="w-full">
-                {/* Month Calendar Grid */}
-                <div className="cal-card overflow-hidden border-0 border-[var(--bz-line)]">
-                  {/* Day Headers */}
-                  <div className="grid grid-cols-7 border-b border-[var(--bz-line)]">
-                    {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
+            <div className="min-h-0 flex-1 overflow-auto px-3 pb-3 md:px-8 md:pb-8">
+              <div className="a-mo" style={{ marginTop: 14 }}>
+                {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
+                  <div key={day} className="h">{day}</div>
+                ))}
+                {(() => {
+                  const monthStart = startOfMonth(monthViewDate);
+                  const monthEnd = endOfMonth(monthViewDate);
+                  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday
+                  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+                  return eachDayOfInterval({ start: calendarStart, end: calendarEnd }).map((day) => {
+                    const n = visibleStaff.reduce((sum, st) => sum + getAppointmentsForDateAndStaff(day, st.id).length, 0);
+                    const outside = !isSameMonth(day, monthViewDate);
+                    return (
                       <div
-                        key={day}
-                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-[var(--bz-line)] last:border-r-0"
+                        key={day.toISOString()}
+                        role="button"
+                        tabIndex={0}
+                        className={cn(outside && "o", salonToday(day) && "t")}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => { setSelectedDayForPopup(day); setIsDayPopupOpen(true); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedDayForPopup(day); setIsDayPopupOpen(true); } }}
                       >
-                        {day}
-            </div>
-          ))}
-        </div>
-
-                  {/* Calendar Days Grid */}
-                  <div className="grid grid-cols-7">
-                    {(() => {
-                      const monthStart = startOfMonth(monthViewDate);
-                      const monthEnd = endOfMonth(monthViewDate);
-                      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }); // Monday
-                      const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 }); // Monday
-                      const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-
-                      return calendarDays.map((day, idx) => {
-                        const dayAppointments = getAppointmentsForDate(day);
-                        const isCurrentMonth = isSameMonth(day, monthViewDate);
-                        const isCurrentDay = salonToday(day);
-
-                        return (
-                          <div
-                            key={idx}
-                            className={`
-                              min-h-[120px] border-r border-b border-[var(--bz-line)] last:border-r-0
-                              ${isCurrentMonth ? "bg-[var(--bz-surface)]" : "bg-muted"}
-                              ${isCurrentDay ? "bg-[var(--bz-vsoft)]" : ""}
-                              p-2
-                            `}
-                          >
-                            {/* Date Number */}
-                            <div className="flex items-center justify-between mb-1">
-                              <span
-                                className={`
-                                  text-sm font-medium
-                                  ${isCurrentDay ? "bg-[rgb(var(--reg-brand))] text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}
-                                  ${!isCurrentMonth ? "text-muted-foreground/50" : ""}
-                                `}
-                              >
-                                {format(day, "d")}
-                              </span>
-                              {dayAppointments.length > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  {dayAppointments.length}
-                                </span>
-                              )}
-      </div>
-
-                            {/* Appointments */}
-                            <div className="space-y-1 mt-1">
-                              {dayAppointments.slice(0, 3).map((apt) => (
-                                <MiniTile
-                                  key={apt.id}
-                                  appointment={apt}
-                                  visits={visitsFor(apt)}
-                                  flagCtx={flagCtxFor(apt)}
-                                  onClick={() => handleAppointmentClick(apt)}
-                                />
-                              ))}
-                              {dayAppointments.length > 3 && (
-                                <div 
-                                  className="text-xs text-muted-foreground text-center pt-1 cursor-pointer hover:text-foreground hover:font-medium transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedDayForPopup(day);
-                                    setIsDayPopupOpen(true);
-                                  }}
-                                >
-                                  {tr("calendar.more", { value: dayAppointments.length - 3 })}
-        </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
+                        {format(day, "d")}
+                        {n > 0 && <small>{n} {tr("calendar.reservations")}</small>}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           )}
 
           {viewType === "Weekly" && (
-            <div className="flex flex-1 overflow-auto bg-[var(--bz-surface)]">
-              {/* Staff Column */}
-              <div className="w-64 shrink-0 border-r border-[var(--bz-line)] bg-[var(--bz-surface)] sticky left-0 z-10">
-                <div className="h-16 border-b border-[var(--bz-line)] bg-[var(--bz-surface)]"></div>
-                <div className="divide-y divide-border">
-                  {staff.map((staff) => {
-                    // All rows should have the same height to fit 3 blocks + "+X more" row
-                    // Height: 3 blocks (~180px with spacing) + "+X more" row (~40px) + padding (~16px) = ~250px
-                    const rowHeight = "h-[250px]";
-                    
-                    return (
-                      <div
-                        key={staff.id}
-                        className={`${rowHeight} border-b border-[var(--bz-line)] px-4 py-3 bg-[var(--bz-surface)] flex items-center gap-3`}
-                      >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[rgb(var(--reg-brand))] to-[#e83e63] flex items-center justify-center text-white font-semibold text-sm shrink-0">
-                        {staff.initials}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <div className="text-sm font-medium truncate">{staff.name}</div>
-                        <div className="text-xs text-muted-foreground">{staff.workingHours}</div>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Week Days Columns */}
-              <div className="flex flex-1">
-                {getWeekDays(weekViewDate).map((day) => {
-                  const dayAppointments = getAppointmentsForDate(day);
-                  const isCurrentDay = salonToday(day);
-                  
-                  return (
-                    <div
-                      key={day.toISOString()}
-                      className="min-w-[200px] flex-1 border-r border-[var(--bz-line)] last:border-r-0 bg-[var(--bz-surface)]"
-                    >
-                      {/* Day Header */}
-                      <div className={`h-16 border-b border-[var(--bz-line)] flex flex-col items-center justify-center px-2 bg-[var(--bz-surface)] sticky top-0 z-10 ${isCurrentDay ? "bg-[var(--bz-vsoft)]" : ""}`}>
-                        <div className="text-xs font-medium text-muted-foreground">
-                          {format(day, "EEE")}
-                        </div>
-                        <div className={`text-sm font-semibold ${isCurrentDay ? "text-[rgb(var(--reg-brand-strong))]" : ""}`}>
-                          {format(day, "d")}
-                        </div>
-                        {dayAppointments.length > 0 && (
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            {dayAppointments.length} {dayAppointments.length === 1 ? tr("calendar.reservation") : tr("calendar.reservations")}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Staff Rows with Appointments */}
-                      <div className="divide-y divide-border">
-                        {staff.map((staff) => {
-                          const staffAppointments = getAppointmentsForDateAndStaff(day, staff.id);
-                          const waitChips = waitingChipsFor(day, staff.id);
-                          // All rows should have the same height to fit 3 blocks + "+X more" row
-                          // Height: 3 blocks (~180px with spacing) + "+X more" row (~40px) + padding (~16px) = ~250px
-                          const rowHeight = "h-[250px]";
-                          
-                          return (
-                            <div
-                              key={staff.id}
-                              className={`${rowHeight} p-2 flex flex-col border-b border-[var(--bz-line)]`}
-                            >
-                              {waitChips.length > 0 && (
-                                <div className="mb-1 flex flex-wrap gap-1">
-                                  {waitChips.map(w => (
-                                    <button
-                                      key={w.id}
-                                      type="button"
-                                      onClick={() => { setCurrentDate(day); setViewType("Day"); }}
-                                      title={`${tr("waitlistCal.waiting")}: ${w.clientName || w.clientEmail || ""}`}
-                                      className={`inline-flex h-6 max-w-full items-center gap-1 rounded-full border border-dashed px-2 text-[10px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
-                                        isFreed(w)
-                                          ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                          : "border-[rgb(var(--reg-brand)/0.6)] bg-[var(--bz-surface)] text-[rgb(var(--reg-brand-strong))]"
-                                      }`}
-                                    >
-                                      <Clock size={11} aria-hidden />
-                                      <span className="truncate">{w.clientName || w.clientEmail || tr("common.client")}</span>
-                                    </button>
+          <div className="flex min-h-0 flex-1 overflow-hidden px-3 pb-3 md:px-8 md:pb-8">
+          <div ref={dayGridRef} className="a-gridw min-w-0 flex-1" style={{ overflow: "auto", padding: "0 12px 12px 0" }}>
+            {(() => {
+              const days = getWeekDays(weekViewDate);
+              const perDay = days.map((day) => visibleStaff.flatMap((st) => getAppointmentsForDateAndStaff(day, st.id)));
+              const { startHour: ws0, endHour: we0 } = getBusinessHoursForDate(weekViewDate);
+              const MAX_WEEK_LANES = 2;
+              return (
+                <>
+                  <div style={{ position: "sticky", top: 0, zIndex: 8, height: 68, background: "var(--bz-surface)", minWidth: gridInnerW }}>
+                    {days.map((day, i) => {
+                      const list = perDay[i];
+                      const waiters = visibleStaff.reduce((sum, st) => sum + waitingChipsFor(day, st.id).length, 0);
+                      const isToday = salonToday(day);
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className="colh"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { setCurrentDate(day); setViewType("Day"); }}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCurrentDate(day); setViewType("Day"); } }}
+                          style={{ position: "absolute", left: HOUR_COL + i * (colW + COL_GAP), top: 12, width: colW, height: 56, cursor: "pointer" }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 15, lineHeight: 1.2, color: isToday ? "var(--bz-vtext)" : undefined }}>{format(day, "EEE d")}</div>
+                            <div style={{ fontSize: 14, color: "var(--bz-muted)", fontWeight: 600, whiteSpace: "nowrap" }}>
+                              {list.length > 0 ? `${list.length} ${tr("calendar.reservations")}` : tr("calendar.noAppointments")}
+                              {list.length > 0 && (
+                                <span className="a-ds">
+                                  {list.slice(0, 8).map((apt) => (
+                                    <i key={apt.id} style={{ background: categoryTint(apt.categoryId, apt.serviceId).accent }} />
                                   ))}
-                                </div>
+                                </span>
                               )}
-                              {staffAppointments.length > 0 ? (
-                                <div className="flex flex-col h-full justify-between">
-                                  {/* Appointment Blocks - Maximum 3 */}
-                                  <div className="space-y-1">
-                                    {staffAppointments.slice(0, 3).map((apt) => (
-                                      <MiniTile
-                                        key={apt.id}
-                                        appointment={apt}
-                                        visits={visitsFor(apt)}
-                                        flagCtx={flagCtxFor(apt)}
-                                        onClick={() => handleAppointmentClick(apt)}
-                                      />
-                                    ))}
-                                  </div>
-                                  {/* "+X more" on separate row - Only show if more than 3 */}
-                                  {staffAppointments.length > 3 && (
-                                    <div 
-                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-[var(--bz-line)]"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedWeeklyPopup({ day, staffId: staff.id });
-                                        setIsWeeklyPopupOpen(true);
-                                      }}
-                                    >
-                                      {tr("calendar.more", { value: staffAppointments.length - 3 })}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="h-full flex items-center justify-center">
-                                  <span className={`text-xs text-muted-foreground/50 ${waitChips.length > 0 ? "sr-only" : ""}`}>{tr("calendar.noAppointments")}</span>
-                                </div>
-                              )}
+                              {waiters > 0 && <span className="st w" style={{ marginLeft: 6 }}>{waiters}</span>}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="lt" style={{ position: "relative", height: timeSlots.length * SLOT_HEIGHT, minWidth: gridInnerW }}>
+                    {Array.from({ length: 24 }, (_, hour) => (
+                      <Fragment key={hour}>
+                        {hour > 0 && <div className="lt-h" style={{ top: hour * 4 * SLOT_HEIGHT - 10, left: 0 }}>{`${hour}:00`}</div>}
+                        <div className="lt-l" style={{ top: hour * 4 * SLOT_HEIGHT, left: HOUR_COL - 8 }} />
+                      </Fragment>
+                    ))}
+                    {days.map((day, i) => {
+                      const colLeft = HOUR_COL + i * (colW + COL_GAP);
+                      const groups = groupConflictingItems(perDay[i], [], ws0, we0);
+                      const isToday = salonToday(day);
+                      return (
+                        <Fragment key={day.toISOString()}>
+                          {isToday && <div className="a-off" style={{ left: colLeft - 6, width: colW + 12, top: 0, height: 24 * 4 * SLOT_HEIGHT, background: "var(--bz-vsoft)", opacity: 0.55, borderRadius: 14 }} />}
+                          {groups.flatMap((fullGroup) => {
+                            const hidden = fullGroup.length > MAX_WEEK_LANES ? fullGroup.slice(MAX_WEEK_LANES) : [];
+                            const group = hidden.length ? fullGroup.slice(0, MAX_WEEK_LANES) : fullGroup;
+                            const laneGap = 4;
+                            const laneW = (colW - (group.length - 1) * laneGap) / group.length;
+                            const tiles = group.flatMap((item, idx) => {
+                              if (item.type !== "appointment") return [];
+                              const { top, height } = getTimePosition(normalizeTime(item.item.startTime), normalizeTime(item.item.endTime), SLOT_HEIGHT);
+                              return [
+                                <MiniTile
+                                  key={item.item.id}
+                                  appointment={item.item}
+                                  visits={visitsFor(item.item)}
+                                  flagCtx={flagCtxFor(item.item)}
+                                  onClick={() => handleAppointmentClick(item.item)}
+                                  placed={{ top, height: Math.max(height, SLOT_HEIGHT * 2), left: colLeft + idx * (laneW + laneGap), width: laneW }}
+                                />,
+                              ];
+                            });
+                            if (!hidden.length) return tiles;
+                            const topMin = Math.min(...fullGroup.flatMap((x) => (x.type === "appointment" ? [getTimePosition(normalizeTime(x.item.startTime), normalizeTime(x.item.endTime), SLOT_HEIGHT).top] : [])));
+                            return [
+                              ...tiles,
+                              <button
+                                key={`more-${fullGroup.map((x) => (x.type === "appointment" ? x.item.id : "")).join("_")}`}
+                                type="button"
+                                className="a-ov"
+                                style={{ left: colLeft + colW - 56, top: topMin + 2, border: 0, cursor: "pointer", font: "inherit" }}
+                                title={tr("calendar.more", { value: hidden.length })}
+                                onClick={() => { setSelectedDayForPopup(day); setIsDayPopupOpen(true); }}
+                              >
+                                +{hidden.length}
+                              </button>,
+                            ];
+                          })}
+                        </Fragment>
+                      );
+                    })}
+                    {days.some((d) => salonToday(d)) && (() => {
+                      const timePosition = getCurrentTimePosition(true);
+                      if (timePosition === null) return null;
+                      return (
+                        <div className="nowl" style={{ top: timePosition, left: HOUR_COL - 8 }}>
+                          <em>{format(currentTime, "HH:mm")}</em>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+          </div>
           )}
 
           {/* New booking: the top bar button (desktop) and the tab bar's "+" (phone). */}
