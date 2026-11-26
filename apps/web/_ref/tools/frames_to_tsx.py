@@ -119,8 +119,12 @@ class Conv(HTMLParser):
     def attrs_jsx(self, tag, attrs):
         parts = []
         cs = False
+        seen = set()
         for k, v in attrs:
             k = k.lower()
+            if k in seen:  # HTML: first duplicate attribute wins
+                continue
+            seen.add(k)
             if k.startswith("on"):
                 continue
             if k == "style":
