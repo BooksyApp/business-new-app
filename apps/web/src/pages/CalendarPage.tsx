@@ -2253,6 +2253,7 @@ export default function CalendarPage() {
                 </div>
               )}
             </PopoverContent>
+          </Popover>
               <button
                 type="button"
                 aria-label={tr("calendar.calendarSettings")}
