@@ -394,3 +394,66 @@ export function Tile({ icon, title, sub, onPress }: { icon: string; title: strin
     </Pressable>
   );
 }
+
+/** Underline tabs (`.utabs`): icon + label, ink underline on the active one. */
+export function UnderTabs<K extends string>({ items, value, onChange }: { items: { k: K; label: string; icon?: string }[]; value: K; onChange: (k: K) => void }) {
+  const { t } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.hair, marginHorizontal: 20 }}>
+      {items.map((it) => {
+        const on = it.k === value;
+        return (
+          <Pressable key={it.k} onPress={() => onChange(it.k)} noScale accessibilityRole="tab" accessibilityState={{ selected: on }} style={{ flex: 1, height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderBottomWidth: 2, borderBottomColor: on ? t.ink : 'transparent', marginBottom: -1 }}>
+            {it.icon ? <Icon name={it.icon} size={19} color={on ? t.ink : t.ink3} /> : null}
+            <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, color: on ? t.ink : t.ink3 }}>{it.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Five stars; filled in the star amber. */
+export function Stars({ n, size = 16 }: { n: number; size?: number }) {
+  const { t } = useTheme();
+  return <View accessibilityLabel={`${n}/5`} style={{ flexDirection: 'row', gap: 2 }}>{[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={size} color={i <= Math.round(n) ? t.star : t.faint} filled={i <= Math.round(n)} />)}</View>;
+};
+
+/** Delta pill (`+12%`): green soft for up, guava soft for down, grey for flat. */
+export function Delta({ v, suffix = '%' }: { v: number; suffix?: string }) {
+  const { t } = useTheme();
+  const up = v > 0; const dn = v < 0;
+  return (
+    <View style={{ height: 24, paddingHorizontal: 9, borderRadius: 12, backgroundColor: up ? t.oksoft : dn ? t.gsoft : t.fill, justifyContent: 'center' }}>
+      <Text style={{ fontFamily: font.b, fontSize: 12, color: up ? t.ok : dn ? t.gink : t.muted }}>{up ? '+' : ''}{v}{suffix}</Text>
+    </View>
+  );
+}
+
+/** Horizontal share bar row: label, violet bar over a track, value. */
+export function BarRow({ label, value, ratio }: { label: string; value: string; ratio: number }) {
+  const { t } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 7 }}>
+      <T k="body" lines={1} style={{ width: 92 }}>{label}</T>
+      <View style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: t.track, overflow: 'hidden' }}><View style={{ width: `${Math.max(3, Math.min(100, ratio * 100))}%`, height: 8, borderRadius: 4, backgroundColor: t.violet }} /></View>
+      <Text style={{ fontFamily: font.b, fontSize: 13.5, color: t.ink, minWidth: 64, textAlign: 'right' }}>{value}</Text>
+    </View>
+  );
+}
+
+/** Photo-led row (`.svc`): rounded square photo, title, chips line, right meta. */
+export function PhotoRow({ photo, title, chips, right, onPress, first }: { photo?: string | number | null; title: string; chips?: React.ReactNode; right?: React.ReactNode; onPress?: () => void; first?: boolean }) {
+  const { t } = useTheme();
+  const body = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10, marginHorizontal: 20, borderTopWidth: first ? 0 : 1, borderTopColor: t.hair }}>
+      <Photo src={photo} style={{ width: 70, height: 70, borderRadius: 18 }} />
+      <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+        <T k="h3" lines={2}>{title}</T>
+        {chips ? <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>{chips}</View> : null}
+      </View>
+      {right}
+    </View>
+  );
+  return onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} noScale>{body}</Pressable> : body;
+}

@@ -1,6 +1,7 @@
 import type { Strings } from './en';
 import { uxRu } from './ux';
 import { v2Ru } from './v2';
+import { v3Ru } from './v3';
 import { extraRu } from './extra';
 import { moreRu } from './more';
 import { bizRu } from './biz';
@@ -173,4 +174,5 @@ export const ru: DeepPartial<Strings> = {
   ...bizRu,
   ...uxRu,
   ...v2Ru,
+  ...v3Ru,
 };

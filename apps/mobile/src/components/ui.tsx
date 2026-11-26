@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } fr
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { Icon } from '@/components/Icon';
+import { BackBar } from '@/components/kit';
 import Svg, { Defs, LinearGradient as SvgGrad, Path, Stop } from 'react-native-svg';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -53,14 +54,11 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
   const { t } = useTheme();
   if (onBack) {
     return (
-      <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 48, gap: 8 }}>
-          <BackCircle onPress={onBack} />
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: t.ink, lineHeight: 20 }}>{title}</Text>
-            {subtitle ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12, color: t.muted, lineHeight: 15 }}>{subtitle}</Text> : null}
-          </View>
-          <View style={{ minWidth: 40, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>{right}</View>
+      <View style={{ paddingBottom: 6 }}>
+        <BackBar onBack={onBack} label={tr('common.back')} right={right} />
+        <View style={{ paddingHorizontal: 20, paddingTop: 2, paddingBottom: 6 }}>
+          <Text accessibilityRole="header" numberOfLines={2} style={{ fontFamily: font.b, fontSize: 26, lineHeight: 31, letterSpacing: -0.65, color: t.ink }}>{title}</Text>
+          {subtitle ? <Text numberOfLines={2} style={{ fontFamily: font.r, fontSize: 12.5, lineHeight: 17, color: t.muted, marginTop: 2 }}>{subtitle}</Text> : null}
         </View>
       </View>
     );
