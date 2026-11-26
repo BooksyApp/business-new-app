@@ -102,6 +102,7 @@ export const en = {
     fewer: 'Fewer',
     more: 'More',
     multiHint: 'You can pick several services; they are booked back to back.',
+    pastMidnight: 'The services run past midnight',
     partial: '{{ok}} booked, {{bad}} not booked',
     stepClient: 'Client',
     stepService: 'Service',

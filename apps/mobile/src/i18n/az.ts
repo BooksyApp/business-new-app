@@ -109,6 +109,7 @@ export const az: DeepPartial<Strings> = {
     fewer: 'Azalt',
     more: 'Artır',
     multiHint: 'Bir neçə xidmət seçə bilərsiniz; ardıcıl yazılır.',
+    pastMidnight: 'Xidmətlər gecə yarısından sonraya keçir',
     partial: '{{ok}} yazıldı, {{bad}} yazılmadı',
     stepClient: 'Müştəri',
     stepService: 'Xidmət',

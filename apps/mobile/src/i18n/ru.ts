@@ -84,6 +84,7 @@ export const ru: DeepPartial<Strings> = {
     fewer: 'Меньше',
     more: 'Больше',
     multiHint: 'Можно выбрать несколько услуг; они записываются подряд.',
+    pastMidnight: 'Услуги выходят за полночь',
     partial: 'Записано: {{ok}}, не записано: {{bad}}',
     title: 'Новая запись',
     client: 'Клиент',

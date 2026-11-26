@@ -1,6 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState as RNAppState } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, clearSession, loadSession, saveSalon, saveSession, setSignedOutHandler, type AuthResponse, type Business } from '@/lib/api';
 import { loadLocale } from '@/i18n';
+import { useOnline } from '@/lib/net';
 import { registerIfGranted } from '@/lib/push';
 
 type Status = 'boot' | 'offline' | 'out' | 'in';
@@ -81,6 +83,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     return () => { alive = false; };
   }, [status, salon?.id, version]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fresh data when the app returns to the foreground (after >30s away) and when the connection comes back.
+  const online = useOnline();
+  const wasOnline = useRef(true);
+  useEffect(() => {
+    if (online && !wasOnline.current && status === 'in') setVersion((v) => v + 1);
+    wasOnline.current = online;
+  }, [online, status]);
+  useEffect(() => {
+    let left = 0;
+    const sub = RNAppState.addEventListener('change', (s) => {
+      if (s === 'background') left = Date.now();
+      else if (s === 'active' && left && Date.now() - left > 30000 && status === 'in') { left = 0; setVersion((v) => v + 1); }
+    });
+    return () => sub.remove();
+  }, [status]);
 
   // A device that already granted notification permission keeps its push token fresh without asking again.
   useEffect(() => { if (status === 'in' && salon) void registerIfGranted(); }, [status, salon?.id]); // eslint-disable-line react-hooks/exhaustive-deps

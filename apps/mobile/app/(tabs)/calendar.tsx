@@ -11,7 +11,7 @@ import { ErrorState, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { addDays, monthLabel, startOfWeek, toMin } from '@/lib/format';
+import { addDays, monthLabel, sameDay, startOfWeek, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { circShadow, ctaShadow, font } from '@/theme/tokens';
@@ -31,7 +31,7 @@ function Chip38({ label, on, vo, icon, onPress }: { label: string; on?: boolean;
   const { t } = useTheme();
   const fg = on ? t.canvas : vo ? t.vtext : t.ink;
   return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button" accessibilityState={{ selected: !!(on || vo) }}
+    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!(on || vo) }}
       style={{ height: 38, paddingHorizontal: 15, borderRadius: 19, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: on ? t.ink : vo ? t.vsoft : t.surface, borderWidth: on ? 0 : vo ? 1.5 : 1, borderColor: vo ? t.violet : t.line }}>
       {icon ? <Icon name={icon} size={18} color={fg} /> : null}
       <Text style={{ fontFamily: font.s, fontSize: 14, color: fg }}>{label}</Text>
@@ -90,7 +90,8 @@ export default function Calendar() {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, marginBottom: 14 }}>
           <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted, textTransform: 'capitalize' }}>{month}</Text>
-          <View style={{ flexDirection: 'row', gap: 18 }}>
+          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
+            {!sameDay(date, new Date()) ? <Pressable onPress={() => setDate(new Date())} hitSlop={10} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('common.today')}</Text></Pressable> : null}
             <Pressable onPress={() => setDate(addDays(date, -7))} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('calendar.prevWeek')}><Icon name="back" size={20} color={t.muted} /></Pressable>
             <Pressable onPress={() => setDate(addDays(date, 7))} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('calendar.nextWeek')}><Icon name="chev" size={20} color={t.muted} /></Pressable>
           </View>

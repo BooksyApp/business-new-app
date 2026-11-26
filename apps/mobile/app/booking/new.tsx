@@ -24,7 +24,10 @@ const REPEATS: { k: Repeat; label: 'create.repeatNone' | 'create.repeatWeekly' |
 const nextDate = (d: Date, r: Repeat, i: number) => {
   if (r === 'weekly') return addDays(d, 7 * i);
   if (r === 'biweekly') return addDays(d, 14 * i);
-  const x = new Date(d); x.setMonth(x.getMonth() + i); return x;
+  // Month step clamps to the last day (31 Jan + 1 month = 28/29 Feb, not 3 Mar).
+  const x = new Date(d.getFullYear(), d.getMonth() + i, 1);
+  x.setDate(Math.min(d.getDate(), new Date(x.getFullYear(), x.getMonth() + 1, 0).getDate()));
+  return x;
 };
 /** Resolves true when the user accepts a conflict the server reported as overridable. */
 const askOverride = (msg: string) => new Promise<boolean>((res) => Alert.alert(tr('appt.conflict'), msg, [
@@ -58,8 +61,10 @@ export default function NewBooking() {
   const can = [!!client, picked.length > 0, !!master && !!time, true][step];
 
   async function book() {
-    if (!client || !service || !master || !time) return;
+    if (busy || !client || !service || !master || !time) return;
+    if (toMin(time) + totalMin > 24 * 60) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); Alert.alert(tr('create.pastMidnight')); return; }
     setBusy(true);
+    let offline = false;
     const failed: string[] = [];
     let created = 0;
     try {
@@ -84,9 +89,11 @@ export default function NewBooking() {
             created++;
           } catch (e) {
             failed.push(`${dateLabel(day)} ${fromMin(at)}: ${(e as Error).message}`);
+            if (e instanceof ApiError && e.status === 0) { offline = true; break; } // no network: stop instead of N identical failures
           }
           at += len;
         }
+        if (offline) break;
       }
       if (created) bump();
       if (failed.length) {
