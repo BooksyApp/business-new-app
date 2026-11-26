@@ -1141,6 +1141,7 @@
     "verifyingAccess": "Проверяем доступ..."
   },
   "calendar": {
+    "openBooking": "Открыть запись",
     "pickDate": "Выбрать дату",
     "flagLate": "Опаздывает",
     "flagVip": "VIP-клиент",

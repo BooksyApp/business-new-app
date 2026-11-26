@@ -1141,6 +1141,7 @@
     "verifyingAccess": "Giriş yoxlanılır..."
   },
   "calendar": {
+    "openBooking": "Rezervi aç",
     "pickDate": "Tarixi seç",
     "flagLate": "Gecikir",
     "flagVip": "VIP müştəri",

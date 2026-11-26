@@ -1141,6 +1141,7 @@
     "verifyingAccess": "Verifying access..."
   },
   "calendar": {
+    "openBooking": "Open booking",
     "pickDate": "Pick a date",
     "flagLate": "Running late",
     "flagVip": "VIP client",

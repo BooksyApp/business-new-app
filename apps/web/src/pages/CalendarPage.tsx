@@ -1485,12 +1485,14 @@ export default function CalendarPage() {
    */
   const attention = useMemo(() => {
     const todays = appointments.filter(apt => isSameDay(apt.date, currentDate));
-    const items: { label: string; detail: string; tone: string; onClick: () => void }[] = [];
+    const items: { label: string; detail: string; tone: string; name?: string; chip?: string; onClick: () => void }[] = [];
 
     for (const apt of todays.filter(a => a.status === "PENDING")) {
       items.push({
         label: tr("calendar.confirm2", { value: apt.clientName || tr("calendar.confirmBookingGeneric") }),
         detail: `${apt.startTime} · ${apt.service}`,
+        name: apt.clientName || undefined,
+        chip: tr("waitlistCal.waiting"),
         tone: "bg-amber-500",
         onClick: () => handleAppointmentClick(apt),
       });
@@ -1499,6 +1501,7 @@ export default function CalendarPage() {
       items.push({
         label: tr("calendar.takePayment3", { value: apt.clientName || tr("common.client") }),
         detail: `${apt.startTime} · ${apt.service}`,
+        name: apt.clientName || undefined,
         tone: "bg-[rgb(var(--reg-brand))]",
         onClick: () => handleAppointmentClick(apt),
       });
@@ -1507,6 +1510,8 @@ export default function CalendarPage() {
       items.push({
         label: tr("calendar.isWaiting", { value: w.clientName || w.clientEmail || tr("common.client") }),
         detail: [w.serviceName, w.preferredDate || "any date"].filter(Boolean).join(" · "),
+        name: w.clientName || w.clientEmail || undefined,
+        chip: tr("waitlistCal.waiting"),
         tone: "bg-violet-500",
         onClick: () => placeFromWaitlist(w),
       });
