@@ -112,7 +112,8 @@ jobs:
           npx --no-install expo-modules-autolinking resolve --platform android --json >/dev/null 2>/tmp/e1; echo "resolve rc=$?"; tail -15 /tmp/e1
           npx --no-install expo-modules-autolinking react-native-config --json --platform android >/tmp/o2 2>/tmp/e2; echo "rn-config rc=$?"; tail -20 /tmp/e2; head -c 600 /tmp/o2
           grep -n "inlineModules" gradle.properties || echo "no inlineModules prop"
-          node --no-warnings --eval "require('expo/bin/autolinking')" expo-modules-autolinking mirror-kotlin-inline-modules --kotlin-files-mirror-directory "$PWD/app/src/main/java/inline/modules/" --inline-modules-list-directory "$PWD/app/build/inline/modules/" --watched-directories-serialized "[]" 2>&1 | cut -c1-300 | head -12; echo "mirror rc=${PIPESTATUS[0]}"
+          EXPO=$(node -p "require('path').dirname(require.resolve('expo/package.json'))"); echo "EXPO=$EXPO"; ls -d "$EXPO"/android "$PWD"/../node_modules/expo 2>&1 | head
+          node --no-warnings --eval "require('expo/bin/autolinking')" expo-modules-autolinking mirror-kotlin-inline-modules --kotlin-files-mirror-directory "$EXPO/android/src/main/java/inline/modules/" --inline-modules-list-directory "$EXPO/android/build/inline/modules/" --watched-directories-serialized "[]" 2>&1 | cut -c1-400 | head -14; echo "mirror rc=${PIPESTATUS[0]}"
       - name: Assemble release
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --stacktrace --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
