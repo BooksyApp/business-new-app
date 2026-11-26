@@ -7,7 +7,9 @@ import { Choice } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Card, ErrorState, Field, Header, Hero, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, ErrorState, Field, Screen } from '@/components/ui';
+import { Avatar, BackBar, Button, Chip, ChipRow, EmptyState, Skeleton, Stars, T, Title } from '@/components/kit';
+import { DEMO_IMG } from '@/demo/photos';
 import { t as tr } from '@/i18n';
 import { apiX, type Review } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
@@ -15,11 +17,6 @@ import { dateLabel } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
-
-const Stars = ({ n }: { n: number }) => {
-  const { t } = useTheme();
-  return <View accessibilityLabel={`${n}/5`} style={{ flexDirection: 'row', gap: 2 }}>{[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={15} color={i <= n ? '#f5a524' : t.line} filled={i <= n} />)}</View>;
-};
 
 /** Rəylər: rating summary, list, public reply. The salon cannot edit, hide or delete a review - it can only open a case for the platform team. */
 export function Reviews({ onBack }: { onBack: () => void }) {
@@ -44,41 +41,61 @@ export function Reviews({ onBack }: { onBack: () => void }) {
     } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   const sum = list.data?.sum;
+  const [flt, setFlt] = useState<'all' | 'open' | 'photo' | 'low'>('all');
+  const rows = (list.data?.rows ?? []).filter((r) => flt === 'all' || (flt === 'open' && !r.reply) || (flt === 'low' && r.rating <= 3));
+  const all = list.data?.rows ?? [];
+  const openN = all.filter((r) => !r.reply).length;
+  const dist = [5, 4, 3, 2, 1].map((n) => all.filter((r) => Math.round(r.rating) === n).length);
+  const mx = Math.max(1, ...dist);
   return (
     <Screen>
-      <Header title={tr('rv.title')} subtitle={salon?.name} onBack={onBack} />
-      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={4} height={96} /> : (
-        <FlatList initialNumToRender={10} windowSize={9} data={list.data?.rows ?? []} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
+      <BackBar label={tr('v2.tabMore')} onBack={onBack} />
+      <Title sub={salon?.name} style={{ paddingBottom: 12 }}>{tr('rv.title')}</Title>
+      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton blocks={[{ h: 120 }, { h: 36, r: 18 }, { h: 110 }, { h: 110 }]} /> : (
+        <FlatList initialNumToRender={10} windowSize={9} data={rows} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingBottom: 60 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={sum && sum.count ? (
-            <Hero style={{ marginBottom: 4 }}>
-              <View style={{ padding: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22, paddingHorizontal: 20, paddingBottom: 18 }}>
                 <View>
-                  <Text style={{ fontFamily: font.x, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: t.ink }}>{sum.average != null ? sum.average.toFixed(1) : '-'}</Text>
-                  <Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{sum.count} {tr('rv.title').toLowerCase()}</Text>
+                  <Text style={{ fontFamily: font.x, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: t.ink }}>{sum.average != null ? sum.average.toFixed(1).replace('.', ',') : '-'}</Text>
+                  <Stars n={sum.average ?? 0} size={16} />
+                  <T k="xs" color={t.muted} style={{ marginTop: 4 }}>{sum.count} {tr('v3.reviewsN')}</T>
                 </View>
-                <Stars n={Math.round(sum.average ?? 0)} />
+                <View style={{ flex: 1, gap: 7 }}>
+                  {dist.map((c, i) => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <T k="xs" color={t.muted} style={{ width: 8 }}>{5 - i}</T>
+                      <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: t.track }}><View style={{ width: `${(c / mx) * 100}%`, height: 5, borderRadius: 3, backgroundColor: t.ink }} /></View>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </Hero>
+              <ChipRow style={{ marginBottom: 6 }}>
+                <Chip label={tr('v2.all')} on={flt === 'all'} onPress={() => setFlt('all')} />
+                <Chip label={tr('v3.unanswered')} count={openN || undefined} on={flt === 'open'} onPress={() => setFlt('open')} />
+                <Chip label={tr('v3.lowStars')} on={flt === 'low'} onPress={() => setFlt('low')} />
+              </ChipRow>
+            </View>
           ) : null}
-          ListEmptyComponent={<StateView icon="star" title={tr('rv.empty')} body={tr('rv.emptyBody')} />}
-          renderItem={({ item: r }) => (
-            <Card style={{ gap: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Avatar name={r.authorName ?? tr('rv.anonymous')} size={40} />
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{r.authorName ?? tr('rv.anonymous')}</Text>
-                  <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 12.5, color: t.muted }}>{[dateLabel(new Date(r.createdAt)), r.serviceName, r.staffName].filter(Boolean).join(' · ')}</Text>
+          ListEmptyComponent={<EmptyState photo={DEMO_IMG['f04']} title={tr('rv.empty')} body={tr('rv.emptyBody')} />}
+          renderItem={({ item: r, index }) => (
+            <View style={{ marginHorizontal: 20, paddingVertical: 16, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: t.hair, gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Avatar name={r.authorName ?? tr('rv.anonymous')} size={44} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <T k="h3" lines={1}>{r.authorName ?? tr('rv.anonymous')}</T>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Stars n={r.rating} size={15} /><T k="xs" color={t.ink3}>{dateLabel(new Date(r.createdAt))}</T></View>
                 </View>
-                <Stars n={r.rating} />
               </View>
-              {r.comment ? <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.ink }}>{r.comment}</Text> : null}
-              {r.reply ? <View style={{ backgroundColor: t.fill, borderRadius: 12, padding: 10 }}><Text style={{ fontFamily: font.s, fontSize: 12.5, color: t.muted }}>{tr('rv.yourReply')}</Text><Text style={{ fontFamily: font.m, fontSize: 14, color: t.ink }}>{r.reply}</Text></View> : null}
-              <View style={{ flexDirection: 'row', gap: 18 }}>
-                <Pressable onPress={() => open(r, 'reply')} accessibilityRole="button" accessibilityLabel={tr('rv.reply')}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.vtext }}>{tr('rv.reply')}</Text></Pressable>
-                <Pressable onPress={() => open(r, 'report')} accessibilityRole="button" accessibilityLabel={tr('rv.report')}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>{tr('rv.report')}</Text></Pressable>
+              {r.comment ? <T k="t1" style={{ fontFamily: font.m, lineHeight: 22 }}>{r.comment}</T> : null}
+              <T k="xs" color={t.ink3} lines={1}>{[r.staffName, r.serviceName].filter(Boolean).join(' · ')}</T>
+              {r.reply ? <View style={{ backgroundColor: t.fill, borderRadius: 16, padding: 12 }}><T k="body"><Text style={{ fontFamily: font.b }}>{tr('rv.yourReply')}</Text> · {r.reply}</T></View> : null}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 2 }}>
+                <Button size="sm" kind="ol" icon="chat" label={r.reply ? tr('v3.editReply') : tr('rv.reply')} onPress={() => open(r, 'reply')} />
+                <Button size="sm" kind="ghost" label={tr('rv.report')} onPress={() => open(r, 'report')} />
               </View>
-            </Card>
+            </View>
           )} />
       )}
       <BottomSheet open={!!sel} onClose={() => setSel(null)}>

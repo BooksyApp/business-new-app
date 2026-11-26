@@ -445,15 +445,19 @@ export function BarRow({ label, value, ratio }: { label: string; value: string; 
 /** Photo-led row (`.svc`): rounded square photo, title, chips line, right meta. */
 export function PhotoRow({ photo, title, chips, right, onPress, first }: { photo?: string | number | null; title: string; chips?: React.ReactNode; right?: React.ReactNode; onPress?: () => void; first?: boolean }) {
   const { t } = useTheme();
-  const body = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10, marginHorizontal: 20, borderTopWidth: first ? 0 : 1, borderTopColor: t.hair }}>
+  const main = (
+    <>
       <Photo src={photo} style={{ width: 70, height: 70, borderRadius: 18 }} />
       <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
         <T k="h3" lines={2}>{title}</T>
         {chips ? <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>{chips}</View> : null}
       </View>
+    </>
+  );
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, marginHorizontal: 20, borderTopWidth: first ? 0 : 1, borderTopColor: t.hair }}>
+      {onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} noScale style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14, minWidth: 0 }}>{main}</Pressable> : <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14, minWidth: 0 }}>{main}</View>}
       {right}
     </View>
   );
-  return onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} noScale>{body}</Pressable> : body;
 }
