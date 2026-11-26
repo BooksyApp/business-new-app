@@ -5,10 +5,9 @@ import { toast } from "sonner";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader, Card, CardContent, CardHeader, CardTitle } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
+import { Btn, Card, ErrorState, Note, PageHead, StatusPill, Skeleton } from "@/components/bz";
+import { BzPage } from "@/components/bz/p3-Settings";
 import { PaymentReturnBanner } from "@/components/page/PaymentReturnBanner";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,9 +178,9 @@ export default function BillingPage() {
 
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader title={t("billing.title")} subtitle={t("billing.subtitle")} />
-        <div className={pageBody}>
+      <BzPage>
+        <PageHead title={t("billing.title")} sub={t("billing.subtitle")} />
+        <div className="stk">
           {returnFor === "plan" ? (
             <PaymentReturnBanner kind="subscription" flag={returnFlag} confirmed={planConfirmed} />
           ) : (
@@ -192,49 +191,32 @@ export default function BillingPage() {
             )
           )}
 
-          {overview.isLoading && <p className="text-sm text-muted-foreground">{t("billing.loading")}</p>}
+          {overview.isLoading && <Skeleton />}
           {overview.isError && (
-            <Card>
-              <CardContent className="flex flex-wrap items-center gap-3 py-6 text-sm">
-                <span className="text-destructive">{t("billing.loadFailed")}</span>
-                <Button variant="outline" size="sm" onClick={() => void overview.refetch()}>
-                  {t("billing.retry")}
-                </Button>
-              </CardContent>
-            </Card>
+            <ErrorState title={t("billing.loadFailed")} action={<Btn kind="ol" onClick={() => void overview.refetch()}>{t("billing.retry")}</Btn>} />
           )}
 
           {data && payOff && (
-            <Card>
-              <CardContent className="py-5 text-sm">
-                <p className="font-medium">{t("billing.notConfigured")}</p>
-                <p className="mt-1 text-muted-foreground">{t("billing.notConfiguredBody")}</p>
-              </CardContent>
-            </Card>
+            <Note kind="wa"><b>{t("billing.notConfigured")}</b><br />{t("billing.notConfiguredBody")}</Note>
           )}
 
           {data && data.pendingCharges && data.pendingCharges.length > 0 && (
-            <Card className="border-[rgb(var(--reg-brand))]">
-              <CardHeader>
-                <CardTitle>{t("billing.toPay.title")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <Card title={t("billing.toPay.title")} style={{ boxShadow: "0 0 0 1.5px var(--bz-violet)" }}><div className="stk">
                 {data.pendingCharges.map((c) => (
                   <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
                     <div>
                       <p className="font-medium">{c.description}</p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="hint">
                         {money(c.amount, c.currency)}
                         {c.promotionDays ? ` · ${t("billing.toPay.promoDays", { days: c.promotionDays })}` : ""}
                       </p>
                     </div>
-                    <Button size="sm" disabled={busy} onClick={() => payCharge.mutate(c.id)}>
+                    <Btn kind="v" disabled={busy} onClick={() => payCharge.mutate(c.id)}>
                       {t("billing.toPay.pay")}
-                    </Button>
+                    </Btn>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div></Card>
           )}
 
           {data && sub && (
@@ -246,13 +228,9 @@ export default function BillingPage() {
                 onResume={() => resume.mutate()}
               />
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("billing.plans.title")}</CardTitle>
-                </CardHeader>
-                <CardContent>
+              <Card title={t("billing.plans.title")}><div className="stk">
                   {data.plans.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("billing.plans.none")}</p>
+                    <p className="hint">{t("billing.plans.none")}</p>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {data.plans.map((p) => (
@@ -267,22 +245,17 @@ export default function BillingPage() {
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div></Card>
 
               <NextInvoice data={data} />
             </>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("billing.invoices.title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <Card title={t("billing.invoices.title")}><div className="stk">
               {invoices.isLoading ? (
-                <p className="text-sm text-muted-foreground">{t("billing.loading")}</p>
+                <p className="hint">{t("billing.loading")}</p>
               ) : !invoices.data?.length ? (
-                <p className="text-sm text-muted-foreground">{t("billing.invoices.none")}</p>
+                <p className="hint">{t("billing.invoices.none")}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -303,7 +276,7 @@ export default function BillingPage() {
                             {inv.periodStart ? `${date(inv.periodStart)} – ${date(inv.periodEnd)}` : date(inv.createdAt)}
                           </td>
                           <td className="py-2">{money(inv.status === "PAID" ? inv.amountPaid : inv.amountDue, inv.currency)}</td>
-                          <td className="py-2">{tDynamic(`billing.invoices.st.${inv.status}`, inv.status)}</td>
+                          <td className="py-2"><StatusPill kind={inv.status === "PAID" ? "c" : inv.status === "OPEN" ? "w" : "d"}>{tDynamic(`billing.invoices.st.${inv.status}`, inv.status)}</StatusPill></td>
                           <td className="space-x-3 py-2 text-right">
                             {inv.hostedUrl && (
                               <a className="inline-flex items-center gap-1 underline" href={inv.hostedUrl} target="_blank" rel="noopener noreferrer">
@@ -322,19 +295,14 @@ export default function BillingPage() {
                   </table>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div></Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("billing.commission.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+          <Card title={t("billing.commission.title")}><div className="stk">
+              <p className="hint">
                 {t("billing.commission.explain", { pct: data?.commissionPct ?? commissions.data?.currentMonth.pct ?? 0 })}
               </p>
               {commissions.isLoading ? (
-                <p className="text-sm text-muted-foreground">{t("billing.loading")}</p>
+                <p className="hint">{t("billing.loading")}</p>
               ) : commissions.data ? (
                 <>
                   <div className="rounded-lg border bg-muted/40 p-3 text-sm">
@@ -353,7 +321,7 @@ export default function BillingPage() {
                     </p>
                   </div>
                   {commissions.data.statements.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("billing.commission.none")}</p>
+                    <p className="hint">{t("billing.commission.none")}</p>
                   ) : (
                     <div className="divide-y rounded-lg border">
                       {commissions.data.statements.map((s) => (
@@ -363,19 +331,12 @@ export default function BillingPage() {
                   )}
                 </>
               ) : null}
-            </CardContent>
-          </Card>
+            </div></Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("billing.messages.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="rounded-[20px] border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-                {t("billing.messages.notLive")}
-              </p>
+          <Card title={t("billing.messages.title")}><div className="stk">
+              <Note kind="wa">{t("billing.messages.notLive")}</Note>
               {messages.isLoading ? (
-                <p className="text-sm text-muted-foreground">{t("billing.loading")}</p>
+                <p className="hint">{t("billing.loading")}</p>
               ) : messages.data ? (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -387,7 +348,7 @@ export default function BillingPage() {
                     ))}
                   </div>
                   {messages.data.packs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("billing.messages.noPacks")}</p>
+                    <p className="hint">{t("billing.messages.noPacks")}</p>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {messages.data.packs.map((p) => (
@@ -400,9 +361,9 @@ export default function BillingPage() {
                             </p>
                           </div>
                           {p.overridden && <PriceBadge price={p.defaultPrice} currency={p.defaultCurrency ?? p.currency} />}
-                          <Button size="sm" disabled={busy || payOff} onClick={() => buyPack.mutate(p.id)}>
+                          <Btn kind="v" disabled={busy || payOff} onClick={() => buyPack.mutate(p.id)}>
                             {t("billing.messages.buy", { price: money(p.price, p.currency) })}
-                          </Button>
+                          </Btn>
                         </div>
                       ))}
                     </div>
@@ -428,8 +389,7 @@ export default function BillingPage() {
                   )}
                 </>
               ) : null}
-            </CardContent>
-          </Card>
+            </div></Card>
         </div>
 
         <AlertDialog open={pending !== null} onOpenChange={(o) => !o && setPending(null)}>
@@ -484,7 +444,7 @@ export default function BillingPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </BooqiScope>
+      </BzPage>
     </AppLayout>
   );
 }
@@ -503,11 +463,7 @@ function CurrentPlan({
   const sub = data.subscription;
   const active = sub.status === "ACTIVE" || sub.status === "TRIALING" || sub.status === "PAST_DUE";
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("billing.current.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+    <Card title={t("billing.current.title")}><div className="stk">
         {sub.status === "NONE" ? (
           <p className="text-muted-foreground">{t("billing.current.none")}</p>
         ) : (
@@ -524,34 +480,29 @@ function CurrentPlan({
           <p className="text-muted-foreground">{t("billing.current.renews", { date: date(sub.currentPeriodEnd) })}</p>
         )}
         {sub.cancelAtPeriodEnd && (
-          <p className="rounded-[20px] border border-amber-300 bg-amber-50 p-4 text-amber-900">
-            {t("billing.current.endsOn", { date: date(sub.currentPeriodEnd ?? sub.trialEnd) })}
-          </p>
+          <Note kind="wa">{t("billing.current.endsOn", { date: date(sub.currentPeriodEnd ?? sub.trialEnd) })}</Note>
         )}
         {sub.pastDue && (
-          <p
-            className={`rounded-[20px] border p-4 ${sub.restricted ? "border-red-300 bg-red-50 text-red-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}
-          >
+          <Note kind={sub.restricted ? "er" : "wa"}>
             {sub.restricted
               ? t("billing.current.restricted")
               : t("billing.current.pastDue", { date: date(sub.graceUntil) })}
-          </p>
+          </Note>
         )}
         {active && (
           <div className="flex flex-wrap gap-3 pt-1">
             {sub.cancelAtPeriodEnd ? (
-              <Button disabled={busy || !data.providerEnabled} onClick={onResume}>
+              <Btn kind="v" small={false} disabled={busy || !data.providerEnabled} onClick={onResume}>
                 {t("billing.current.resume")}
-              </Button>
+              </Btn>
             ) : (
-              <Button variant="outline" disabled={busy || !data.providerEnabled} onClick={onCancel}>
+              <Btn kind="ol" small={false} disabled={busy || !data.providerEnabled} onClick={onCancel}>
                 {t("billing.current.cancel")}
-              </Button>
+              </Btn>
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div></Card>
   );
 }
 
@@ -581,7 +532,7 @@ function PlanCard({
           ? t("billing.plans.startTrial")
           : t("billing.plans.choose");
   return (
-    <div className={`flex flex-col gap-3 rounded-xl border p-4 ${isCurrent ? "border-[rgb(var(--reg-brand))] ring-1 ring-[rgb(var(--reg-brand))]" : ""}`}>
+    <div className="crd2" style={{ display: "flex", flexDirection: "column", gap: 12, ...(isCurrent ? { boxShadow: "0 0 0 1.5px var(--bz-violet)" } : null) }}>
       <div>
         <p className="font-semibold">{planName(plan)}</p>
         <p className="text-2xl font-semibold">
@@ -598,9 +549,9 @@ function PlanCard({
           <li key={f}>{f}</li>
         ))}
       </ul>
-      <Button variant={isCurrent ? "outline" : "default"} disabled={disabled || isCurrent} onClick={() => onPick(kind)}>
+      <Btn kind={isCurrent ? "ol" : "v"} small={false} disabled={disabled || isCurrent} onClick={() => onPick(kind)}>
         {label}
-      </Button>
+      </Btn>
     </div>
   );
 }
@@ -608,11 +559,7 @@ function PlanCard({
 function NextInvoice({ data }: { data: BillingOverview }) {
   const n = data.nextInvoice;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("billing.next.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="text-sm">
+    <Card title={t("billing.next.title")}><div className="stk">
         {!n ? (
           <p className="text-muted-foreground">{t("billing.next.none")}</p>
         ) : (
@@ -630,8 +577,7 @@ function NextInvoice({ data }: { data: BillingOverview }) {
             {n.estimate && <p className="text-xs text-muted-foreground">{t("billing.next.estimate")}</p>}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div></Card>
   );
 }
 
