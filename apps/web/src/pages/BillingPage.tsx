@@ -371,7 +371,7 @@ export default function BillingPage() {
               <CardTitle>{t("billing.messages.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="rounded-[20px] border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
                 {t("billing.messages.notLive")}
               </p>
               {messages.isLoading ? (
@@ -524,13 +524,13 @@ function CurrentPlan({
           <p className="text-muted-foreground">{t("billing.current.renews", { date: date(sub.currentPeriodEnd) })}</p>
         )}
         {sub.cancelAtPeriodEnd && (
-          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900">
+          <p className="rounded-[20px] border border-amber-300 bg-amber-50 p-4 text-amber-900">
             {t("billing.current.endsOn", { date: date(sub.currentPeriodEnd ?? sub.trialEnd) })}
           </p>
         )}
         {sub.pastDue && (
           <p
-            className={`rounded-lg border p-3 ${sub.restricted ? "border-red-300 bg-red-50 text-red-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}
+            className={`rounded-[20px] border p-4 ${sub.restricted ? "border-red-300 bg-red-50 text-red-900" : "border-amber-300 bg-amber-50 text-amber-900"}`}
           >
             {sub.restricted
               ? t("billing.current.restricted")
