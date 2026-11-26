@@ -1,10 +1,15 @@
 {
   "name": "business-new-app",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "web:dev": "npm run dev -w apps/web",
     "web:build": "npm run build -w apps/web",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "mobile:start": "npm run start -w apps/mobile",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "icons": "node scripts/build-icons.mjs"
   }
 }

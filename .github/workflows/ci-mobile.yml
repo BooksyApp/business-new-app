@@ -1,0 +1,19 @@
+name: CI mobile
+on:
+  pull_request:
+  push:
+    branches: [feat/mobile-app]
+concurrency: { group: "ci-mobile-${{ github.ref }}", cancel-in-progress: true }
+permissions: { contents: read }
+jobs:
+  typecheck:
+    name: Typecheck apps/mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      # Runs the workspace's own tsc (TypeScript 6) = npx tsc --noEmit -p apps/mobile; packages/shared is checked through its imports.
+      - run: npm run typecheck -w apps/mobile
