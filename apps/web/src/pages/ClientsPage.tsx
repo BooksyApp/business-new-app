@@ -1,5 +1,6 @@
 import type { Id } from "@/types/id";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
+import { Btn, Chip, ChipRow, Dialog as BzDialog, EmptyState, Field, FormGrid, PageHead, SegPills, Skeleton } from "@/components/bz";
 import { salonToday } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
@@ -601,94 +602,69 @@ export default function ClientsPage() {
       <div className="min-h-full bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ fontFamily: BRAND_FONT }}>
         {/* Header: title + count, search, the one primary action. */}
         <div className="sticky top-0 z-20 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 pb-3 pt-4 backdrop-blur-xl md:px-8 md:pt-6">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            <h1 className="text-[28px] font-extrabold leading-none tracking-[-0.03em] md:text-[32px]">
-              {tr("common.clients")}{" "}<span className="text-[rgb(var(--reg-muted))]">{loading ? "" : allClientsWithPending.length}</span>
-            </h1>
-            <div className="order-last flex h-11 w-full items-center gap-2 rounded-full bg-white px-4 ring-1 ring-[rgb(var(--reg-line))] focus-within:ring-2 focus-within:ring-[rgb(var(--reg-brand)/0.5)] md:order-none md:ml-auto md:w-80">
-              <Search size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={tr("clients.searchNamePhoneOrEmail")}
-                aria-label={tr("clients.searchClients")}
-                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[rgb(var(--reg-muted))] md:text-sm"
-              />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} aria-label={tr("clients.clearSearch")} className="text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
-                  <XCircle size={16} />
-                </button>
-              )}
-            </div>
-            {/* R02 G3: "your client list is yours" — owner or a role that runs marketing; audit-logged. */}
-            {businessId && hasPermission(myAccess(), "MARKETING") && (
-              <button
-                type="button"
-                disabled={exporting}
-                onClick={async () => {
-                  setExporting(true);
-                  try {
-                    await clientService.downloadClientsCsv(businessId);
-                  } catch {
-                    toast.error(tr("clients.r02ExportFailed"));
-                  } finally {
-                    setExporting(false);
-                  }
-                }}
-                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] transition hover:bg-[rgb(var(--reg-brand-soft))] disabled:opacity-60"
-              >
-                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} strokeWidth={2} />}
-                {tr("clients.r02ExportCsv")}
+          <PageHead
+            title={<>{tr("common.clients")}{" "}<span style={{ color: "var(--bz-muted)" }}>{loading ? "" : allClientsWithPending.length}</span></>}
+            right={
+              <>
+                {/* R02 G3: "your client list is yours" — owner or a role that runs marketing; audit-logged. */}
+                {businessId && hasPermission(myAccess(), "MARKETING") && (
+                  <Btn
+                    kind="ol"
+                    disabled={exporting}
+                    icon={exporting ? <Loader2 className="ic animate-spin" /> : <Download className="ic" />}
+                    onClick={async () => {
+                      setExporting(true);
+                      try {
+                        await clientService.downloadClientsCsv(businessId);
+                      } catch {
+                        toast.error(tr("clients.r02ExportFailed"));
+                      } finally {
+                        setExporting(false);
+                      }
+                    }}
+                  >
+                    {tr("clients.r02ExportCsv")}
+                  </Btn>
+                )}
+                <Btn kind="ol" icon={<Upload className="ic" />} onClick={() => setImportOpen(true)}>
+                  {tr("clients.importButton")}
+                </Btn>
+                <ClientImportDialog businessId={businessId} open={importOpen} onOpenChange={setImportOpen} onImported={() => loadClients()} />
+                <Btn kind="ol" icon={<Upload className="ic" />} onClick={() => setBookingImportOpen(true)}>
+                  {tr("bookingImport.button")}
+                </Btn>
+                <BookingImportDialog businessId={businessId} timeZone={bookingImportTz} open={bookingImportOpen} onOpenChange={setBookingImportOpen} onImported={() => undefined} />
+                <Btn kind="v" icon={<Plus className="ic" />} onClick={() => setAddClientDialogOpen(true)}>
+                  {tr("clients.addClient")}
+                </Btn>
+              </>
+            }
+          />
+          <div className="srch" style={{ marginBottom: 14 }}>
+            <Search className="ic" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={tr("clients.searchNamePhoneOrEmail")}
+              aria-label={tr("clients.searchClients")}
+              style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: 0, font: "inherit", color: "inherit" }}
+            />
+            {searchQuery && (
+              <button type="button" onClick={() => setSearchQuery("")} aria-label={tr("clients.clearSearch")} className="circ" style={{ width: 46, height: 46, border: 0 }}>
+                <XCircle className="ic" />
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setImportOpen(true)}
-              className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] transition hover:bg-[rgb(var(--reg-brand-soft))]"
-            >
-              <Upload size={16} strokeWidth={2} />
-              {tr("clients.importButton")}
-            </button>
-            <ClientImportDialog businessId={businessId} open={importOpen} onOpenChange={setImportOpen} onImported={() => loadClients()} />
-            <button
-              type="button"
-              onClick={() => setBookingImportOpen(true)}
-              className="inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] transition hover:bg-[rgb(var(--reg-brand-soft))]"
-            >
-              <Upload size={16} strokeWidth={2} />
-              {tr("bookingImport.button")}
-            </button>
-            <BookingImportDialog businessId={businessId} timeZone={bookingImportTz} open={bookingImportOpen} onOpenChange={setBookingImportOpen} onImported={() => undefined} />
-            <button
-              type="button"
-              onClick={() => setAddClientDialogOpen(true)}
-              className="ml-auto inline-flex h-11 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_24px_-10px_rgb(var(--reg-brand-strong)/0.7)] transition hover:brightness-110 md:ml-0"
-            >
-              <Plus size={16} strokeWidth={2.25} />
-              {tr("clients.addClient")}
-            </button>
           </div>
           {/* Segments as chips — only those with someone in them. */}
-          <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] md:mx-0 md:px-0" role="tablist" aria-label={tr("clients.clientSegments")}>
-            {shownSegments.map((s) => {
-              const on = segment === s.key;
-              return (
-                <button
-                  key={s.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setSegment(s.key)}
-                  className={cn(
-                    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold ring-1 transition",
-                    on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white text-[rgb(var(--reg-ink)/0.8)] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
-                  )}
-                >
+          <div role="tablist" aria-label={tr("clients.clientSegments")}>
+            <ChipRow>
+              {shownSegments.map((s) => (
+                <Chip key={s.key} on={segment === s.key} onClick={() => setSegment(s.key)}>
                   {s.label}
-                  <span className={cn("text-xs", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{segmentCount(s.key)}</span>
-                </button>
-              );
-            })}
+                  <span style={{ opacity: 0.7 }}>{segmentCount(s.key)}</span>
+                </Chip>
+              ))}
+            </ChipRow>
           </div>
           <ClientCrmFilters businessId={businessId} onChange={setCrmIds} />
         </div>
@@ -714,51 +690,31 @@ export default function ClientsPage() {
             </div>
           )}
           {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="h-7 w-7 animate-spin text-[rgb(var(--reg-brand))]" />
-            </div>
+            <Skeleton lines={[90, 70, 80, 55, 75]} />
           ) : allClientsWithPending.length === 0 ? (
-            <div className="mx-auto max-w-sm py-16 text-center">
-              <span aria-hidden className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"><Users className="h-6 w-6" /></span>
-              <h2 className="mt-6 text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.noClientsYet")}</h2>
-              <p className="mt-2 text-[rgb(var(--reg-muted))]">{tr("clients.anyoneWhoBooksLandsHere")}</p>
-              <button type="button" onClick={() => setAddClientDialogOpen(true)} className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-6 font-semibold text-white">
-                <Plus size={18} />{" "}{tr("clients.addClient")}
-              </button>
-            </div>
+            <EmptyState
+              icon={<Users className="ic" />}
+              title={tr("clients.noClientsYet")}
+              text={tr("clients.anyoneWhoBooksLandsHere")}
+              action={<Btn kind="v" icon={<Plus className="ic" />} onClick={() => setAddClientDialogOpen(true)}>{tr("clients.addClient")}</Btn>}
+            />
           ) : visibleClients.length === 0 ? (
-            <div className="mx-auto max-w-sm py-16 text-center">
-              <Search className="mx-auto h-8 w-8 text-[rgb(var(--reg-muted))]" strokeWidth={1.5} />
-              <h2 className="mt-4 text-xl font-extrabold tracking-[-0.02em]">{searchQuery ? tr("clients.nothingMatches", { searchQuery }) : tr("clients.nobodyHereYet")}</h2>
-              <p className="mt-2 text-[rgb(var(--reg-muted))]">{tr("clients.searchRunsOverNameEmail", { value: segment !== "all" ? tr("clients.orShowEveryone") : "" })}</p>
-              {(searchQuery || segment !== "all") && (
-                <button type="button" onClick={() => { setSearchQuery(""); setSegment("all"); }} className="mt-5 inline-flex h-11 items-center rounded-full bg-white px-5 font-semibold ring-1 ring-[rgb(var(--reg-line))]">
-                  {tr("clients.clearSearchAndFilters")}
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={<Search className="ic" />}
+              title={searchQuery ? tr("clients.nothingMatches", { searchQuery }) : tr("clients.nobodyHereYet")}
+              text={tr("clients.searchRunsOverNameEmail", { value: segment !== "all" ? tr("clients.orShowEveryone") : "" })}
+              action={(searchQuery || segment !== "all") ? <Btn kind="ol" onClick={() => { setSearchQuery(""); setSegment("all"); }}>{tr("clients.clearSearchAndFilters")}</Btn> : undefined}
+            />
           ) : (
             <>
               {/* Desktop: a table on a white card — compact, or detailed with every fact we have. */}
               <div className="mb-3 hidden items-center justify-end gap-2 md:flex">
                 <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("clients.view")}</span>
-                <div role="tablist" aria-label={tr("clients.tableDensity")} className="flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
-                  {(["compact", "detailed"] as const).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      role="tab"
-                      aria-selected={density === d}
-                      onClick={() => setDensityPersist(d)}
-                      className={cn(
-                        "h-8 rounded-full px-3.5 text-sm font-semibold capitalize",
-                        density === d ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06)]" : "text-[rgb(var(--reg-muted))]",
-                      )}
-                    >
-                      {d === "compact" ? tr("clients.densityCompact") : tr("clients.densityDetailed")}
-                    </button>
-                  ))}
-                </div>
+                <SegPills
+                  items={[{ key: "compact", label: tr("clients.densityCompact") }, { key: "detailed", label: tr("clients.densityDetailed") }]}
+                  value={density}
+                  onChange={(k) => setDensityPersist(k as "compact" | "detailed")}
+                />
               </div>
               <div className="hidden overflow-hidden rounded-[20px] bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_12px_32px_-16px_rgb(var(--reg-ink)/0.12)] ring-1 ring-[rgb(var(--reg-line)/0.8)] md:block">
                 {/* relative: the sr-only header text is absolutely positioned; without a
@@ -1098,66 +1054,15 @@ export default function ClientsPage() {
         </Dialog>
 
       {/* Add Client Dialog */}
-      <Dialog open={addClientDialogOpen} onOpenChange={setAddClientDialogOpen}>
-        <DialogContent className="rounded-[24px] border-0 bg-[rgb(var(--reg-canvas))] p-6 text-[rgb(var(--reg-ink))] sm:max-w-[480px]" style={{ fontFamily: BRAND_FONT }}>
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-extrabold tracking-[-0.02em]">{tr("clients.addClient")}</DialogTitle>
-            <DialogDescription>
-              {tr("clients.addANewClientTo")}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">{tr("clients.firstName")}</Label>
-                <Input
-                  className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
-                  id="firstName"
-                  placeholder={tr("clients.firstName2")}
-                  value={newClientForm.firstName}
-                  onChange={(e) => setNewClientForm(prev => ({ ...prev, firstName: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">{tr("clients.lastName")}</Label>
-                <Input
-                  className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
-                  id="lastName"
-                  placeholder={tr("clients.lastName2")}
-                  value={newClientForm.lastName}
-                  onChange={(e) => setNewClientForm(prev => ({ ...prev, lastName: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">{tr("common.email")}</Label>
-              <Input
-                className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
-                id="email"
-                type="email"
-                placeholder={tr("clients.emailExampleCom")}
-                value={newClientForm.email}
-                onChange={(e) => setNewClientForm(prev => ({ ...prev, email: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">{tr("common.phone")}</Label>
-              <Input
-                className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
-                id="phone"
-                type="tel"
-                placeholder="+994 50 123 45 67"
-                value={newClientForm.phone}
-                onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
+      {addClientDialogOpen && (
+        <BzDialog
+          title={tr("clients.addClient")}
+          sub={tr("clients.addANewClientTo")}
+          width={480}
+          onClose={() => setAddClientDialogOpen(false)}
+          footer={
+            <>
+              <Btn kind="ol" onClick={() => {
                   setAddClientDialogOpen(false);
                   setNewClientForm({
                     firstName: "",
@@ -1167,11 +1072,11 @@ export default function ClientsPage() {
                     allowMarketingEmails: false,
                     allowSmsNotifications: false,
                   });
-                }}
-              >
+                }}>
                 {tr("common.cancel")}
-              </Button>
-              <Button
+              </Btn>
+              <Btn
+                kind="v"
                 onClick={async () => {
                   if (!newClientForm.firstName.trim()) {
                     toast.error(tr("clients.firstNameIsRequired"));
@@ -1224,14 +1129,50 @@ export default function ClientsPage() {
                   }
                 }}
                 disabled={!newClientForm.firstName.trim() || (!newClientForm.email && !newClientForm.phone)}
-                className="h-12 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-6 text-base font-semibold text-white hover:brightness-110"
               >
                 {tr("clients.addClient")}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+              </Btn>
+            </>
+          }
+        >
+          <FormGrid cols={2}>
+            <Field label={tr("clients.firstName")}>
+              <input
+                id="firstName"
+                placeholder={tr("clients.firstName2")}
+                value={newClientForm.firstName}
+                onChange={(e) => setNewClientForm(prev => ({ ...prev, firstName: e.target.value }))}
+              />
+            </Field>
+            <Field label={tr("clients.lastName")}>
+              <input
+                id="lastName"
+                placeholder={tr("clients.lastName2")}
+                value={newClientForm.lastName}
+                onChange={(e) => setNewClientForm(prev => ({ ...prev, lastName: e.target.value }))}
+              />
+            </Field>
+          </FormGrid>
+          <Field label={tr("common.email")}>
+            <input
+              id="email"
+              type="email"
+              placeholder={tr("clients.emailExampleCom")}
+              value={newClientForm.email}
+              onChange={(e) => setNewClientForm(prev => ({ ...prev, email: e.target.value }))}
+            />
+          </Field>
+          <Field label={tr("common.phone")}>
+            <input
+              id="phone"
+              type="tel"
+              placeholder="+994 50 123 45 67"
+              value={newClientForm.phone}
+              onChange={(e) => setNewClientForm(prev => ({ ...prev, phone: e.target.value }))}
+            />
+          </Field>
+        </BzDialog>
+      )}
 
       {/* Client card — a right-hand sheet (full screen on a phone) with four tabs. */}
       <Sheet
