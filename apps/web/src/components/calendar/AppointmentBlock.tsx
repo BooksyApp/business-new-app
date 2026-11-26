@@ -173,6 +173,34 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
     return isDragging;
   };
 
+  // Artifact tile (BF02): `.tile` with a status stripe (::before, --bz-sc), name in <b>, a quiet line,
+  // small icons in `.nb`. The category tint stays real data (fill + ink), so the colour legend still holds.
+  const tileSize = size === "sm" ? "cp" : size === "md" ? "md" : "";
+  const icons = (
+    <span className="nb">
+      {appointment.clientAlert && (
+        <i className="ni" title={t("calendar.clientAlert")} style={{ color: "#a05a00" }}>
+          <TriangleAlert aria-label={t("calendar.clientAlert")} role="img" size={14} strokeWidth={2} />
+        </i>
+      )}
+      {appointment.isPackage && (
+        <i
+          className="ni"
+          title={appointment.guestName ? t("calendar.packageGuest", { name: appointment.guestName }) : t("calendar.packageStepTitle", { step: appointment.packageStep ?? 1 })}
+          style={{ color: accent ?? undefined, width: "auto", gap: 2, fontSize: 11, fontWeight: 800 }}
+        >
+          <Package size={13} strokeWidth={2.2} />{appointment.packageStep ?? ""}
+        </i>
+      )}
+      <FlagIcons keys={flagKeys} max={size === "sm" ? (compact ? 2 : 3) : compact ? 3 : 5} size={14} />
+      {StatusIcon && (
+        <i className="ni" style={{ color: s.dot }}>
+          <StatusIcon size={14} strokeWidth={2.5} aria-label={s.label} role="img" />
+        </i>
+      )}
+    </span>
+  );
+
   return (
     <div
       role="button"
@@ -195,22 +223,13 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
       style={{
         backgroundColor: tint.fill,
         color: tint.ink,
-        // Cancelled: hatched and faded. No-show: dashed outline. Completed: a little muted.
-        backgroundImage: cancelled
-          ? "repeating-linear-gradient(135deg, transparent 0 6px, rgba(30,27,46,0.09) 6px 8px)"
-          : undefined,
+        ["--bz-sc" as string]: s.dot,
+        ["--bz-so" as string]: 1,
         boxShadow: accent ? `inset 0 0 0 2px ${accent}` : undefined,
-        outline: noShow ? `1.5px dashed ${s.dot}` : undefined,
-        outlineOffset: noShow ? "-4px" : undefined,
-        opacity: cancelled ? 0.6 : completed ? 0.82 : 1,
+        opacity: cancelled ? undefined : completed ? 0.82 : 1,
       }}
-      className={cn(
-        // The white 2px border is the gap that keeps back-to-back blocks apart.
-        "group relative flex h-full cursor-pointer overflow-hidden rounded-[10px] border-2 border-white pl-[3px] transition-[filter]",
-        "hover:brightness-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]",
-      )}
+      className={cn("tile in group cursor-pointer focus-visible:outline-none", tileSize, cancelled && "a-x", noShow && "a-n")}
     >
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[4px]" style={{ backgroundColor: s.dot }} />
       {accent && <span aria-hidden className="absolute inset-y-0 right-0 w-[4px]" style={{ backgroundColor: accent }} />}
       {appointment.linked && (
         <span
@@ -219,7 +238,7 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
             appointment.groupSize ? t("calendar.groupBadge", { count: appointment.groupSize }) : t("calendar.linkedToTheSameVisit"),
             appointment.staffAutoAssigned ? t("calendar.autoAssigned") : "",
           ].filter(Boolean).join(" · ")}
-          className="absolute bottom-1 right-1.5 text-[rgb(var(--reg-muted))]"
+          style={{ position: "absolute", bottom: 4, right: 6, opacity: 0.7 }}
         >
           <Link2 size={12} strokeWidth={2.5} />
         </span>
@@ -229,71 +248,39 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
           data-testid="override-marker"
           aria-label={t("bookingConflict.markerTitle")}
           title={t("bookingConflict.markerTitle")}
-          className="absolute bottom-1 right-5 text-amber-700"
+          style={{ position: "absolute", bottom: 4, right: 22, color: "#a05a00" }}
         >
           <TriangleAlert size={12} strokeWidth={2.5} />
         </span>
       )}
-      <div
-        className={cn(
-          "flex min-w-0 flex-1 flex-col",
-          size === "sm" ? "justify-center px-2" : size === "md" ? "justify-center px-2.5 py-[3px]" : compact ? "px-2 py-1" : "px-2.5 py-1.5",
-        )}
-      >
-        {size === "sm" ? (
-          <div className="flex min-w-0 items-center gap-1">
-            <p className="min-w-0 flex-1 truncate text-[12px] leading-none">
-              <span className={cn("font-bold", cancelled && "line-through")}>{appointment.clientName}</span>
-              <span style={{ color: tint.muted }}> · {start} {shortLabel}</span>
-            </p>
-            <FlagIcons keys={flagKeys} max={compact ? 2 : 3} size={12} />
-            {StatusIcon && <StatusIcon size={12} strokeWidth={2.5} aria-label={s.label} role="img" className="shrink-0" style={{ color: s.dot }} />}
+      {size === "sm" ? (
+        <>
+          <b style={cancelled ? { textDecoration: "line-through" } : undefined}>{appointment.clientName}</b>
+          <span>{start} · {shortLabel}</span>
+          {icons}
+        </>
+      ) : size === "md" ? (
+        <>
+          <div className="hr2">
+            <b style={cancelled ? { textDecoration: "line-through" } : undefined}>{appointment.clientName}</b>
+            {icons}
           </div>
-        ) : (
-          <>
-            <div className="flex min-w-0 items-center gap-1.5">
-              <p className={cn("min-w-0 flex-1 truncate font-bold leading-tight", compact ? "text-[12px]" : "text-[13px]", cancelled && "line-through")}>
-                {appointment.clientName}
-              </p>
-              {appointment.clientAlert && (
-                <TriangleAlert aria-label={t("calendar.clientAlert")} role="img" className="h-3.5 w-3.5 shrink-0 text-amber-700" />
-              )}
-              {appointment.isPackage && (
-                <span
-                  title={appointment.guestName ? t("calendar.packageGuest", { name: appointment.guestName }) : t("calendar.packageStepTitle", { step: appointment.packageStep ?? 1 })}
-                  className="inline-flex h-4 shrink-0 items-center gap-0.5 rounded-full bg-white/80 px-1 text-[10px] font-bold"
-                  style={{ color: accent ?? undefined }}
-                >
-                  <Package size={10} strokeWidth={2.5} />{appointment.packageStep ?? ""}
-                </span>
-              )}
-              {/* Small icons instead of text tags: new, VIP, chose this master, late, paid ... */}
-              <FlagIcons keys={flagKeys} max={compact ? 3 : 5} size={13} />
-              {StatusIcon && <StatusIcon size={13} strokeWidth={2.5} aria-label={s.label} role="img" className="shrink-0" style={{ color: s.dot }} />}
-            </div>
-            {size === "md" ? (
-              <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.muted }}>
-                {start}–{end} · {serviceLabel}
-              </p>
-            ) : compact ? (
-              <p className="mt-0.5 truncate text-[11.5px] leading-tight" style={{ color: tint.muted }}>
-                {start}–{end} · {serviceLabel}
-              </p>
-            ) : (
-              <>
-                <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.ink }}>
-                  {serviceLabel}
-                  {appointment.isPackage && appointment.guestName ? ` · ${t("calendar.packageGuest", { name: appointment.guestName })}` : ""}
-                </p>
-                <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.muted }}>
-                  {start}–{end}
-                  {appointment.staffName ? ` · ${appointment.staffName}` : ""}
-                </p>
-              </>
-            )}
-          </>
-        )}
-      </div>
+          <span>{serviceLabel} · {start}</span>
+        </>
+      ) : (
+        <>
+          <b style={cancelled ? { textDecoration: "line-through" } : undefined}>{appointment.clientName}</b>
+          <span>
+            {serviceLabel}
+            {appointment.isPackage && appointment.guestName ? ` · ${t("calendar.packageGuest", { name: appointment.guestName })}` : ""}
+          </span>
+          <span>
+            {start}–{end}
+            {!compact && appointment.staffName ? ` · ${appointment.staffName}` : ""}
+          </span>
+          {icons}
+        </>
+      )}
     </div>
   );
 }

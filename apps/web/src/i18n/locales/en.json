@@ -1437,7 +1437,8 @@
       "cancelAllHint": "All upcoming, unpaid occurrences are cancelled.",
       "cancelled": "{count} bookings in the series cancelled"
     },
-    "lateBadge": "Late: {min} min"
+    "lateBadge": "Late: {min} min",
+    "nextClient": "Next client"
   },
   "checkout": {
     "pickAClientToUse": "Pick a client to use a membership, a package, points or an earned free service.",

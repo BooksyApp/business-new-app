@@ -2,7 +2,6 @@ import type { Id } from "@/types/id";
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { lazyWithReload } from "@/lib/lazyWithReload";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
-import { currencySymbol } from "@/lib/currency";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, getDay, parse } from "date-fns";
 import { format } from "@/i18n/dateFns";
@@ -42,11 +41,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, User, Users, Heart, HelpCircle, Clock, Check, ChevronsUpDown, Layers, Package, Trash2 } from "lucide-react";
+import { X, Users, HelpCircle, Clock, Check, Layers } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppointments, type Appointment as AppointmentType } from "@/hooks/useAppointments";
 import { useServices } from "@/hooks/useServices";
 import { useTimeOff } from "@/hooks/useTimeOff";
+import { CalendarSidePanel } from "@/components/calendar/CalendarSidePanel";
+import { BookingDrawer } from "@/components/calendar/BookingDrawer/BookingDrawer";
 import { WhatsAppReminders } from "@/components/calendar/WhatsAppReminders";
 import type { TimeOff } from "@/services/timeOffService";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -57,7 +58,6 @@ import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FlagIcons, FlagLegend, type CalendarDensity } from "@/components/calendar/AppointmentFlags";
 import { categoryTint, type CategoryTint } from "@/lib/serviceCategoryColor";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -67,7 +67,6 @@ import { appointmentService, BookingConflictDeclined, type BookingConflict } fro
 import { describeConflict } from "@/components/calendar/BookingConflictDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { serviceService, type ServicePackage } from "@/services/serviceService";
-import { PackageBookingPanel } from "@/components/calendar/PackageBookingPanel";
 import { waitlistService, type WaitlistEntry } from "@/services/waitlistService";
 import { WaitingBlock } from "@/components/calendar/WaitingBlock";
 import { isFreed, placeWaiting, waitsOn, toHHmm, toMinutes, type BusyRange, type WaitingPlacement } from "@/lib/waitlistCalendar";
@@ -1736,6 +1735,221 @@ export default function CalendarPage() {
     };
   };
 
+  const closeBookingDrawer = () => {
+    setIsNewAppointmentOpen(false);
+    setEditingAppointmentId(null);
+    setAppointmentForm({
+      clientId: "",
+      clientName: "",
+      clientPhone: "",
+      clientEmail: "",
+      serviceId: "",
+      staffId: "",
+      startTime: "",
+      endTime: "",
+      notes: "",
+      price: "",
+      date: format(currentDate, 'yyyy-MM-dd'),
+      requestedByClient: false,
+      // A fresh key for the next booking: closing the sheet dropped it, so the next
+      // one lost its double-click protection.
+      idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    });
+  };
+
+  // Next client of the day (side panel): first live booking still to come; before opening hours, the first of the day.
+  const nextClient = (() => {
+    const nowHm = format(currentTime, "HH:mm");
+    const live = getAppointmentsForDate(currentDate)
+      .filter((a) => !["CANCELLED", "NO_SHOW", "COMPLETED"].includes((a.status || "").toUpperCase()))
+      .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
+    if (live.length === 0) return null;
+    return (isCurrentDate ? live.find((a) => (a.endTime || a.startTime || "") >= nowHm) : null) ?? live[0];
+  })();
+
+  // Booking drawer total: reflects group members / extra services / occurrences.
+  const bookingTotal = (() => {
+    const primary = servicePrice(appointmentForm.serviceId) || 0;
+    if (bookingMode === "group") return primary * (groupMembers.length + 1);
+    const perVisit = primary + extraServices.reduce((sum, es) => sum + (servicePrice(es.serviceId) || 0), 0);
+    const occurrences = bookingMode === "recurring" ? computeRecurrenceDates(appointmentForm.date, recurrence).length : 1;
+    return perVisit * occurrences;
+  })();
+
+  // Save from the booking drawer: validation, then package / advanced / multi-service / single create-or-update.
+  const submitBooking = async () => {
+    try {
+      // FG-W3-01: a package goes through its own endpoint (server-side planner).
+      if (selectedPackage && !editingAppointmentId) {
+        const day = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
+        const todayStart = salonNow(salonTz);
+        todayStart.setHours(0, 0, 0, 0);
+        if (day < todayStart) {
+          toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
+          return;
+        }
+        await submitPackageBooking();
+        return;
+      }
+      if (!appointmentForm.serviceId) {
+        toast.error(tr("calendar.pleaseSelectAService"));
+        return;
+      }
+      if (!appointmentForm.staffId) {
+        toast.error(tr("calendar.pleaseSelectAStaffMember"));
+        return;
+      }
+      if (!appointmentForm.startTime || !appointmentForm.endTime) {
+        toast.error(tr("calendar.pleaseSelectStartAndEnd"));
+        return;
+      }
+
+      // End time must be after start time
+      if (appointmentForm.startTime && appointmentForm.endTime &&
+          appointmentForm.startTime >= appointmentForm.endTime) {
+        toast.error(tr("calendar.endTimeMustBeAfter"));
+        return;
+      }
+
+      // Email format validation
+      const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
+      if (appointmentForm.clientEmail && !emailRegex.test(appointmentForm.clientEmail)) {
+        toast.error(tr("calendar.invalidEmailAddressFormat"));
+        return;
+      }
+
+      // Field length limits
+      if (appointmentForm.clientName && appointmentForm.clientName.length > 255) {
+        toast.error(tr("calendar.clientNameIsTooLong"));
+        return;
+      }
+      if (appointmentForm.notes && appointmentForm.notes.length > 2000) {
+        toast.error(tr("calendar.notesAreTooLongMax"));
+        return;
+      }
+
+      // Past date check for new appointments only
+      const appointmentDate = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
+      const today = salonNow(salonTz);
+      today.setHours(0, 0, 0, 0);
+      if (!editingAppointmentId && appointmentDate < today) {
+        toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
+        return;
+      }
+
+      // Advanced modes (group / recurring / multi-service) are composed
+      // from the single-booking endpoint — hand off to the batch submitter.
+      if (!editingAppointmentId && (bookingMode !== "single" || extraServices.length > 0)) {
+        await submitAdvancedBooking();
+        return;
+      }
+
+      // A multi-service visit is saved as a whole: every appointment of it, one after
+      // the other. If one is refused, the ones already written are put back.
+      if (editingAppointmentId && editingVisit) {
+        const lines = [
+          { serviceId: appointmentForm.serviceId, staffId: appointmentForm.staffId, startTime: appointmentForm.startTime, endTime: appointmentForm.endTime },
+          ...extraServices,
+        ];
+        if (lines.length !== editingVisit.ids.length || lines.some((l) => !l.serviceId || !l.staffId || !l.startTime || !l.endTime)) {
+          toast.error(tr("calendar.fillInTheServiceTeam"));
+          return;
+        }
+        const date = appointmentForm.date || format(currentDate, 'yyyy-MM-dd');
+        const notes = withRequestedFlag(appointmentForm.notes, appointmentForm.requestedByClient);
+        const who = {
+          clientId: appointmentForm.clientId ? appointmentForm.clientId : undefined,
+          clientName: appointmentForm.clientName || undefined,
+          clientPhone: appointmentForm.clientPhone || undefined,
+          clientEmail: appointmentForm.clientEmail || undefined,
+        };
+        const done: number[] = [];
+        try {
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i];
+            const o = editingVisit.original[i];
+            await appointmentService.updateAppointment(editingVisit.ids[i], {
+              businessId: businessId!,
+              staffId: l.staffId,
+              serviceId: l.serviceId,
+              appointmentDate: date,
+              startTime: l.startTime,
+              endTime: l.endTime,
+              ...who,
+              // The price the booking was made at, unless the service itself changed.
+              price: String(o.serviceId) === l.serviceId ? o.price : servicePrice(l.serviceId),
+              notes,
+            } as never);
+            done.push(i);
+          }
+        } catch (err) {
+          for (const i of done) {
+            const o = editingVisit.original[i];
+            await appointmentService.updateAppointment(editingVisit.ids[i], {
+              businessId: businessId!, staffId: o.staffId, serviceId: o.serviceId,
+              appointmentDate: editingVisit.date,
+              startTime: o.startTime, endTime: o.endTime, price: o.price, ...who,
+            } as never).catch(() => undefined);
+          }
+          toast.error(tr("calendar.nothingWasChanged", { value: (err instanceof Error && err.message) || tr("calendar.couldNotSave") }));
+          await refreshAppointments();
+          return;
+        }
+        toast.success(tr("calendar.bookingUpdated"));
+        await refreshAppointments();
+        setIsNewAppointmentOpen(false);
+        setEditingAppointmentId(null);
+        setEditingVisit(null);
+        setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
+        return;
+      }
+
+      const selectedService = services.find(s => s.id.toString() === appointmentForm.serviceId);
+      
+      const appointmentData = {
+        staffId: appointmentForm.staffId,
+        serviceId: appointmentForm.serviceId,
+        appointmentDate: appointmentForm.date || format(currentDate, 'yyyy-MM-dd'),
+        startTime: appointmentForm.startTime,
+        endTime: appointmentForm.endTime,
+        clientId: appointmentForm.clientId ? appointmentForm.clientId : undefined,
+        clientName: appointmentForm.clientName || undefined,
+        clientPhone: appointmentForm.clientPhone || undefined,
+        clientEmail: appointmentForm.clientEmail || undefined,
+        price: selectedService?.price,
+        notes: withRequestedFlag(appointmentForm.notes, appointmentForm.requestedByClient),
+        // Key generated when form opened — stable across retries for this booking attempt
+        idempotencyKey: appointmentForm.idempotencyKey,
+      };
+
+      const EMPTY_FORM = { clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` };
+
+      // Conflicts (closed day, time off, double booking...) come back from the server as a
+      // list; the booking-conflict dialog asks the person and re-sends with an override.
+      {
+        if (editingAppointmentId) {
+          await updateAppointmentAPI(editingAppointmentId, appointmentData);
+        } else {
+          await createAppointmentAPI(appointmentData);
+          // The server closes the waitlist entry on the booking's own email,
+          // but the column is a snapshot taken when the page loaded — so it
+          // kept showing someone who had just been booked in.
+          if (placingEntryId != null) {
+            setWaitlist(prev => prev.filter(w => w.id !== placingEntryId));
+            setPlacingEntryId(null);
+          }
+          reloadWaitlist();
+        }
+        setIsNewAppointmentOpen(false);
+        setEditingAppointmentId(null);
+        setFinalSelection(null);
+        setAppointmentForm(EMPTY_FORM);
+      }
+    } catch (error) {
+      // Error already handled in hook
+    }
+  };
+
   return (
     <AppLayout>
       <div className="flex h-full w-full overflow-hidden bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ fontFamily: BRAND_FONT }}>
@@ -1758,69 +1972,54 @@ export default function CalendarPage() {
 
           {/* Loading State */}
           {loading && (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-[rgb(var(--reg-brand))] border-t-transparent"></div>
-                <p className="text-sm text-muted-foreground">{tr("calendar.loadingCalendar")}</p>
-              </div>
+            <div className="cal-empty" role="status">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--bz-violet)", borderTopColor: "transparent" }}></div>
+              <p className="sm t-m b7">{tr("calendar.loadingCalendar")}</p>
             </div>
           )}
 
           {/* No Staff State */}
           {!loading && (!apiStaff || apiStaff.length === 0) && (
-            <div className="flex flex-1 items-center justify-center px-6">
-              <div className="mx-auto max-w-sm text-center">
-                <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-mesh-1)),rgb(var(--reg-mesh-2))_55%,rgb(var(--reg-mesh-3)))]">
-                  <Users className="h-7 w-7 text-[rgb(var(--reg-ink))]" strokeWidth={1.75} aria-hidden />
-                </span>
-                <h2 className="mt-6 text-2xl font-extrabold tracking-[-0.02em]">{tr("calendar.addYourTeamToStart")}</h2>
-                <p className="mt-2 text-base leading-relaxed text-[rgb(var(--reg-muted))]">
-                  {tr("calendar.eachPersonGetsTheirOwn")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate(getPath("staff"))}
-                  className="mt-7 inline-flex h-[52px] items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-7 text-base font-semibold text-white shadow-[0_10px_24px_-8px_rgb(var(--reg-brand-strong)/0.6)] transition hover:brightness-110"
-                >
-                  <Plus size={18} aria-hidden />
-                  {tr("common.addTeamMember")}
-                </button>
-              </div>
+            <div className="cal-empty">
+              <span className="ico">
+                <Users className="ic" style={{ width: 30, height: 30 }} aria-hidden />
+              </span>
+              <h2>{tr("calendar.addYourTeamToStart")}</h2>
+              <p className="sm t-m b7" style={{ fontSize: 15 }}>
+                {tr("calendar.eachPersonGetsTheirOwn")}
+              </p>
+              <button type="button" onClick={() => navigate(getPath("staff"))} className="btn btn-v" style={{ marginTop: 8 }}>
+                <Plus className="ic" aria-hidden />
+                {tr("common.addTeamMember")}
+              </button>
             </div>
           )}
-          
+
           {/* Top Navigation Bar - Only show when staff exists */}
           {!loading && apiStaff && apiStaff.length > 0 && (
           <>
-          <div className="z-30 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-3 pb-3 pt-3 backdrop-blur-xl md:px-6">
+          <div className="cal-bar">
             {/* Row 1 — where am I: ‹ Today ›, the date (with the picker), the day's hours; actions on the right. */}
             <div className="flex flex-wrap items-center gap-x-2 gap-y-2 md:flex-nowrap md:gap-3">
-              <div className="flex shrink-0 items-center rounded-full bg-white p-1 shadow-[0_1px_2px_rgb(var(--reg-ink)/0.05)] ring-1 ring-[rgb(var(--reg-line))]">
+              <div className="row gap8 shrink-0">
                 <button
                   type="button"
+                  className="circ"
                   aria-label={viewType === "Day" ? tr("calendar.previousDay") : viewType === "Weekly" ? tr("calendar.previousWeek") : tr("calendar.previousMonth")}
                   onClick={viewType === "Day" ? goToPrevDay : viewType === "Weekly" ? goToPrevWeek : goToPrevMonth}
-                  className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
                 >
-                  <ChevronLeft size={18} strokeWidth={1.75} />
+                  <ChevronLeft className="ic" />
                 </button>
-                <button
-                  type="button"
-                  onClick={goToToday}
-                  className={cn(
-                    "relative after:absolute after:-inset-1 after:content-[''] h-8 rounded-full px-3 text-sm font-semibold transition-colors",
-                    isCurrentDate && viewType === "Day" ? "text-[rgb(var(--reg-muted))]" : "text-[rgb(var(--reg-ink))] hover:bg-[rgb(var(--reg-canvas))]",
-                  )}
-                >
+                <button type="button" onClick={goToToday} className={cn("chip", isCurrentDate && viewType === "Day" && "on")}>
                   {tr("common.today")}
                 </button>
                 <button
                   type="button"
+                  className="circ"
                   aria-label={viewType === "Day" ? tr("calendar.nextDay") : viewType === "Weekly" ? tr("calendar.nextWeek") : tr("calendar.nextMonth")}
                   onClick={viewType === "Day" ? goToNextDay : viewType === "Weekly" ? goToNextWeek : goToNextMonth}
-                  className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-[rgb(var(--reg-canvas))]"
                 >
-                  <ChevronRight size={18} strokeWidth={1.75} />
+                  <ChevronRight className="ic" />
                 </button>
               </div>
 
@@ -1830,7 +2029,7 @@ export default function CalendarPage() {
                     <button
                       type="button"
                       aria-label={tr("calendar.colourLegend")}
-                      className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-canvas))]"
+                      className="chip shrink-0"
                     >
                       <span className="flex -space-x-1">
                         {legendEntries.slice(0, 4).map((e) => (
@@ -1861,7 +2060,7 @@ export default function CalendarPage() {
                 <Popover onOpenChange={(open) => { if (open) setDatePickerMonth(currentDate); }}>
                   <PopoverTrigger asChild>
                     <button type="button" className="order-last flex min-w-0 basis-full items-center gap-1.5 rounded-full py-1 text-left hover:bg-white/70 md:order-none md:basis-auto md:px-2">
-                      <span className="truncate text-lg font-extrabold tracking-[-0.02em] md:text-xl">
+                      <span className="cal-title truncate">
                         <span className="md:hidden">{format(currentDate, "EEE, d MMM")}</span>
                         <span className="hidden md:inline">{format(currentDate, "EEEE, d MMMM")}</span>
                       </span>
@@ -1931,7 +2130,7 @@ export default function CalendarPage() {
                     </PopoverContent>
                 </Popover>
               ) : (
-                <p className="order-last min-w-0 basis-full truncate text-lg font-extrabold tracking-[-0.02em] md:order-none md:basis-auto md:px-2 md:text-xl">
+                <p className="cal-title order-last min-w-0 basis-full truncate md:order-none md:basis-auto md:px-2">
                   {viewType === "Weekly"
                     ? (() => {
                         const weekStart = startOfWeek(weekViewDate, { weekStartsOn: 1 });
@@ -1943,15 +2142,15 @@ export default function CalendarPage() {
               )}
 
               <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
-                <div className="hidden h-10 items-center gap-2 rounded-full bg-white px-3.5 ring-1 ring-[rgb(var(--reg-line))] focus-within:ring-2 focus-within:ring-[rgb(var(--reg-brand)/0.5)] lg:flex">
-                  <Search size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
+                <div className="srch cal-srch hidden lg:flex">
+                  <Search className="ic" />
                   <input
                     type="text"
                     value={calendarSearch}
                     onChange={(e) => setCalendarSearch(e.target.value)}
                     placeholder={tr("calendar.findAClient")}
                     aria-label={tr("calendar.findAClient2")}
-                    className="w-40 border-0 bg-transparent text-sm outline-none placeholder:text-[rgb(var(--reg-muted))]"
+                    className="min-w-0"
                   />
                   {calendarSearch && (
                     <button onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} className="text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
@@ -1964,7 +2163,7 @@ export default function CalendarPage() {
                   aria-expanded={mobileSearchOpen}
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white lg:hidden"
+                  className="circ h-10 w-10 lg:hidden"
                   onClick={() => setMobileSearchOpen((v) => !v)}
                 >
                   <Search size={18} strokeWidth={1.75} />
@@ -1972,7 +2171,7 @@ export default function CalendarPage() {
           {businessId && <WhatsAppReminders businessId={businessId} />}
           <Popover>
             <PopoverTrigger asChild>
-              <Button aria-label={tr("calendar.needsAttention")} variant="ghost" size="icon" className="relative h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white hover:text-[rgb(var(--reg-ink))]">
+              <Button aria-label={tr("calendar.needsAttention")} variant="ghost" size="icon" className="circ relative">
                 <Bell size={18} strokeWidth={1.75} />
                 {attention.length > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
@@ -2013,7 +2212,7 @@ export default function CalendarPage() {
                   aria-label={tr("calendar.calendarSettings")}
                   variant="ghost"
                   size="icon"
-                  className="hidden h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white hover:text-[rgb(var(--reg-ink))] sm:inline-flex"
+                  className="circ hidden sm:inline-flex"
                   onClick={() => navigate(getPath("/booking-rules"))}
                 >
                   <Settings size={18} strokeWidth={1.75} />
@@ -2021,7 +2220,7 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setIsNewAppointmentOpen(true)}
-                  className="ml-1 hidden h-10 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] px-4 text-sm font-semibold text-white shadow-[0_10px_24px_-10px_rgb(var(--reg-brand-strong)/0.7)] transition hover:brightness-110 active:scale-[0.98] md:inline-flex"
+                  className="btn btn-v s ml-1 hidden md:inline-flex"
                 >
                   <Plus size={16} strokeWidth={2.25} />
                   {tr("common.newBooking")}
@@ -2051,7 +2250,7 @@ export default function CalendarPage() {
 
             {/* Row 2 — how am I looking: view switch, who, and the day's hours. */}
             <div className="mt-3 flex items-center gap-2">
-              <div role="tablist" aria-label={tr("calendar.calendarView")} className="flex shrink-0 rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
+              <div role="tablist" aria-label={tr("calendar.calendarView")} className="cal-seg">
                 {([["Day", tr("calendar.viewDay")], ["Weekly", tr("calendar.viewWeek")], ["Month", tr("calendar.viewMonth")]] as const).map(([v, label]) => (
                   <button
                     key={v}
@@ -2059,12 +2258,7 @@ export default function CalendarPage() {
                     role="tab"
                     aria-selected={viewType === v}
                     onClick={() => setViewType(v)}
-                    className={cn(
-                      "relative after:absolute after:-inset-1 after:content-[''] h-8 rounded-full px-3 text-sm font-semibold transition-colors md:px-3.5",
-                      viewType === v
-                        ? "bg-white text-[rgb(var(--reg-ink))] shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
-                        : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]",
-                    )}
+                    className={viewType === v ? "on" : undefined}
                   >
                     {label}
                   </button>
@@ -2074,7 +2268,7 @@ export default function CalendarPage() {
               {viewType === "Day" && !isMobile && staff.length > 1 && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button type="button" className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold ring-1 ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]">
+                    <button type="button" className="chip">
                       <Users size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
                       {visibleStaff.length === staff.length ? tr("calendar.allTeam") : tr("calendar.of", { count: visibleStaff.length, count2: staff.length })}
                       <ChevronDown size={14} className="text-[rgb(var(--reg-muted))]" />
@@ -2112,11 +2306,7 @@ export default function CalendarPage() {
                   role="switch"
                   aria-checked={showWaiting}
                   onClick={() => setShowWaiting(!showWaiting)}
-                  className={`inline-flex h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
-                    showWaiting
-                      ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-[rgb(var(--reg-brand)/0.4)]"
-                      : "bg-white text-[rgb(var(--reg-muted))] ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]"
-                  }`}
+                  className={cn("chip", showWaiting && "vo")}
                 >
                   <Clock size={16} strokeWidth={1.75} aria-hidden />
                   <span className="hidden sm:inline">{tr("waitlistCal.showWaiting")}</span>
@@ -2127,7 +2317,7 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setAddWaiterOpen(true)}
-                  className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line))] transition-colors hover:ring-[rgb(var(--reg-brand)/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
+                  className="chip"
                 >
                   <Plus size={16} strokeWidth={1.75} aria-hidden />
                   <span className="hidden sm:inline">{tr("waitlistCal.addButton")}</span>
@@ -2137,16 +2327,14 @@ export default function CalendarPage() {
               {(viewType === "Day" || viewType === "Weekly") && (
                 <>
                   <FlagLegend />
-                  <div role="group" aria-label={tr("calendar.densityTitle")} className="inline-flex h-10 items-center rounded-full bg-white p-1 ring-1 ring-[rgb(var(--reg-line))]">
+                  <div role="group" aria-label={tr("calendar.densityTitle")} className="cal-seg">
                     {(["comfy", "compact"] as const).map((d) => (
                       <button
                         key={d}
                         type="button"
                         aria-pressed={density === d}
                         onClick={() => setDensity(d)}
-                        className={`h-8 rounded-full px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
-                          density === d ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
-                        }`}
+                        className={density === d ? "on" : undefined}
                       >
                         {d === "comfy" ? tr("calendar.densityComfy") : tr("calendar.densityTight")}
                       </button>
@@ -2165,10 +2353,11 @@ export default function CalendarPage() {
                 return (
                   <span
                     className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
+                      "chip shrink-0",
                       getAppointmentsForDate(currentDate).length === 0 ? "ml-auto lg:ml-3" : "ml-auto",
-                      isEnabled ? "bg-white text-[rgb(var(--reg-ink)/0.8)] ring-1 ring-[rgb(var(--reg-line))]" : "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-muted))]",
+                      !isEnabled && "dim",
                     )}
+                    style={isEnabled ? undefined : { background: "var(--bz-fill)", color: "var(--bz-muted)", boxShadow: "none" }}
                   >
                     <Clock size={13} strokeWidth={1.75} aria-hidden />
                     {isEnabled
@@ -2178,6 +2367,18 @@ export default function CalendarPage() {
                 );
               })()}
             </div>
+
+            {/* Phone: the week as a day strip (BF02 · 390). */}
+            {viewType === "Day" && isMobile && (
+              <div className="dstrip" style={{ marginTop: 12 }} role="tablist" aria-label={tr("calendar.calendarView")}>
+                {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(currentDate, { weekStartsOn: 1 }), i)).map((d) => (
+                  <span key={d.toISOString()} role="tab" aria-selected={isSameDay(d, currentDate)} tabIndex={0} className={isSameDay(d, currentDate) ? "on" : undefined} onClick={() => setCurrentDate(d)} style={{ cursor: "pointer" }}>
+                    {format(d, "EEEEEE")}
+                    <b>{format(d, "d")}</b>
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* A phone shows one column; this is how you move between people. */}
             {viewType === "Day" && isMobile && staff.length > 1 && (
@@ -2191,10 +2392,7 @@ export default function CalendarPage() {
                       role="tab"
                       aria-selected={on}
                       onClick={() => setMobileStaffId(member.id)}
-                      className={cn(
-                        "flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3.5 text-sm font-semibold ring-1 transition",
-                        on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white text-[rgb(var(--reg-ink))] ring-[rgb(var(--reg-line))]",
-                      )}
+                      className={cn("chip shrink-0", on && "on")}
                     >
                       <span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold", on ? "bg-white/15 text-white" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}>
                         {initialsOf(member.name)}
@@ -2209,7 +2407,8 @@ export default function CalendarPage() {
 
       {/* Calendar Grid - Conditional based on view type */}
           {viewType === "Day" && (
-          <div ref={dayGridRef} className="relative flex flex-1 overflow-auto bg-white md:mx-4 md:mb-4 md:mt-3 md:rounded-[20px] md:shadow-[0_1px_2px_rgb(var(--reg-ink)/0.04),0_12px_32px_-16px_rgb(var(--reg-ink)/0.12)] md:ring-1 md:ring-[rgb(var(--reg-line)/0.8)]">
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+          <div ref={dayGridRef} className="cal-card relative flex min-w-0 flex-1 overflow-auto md:ml-6 md:mr-5 md:mb-4">
             {/* Current Time Indicator - Full horizontal line across all columns */}
             {isCurrentDate && (() => {
               const timePosition = getCurrentTimePosition();
@@ -2223,15 +2422,15 @@ export default function CalendarPage() {
                     height: '2px',
                   }}
                 >
-                  <div className="h-full w-full bg-[rgb(var(--reg-brand))]" />
-                  <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[rgb(var(--reg-brand))] ring-2 ring-white" />
+                  <div className="h-full w-full" style={{ background: "var(--bz-guava)", height: 2.5 }} />
+                  <span className="absolute -left-1 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full" style={{ background: "var(--bz-guava)", boxShadow: "0 0 0 3px var(--bz-surface)" }} />
             </div>
               );
             })()}
             
             {/* Time Column */}
-            <div className="sticky left-0 z-20 w-14 shrink-0 self-start border-r border-[rgb(var(--reg-line)/0.7)] bg-white md:w-16">
-              <div className="sticky top-0 z-20 h-16 border-b border-[rgb(var(--reg-line)/0.7)] bg-white"></div>
+            <div className="sticky left-0 z-20 w-14 shrink-0 self-start bg-[var(--bz-surface)] md:w-16">
+              <div className="sticky top-0 z-20 h-16 bg-[var(--bz-surface)]"></div>
               
               {/* Current Time Indicator in Time Column - Time badge */}
               {isCurrentDate && (() => {
@@ -2245,7 +2444,7 @@ export default function CalendarPage() {
                       top: `${timePosition + 64}px`, // 64px for header height
                     }}
                   >
-                    <div className="rounded-full bg-[rgb(var(--reg-brand))] px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-white shadow-sm">
+                    <div className="cal-now-pill">
                       {format(currentTime, "HH:mm")}
         </div>
                   </div>
@@ -2264,11 +2463,11 @@ export default function CalendarPage() {
             return (
             <div
               key={timeString}
-              className="relative bg-white"
-              style={{ height: `${hourHeight}px` }}
+              className="relative"
+              style={{ height: `${hourHeight}px`, background: "var(--bz-surface)" }}
             >
               {hour > 0 && (
-                <span className={`absolute -top-2 right-2 text-[11px] font-medium tabular-nums ${isBusiness ? "text-[rgb(var(--reg-ink)/0.7)]" : "text-[rgb(var(--reg-muted)/0.6)]"}`}>
+                <span className="cal-th absolute -top-2.5 right-2" style={isBusiness ? undefined : { opacity: 0.55 }}>
                   {timeString}
                 </span>
               )}
@@ -2295,25 +2494,25 @@ export default function CalendarPage() {
                 return (
             <div
               key={staff.id}
-                    className="min-w-0 flex-1 border-r border-[rgb(var(--reg-line)/0.7)] bg-white last:border-r-0 md:min-w-[220px]"
+                    className="min-w-0 flex-1 border-r border-[var(--bz-line)] bg-[var(--bz-surface)] last:border-r-0 md:min-w-[220px]"
                   >
                     {/* Staff Header */}
-                    <div className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-[rgb(var(--reg-line)/0.7)] bg-white/95 px-4 backdrop-blur">
-                      {staff.avatar ? (
-                        <img src={staff.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white" />
-                      ) : (
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-xs font-bold text-[rgb(var(--reg-brand-strong))]">
-                          {staff.initials || initialsOf(staff.name)}
-                        </span>
-                      )}
+                    <div className="cal-colh sticky top-0 z-10">
+                      <div className="ring">
+                        {staff.avatar ? (
+                          <img src={staff.avatar} alt="" style={{ width: 36, height: 36 }} />
+                        ) : (
+                          <span style={{ width: 36, height: 36, fontSize: 13, fontWeight: 800 }}>{staff.initials || initialsOf(staff.name)}</span>
+                        )}
+                      </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold">{staff.name}</p>
-                        <p className="truncate text-xs text-[rgb(var(--reg-muted))]">
+                        <p className="truncate" style={{ margin: 0 }}>{staff.name}</p>
+                        <small className="truncate">
                           {(() => {
                             const n = new Set(staffAppointments.map((a) => a.apiId ?? a.id)).size;
                             return n ? tr("common.bookingCount", { count: n }) : staff.workingHours || tr("calendar.noBookings");
                           })()}
-                        </p>
+                        </small>
                       </div>
                     </div>
 
@@ -2823,11 +3022,11 @@ export default function CalendarPage() {
                   return (
                   <div key={i}>
                     <div
-                      className={`pointer-events-none absolute left-0 right-0 border-b border-dashed ${isBusiness ? "border-[rgb(var(--reg-line)/0.55)]" : "border-[rgb(var(--reg-line)/0.35)]"}`}
+                      className={`pointer-events-none absolute left-0 right-0 border-b border-dashed ${isBusiness ? "border-[var(--bz-line)] opacity-60" : "border-[var(--bz-line)] opacity-35"}`}
                       style={{ top: `${(i * 4 + 2) * SLOT_HEIGHT}px` }}
                     />
                     <div
-                      className={`pointer-events-none absolute left-0 right-0 border-b ${isBusiness ? "border-[rgb(var(--reg-line))]" : "border-[rgb(var(--reg-line)/0.6)]"}`}
+                      className={`pointer-events-none absolute left-0 right-0 border-b ${isBusiness ? "border-[var(--bz-line)]" : "border-[var(--bz-line)] opacity-60"}`}
                       style={{ top: `${(i + 1) * 4 * SLOT_HEIGHT}px` }}
                     />
                   </div>
@@ -2839,19 +3038,31 @@ export default function CalendarPage() {
               })}
             </div>
           </div>
+          {!isMobile && (
+            <div className="hidden shrink-0 overflow-y-auto pb-4 pr-6 pt-0 xl:block" style={{ width: 324 }}>
+              <CalendarSidePanel
+                next={nextClient}
+                attention={attention}
+                team={visibleStaff}
+                onOpenAppointment={handleAppointmentClick}
+                initialsOf={initialsOf}
+              />
+            </div>
+          )}
+          </div>
           )}
 
           {viewType === "Month" && (
             <div className="flex flex-1 overflow-auto bg-white p-6">
               <div className="w-full">
                 {/* Month Calendar Grid */}
-                <div className="bg-white rounded-lg border border-border">
+                <div className="cal-card overflow-hidden border-0 border-[var(--bz-line)]">
                   {/* Day Headers */}
-                  <div className="grid grid-cols-7 border-b border-border">
+                  <div className="grid grid-cols-7 border-b border-[var(--bz-line)]">
                     {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
                       <div
                         key={day}
-                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-border last:border-r-0"
+                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-[var(--bz-line)] last:border-r-0"
                       >
                         {day}
             </div>
@@ -2876,9 +3087,9 @@ export default function CalendarPage() {
                           <div
                             key={idx}
                             className={`
-                              min-h-[120px] border-r border-b border-border last:border-r-0
-                              ${isCurrentMonth ? "bg-white" : "bg-muted"}
-                              ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}
+                              min-h-[120px] border-r border-b border-[var(--bz-line)] last:border-r-0
+                              ${isCurrentMonth ? "bg-[var(--bz-surface)]" : "bg-muted"}
+                              ${isCurrentDay ? "bg-[var(--bz-vsoft)]" : ""}
                               p-2
                             `}
                           >
@@ -2935,10 +3146,10 @@ export default function CalendarPage() {
           )}
 
           {viewType === "Weekly" && (
-            <div className="flex flex-1 overflow-auto bg-white">
+            <div className="flex flex-1 overflow-auto bg-[var(--bz-surface)]">
               {/* Staff Column */}
-              <div className="w-64 shrink-0 border-r border-border bg-white sticky left-0 z-10">
-                <div className="h-16 border-b border-border bg-white"></div>
+              <div className="w-64 shrink-0 border-r border-[var(--bz-line)] bg-[var(--bz-surface)] sticky left-0 z-10">
+                <div className="h-16 border-b border-[var(--bz-line)] bg-[var(--bz-surface)]"></div>
                 <div className="divide-y divide-border">
                   {staff.map((staff) => {
                     // All rows should have the same height to fit 3 blocks + "+X more" row
@@ -2948,7 +3159,7 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={staff.id}
-                        className={`${rowHeight} border-b border-border px-4 py-3 bg-white flex items-center gap-3`}
+                        className={`${rowHeight} border-b border-[var(--bz-line)] px-4 py-3 bg-[var(--bz-surface)] flex items-center gap-3`}
                       >
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[rgb(var(--reg-brand))] to-[#e83e63] flex items-center justify-center text-white font-semibold text-sm shrink-0">
                         {staff.initials}
@@ -2972,10 +3183,10 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className="min-w-[200px] flex-1 border-r border-border last:border-r-0 bg-white"
+                      className="min-w-[200px] flex-1 border-r border-[var(--bz-line)] last:border-r-0 bg-[var(--bz-surface)]"
                     >
                       {/* Day Header */}
-                      <div className={`h-16 border-b border-border flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}`}>
+                      <div className={`h-16 border-b border-[var(--bz-line)] flex flex-col items-center justify-center px-2 bg-[var(--bz-surface)] sticky top-0 z-10 ${isCurrentDay ? "bg-[var(--bz-vsoft)]" : ""}`}>
                         <div className="text-xs font-medium text-muted-foreground">
                           {format(day, "EEE")}
                         </div>
@@ -3001,7 +3212,7 @@ export default function CalendarPage() {
                           return (
                             <div
                               key={staff.id}
-                              className={`${rowHeight} p-2 flex flex-col border-b border-border`}
+                              className={`${rowHeight} p-2 flex flex-col border-b border-[var(--bz-line)]`}
                             >
                               {waitChips.length > 0 && (
                                 <div className="mb-1 flex flex-wrap gap-1">
@@ -3014,7 +3225,7 @@ export default function CalendarPage() {
                                       className={`inline-flex h-6 max-w-full items-center gap-1 rounded-full border border-dashed px-2 text-[10px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
                                         isFreed(w)
                                           ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                          : "border-[rgb(var(--reg-brand)/0.6)] bg-white text-[rgb(var(--reg-brand-strong))]"
+                                          : "border-[rgb(var(--reg-brand)/0.6)] bg-[var(--bz-surface)] text-[rgb(var(--reg-brand-strong))]"
                                       }`}
                                     >
                                       <Clock size={11} aria-hidden />
@@ -3040,7 +3251,7 @@ export default function CalendarPage() {
                                   {/* "+X more" on separate row - Only show if more than 3 */}
                                   {staffAppointments.length > 3 && (
                                     <div 
-                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-border"
+                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-[var(--bz-line)]"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedWeeklyPopup({ day, staffId: staff.id });
@@ -3423,830 +3634,62 @@ export default function CalendarPage() {
         </DialogContent>
       </Dialog>
 
-      {/* New Appointment Form - Slides in from right */}
-      <Sheet open={isNewAppointmentOpen} onOpenChange={(open) => {
-        setIsNewAppointmentOpen(open);
-        if (!open) {
-          setEditingAppointmentId(null);
-          setAppointmentForm({
-            clientId: "",
-            clientName: "",
-            clientPhone: "",
-            clientEmail: "",
-            serviceId: "",
-            staffId: "",
-            startTime: "",
-            endTime: "",
-            notes: "",
-            price: "",
-            date: format(currentDate, 'yyyy-MM-dd'),
-            requestedByClient: false,
-            // A fresh key for the next booking: closing the sheet dropped it, so the next
-            // one lost its double-click protection.
-            idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          });
-        }
-      }}>
-        <SheetContent side="right" style={{ fontFamily: BRAND_FONT }} className={SHEET_FRAME}>
-          {/* Header */}
-          <div className={SHEET_HEAD}>
-            <SheetTitle className={SHEET_TITLE}>{editingAppointmentId ? tr("calendar.editBooking") : tr("common.newBooking")}</SheetTitle>
-            <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{format(parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date()), 'EEEE, d MMMM')}</p>
-          </div>
-
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 md:px-6">
-          {/* Client Selection */}
-          <section className="space-y-2">
-            <div className="space-y-2">
-              <p className={SECTION_LABEL}>{tr("common.client")}{" "}<span className="font-normal normal-case tracking-normal text-[rgb(var(--reg-muted))]">{tr("calendar.optionalEmptyWalkIn")}</span></p>
-              <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={clientSearchOpen}
-                    className={cn(FIELD, "justify-between gap-3 font-semibold")}
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
-                        {appointmentForm.clientName ? initialsOf(appointmentForm.clientName) : <User className="h-4 w-4" />}
-                      </span>
-                      <span className="truncate">
-                    {appointmentForm.clientId
-                      ? (() => {
-                          const selected = clients.find(c => c.id.toString() === appointmentForm.clientId);
-                          return selected ? `${selected.firstName} ${selected.lastName || ""}`.trim() : tr("calendar.selectClient");
-                        })()
-                      : appointmentForm.clientName || tr("calendar.searchClientsOrAddNew")}
-                      </span>
-                    </span>
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl p-0" align="start">
-                  <Command shouldFilter={true}>
-                    <CommandInput placeholder={tr("calendar.searchClients")} />
-                    <CommandList>
-                      <CommandEmpty>{tr("calendar.noClientFound")}</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value="new-client"
-                          onSelect={() => {
-                            setAppointmentForm(prev => ({ ...prev, clientId: "", clientName: "", clientPhone: "", clientEmail: "" }));
-                            setClientSearchOpen(false);
-                          }}
-                        >
-                          <User className="mr-2 h-4 w-4" />
-                          {tr("calendar.newClientEnterManually")}
-                        </CommandItem>
-                        {clients.map((client, idx) => {
-                          const isSelected = appointmentForm.clientId === client.id.toString();
-                          return (
-                            <CommandItem
-                              // Clients built from walk-in bookings come back with id 0, so the id alone repeats.
-                              key={`${client.id}-${idx}`}
-                              value={`${client.firstName} ${client.lastName || ""} ${client.email || ""} ${client.phone || ""}`}
-                              onSelect={() => {
-                                setAppointmentForm(prev => ({
-                                  ...prev,
-                                  clientId: client.id.toString(),
-                                  clientName: `${client.firstName} ${client.lastName || ""}`.trim(),
-                                  clientPhone: client.phone || "",
-                                  clientEmail: client.email || "",
-                                }));
-                                setClientSearchOpen(false);
-                              }}
-                              className={cn("flex items-center justify-between", isSelected && "bg-accent")}
-                            >
-                              <div className="flex min-w-0 items-center gap-3">
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
-                                  {initialsOf(`${client.firstName} ${client.lastName || ""}`)}
-                                </span>
-                                <div className="flex min-w-0 flex-col">
-                                <span className="truncate font-semibold">{`${client.firstName} ${client.lastName || ""}`.trim()}</span>
-                                {(client.email || client.phone) && (
-                                  <span className="truncate text-xs text-muted-foreground">
-                                    {client.email || client.phone}
-                                  </span>
-                                )}
-                                </div>
-                              </div>
-                              {isSelected && <Check className="h-4 w-4" />}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {!appointmentForm.clientId && (
-                <>
-                  <Input
-                    placeholder={tr("calendar.clientName")}
-                    value={appointmentForm.clientName}
-                    onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientName: e.target.value }))}
-                    className={FIELD}
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      placeholder={tr("common.phone")}
-                      value={appointmentForm.clientPhone}
-                      onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientPhone: e.target.value }))}
-                      className={FIELD}
-                    />
-                    <Input
-                      placeholder={tr("common.email")}
-                      type="email"
-                      value={appointmentForm.clientEmail}
-                      onChange={(e) => setAppointmentForm(prev => ({ ...prev, clientEmail: e.target.value }))}
-                      className={FIELD}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* The two "tabs" that sat here had no handlers; notes are further down. */}
-          <div className="space-y-6">
-            {/* Date picker — drives the appointment's date (and syncs the
-                viewed day so conflict detection matches the chosen date). */}
-            <section className="space-y-2">
-              <p className={SECTION_LABEL}>{tr("calendar.date2")}</p>
-              {(() => {
-                const pick = (v: string) => {
-                  setAppointmentForm(prev => ({ ...prev, date: v }));
-                  const parsed = parse(v, 'yyyy-MM-dd', new Date());
-                  if (!isNaN(parsed.getTime())) setCurrentDate(parsed);
-                };
-                const days = Array.from({ length: 21 }, (_, i) => addDays(salonNow(salonTz), i));
-                return (
-                  <>
-                    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="radiogroup" aria-label={tr("calendar.date2")}>
-                      {days.map((d) => {
-                        const v = format(d, 'yyyy-MM-dd');
-                        const on = appointmentForm.date === v;
-                        const open = getBusinessHoursForDate(d).isEnabled;
-                        return (
-                          <button
-                            key={v}
-                            type="button"
-                            role="radio"
-                            aria-checked={on}
-                            onClick={() => pick(v)}
-                            className={cn(
-                              "flex w-14 shrink-0 flex-col items-center rounded-2xl py-2 ring-1 transition",
-                              on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
-                              !open && !on && "opacity-50",
-                            )}
-                          >
-                            <span className={cn("text-[11px] font-semibold uppercase", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{salonToday(d) ? tr("common.today") : format(d, 'EEE')}</span>
-                            <span className="text-lg font-extrabold leading-tight">{format(d, 'd')}</span>
-                            <span className={cn("text-[10px]", on ? "text-white/70" : "text-[rgb(var(--reg-muted))]")}>{format(d, 'MMM')}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <label className="flex items-center gap-2 text-sm text-[rgb(var(--reg-muted))]">
-                      {tr("calendar.otherDate")}
-                      <Input
-                        type="date"
-                        value={appointmentForm.date}
-                        min={format(salonNow(salonTz), 'yyyy-MM-dd')}
-                        onChange={(e) => { if (e.target.value) pick(e.target.value); }}
-                        aria-label={tr("calendar.date2")}
-                        className="h-10 w-auto rounded-xl border-[rgb(var(--reg-line))] text-sm"
-                      />
-                    </label>
-                  </>
-                );
-              })()}
-            </section>
-
-            {/* Repeat: weekly / every 2 weeks / monthly x N (new bookings only; not for package services) */}
-            {!editingAppointmentId && !selectedPackage && (
-              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium" htmlFor="repeat-booking">
-                <Checkbox
-                  id="repeat-booking"
-                  data-testid="repeat-toggle"
-                  checked={bookingMode === "recurring"}
-                  onCheckedChange={(c) => setBookingMode(c === true ? "recurring" : "single")}
-                />
-                {tr("calendar.series.repeatBooking")}
-              </label>
-            )}
-
-            {/* Recurrence config */}
-            {bookingMode === "recurring" && (
-              <div className="space-y-2 rounded-md border border-border p-2" data-testid="recurrence-config">
-                <Label className={FIELD_LABEL}>{tr("calendar.repeat")}</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">{tr("calendar.frequency")}</Label>
-                    <Select
-                      value={recurrence.frequency === "MONTHLY" ? "MONTHLY" : recurrence.interval === 2 ? "BIWEEKLY" : "WEEKLY"}
-                      onValueChange={(v) => setRecurrence(prev => ({ ...prev, frequency: v === "MONTHLY" ? "MONTHLY" : "WEEKLY", interval: v === "BIWEEKLY" ? 2 : 1 }))}
-                    >
-                      <SelectTrigger className={FIELD} data-testid="recurrence-pattern"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="WEEKLY">{tr("calendar.weekly")}</SelectItem>
-                        <SelectItem value="BIWEEKLY">{tr("calendar.series.biweekly")}</SelectItem>
-                        <SelectItem value="MONTHLY">{tr("calendar.monthly")}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">{tr("calendar.occurrences")}</Label>
-                    <Input
-                      type="number" min={2} max={52} value={recurrence.count}
-                      data-testid="recurrence-count"
-                      onChange={(e) => setRecurrence(prev => ({ ...prev, count: Math.max(2, Math.min(52, parseInt(e.target.value) || 2)) }))}
-                      className={FIELD}
-                    />
-                  </div>
-                </div>
-                <ul className="max-h-40 space-y-0.5 overflow-y-auto text-xs" data-testid="recurrence-dates">
-                  {computeRecurrenceDates(appointmentForm.date, recurrence).map((d) => {
-                    const row = seriesPreview?.find((r) => r.date === d);
-                    const bad = row && row.conflicts.length > 0;
-                    return (
-                      <li key={d} className={bad ? "text-amber-700" : "text-muted-foreground"}>
-                        <span className="font-medium">{d}</span>
-                        {bad ? ` · ${row!.conflicts.map(describeConflict).join("; ")}` : row ? " ✓" : ""}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {seriesPreview?.some((r) => r.conflicts.length > 0) && (
-                  <p className="text-xs text-amber-700" data-testid="recurrence-conflicts">{tr("calendar.series.conflictsHint")}</p>
-                )}
-              </div>
-            )}
-
-            {/* Service Selection — tidy rows: name, duration, price. */}
-            <section className="space-y-2">
-              <p className={SECTION_LABEL}>{bookingMode === "group" ? tr("calendar.serviceAllMembers") : tr("common.service")}</p>
-              {services.length > 6 && (
-                <div className="flex h-11 items-center gap-2 rounded-xl bg-white px-3 ring-1 ring-[rgb(var(--reg-line))] focus-within:ring-2 focus-within:ring-[rgb(var(--reg-brand)/0.5)]">
-                  <Search size={16} className="text-[rgb(var(--reg-muted))]" />
-                  <input
-                    value={serviceQuery}
-                    onChange={(e) => setServiceQuery(e.target.value)}
-                    placeholder={tr("common.searchServices")}
-                    aria-label={tr("calendar.searchServices")}
-                    className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-[rgb(var(--reg-muted))]"
-                  />
-                </div>
-              )}
-              <div className="max-h-[264px] overflow-y-auto rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]" role="radiogroup" aria-label={tr("common.service")}>
-                {services
-                  .filter((sv) => !serviceQuery || sv.name.toLowerCase().includes(serviceQuery.toLowerCase()))
-                  .map((service) => {
-                    const isSelected = appointmentForm.serviceId === service.id.toString();
-                    const isCombo = service.serviceType === 'COMBO';
-                    return (
-                      <button
-                        key={service.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={isSelected}
-                        onClick={() => setAppointmentForm(prev => ({ ...prev, serviceId: service.id.toString() }))}
-                        className={cn(
-                          "flex w-full items-center gap-3 border-b border-[rgb(var(--reg-line)/0.6)] px-4 py-3 text-left transition-colors last:border-0",
-                          isSelected ? "bg-[rgb(var(--reg-brand-soft))]" : "hover:bg-[rgb(var(--reg-canvas))]",
-                        )}
-                      >
-                        <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2", isSelected ? "border-[rgb(var(--reg-brand))]" : "border-[rgb(var(--reg-line))]")}>
-                          {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-2">
-                            <span className="truncate text-[15px] font-semibold">{service.name}</span>
-                            {isCombo && (
-                              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[rgb(var(--reg-brand)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase text-[rgb(var(--reg-brand-strong))]">
-                                <Package size={10} />{" "}{tr("common.combo")}
-                              </span>
-                            )}
-                          </span>
-                          {service.durationMinutes ? (
-                            <span className="block text-sm text-[rgb(var(--reg-muted))]">{tr("calendar.min3", { durationMinutes: service.durationMinutes })}</span>
-                          ) : null}
-                        </span>
-                        <span className="shrink-0 text-sm font-semibold">
-                          {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : tr("calendar.free")}
-                        </span>
-                      </button>
-                    );
-                  })}
-                {services.length === 0 && (
-                  <p className="px-4 py-4 text-sm text-[rgb(var(--reg-muted))]">{tr("calendar.noServicesYetAddThem")}</p>
-                )}
-              </div>
-            </section>
-
-            {/* FG-W3-01: a package is booked from its own slot finder (party size + start time). */}
-            {selectedPackage && businessId && !editingAppointmentId && (
-              <PackageBookingPanel
-                businessId={businessId}
-                serviceId={appointmentForm.serviceId}
-                date={appointmentForm.date || format(currentDate, "yyyy-MM-dd")}
-                maxParty={selectedPackage.maxPartySize}
-                partySize={packageParty}
-                onPartySize={setPackageParty}
-                startTime={appointmentForm.startTime}
-                onStartTime={(hhmm) => setAppointmentForm((prev) => ({ ...prev, startTime: hhmm }))}
-              />
-            )}
-
-            {/* Time — start as a grid of slots within the day's opening hours; end follows the service. */}
-            {!(selectedPackage && !editingAppointmentId) && (
-            <section className="space-y-2">
-              <p className={SECTION_LABEL}>{tr("calendar.time2")}</p>
-              {(() => {
-                const day = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
-                const { startHour, endHour, isEnabled } = getBusinessHoursForDate(isNaN(day.getTime()) ? currentDate : day);
-                const lo = isEnabled ? startHour : 8;
-                const hi = isEnabled ? endHour : 20;
-                // Today, a new booking cannot start in the past (the API refuses it with
-                // "Cannot create bookings in the past"), so those times are not offered.
-                const nowHm = !editingAppointmentId && salonToday(day) ? format(salonNow(salonTz), 'HH:mm') : null;
-                const slots = timeOptionsWith(appointmentForm.startTime).filter((t) => {
-                  const h = parseInt(t.slice(0, 2), 10);
-                  if (nowHm && t < nowHm && t !== appointmentForm.startTime) return false;
-                  return (h >= lo && h < hi) || t === appointmentForm.startTime;
-                });
-                return (
-                  <>
-                    {!isEnabled && (
-                      <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">{tr("calendar.closedThisDayYouCan")}</p>
-                    )}
-                    <div className="grid max-h-[208px] grid-cols-4 gap-2 overflow-y-auto pr-0.5" role="radiogroup" aria-label={tr("calendar.startTime")}>
-                      {slots.map((t) => {
-                        const on = appointmentForm.startTime === t;
-                        return (
-                          <button
-                            key={t}
-                            type="button"
-                            role="radio"
-                            aria-checked={on}
-                            onClick={() => setAppointmentForm(prev => ({ ...prev, startTime: t }))}
-                            className={cn(
-                              "h-11 rounded-xl text-sm font-semibold tabular-nums ring-1 transition",
-                              on
-                                ? "bg-[linear-gradient(135deg,rgb(var(--reg-brand))_0%,rgb(var(--reg-brand-strong))_100%)] text-white ring-transparent shadow-[0_8px_18px_-8px_rgb(var(--reg-brand-strong)/0.7)]"
-                                : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.5)]",
-                            )}
-                          >
-                            {t}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="flex items-center gap-3 pt-1">
-                      <span className="text-sm font-semibold">{tr("common.ends")}</span>
-                      <Select
-                        value={appointmentForm.endTime}
-                        onValueChange={(value) => setAppointmentForm(prev => ({ ...prev, endTime: value }))}
-                      >
-                        <SelectTrigger aria-label={tr("calendar.endTime")} className="h-11 w-32 rounded-xl border-[rgb(var(--reg-line))] text-sm font-semibold">
-                          <SelectValue placeholder={tr("calendar.endTime")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeOptionsWith(appointmentForm.endTime).map((t) => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {appointmentForm.serviceId && appointmentForm.startTime && (
-                        <span className="text-xs text-[rgb(var(--reg-muted))]">{tr("calendar.fromTheServiceLength")}</span>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </section>
-
-            )}
-
-            {/* Staff Selection (in group mode this is member 1's staff) */}
-            {!(selectedPackage && !editingAppointmentId) && (
-            <section className="space-y-2">
-              <p className={SECTION_LABEL}>{bookingMode === "group" ? tr("calendar.withMember") : tr("calendar.with2")}</p>
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={tr("common.staff")}>
-                {staff.map((staffMember) => {
-                  const on = appointmentForm.staffId === staffMember.id;
-                  return (
-                    <button
-                      key={staffMember.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      onClick={() => setAppointmentForm(prev => ({ ...prev, staffId: staffMember.id }))}
-                      className={cn(
-                        "flex items-center gap-2 rounded-full py-1 pl-1 pr-4 text-sm font-semibold ring-1 transition",
-                        on ? "bg-[rgb(var(--reg-ink))] text-white ring-[rgb(var(--reg-ink))]" : "bg-white ring-[rgb(var(--reg-line))] hover:ring-[rgb(var(--reg-brand)/0.4)]",
-                      )}
-                    >
-                      <span className={cn("flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold", on ? "bg-white/15" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}>
-                        {initialsOf(staffMember.name)}
-                      </span>
-                      {staffMember.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-            )}
-            
-            {/* Group members — each gets their own staff + time. The primary
-                client above is member 1; add the rest here. */}
-            {bookingMode === "group" && (
-              <div className="space-y-2 rounded-md border border-border p-2">
-                <div className="flex items-center justify-between">
-                  <Label className={FIELD_LABEL}>{tr("calendar.groupMembers")}</Label>
-                  <span className="text-[10px] text-muted-foreground">{tr("calendar.primaryClientMember")}</span>
-                </div>
-                {groupMembers.map((m, i) => (
-                  <div key={i} className="space-y-1 border-t border-border pt-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted-foreground w-16 shrink-0">{tr("calendar.member", { value: i + 2 })}</span>
-                      <Input
-                        placeholder={tr("common.name")}
-                        value={m.clientName}
-                        onChange={(e) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, clientName: e.target.value } : x))}
-                        className={cn(FIELD, "flex-1")}
-                      />
-                      <Button
-                        type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeMember")} className="h-7 w-7 shrink-0"
-                        onClick={() => setGroupMembers(prev => prev.filter((_, j) => j !== i))}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 pl-16">
-                      <Select value={m.staffId} onValueChange={(v) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, staffId: v } : x))}>
-                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("common.staff")} /></SelectTrigger>
-                        <SelectContent>
-                          {staff.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={m.startTime} onValueChange={(v) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, startTime: v } : x))}>
-                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("calendar.start")} /></SelectTrigger>
-                        <SelectContent>
-                          {timeOptionsWith(m.startTime).map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="pl-16">
-                      <Input
-                        placeholder={tr("calendar.phoneOptional")}
-                        value={m.clientPhone}
-                        onChange={(e) => setGroupMembers(prev => prev.map((x, j) => j === i ? { ...x, clientPhone: e.target.value } : x))}
-                        className={FIELD}
-                      />
-                    </div>
-                  </div>
-                ))}
-                <Button
-                  type="button" variant="outline" className="w-full h-8 text-xs"
-                  onClick={() => setGroupMembers(prev => {
-                    // Default the new member to start right after the previous one
-                    // on the same staff (sequential → no auto-conflict). The user
-                    // can switch to a different staff to run them at the same time.
-                    const last = prev[prev.length - 1];
-                    const prevStart = last?.startTime || appointmentForm.startTime;
-                    const nextStart = prevStart ? addMinutesToTime(prevStart, serviceDuration(appointmentForm.serviceId)) : appointmentForm.endTime;
-                    return [...prev, { clientName: "", clientPhone: "", clientEmail: "", staffId: appointmentForm.staffId, startTime: nextStart }];
-                  })}
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />{" "}{tr("calendar.addMember")}
-                </Button>
-              </div>
-            )}
-
-            {/* Extra services (multi-service) — appended after the primary service.
-                Not available in group mode. */}
-            {bookingMode !== "group" && !(selectedPackage && !editingAppointmentId) && (
-              <div className="space-y-2">
-                {extraServices.map((es, i) => (
-                  <div key={i} className="space-y-1 rounded-md border border-border p-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] text-muted-foreground">{editingVisit ? tr("calendar.service", { value: i + 2 }) : tr("calendar.extraService", { value: i + 1 })}</Label>
-                      <Button
-                        type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeService")} className={`h-7 w-7 ${editingAppointmentId ? "hidden" : ""}`}
-                        onClick={() => setExtraServices(prev => prev.filter((_, j) => j !== i))}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                    </div>
-                    <Select
-                      value={es.serviceId}
-                      onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => {
-                        if (j !== i) return x;
-                        const start = x.startTime || appointmentForm.endTime;
-                        return { ...x, serviceId: v, endTime: start ? addMinutesToTime(start, serviceDuration(v)) : x.endTime };
-                      }))}
-                    >
-                      <SelectTrigger className={FIELD}><SelectValue placeholder={tr("common.service")} /></SelectTrigger>
-                      <SelectContent>
-                        {services.map((s) => (<SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>))}
-                      </SelectContent>
-                    </Select>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Select value={es.staffId} onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => j === i ? { ...x, staffId: v } : x))}>
-                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("common.staff")} /></SelectTrigger>
-                        <SelectContent>
-                          {staff.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={es.startTime} onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => j === i ? { ...x, startTime: v, endTime: addMinutesToTime(v, serviceDuration(x.serviceId)) } : x))}>
-                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("calendar.start")} /></SelectTrigger>
-                        <SelectContent>
-                          {timeOptionsWith(es.startTime).map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={es.endTime} onValueChange={(v) => setExtraServices(prev => prev.map((x, j) => j === i ? { ...x, endTime: v } : x))}>
-                        <SelectTrigger className={FIELD}><SelectValue placeholder={tr("calendar.end")} /></SelectTrigger>
-                        <SelectContent>
-                          {timeOptionsWith(es.endTime).map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
-                {editingVisit && (
-                  <p className="text-xs text-muted-foreground">
-                    {tr("calendar.thisBookingHasServicesYou", { count: editingVisit.ids.length })}
-                  </p>
-                )}
-                <Button
-                  type="button" variant="outline" className={`w-full h-8 text-xs ${editingAppointmentId ? "hidden" : ""}`}
-                  onClick={() => {
-                    const start = appointmentForm.endTime || appointmentForm.startTime;
-                    setExtraServices(prev => [...prev, { serviceId: "", staffId: appointmentForm.staffId, startTime: start, endTime: start ? addMinutesToTime(start, 30) : "" }]);
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />{" "}{tr("calendar.addAnotherService")}
-                </Button>
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="space-y-1">
-              <Label className={FIELD_LABEL}>{tr("calendar.notesOptional")}</Label>
-              <Textarea
-                placeholder={tr("calendar.addNotes")}
-                value={appointmentForm.notes}
-                onChange={(e) => setAppointmentForm(prev => ({ ...prev, notes: e.target.value }))}
-                className="h-16 text-xs resize-none"
-              />
-            </div>
-
-            {/* Requested by client */}
-            <div className="flex items-center gap-1.5 py-0.5">
-              <Button
-                type="button" variant="ghost" size="icon" className="h-6 w-6"
-                aria-label={tr("calendar.requestedByClient")}
-                aria-pressed={appointmentForm.requestedByClient}
-                onClick={() => setAppointmentForm(prev => ({ ...prev, requestedByClient: !prev.requestedByClient }))}
-              >
-                <Heart className={cn("h-3.5 w-3.5", appointmentForm.requestedByClient ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
-              </Button>
-              <span className="text-xs text-muted-foreground">{tr("calendar.requestedByClient")}</span>
-            </div>
-
-            {/* Financial Summary — reflects group members / extra services / occurrences */}
-            <div className="space-y-1.5 rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line))]">
-              {(() => {
-                const primary = servicePrice(appointmentForm.serviceId) || 0;
-                let total = 0;
-                if (bookingMode === "group") {
-                  total = primary * (groupMembers.length + 1);
-                } else {
-                  const perVisit = primary + extraServices.reduce((sum, es) => sum + (servicePrice(es.serviceId) || 0), 0);
-                  const occurrences = bookingMode === "recurring" ? computeRecurrenceDates(appointmentForm.date, recurrence).length : 1;
-                  total = perVisit * occurrences;
-                }
-                const label = `${total.toFixed(2)} ${currencySymbol()}`;
-                return (
-                  <>
-                    <div className="flex justify-between items-center">
-                      <Label className={FIELD_LABEL}>{tr("common.total")}</Label>
-                      <span className="text-xs font-semibold">{label}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <Label className={FIELD_LABEL}>{tr("calendar.toBePaid")}</Label>
-                      <span className="text-xs font-semibold">{label}</span>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className={SHEET_FOOT}>
-            <Button
-              variant="outline"
-              className={SECONDARY_BTN}
-              onClick={() => setIsNewAppointmentOpen(false)}
-            >
-              {tr("common.cancel")}
-            </Button>
-            <Button
-              className={PRIMARY_BTN}
-              disabled={isBatchSubmitting || !appointmentForm.serviceId || !appointmentForm.startTime
-                || (!(selectedPackage && !editingAppointmentId) && (!appointmentForm.staffId || !appointmentForm.endTime))}
-              onClick={async () => {
-                try {
-                  // FG-W3-01: a package goes through its own endpoint (server-side planner).
-                  if (selectedPackage && !editingAppointmentId) {
-                    const day = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
-                    const todayStart = salonNow(salonTz);
-                    todayStart.setHours(0, 0, 0, 0);
-                    if (day < todayStart) {
-                      toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
-                      return;
-                    }
-                    await submitPackageBooking();
-                    return;
-                  }
-                  if (!appointmentForm.serviceId) {
-                    toast.error(tr("calendar.pleaseSelectAService"));
-                    return;
-                  }
-                  if (!appointmentForm.staffId) {
-                    toast.error(tr("calendar.pleaseSelectAStaffMember"));
-                    return;
-                  }
-                  if (!appointmentForm.startTime || !appointmentForm.endTime) {
-                    toast.error(tr("calendar.pleaseSelectStartAndEnd"));
-                    return;
-                  }
-
-                  // End time must be after start time
-                  if (appointmentForm.startTime && appointmentForm.endTime &&
-                      appointmentForm.startTime >= appointmentForm.endTime) {
-                    toast.error(tr("calendar.endTimeMustBeAfter"));
-                    return;
-                  }
-
-                  // Email format validation
-                  const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
-                  if (appointmentForm.clientEmail && !emailRegex.test(appointmentForm.clientEmail)) {
-                    toast.error(tr("calendar.invalidEmailAddressFormat"));
-                    return;
-                  }
-
-                  // Field length limits
-                  if (appointmentForm.clientName && appointmentForm.clientName.length > 255) {
-                    toast.error(tr("calendar.clientNameIsTooLong"));
-                    return;
-                  }
-                  if (appointmentForm.notes && appointmentForm.notes.length > 2000) {
-                    toast.error(tr("calendar.notesAreTooLongMax"));
-                    return;
-                  }
-
-                  // Past date check for new appointments only
-                  const appointmentDate = parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date());
-                  const today = salonNow(salonTz);
-                  today.setHours(0, 0, 0, 0);
-                  if (!editingAppointmentId && appointmentDate < today) {
-                    toast.error(tr("calendar.cannotCreateAppointmentsInThe"));
-                    return;
-                  }
-
-                  // Advanced modes (group / recurring / multi-service) are composed
-                  // from the single-booking endpoint — hand off to the batch submitter.
-                  if (!editingAppointmentId && (bookingMode !== "single" || extraServices.length > 0)) {
-                    await submitAdvancedBooking();
-                    return;
-                  }
-
-                  // A multi-service visit is saved as a whole: every appointment of it, one after
-                  // the other. If one is refused, the ones already written are put back.
-                  if (editingAppointmentId && editingVisit) {
-                    const lines = [
-                      { serviceId: appointmentForm.serviceId, staffId: appointmentForm.staffId, startTime: appointmentForm.startTime, endTime: appointmentForm.endTime },
-                      ...extraServices,
-                    ];
-                    if (lines.length !== editingVisit.ids.length || lines.some((l) => !l.serviceId || !l.staffId || !l.startTime || !l.endTime)) {
-                      toast.error(tr("calendar.fillInTheServiceTeam"));
-                      return;
-                    }
-                    const date = appointmentForm.date || format(currentDate, 'yyyy-MM-dd');
-                    const notes = withRequestedFlag(appointmentForm.notes, appointmentForm.requestedByClient);
-                    const who = {
-                      clientId: appointmentForm.clientId ? appointmentForm.clientId : undefined,
-                      clientName: appointmentForm.clientName || undefined,
-                      clientPhone: appointmentForm.clientPhone || undefined,
-                      clientEmail: appointmentForm.clientEmail || undefined,
-                    };
-                    const done: number[] = [];
-                    try {
-                      for (let i = 0; i < lines.length; i++) {
-                        const l = lines[i];
-                        const o = editingVisit.original[i];
-                        await appointmentService.updateAppointment(editingVisit.ids[i], {
-                          businessId: businessId!,
-                          staffId: l.staffId,
-                          serviceId: l.serviceId,
-                          appointmentDate: date,
-                          startTime: l.startTime,
-                          endTime: l.endTime,
-                          ...who,
-                          // The price the booking was made at, unless the service itself changed.
-                          price: String(o.serviceId) === l.serviceId ? o.price : servicePrice(l.serviceId),
-                          notes,
-                        } as never);
-                        done.push(i);
-                      }
-                    } catch (err) {
-                      for (const i of done) {
-                        const o = editingVisit.original[i];
-                        await appointmentService.updateAppointment(editingVisit.ids[i], {
-                          businessId: businessId!, staffId: o.staffId, serviceId: o.serviceId,
-                          appointmentDate: editingVisit.date,
-                          startTime: o.startTime, endTime: o.endTime, price: o.price, ...who,
-                        } as never).catch(() => undefined);
-                      }
-                      toast.error(tr("calendar.nothingWasChanged", { value: (err instanceof Error && err.message) || tr("calendar.couldNotSave") }));
-                      await refreshAppointments();
-                      return;
-                    }
-                    toast.success(tr("calendar.bookingUpdated"));
-                    await refreshAppointments();
-                    setIsNewAppointmentOpen(false);
-                    setEditingAppointmentId(null);
-                    setEditingVisit(null);
-                    setAppointmentForm({ clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` });
-                    return;
-                  }
-
-                  const selectedService = services.find(s => s.id.toString() === appointmentForm.serviceId);
-                  
-                  const appointmentData = {
-                    staffId: appointmentForm.staffId,
-                    serviceId: appointmentForm.serviceId,
-                    appointmentDate: appointmentForm.date || format(currentDate, 'yyyy-MM-dd'),
-                    startTime: appointmentForm.startTime,
-                    endTime: appointmentForm.endTime,
-                    clientId: appointmentForm.clientId ? appointmentForm.clientId : undefined,
-                    clientName: appointmentForm.clientName || undefined,
-                    clientPhone: appointmentForm.clientPhone || undefined,
-                    clientEmail: appointmentForm.clientEmail || undefined,
-                    price: selectedService?.price,
-                    notes: withRequestedFlag(appointmentForm.notes, appointmentForm.requestedByClient),
-                    // Key generated when form opened — stable across retries for this booking attempt
-                    idempotencyKey: appointmentForm.idempotencyKey,
-                  };
-
-                  const EMPTY_FORM = { clientId: "", clientName: "", clientPhone: "", clientEmail: "", serviceId: "", staffId: "", startTime: "", endTime: "", notes: "", price: "", date: format(currentDate, 'yyyy-MM-dd'), requestedByClient: false, idempotencyKey: `booking-${Date.now()}-${Math.random().toString(36).slice(2)}` };
-
-                  // Conflicts (closed day, time off, double booking...) come back from the server as a
-                  // list; the booking-conflict dialog asks the person and re-sends with an override.
-                  {
-                    if (editingAppointmentId) {
-                      await updateAppointmentAPI(editingAppointmentId, appointmentData);
-                    } else {
-                      await createAppointmentAPI(appointmentData);
-                      // The server closes the waitlist entry on the booking's own email,
-                      // but the column is a snapshot taken when the page loaded — so it
-                      // kept showing someone who had just been booked in.
-                      if (placingEntryId != null) {
-                        setWaitlist(prev => prev.filter(w => w.id !== placingEntryId));
-                        setPlacingEntryId(null);
-                      }
-                      reloadWaitlist();
-                    }
-                    setIsNewAppointmentOpen(false);
-                    setEditingAppointmentId(null);
-                    setFinalSelection(null);
-                    setAppointmentForm(EMPTY_FORM);
-                  }
-                } catch (error) {
-                  // Error already handled in hook
-                }
-              }}
-            >
-              {isBatchSubmitting
-                ? tr("common.saving")
-                : editingAppointmentId
-                  ? tr("common.saveChanges")
-                  : bookingMode === 'group'
-                    ? tr("calendar.bookGroup", { value: groupMembers.length + 1 })
-                    : bookingMode === 'recurring'
-                      ? tr("calendar.book", { count: computeRecurrenceDates(appointmentForm.date, recurrence).length })
-                      : extraServices.length > 0
-                        ? tr("calendar.bookServices", { value: extraServices.length + 1 })
-                        : tr("calendar.bookAppointment")}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* New / edit booking drawer (bz kit) */}
+      {isNewAppointmentOpen && (
+        <BookingDrawer
+          editing={!!editingAppointmentId}
+          editingVisit={editingVisit}
+          form={appointmentForm}
+          setForm={setAppointmentForm}
+          onClose={closeBookingDrawer}
+          onSubmit={submitBooking}
+          submitting={isBatchSubmitting}
+          canSubmit={!!appointmentForm.serviceId && !!appointmentForm.startTime
+            && (!!(selectedPackage && !editingAppointmentId) || (!!appointmentForm.staffId && !!appointmentForm.endTime))}
+          submitLabel={editingAppointmentId
+            ? tr("common.saveChanges")
+            : bookingMode === 'group'
+              ? tr("calendar.bookGroup", { value: groupMembers.length + 1 })
+              : bookingMode === 'recurring'
+                ? tr("calendar.book", { count: computeRecurrenceDates(appointmentForm.date, recurrence).length })
+                : extraServices.length > 0
+                  ? tr("calendar.bookServices", { value: extraServices.length + 1 })
+                  : tr("calendar.bookAppointment")}
+          subtitle={format(parse(appointmentForm.date || format(currentDate, 'yyyy-MM-dd'), 'yyyy-MM-dd', new Date()), 'EEEE, d MMMM')}
+          clients={clients}
+          clientSearchOpen={clientSearchOpen}
+          setClientSearchOpen={setClientSearchOpen}
+          services={services}
+          serviceQuery={serviceQuery}
+          setServiceQuery={setServiceQuery}
+          staff={staff}
+          bookingMode={bookingMode}
+          setBookingMode={setBookingMode}
+          recurrence={recurrence}
+          setRecurrence={setRecurrence}
+          recurrenceDates={computeRecurrenceDates(appointmentForm.date, recurrence)}
+          seriesPreview={seriesPreview}
+          describeConflict={describeConflict}
+          groupMembers={groupMembers}
+          setGroupMembers={setGroupMembers}
+          extraServices={extraServices}
+          setExtraServices={setExtraServices}
+          selectedPackage={selectedPackage}
+          packageParty={packageParty}
+          setPackageParty={setPackageParty}
+          businessId={businessId}
+          currentDate={currentDate}
+          setCurrentDate={setCurrentDate}
+          salonNow={() => salonNow(salonTz)}
+          salonToday={salonToday}
+          getBusinessHoursForDate={getBusinessHoursForDate}
+          timeOptionsWith={timeOptionsWith}
+          serviceDuration={serviceDuration}
+          addMinutesToTime={addMinutesToTime}
+          initialsOf={initialsOf}
+          total={bookingTotal}
+        />
+      )}
 
       {/* Add Time Reservation Sheet */}
       <Sheet open={isAddReservationOpen} onOpenChange={(open) => {
