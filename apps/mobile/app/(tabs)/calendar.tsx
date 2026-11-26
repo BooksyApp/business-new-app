@@ -1,90 +1,113 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { BookingSheet } from '@/components/BookingSheet';
-import { DayStrip, Timeline, type Density } from '@/components/calendar';
+import { DayStrip, Timeline } from '@/components/calendar';
+import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Chip, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { ErrorState, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type Staff } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { dateLabel, sameDay, toMin } from '@/lib/format';
+import { addDays, monthLabel, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
-import { font } from '@/theme/tokens';
+import { circShadow, ctaShadow, font } from '@/theme/tokens';
 
-const DENSITY_KEY = 'booqi.biz.density';
+/** Round 42 px icon button (`.circ`). */
+function Circ({ icon, onPress, label, violet }: { icon: string; onPress: () => void; label: string; violet?: boolean }) {
+  const { t } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: violet ? t.violet : t.surface }, violet ? ctaShadow : circShadow]}>
+      <Icon name={icon} size={22} color={violet ? '#fff' : t.ink} />
+    </Pressable>
+  );
+}
+
+/** `.chip`: 38 tall, pill, 14/600; `on` = ink fill, `vo` = soft violet with a 1.5 violet ring. */
+function Chip38({ label, on, vo, icon, onPress }: { label: string; on?: boolean; vo?: boolean; icon?: string; onPress?: () => void }) {
+  const { t } = useTheme();
+  const fg = on ? t.canvas : vo ? t.vtext : t.ink;
+  return (
+    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button" accessibilityState={{ selected: !!(on || vo) }}
+      style={{ height: 38, paddingHorizontal: 15, borderRadius: 19, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: on ? t.ink : vo ? t.vsoft : t.surface, borderWidth: on ? 0 : vo ? 1.5 : 1, borderColor: vo ? t.violet : t.line }}>
+      {icon ? <Icon name={icon} size={18} color={fg} /> : null}
+      <Text style={{ fontFamily: font.s, fontSize: 14, color: fg }}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function Calendar() {
   const { t } = useTheme();
+  const router = useRouter();
   const { salon, version } = useApp();
   const [date, setDate] = useState(() => new Date());
-  const [density, setDensity] = useState<Density>('comfy');
   const [open, setOpen] = useState<Appointment | null>(null);
-  useEffect(() => { AsyncStorage.getItem(DENSITY_KEY).then((v) => { if (v === 'compact' || v === 'comfy') setDensity(v); }).catch(() => {}); }, []);
-  const pick = (d: Density) => { setDensity(d); AsyncStorage.setItem(DENSITY_KEY, d).catch(() => {}); };
+  const [focus, setFocus] = useState<string | null>(null);
+  const [chips, setChips] = useState(true);
 
   const sid = salon?.id ?? '';
   const staff = useLoad<Staff[]>(() => api.staff(sid), [sid]);
-  const day = useLoad(async () => {
-    const [appts, waitlist] = await Promise.all([api.appointments(sid, date), api.waitlist(sid).catch(() => [])]);
-    return { appts, waitlist };
-  }, [sid, date.toDateString(), version]);
+  const day = useLoad(() => api.appointments(sid, date), [sid, date.toDateString(), version]);
 
-  const masters = useMemo(() => {
+  const all = useMemo(() => {
     const list = (staff.data ?? []).filter((s) => s.isActive !== false);
     const known = new Set(list.map((s) => String(s.id)));
-    const orphan = (day.data?.appts ?? []).some((a) => !known.has(String(a.staffId)));
+    const orphan = (day.data ?? []).some((a) => !known.has(String(a.staffId)));
     return orphan ? [...list, { id: '__none', name: tr('calendar.unassigned') } as Staff] : list;
   }, [staff.data, day.data]);
+  const masters = focus ? all.filter((m) => String(m.id) === focus) : all;
 
   // Visible hour range from data, never less than 9-19.
   const { startHour, endHour } = useMemo(() => {
-    const a = day.data?.appts ?? [];
+    const a = day.data ?? [];
     const lo = Math.min(9, ...a.map((x) => Math.floor(toMin(x.startTime) / 60)));
     const hi = Math.max(19, ...a.map((x) => Math.ceil(toMin(x.endTime) / 60)));
     return { startHour: lo, endHour: Math.min(24, hi + 1) };
   }, [day.data]);
 
-  const waiting = (day.data?.waitlist ?? []).filter((w) => w.status !== 'CANCELLED' && (!w.preferredDate || w.preferredDate.slice(0, 10) === toDay(date)));
   const err = (staff.error || day.error) as Error | null;
-  const isToday = sameDay(date, new Date());
+  const month = monthLabel(date);
 
   return (
     <Screen>
-      <Header title={tr('calendar.title')} subtitle={`${salon?.name ?? ''} · ${dateLabel(date)}`}
-        right={!isToday ? <Chip label={tr('calendar.goToday')} onPress={() => setDate(new Date())} /> : undefined} />
-      <DayStrip date={date} onChange={setDate} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, paddingHorizontal: 14, paddingBottom: 8 }}>
-        <Text style={{ fontFamily: font.s, fontSize: 12.5, color: t.muted, marginRight: 4 }}>{tr('calendar.density')}</Text>
-        {(['comfy', 'compact'] as const).map((d) => (
-          <Pressable key={d} onPress={() => pick(d)} accessibilityRole="button" accessibilityState={{ selected: density === d }}
-            style={{ height: 32, paddingHorizontal: 14, borderRadius: 16, justifyContent: 'center', backgroundColor: density === d ? t.vsoft : t.fill }}>
-            <Text style={{ fontFamily: density === d ? font.b : font.s, fontSize: 13, color: density === d ? t.vtext : t.muted }}>{d === 'comfy' ? tr('calendar.densityComfy') : tr('calendar.densityCompact')}</Text>
-          </Pressable>
-        ))}
+      <View style={{ paddingHorizontal: 16 }}>
+        <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ fontFamily: font.x, fontSize: 32, lineHeight: 35, letterSpacing: -0.96, color: t.ink }}>{tr('calendar.title')}</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Circ icon="sliders" label={tr('calendar.allTeam')} onPress={() => setChips((v) => !v)} />
+            <Circ icon="plus" violet label={tr('calendar.newAppointment')} onPress={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, marginBottom: 14 }}>
+          <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted, textTransform: 'capitalize' }}>{month}</Text>
+          <View style={{ flexDirection: 'row', gap: 18 }}>
+            <Pressable onPress={() => setDate(addDays(date, -7))} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('calendar.prevWeek')}><Icon name="back" size={20} color={t.muted} /></Pressable>
+            <Pressable onPress={() => setDate(addDays(date, 7))} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('calendar.nextWeek')}><Icon name="chev" size={20} color={t.muted} /></Pressable>
+          </View>
+        </View>
+        <DayStrip date={date} onChange={setDate} />
+        {chips ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14, flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
+            <Chip38 label={tr('calendar.day')} on />
+            <Chip38 label={tr('calendar.allTeam')} icon="users" vo={!focus} onPress={() => setFocus(null)} />
+            {all.map((m) => <Chip38 key={m.id} label={m.name} vo={focus === String(m.id)} onPress={() => setFocus(focus === String(m.id) ? null : String(m.id))} />)}
+          </ScrollView>
+        ) : null}
       </View>
-      {waiting.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 8, gap: 8 }}>
-          {waiting.map((w) => (
-            <View key={w.id} style={{ backgroundColor: t.gsoft, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderStyle: 'dashed', borderColor: '#e83e63' }}>
-              <Text style={{ fontFamily: font.b, fontSize: 12.5, color: t.gink }}>{tr('calendar.waiting')} · {w.clientName || '-'}</Text>
-              <Text style={{ fontFamily: font.m, fontSize: 11.5, color: t.gink }}>{[w.serviceName, w.staffName].filter(Boolean).join(' · ')}</Text>
-            </View>
-          ))}
-        </ScrollView>
-      ) : null}
-      {err ? (
-        <ErrorState error={err} onRetry={() => { void staff.reload(); void day.reload(); }} />
-      ) : staff.loading || (day.loading && !day.data) ? (
-        <Skeleton rows={5} height={80} />
-      ) : masters.length === 0 ? (
-        <StateView icon="users" title={tr('calendar.empty')} body={tr('sections.teamHint')} />
-      ) : (
-        <Timeline date={date} masters={masters} appts={day.data?.appts ?? []} density={density} startHour={startHour} endHour={endHour}
-          refreshing={day.refreshing} onRefresh={() => void day.reload()} onOpen={setOpen} />
-      )}
+      <View style={{ flex: 1, marginTop: 12 }}>
+        {err ? (
+          <ErrorState error={err} onRetry={() => { void staff.reload(); void day.reload(); }} />
+        ) : staff.loading || (day.loading && !day.data) ? (
+          <Skeleton rows={5} height={80} />
+        ) : masters.length === 0 ? (
+          <StateView icon="users" title={tr('calendar.empty')} body={tr('sections.teamHint')} />
+        ) : (
+          <Timeline date={date} masters={masters} appts={day.data ?? []} startHour={startHour} endHour={endHour}
+            refreshing={day.refreshing} onRefresh={() => void day.reload()} onOpen={setOpen} />
+        )}
+      </View>
       <BookingSheet appt={open} onClose={() => setOpen(null)} />
     </Screen>
   );

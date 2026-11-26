@@ -2,16 +2,16 @@ import React, { useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, View, useWindowDimensions } from 'react-native';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
-import { Btn, Chip, Field, Pill, Row, Skeleton } from '@/components/ui';
+import { Avatar, Btn, Chip, Field, Pill, Skeleton } from '@/components/ui';
+import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { markersOf } from '@/components/calendar';
 import { t as tr } from '@/i18n';
 import { api, ApiError, toDay, type Appointment } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { addDays, dateLabel, digits, fromIso, fromMin, hhmm, money, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
-import { font } from '@/theme/tokens';
+import { cardShadow, font, mesh } from '@/theme/tokens';
 
 type Step = 'view' | 'cancel' | 'reschedule';
 const TONE = { PENDING: 'violet', CONFIRMED: 'violet', COMPLETED: 'ok', CANCELLED: 'muted', NO_SHOW: 'guava' } as const;
@@ -58,63 +58,81 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
 
   return (
     <ScrollView style={{ maxHeight: H * 0.78 }} contentContainerStyle={{ paddingBottom: 28, gap: 12 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 24, letterSpacing: -0.5, color: t.ink }}>{a.clientName || '-'}</Text>
-          <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{dateLabel(fromIso(a.appointmentDate))} · {hhmm(a.startTime)}-{hhmm(a.endTime)}</Text>
-        </View>
-        <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />
-      </View>
-
       {step === 'view' ? (
         <>
-          {late ? (
-            <View style={{ backgroundColor: t.gsoft, borderRadius: 16, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-              <Icon name="timer" size={22} color={t.gink} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.gink }}>{tr('calendar.late', { min: a.lateMinutes ?? 0 })}</Text>
-                <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink }}>{tr('calendar.lateHint')}</Text>
+          {/* `.tk` ticket: mesh top (status + number, avatar + client), dashed cut, 2-column grid of k/v */}
+          <View style={{ backgroundColor: t.surface, borderRadius: 24, overflow: 'hidden', ...cardShadow }}>
+            <View style={{ padding: 20, paddingVertical: 18, experimental_backgroundImage: mesh } as any}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 }}>
+                {late ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingLeft: 9, paddingRight: 12, borderRadius: 14, backgroundColor: t.gsoft }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.guava }} />
+                    <Text style={{ fontFamily: font.x, fontSize: 14, color: t.gink }}>{tr('calendar.late', { min: a.lateMinutes ?? 0 })}</Text>
+                  </View>
+                ) : <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />}
+                <Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>№ {String(a.id).slice(0, 6).toUpperCase()}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 }}>
+                <Avatar name={a.clientName ?? ''} size={56} />
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 24, letterSpacing: -0.48, color: t.ink }}>{a.clientName || '-'}</Text>
+                  <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{a.clientPhone || dateLabel(fromIso(a.appointmentDate))}</Text>
+                </View>
               </View>
             </View>
-          ) : null}
-          {phone ? (
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Btn label={tr('common.call')} icon="phone" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`tel:${phone}`)} />
-              <Btn label={tr('common.whatsapp')} icon="chat" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`https://wa.me/${digits(phone)}`)} />
-            </View>
-          ) : null}
-          <View style={{ backgroundColor: t.surface, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 6 }}>
-            <Row label={tr('appt.service')} value={a.serviceName} />
-            <Row label={tr('appt.master')} value={a.staffName} />
-            <Row label={tr('appt.price')} value={money(a.price, cur)} />
-            <Row label={tr('appt.paid')} value={a.paymentStatus === 'PAID' ? tr('appt.paid') : tr('appt.unpaid')} />
-            {a.depositAmount ? <Row label={tr('appt.deposit')} value={`${money(a.depositAmount, cur)}${a.depositPaid ? ' ✓' : ''}`} /> : null}
-            {a.notes ? <Row label={tr('appt.notes')} value={a.notes} /> : null}
-          </View>
-          {markersOf(a).length ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {markersOf(a).map((m) => (
-                <View key={m.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 30, paddingHorizontal: 10, borderRadius: 15, backgroundColor: t.fill }}>
-                  <Icon name={m.icon} size={14} color={t.muted} />
-                  <Text style={{ fontFamily: font.s, fontSize: 12.5, color: t.muted }}>{tr(m.label)}</Text>
+            <View style={{ marginHorizontal: 18, borderTopWidth: 2, borderStyle: 'dashed', borderColor: t.line }} />
+            <View style={{ padding: 20, paddingVertical: 16, flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, columnGap: 12 }}>
+              {([
+                ['appt.service', a.serviceName], ['appt.team', a.staffName], ['appt.time', `${hhmm(a.startTime)} – ${hhmm(a.endTime)}`],
+                ['appt.payment', a.paymentStatus === 'PAID' ? tr('appt.paid') : money(a.price, cur) !== '—' ? `${money(a.price, cur)} · ${tr('appt.unpaid')}` : tr('appt.atSalon')],
+              ] as const).map(([k, v]) => (
+                <View key={k} style={{ width: '47%' }}>
+                  <Text style={{ fontFamily: font.x, fontSize: 14, letterSpacing: 1.12, color: t.muted }}>{tr(k).toUpperCase()}</Text>
+                  <Text numberOfLines={2} style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 2 }}>{v || '-'}</Text>
                 </View>
               ))}
+              {a.depositAmount ? (
+                <View style={{ width: '47%' }}>
+                  <Text style={{ fontFamily: font.x, fontSize: 14, letterSpacing: 1.12, color: t.muted }}>{tr('appt.deposit').toUpperCase()}</Text>
+                  <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 2 }}>{money(a.depositAmount, cur)}{a.depositPaid ? ' ✓' : ''}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+          {a.notes ? (
+            <View style={{ borderRadius: 16, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, paddingHorizontal: 16, paddingTop: 9, paddingBottom: 10, minHeight: 58 }}>
+              <Text style={{ fontFamily: font.s, fontSize: 14, color: t.muted }}>{tr('appt.salonNote')}</Text>
+              <Text style={{ fontFamily: font.s, fontSize: 16, color: t.ink }}>{a.notes}</Text>
             </View>
           ) : null}
           {live.loading && !live.data ? <Skeleton rows={1} height={20} /> : null}
           {open ? (
-            <View style={{ gap: 10 }}>
-              {a.status === 'PENDING' ? <Btn label={tr('appt.confirm')} icon="check" loading={busy} onPress={() => void run(() => api.confirmAppointment(a.id))} /> : null}
-              <Btn label={tr('appt.reschedule')} icon="cal" variant="secondary" onPress={() => setStep('reschedule')} />
-              <Btn label={tr('appt.noShow')} icon="eyeoff" variant="secondary" loading={busy} onPress={() => void run(() => api.noShow(a.id))} />
-              <Btn label={tr('appt.cancel')} icon="x" variant="danger" onPress={() => setStep('cancel')} />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {a.status === 'PENDING' ? <Btn label={tr('appt.arrived')} icon="check" loading={busy} style={{ flex: 1 }} onPress={() => void run(() => api.confirmAppointment(a.id))} /> : null}
+              <Btn label={tr('appt.move')} icon="repeat" variant="secondary" style={{ flex: 1 }} onPress={() => setStep('reschedule')} />
             </View>
           ) : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
+            {phone ? (
+              <Pressable onPress={() => void Linking.openURL(`https://wa.me/${digits(phone)}`)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Icon name="chat" size={20} color={t.vtext} />
+                <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('appt.messageClient')}</Text>
+              </Pressable>
+            ) : <View />}
+            {open ? (
+              <View style={{ flexDirection: 'row', gap: 18 }}>
+                <Pressable onPress={() => void run(() => api.noShow(a.id))} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{tr('appt.noShow')}</Text></Pressable>
+                <Pressable onPress={() => setStep('cancel')} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.gink }}>{tr('appt.cancel')}</Text></Pressable>
+              </View>
+            ) : null}
+          </View>
+          {phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" onPress={() => void Linking.openURL(`tel:${phone}`)} /> : null}
         </>
       ) : null}
 
       {step === 'cancel' ? (
         <>
+          <Text style={{ fontFamily: font.x, fontSize: 20, color: t.ink }}>{tr('appt.cancelTitle')}</Text>
           <Field label={tr('appt.cancelReason')} value={reason} onChangeText={setReason} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Btn label={tr('common.back')} variant="secondary" style={{ flex: 1 }} onPress={() => setStep('view')} />
