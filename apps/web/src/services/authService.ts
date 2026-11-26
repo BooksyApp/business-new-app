@@ -192,7 +192,7 @@ class AuthService {
         body: JSON.stringify({
           emailOrPhone: data.email,
           password: data.password,
-          app: 'WEB_BUSINESS',
+          app: appAudience(),
         }),
       });
     } catch (primaryError) {
@@ -209,7 +209,7 @@ class AuthService {
         body: JSON.stringify({
           emailOrPhone: data.email,
           password: data.password,
-          app: 'WEB_BUSINESS',
+          app: appAudience(),
         }),
       });
     }
@@ -267,6 +267,14 @@ class AuthService {
       return { valid: true, message: t("services.couldNotCheckTheSession") };
     }
   }
+}
+
+/** Audience for the login `app` field: the Expo shell injects window.__BOOQI_APP__ ('ios'|'android'). */
+function appAudience(): string {
+  const flag = typeof window !== 'undefined' ? (window as unknown as { __BOOQI_APP__?: string }).__BOOQI_APP__ : undefined;
+  if (flag === 'ios') return 'IOS_BUSINESS';
+  if (flag === 'android') return 'ANDROID_BUSINESS';
+  return 'WEB_BUSINESS';
 }
 
 export const authService = new AuthService();
