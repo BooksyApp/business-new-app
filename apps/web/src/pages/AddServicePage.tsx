@@ -1,9 +1,9 @@
 import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { RouteSheet, SheetTabs } from "@/components/page/RouteSheet";
+import { BzScope, Btn, Drawer, Tabs } from "@/components/bz";
+import { sheetSecondary } from "@/components/page/booqiStyles";
 import { ClientPreview } from "@/components/page/kit";
-import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
 import ItemsCategoryPage from "./ItemsCategoryPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
+  X,
   HelpCircle,
   Bold,
   Italic,
@@ -474,35 +475,35 @@ export default function AddServicePage() {
   const close = () => navigate(getPath("items-category"));
 
   return (
-    <RouteSheet
-      backdrop={<ItemsCategoryPage />}
-      onClose={close}
-      size="lg"
-      title={isEditMode ? formData.serviceName || tr("addService.editService") : tr("addService.newService")}
-      description={isEditMode ? tr("addService.changesShowOnBooqiAs") : tr("addService.clientsCanBookItOnline")}
-      header={
-        <SheetTabs
-          label={tr("addService.serviceSections")}
-          value={activeSidebarItem}
-          onChange={setActiveSidebarItem}
-          items={sidebarItems.filter((i) => i.id !== "materials" || isEditMode).map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLocaleLowerCase(getLocale()) }))}
-        />
-      }
-      footer={
-        <>
-          {!isEditMode ? (
-            <Button variant="outline" className={sheetSecondary} onClick={handleSaveAndAddNext} disabled={!formData.serviceName.trim() || creating}>
-              {tr("common.saveAddNext")}
-            </Button>
-          ) : (
-            <Button variant="outline" className={sheetSecondary} onClick={close}>{tr("common.cancel")}</Button>
-          )}
-          <Button className={sheetPrimary} onClick={handleSave} disabled={!formData.serviceName.trim() || creating}>
-            {creating ? (isEditMode ? tr("addService.updating") : tr("common.saving")) : isEditMode ? tr("common.saveChanges") : tr("addService.saveService")}
-          </Button>
-        </>
-      }
-    >
+    <BzScope>
+      <ItemsCategoryPage />
+      <Drawer
+        title={isEditMode ? formData.serviceName || tr("addService.editService") : tr("addService.newService")}
+        sub={isEditMode ? tr("addService.changesShowOnBooqiAs") : tr("addService.clientsCanBookItOnline")}
+        onClose={close}
+        closeIcon={<X className="ic" />}
+        tabs={
+          <Tabs
+            value={activeSidebarItem}
+            onChange={setActiveSidebarItem}
+            items={sidebarItems.filter((i) => i.id !== "materials" || isEditMode).map((i) => ({ key: i.id, label: i.label.charAt(0) + i.label.slice(1).toLocaleLowerCase(getLocale()) }))}
+          />
+        }
+        footer={
+          <>
+            {!isEditMode ? (
+              <Btn kind="soft" onClick={handleSaveAndAddNext} disabled={!formData.serviceName.trim() || creating}>
+                {tr("common.saveAddNext")}
+              </Btn>
+            ) : (
+              <Btn kind="ol" onClick={close}>{tr("common.cancel")}</Btn>
+            )}
+            <Btn kind="v" onClick={handleSave} disabled={!formData.serviceName.trim() || creating}>
+              {creating ? (isEditMode ? tr("addService.updating") : tr("common.saving")) : isEditMode ? tr("common.saveChanges") : tr("addService.saveService")}
+            </Btn>
+          </>
+        }
+      >
             {activeSidebarItem === "general" && (
               <ClientPreview where={tr("addService.yourMenuOnBooqi")}>
                 <div className="flex items-center gap-4 rounded-2xl bg-white p-4 ring-1 ring-inset ring-[rgb(var(--reg-line))]">
@@ -1445,7 +1446,8 @@ export default function AddServicePage() {
                 </p>
               </div>
             )}
-    </RouteSheet>
+      </Drawer>
+    </BzScope>
   );
 }
 
