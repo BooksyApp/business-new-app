@@ -27,10 +27,11 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
 /** Round 44 px icon button (`.circ`): white with a soft shadow, or violet CTA. */
 export function Circ({ icon, onPress, label, violet, size = 44, badge }: { icon: string; onPress: () => void; label: string; violet?: boolean; size?: number; badge?: number }) {
   const { t } = useTheme();
+  // v2: top-bar actions are quiet ink icons (the artifact's `.ib`); only `violet` + `size` > 44 would be a floating primary.
   return (
-    <Pressable onPress={onPress} haptic accessibilityRole="button" accessibilityLabel={label} style={[{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: violet ? t.violet : t.surface }, violet ? ctaShadow : circShadow]}>
-      <Icon name={icon} size={22} color={violet ? '#fff' : t.ink} />
-      {badge ? <View style={{ position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: t.guava, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: font.x, fontSize: 11, color: '#fff' }}>{badge > 99 ? '99+' : badge}</Text></View> : null}
+    <Pressable onPress={onPress} haptic accessibilityRole="button" accessibilityLabel={label} style={[{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: violet && size > 44 ? t.violet : 'transparent' }, violet && size > 44 ? ctaShadow : null]}>
+      <Icon name={icon} size={22} color={violet && size > 44 ? '#fff' : t.ink} />
+      {badge ? <View style={{ position: 'absolute', top: 2, right: 0, minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, backgroundColor: t.guava, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: font.x, fontSize: 11, color: '#fff' }}>{badge > 99 ? '99+' : badge}</Text></View> : null}
     </Pressable>
   );
 }

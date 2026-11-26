@@ -1,3 +1,4 @@
+import { EmptyState, ListItem as KListItem, Pill as KPill, T } from '@/components/kit';
 import React, { useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
@@ -55,28 +56,19 @@ export function Sales({ onBack }: { onBack: () => void }) {
         {nav('chev', 1, tr('sales.next'))}
       </View>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={rows.length ? (
-            <Hero style={{ marginBottom: 4 }}>
-              <View style={{ padding: 20, gap: 2 }}>
-                <Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('sales.total', { n: rows.length })}</Text>
-                <Text style={{ fontFamily: font.x, fontSize: 38, letterSpacing: -1.2, color: t.ink }}>{money(total, salon?.currency)}</Text>
-              </View>
-            </Hero>
+            <View style={{ paddingBottom: 8 }}>
+              <T k="sm" color={t.muted}>{tr('sales.total', { n: rows.length })}</T>
+              <Text style={{ fontFamily: font.x, fontSize: 40, lineHeight: 46, letterSpacing: -1.4, color: t.ink }}>{money(total, salon?.currency)}</Text>
+            </View>
           ) : null}
-          ListEmptyComponent={<StateView icon="wallet" title={tr('sales.empty')} body={tr('sales.emptyBody')} />}
-          renderItem={({ item: s }) => (
-            <Card onPress={() => { setRefund({ id: s.id, total: s.total ?? 0 }); setAmt(String(s.total ?? '')); setWhy(''); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, minHeight: 84 }}>
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{s.clientName || tr('sales.walkIn')}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{[hhmm(s.saleTime), s.staffName, (s.items ?? []).map((i) => i.name ?? i.itemName).filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Text style={{ fontFamily: font.x, fontSize: 18, color: t.ink }}>{money(s.total, salon?.currency)}</Text>
-                <Pill text={(METHODS as readonly string[]).includes(s.paymentMethod) ? tr(`sales.m.${s.paymentMethod}` as StringKey) : s.paymentMethod} tone="muted" />
-              </View>
-            </Card>
+          ListEmptyComponent={<EmptyState photo="demo:f02" title={tr('sales.empty')} body={tr('sales.emptyBody')} action={{ label: tr('sl.add'), icon: 'plus', onPress: () => setAdding(true) }} style={{ marginHorizontal: 0 }} />}
+          renderItem={({ item: s, index }) => (
+            <KListItem first={index === 0} title={s.clientName || tr('sales.walkIn')} sub={[hhmm(s.saleTime), s.staffName, (s.items ?? []).map((i) => i.name ?? i.itemName).filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+              onPress={() => { setRefund({ id: s.id, total: s.total ?? 0 }); setAmt(String(s.total ?? '')); setWhy(''); }}
+              right={<View style={{ alignItems: 'flex-end', gap: 4 }}><Text style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{money(s.total, salon?.currency)}</Text><KPill text={(METHODS as readonly string[]).includes(s.paymentMethod) ? tr(`sales.m.${s.paymentMethod}` as StringKey) : s.paymentMethod} /></View>} />
           )} />
       )}
       <BottomSheet open={!!refund} onClose={() => setRefund(null)}>

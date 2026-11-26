@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
-import { Alert, ScrollView, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Alert, ScrollView, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Choice, SectionTitle, num } from '@/components/form';
+import { Choice, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, Chip, Field, Header, Screen, ServiceThumb } from '@/components/ui';
+import { Field, Screen, ServiceThumb } from '@/components/ui';
+import { Avatar as KAvatar, BackBar, Button as KButton, Card as KCard, Chip as KChip, CtaBar, Pill as KPill, T, Title } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type SaleBody } from '@/lib/api-ext';
@@ -66,64 +66,78 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
       toast((e as Error).message, 'error');
     } finally { setBusy(false); }
   }
+  const [more, setMore] = useState(false);
+  const [pct, setPct] = useState(0);
+  const setTipPct = (p: number) => { setPct(p); setTip(p ? String(Math.round(sub * p) / 100) : ''); };
+  const ICON: Record<string, string> = { CASH: 'cash', CARD_TERMINAL: 'card', GIFT_CARD: 'gift', MEMBERSHIP: 'crown', PACKAGE: 'box' };
   return (
     <Screen>
-      <Header title={tr('sl.title')} subtitle={salon?.name} onBack={onClose} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
-        <SectionTitle>{tr('sl.items')}</SectionTitle>
-        {lines.length ? (
-          <Card style={{ padding: 6, marginBottom: 12 }}>
-            {lines.map((l, i) => (
-              <View key={l.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderTopWidth: i ? 1 : 0, borderTopColor: t.line + '99' }}>
-                <ServiceThumb name={l.name} size={52} />
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16.5, letterSpacing: -0.2, color: t.ink }}>{l.name}</Text>
-                  <Text style={{ fontFamily: font.b, fontSize: 15, color: t.muted }}>{money(l.price * l.qty, cur)}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.fill, borderRadius: 24, padding: 3 }}>
-                  <Pressable onPress={() => qty(l.key, -1)} accessibilityRole="button" accessibilityLabel={`${l.name} -1`} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="minus" size={18} color={t.ink} /></Pressable>
-                  <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink, minWidth: 22, textAlign: 'center' }}>{l.qty}</Text>
-                  <Pressable onPress={() => qty(l.key, 1)} accessibilityRole="button" accessibilityLabel={`${l.name} +1`} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={18} color={t.ink} /></Pressable>
-                </View>
-              </View>
-            ))}
-          </Card>
-        ) : null}
-        <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('sl.pickService')}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
-          {(quick.data ?? []).map((q) => <Chip key={`q${q.id}`} icon="star" label={`${q.serviceName} · ${money(q.price, cur)}`} onPress={() => add({ serviceId: q.serviceId, name: q.serviceName, price: q.price ?? 0, qty: 1 })} />)}
-          {(svc.data ?? []).filter((s) => s.isActive && !(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id))).map((s) => <Chip key={s.id} label={`${s.name} · ${money(s.price, cur)}`} onPress={() => add({ serviceId: s.id, name: s.name, price: s.price ?? 0, qty: 1 })} />)}
-        </ScrollView>
-        <Field label={tr('sl.customName')} value={cName} onChangeText={setCName} />
-        <Field label={`${tr('sl.price')} (${cur ?? 'AZN'})`} value={cPrice} onChangeText={setCPrice} keyboardType="decimal-pad" />
-        <Btn label={tr('sl.custom')} variant="secondary" icon="plus" disabled={!cName.trim() || !(num(cPrice) >= 0)} onPress={() => { add({ name: cName.trim(), price: num(cPrice), qty: 1 }); setCName(''); setCPrice(''); }} />
-        <SectionTitle>{tr('sl.master')}</SectionTitle>
-        <Choice value={master} onChange={setMaster} options={[{ value: '', label: '-' }, ...(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => ({ value: String(s.id), label: s.name }))]} />
-        <Field label={tr('sl.client')} value={clientName} onChangeText={setClientName} autoCapitalize="words" />
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}><Field label={tr('sl.discount')} value={discount} onChangeText={setDiscount} keyboardType="decimal-pad" /></View>
-          <View style={{ flex: 1 }}><Field label={tr('sl.tip')} value={tip} onChangeText={setTip} keyboardType="decimal-pad" /></View>
-        </View>
-        <SectionTitle>{tr('sl.method')}</SectionTitle>
-        <Choice value={method} onChange={setMethod} options={METHODS.map((m) => ({ value: m, label: tr(`sales.m.${m}` as 'sales.m.CASH') }))} />
-        {method === 'GIFT_CARD' ? <Field label={tr('sl.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" autoCorrect={false} /> : null}
-        <Card style={{ gap: 6, marginTop: 8 }}>
-          {disc > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{tr('sl.discount')}</Text><Text style={{ fontFamily: font.b, fontSize: 15, color: t.ok }}>-{money(disc, cur)}</Text></View> : null}
-          {tipN > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{tr('sl.tip')}</Text><Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{money(tipN, cur)}</Text></View> : null}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <Text style={{ fontFamily: font.s, fontSize: 16, color: t.muted }}>{tr('sl.total')}</Text>
-            <Text style={{ fontFamily: font.x, fontSize: 40, letterSpacing: -1.3, color: t.ink }}>{money(total, cur)}</Text>
+      <BackBar label={tr('v2.back')} onBack={onClose} right={<KPill icon="receipt" text={tr('v3.saleNo')} />} />
+      <Title sub={salon?.name} style={{ paddingBottom: 10 }}>{tr('v3.till')}</Title>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 170 }} showsVerticalScrollIndicator={false}>
+        <KCard style={{ padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 10 }}>
+            <KAvatar name={clientName || '?'} size={40} />
+            <View style={{ flex: 1 }}>
+              <TextInput value={clientName} onChangeText={setClientName} placeholder={tr('sl.client')} placeholderTextColor={t.ink3} autoCapitalize="words" accessibilityLabel={tr('sl.client')} style={{ fontFamily: font.b, fontSize: 15, color: t.ink, padding: 0, outlineStyle: 'none' } as never} />
+              <T k="xs" color={t.muted}>{(staff.data ?? []).find((x) => String(x.id) === master)?.name ?? tr('sl.master')}</T>
+            </View>
           </View>
-        </Card>
+          {lines.length === 0 ? <T k="sm" color={t.muted} style={{ paddingVertical: 14, textAlign: 'center', borderTopWidth: 1, borderTopColor: t.hair }}>{tr('sl.pickService')}</T> : null}
+          {lines.map((l) => (
+            <View key={l.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: t.hair }}>
+              <ServiceThumb name={l.name} size={46} />
+              <View style={{ flex: 1 }}>
+                <T k="h3" lines={1}>{l.name}</T>
+                <T k="xs" color={t.muted}>{l.qty} × {money(l.price, cur)}</T>
+              </View>
+              <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{money(l.price * l.qty, cur)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: t.fill, borderRadius: 18, padding: 2 }}>
+                <Pressable onPress={() => qty(l.key, -1)} accessibilityRole="button" accessibilityLabel={`${l.name} -1`} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}><Icon name="minus" size={16} color={t.ink} /></Pressable>
+                <Pressable onPress={() => qty(l.key, 1)} accessibilityRole="button" accessibilityLabel={`${l.name} +1`} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={16} color={t.ink} /></Pressable>
+              </View>
+            </View>
+          ))}
+        </KCard>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginTop: 12 }} contentContainerStyle={{ gap: 8 }}>
+          {(quick.data ?? []).map((q) => <KChip key={`q${q.id}`} label={`${q.serviceName} · ${money(q.price, cur)}`} onPress={() => add({ serviceId: q.serviceId, name: q.serviceName, price: q.price ?? 0, qty: 1 })} />)}
+          {(svc.data ?? []).filter((s) => s.isActive && !(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id))).map((s) => <KChip key={s.id} label={`${s.name} · ${money(s.price, cur)}`} onPress={() => add({ serviceId: s.id, name: s.name, price: s.price ?? 0, qty: 1 })} />)}
+        </ScrollView>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 22, marginBottom: 10 }}>
+          <T k="h2">{tr('sl.tip')}</T>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {[0, 5, 10, 15].map((p) => <KChip key={p} label={p ? `${p}%` : tr('v3.none')} on={pct === p && (p === 0 ? !tip : true)} onPress={() => setTipPct(p)} style={{ flex: 1, justifyContent: 'center' }} />)}
+        </View>
+        <T k="h2" style={{ marginTop: 22, marginBottom: 10 }}>{tr('sl.method')}</T>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {METHODS.map((m) => (
+            <Pressable key={m} onPress={() => setMethod(m)} accessibilityRole="button" accessibilityState={{ selected: method === m }} noScale
+              style={{ width: '31.5%', flexGrow: 1, height: 78, borderRadius: 18, backgroundColor: t.surface, borderWidth: method === m ? 2 : 1, borderColor: method === m ? t.ink : t.hair, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Icon name={ICON[m] ?? 'wallet'} size={22} color={t.ink} />
+              <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12.5, color: t.ink }}>{tr(`sales.m.${m}` as 'sales.m.CASH')}</Text>
+            </Pressable>
+          ))}
+        </View>
+        {method === 'GIFT_CARD' ? <View style={{ marginTop: 12 }}><Field label={tr('sl.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" autoCorrect={false} /></View> : null}
+        <KButton kind="ghost" size="sm" icon={more ? 'chevu' : 'chevd'} label={tr('v3.more')} onPress={() => setMore((v) => !v)} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
+        {more ? (
+          <View style={{ marginTop: 4 }}>
+            <Field label={tr('sl.customName')} value={cName} onChangeText={setCName} />
+            <Field label={`${tr('sl.price')} (${cur ?? 'AZN'})`} value={cPrice} onChangeText={setCPrice} keyboardType="decimal-pad" />
+            <KButton kind="fl" icon="plus" label={tr('sl.custom')} disabled={!cName.trim() || !(num(cPrice) >= 0)} onPress={() => { add({ name: cName.trim(), price: num(cPrice), qty: 1 }); setCName(''); setCPrice(''); }} />
+            <T k="h2" style={{ marginTop: 18, marginBottom: 8 }}>{tr('sl.master')}</T>
+            <Choice value={master} onChange={setMaster} options={[{ value: '', label: '-' }, ...(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => ({ value: String(s.id), label: s.name }))]} />
+            <View style={{ marginTop: 10 }}><Field label={tr('sl.discount')} value={discount} onChangeText={setDiscount} keyboardType="decimal-pad" /></View>
+          </View>
+        ) : null}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 20, paddingHorizontal: 4 }}>
+          <T k="t1" color={t.muted}>{tr('sl.total')}</T>
+          <Text style={{ fontFamily: font.x, fontSize: 38, letterSpacing: -1.3, color: t.ink }}>{money(total, cur)}</Text>
+        </View>
+        {disc > 0 || tipN > 0 ? <T k="xs" color={t.muted} style={{ textAlign: 'right' }}>{[disc > 0 ? `${tr('sl.discount')} -${money(disc, cur)}` : '', tipN > 0 ? `${tr('sl.tip')} +${money(tipN, cur)}` : ''].filter(Boolean).join(' · ')}</T> : null}
       </ScrollView>
-      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: 28 }}>
-        <Pressable onPress={() => void submit()} disabled={!lines.length || busy} haptic accessibilityRole="button" accessibilityLabel={tr('sl.charge')} style={{ opacity: !lines.length ? 0.5 : 1 }}>
-          <LinearGradient colors={['#1d1730', '#35276b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 64, borderRadius: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 26, boxShadow: '0 16px 30px -12px rgba(29,23,48,.6)' } as any}>
-            <Text style={{ fontFamily: font.x, fontSize: 19, color: '#fff' }}>{busy ? '…' : `${money(total, cur)} ${tr('sl.charge').toLowerCase()}`}</Text>
-            <Icon name="chev" size={22} color="#fff" />
-          </LinearGradient>
-        </Pressable>
-      </View>
+      <CtaBar><KButton kind="dk" size="lg" block style={{ flex: 1 }} label={busy ? '…' : `${tr('sl.charge')} · ${money(total, cur)}`} disabled={!lines.length} loading={busy} onPress={() => void submit()} /></CtaBar>
     </Screen>
   );
 }
