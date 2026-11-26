@@ -39,17 +39,29 @@ export function createApi({ baseUrl, getToken, renew, onUnauthorized }: ApiOptio
     const auth = opts.auth !== false;
     const token = retriedWith ?? (auth ? getToken() : null);
     let res: Response;
+    // A stalled connection must fail (status 0 = offline) instead of leaving the screen loading forever.
+    const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), 25000) : null;
     try {
       res = await fetch(`${base}/api${path}`, {
+        signal: ctl?.signal,
         method: opts.method ?? "GET",
         headers: { "Content-Type": "application/json", Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       });
     } catch {
       throw new ApiError("offline", 0);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
     if (res.status === 401 && auth && retriedWith === undefined) {
-      const nt = await renew();
+      let nt: string | null;
+      try {
+        nt = await renew();
+      } catch {
+        // Renewal failed because the network did, not because the session is invalid: stay signed in.
+        throw new ApiError("offline", 0);
+      }
       if (nt) return request<T>(path, opts, nt);
     }
     if (res.status === 401 && auth) {

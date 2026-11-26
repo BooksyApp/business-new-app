@@ -250,12 +250,16 @@ function renew(): Promise<string | null> {
   if (refreshing) return refreshing;
   const rt = refreshToken;
   if (!rt) return Promise.resolve(null);
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 15000);
   refreshing = fetch(`${API_BASE}/api/auth/refresh`, {
+    signal: ctl.signal,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken: rt }),
   })
     .then(async (r) => {
+      if (r.status >= 500) throw new Error('refresh unavailable'); // server trouble is not a revoked session
       if (!r.ok) return null;
       const d = (await r.json()) as Partial<AuthResponse>;
       if (!d.accessToken) return null;
@@ -267,8 +271,8 @@ function renew(): Promise<string | null> {
       }
       return d.accessToken;
     })
-    .catch(() => null)
     .finally(() => {
+      clearTimeout(timer);
       refreshing = null;
     });
   return refreshing;

@@ -7,6 +7,7 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const alive = useRef(true);
+  const seq = useRef(0);
   const fnRef = useRef(fn);
   useEffect(() => {
     fnRef.current = fn;
@@ -15,16 +16,17 @@ export function useLoad<T>(fn: () => Promise<T>, deps: unknown[]) {
   const run = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+    const mine = ++seq.current; // only the newest request may write state (slow older answers are dropped)
     try {
       const d = await fnRef.current();
-      if (alive.current) {
+      if (alive.current && mine === seq.current) {
         setData(d);
         setError(null);
       }
     } catch (e) {
-      if (alive.current) setError(e as Error);
+      if (alive.current && mine === seq.current) setError(e as Error);
     } finally {
-      if (alive.current) {
+      if (alive.current && mine === seq.current) {
         setLoading(false);
         setRefreshing(false);
       }
