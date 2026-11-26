@@ -1,0 +1,12 @@
+/* Real-app wrapper for artifact frames: the frame markup is verbatim, only the mock browser/phone chrome is dropped. */
+.bzw .bz-frame{width:100%}
+.bzw .dz,.bzw-d .bz-frame .dz{width:100%}
+.bzw .bw{width:100%;border:0;border-radius:0;box-shadow:none}
+.bzw .bwt,.bzw .mst{display:none}
+.bzw .site{width:100%;height:auto!important}
+.bzw .dsh{min-height:100vh}
+.bzw-m .bz-frame .mz{width:100%}
+.bzw .mw{width:100%;min-height:100vh;height:auto;border-radius:0;box-shadow:none}
+.bzw .mw-nourl .mb{top:0}
+.bzw-pager{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:999px;background:rgba(29,23,48,.82);color:#fff;font:600 12px system-ui,sans-serif;backdrop-filter:blur(8px)}
+.bzw-pager button{all:unset;cursor:pointer;padding:0 8px;font-size:18px;line-height:1}
