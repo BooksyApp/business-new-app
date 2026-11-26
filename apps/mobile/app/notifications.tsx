@@ -64,7 +64,7 @@ export default function Notifications() {
 
   return (
     <Screen>
-      <Header title={tr('notifications.title')} subtitle={salon?.name}
+      <Header title={tr('notifications.title')} subtitle={salon?.name} onBack={() => (router.canGoBack() ? router.back() : router.replace('/today'))}
         right={unread ? <Pressable onPress={() => void apiB.readInbox().then(() => { void inbox.reload(); bump(); }).catch(() => {})} accessibilityRole="button" hitSlop={10}><Text style={{ fontFamily: font.b, fontSize: 15, color: t.vtext }}>{tr('pp.markAll')}</Text></Pressable> : undefined} />
       {data.error && !data.data ? (
         <ErrorState error={data.error} onRetry={() => void data.reload()} />

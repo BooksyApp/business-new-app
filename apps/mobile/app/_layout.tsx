@@ -61,10 +61,11 @@ function Shell() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="salons" />
           <Stack.Screen name="bookings" />
+          <Stack.Screen name="notifications" />
           <Stack.Screen name="client/[id]" />
           <Stack.Screen name="booking/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="section/[key]" />
-          <Stack.Screen name="booking/[id]" options={{ animation: 'fade' }} />
+          <Stack.Screen name="booking/[id]" />
         </Stack.Protected>
       </Stack>
     </>

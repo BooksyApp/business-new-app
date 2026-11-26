@@ -7,5 +7,5 @@ import { useApp } from '@/lib/app';
  */
 export default function Index() {
   const { status } = useApp();
-  return <Redirect href={status === 'in' ? '/calendar' : '/login'} />;
+  return <Redirect href={status === 'in' ? '/today' : '/login'} />;
 }

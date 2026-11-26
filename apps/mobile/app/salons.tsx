@@ -23,7 +23,7 @@ export default function Salons() {
       ) : (
         <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
           {salons.map((b) => (
-            <Card key={b.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); chooseSalon(b); router.replace('/calendar'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 88 }}>
+            <Card key={b.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); chooseSalon(b); router.replace('/today'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 88 }}>
               <Avatar name={b.name} size={60} uri={(b as { logoUrl?: string }).logoUrl} />
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: t.ink }}>{b.name}</Text>

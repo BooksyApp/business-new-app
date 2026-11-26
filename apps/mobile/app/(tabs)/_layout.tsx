@@ -15,11 +15,12 @@ import { useApp } from '@/lib/app';
 import { DOCK_HEIGHT, DOCK_SIDE, dockBottom } from '@/lib/dock';
 
 
+/** v2 dock (artifact `dock()` / customer F62): Bu gün, Təqvim, Görünüşlər, Müştərilər, Daha çox. Notifications moved to the bell on Bu gün. */
 const ITEMS = [
-  { name: 'calendar', icon: 'cal', k: 'tabs.calendar' }, { name: 'clients', icon: 'users', k: 'tabs.clients' },
-  { name: 'notifications', icon: 'bell', k: 'tabs.notifications' }, { name: 'more', icon: 'dots', k: 'tabs.more' },
+  { name: 'today', icon: 'home', k: 'v2.tabToday' }, { name: 'calendar', icon: 'cal', k: 'v2.tabCalendar' }, { name: 'looks', icon: 'spark', k: 'v2.tabLooks' },
+  { name: 'clients', icon: 'users', k: 'v2.tabClients' }, { name: 'more', icon: 'grid', k: 'v2.tabMore' },
 ] as const;
-const ICON = 26; const H = 48; const PAD = 9;
+const ICON = 25; const H = 48; const PAD = 8;
 const SPRING = { stiffness: 380, damping: 30, mass: 1 };
 
 type Pal = { on: string; off: string; ring: string; pill: string; pillLine: string; press: string };
@@ -38,7 +39,7 @@ const DockItem = memo(function DockItem({ icon, label, on, badge, dot, pal, idle
   const box = useAnimatedStyle(() => ({ width: interpolate(p.value, [0, 1], [idleW, activeW]), transform: [{ scale: 1 - 0.08 * pr.value }] }));
   const bg = useAnimatedStyle(() => ({ opacity: p.value }));
   const prs = useAnimatedStyle(() => ({ opacity: pr.value * (1 - p.value) }));
-  const ic = useAnimatedStyle(() => ({ transform: [{ translateX: interpolate(p.value, [0, 1], [(idleW - ICON) / 2, 14]) }] }));
+  const ic = useAnimatedStyle(() => ({ transform: [{ translateX: interpolate(p.value, [0, 1], [(idleW - ICON) / 2, 13]) }] }));
   const lb = useAnimatedStyle(() => ({ opacity: lp.value, transform: [{ translateX: interpolate(lp.value, [0, 1], [-8, 0]) }] }));
   const col = on ? pal.on : pal.off;
   return (
@@ -48,13 +49,13 @@ const DockItem = memo(function DockItem({ icon, label, on, badge, dot, pal, idle
       <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 0, top: (H - ICON) / 2, width: ICON, height: ICON }, ic]}>
         <Icon name={icon} filled={on} size={ICON} color={col} />
         {badge > 0 && (
-          <View style={{ position: 'absolute', top: -6, right: -9, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: '#d9304a', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: pal.ring, boxSizing: 'content-box' } as any}>
+          <View style={{ position: 'absolute', top: -6, right: -9, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 8, backgroundColor: '#e83e63', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: pal.ring, boxSizing: 'content-box' } as any}>
             <Text style={{ fontFamily: font.b, fontSize: 10, lineHeight: 12, color: '#fff' }}>{badge > 99 ? '99+' : badge}</Text>
           </View>
         )}
         {dot && !on && <LinearGradient colors={['#ff7aa2', '#6f52ed']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: 'absolute', top: -3, right: -4, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: pal.ring, boxSizing: 'content-box' } as any} />}
       </Animated.View>
-      <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 14 + ICON + 10, top: 0, bottom: 0, justifyContent: 'center' }, lb]}>
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: 13 + ICON + 8, top: 0, bottom: 0, justifyContent: 'center' }, lb]}>
         <Text style={{ fontFamily: font.b, fontSize: 13.5, color: pal.on }} numberOfLines={1}>{label}</Text>
       </Animated.View>
       <RNPressable accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={label} onPress={onPress} onLongPress={onLongPress}
@@ -71,9 +72,9 @@ function TabBar({ state, navigation }: any) {
   const pal = dk ? DARK : LIGHT; const bot = dockBottom(ins.bottom);
   const labels = ITEMS.map((it) => tr(it.k));
   // widths: idle 46x48 (44 on narrow phones); active = pad 14 + icon + gap 10 + label + pad 16, tightened if the row would not fit
-  const inner = w - 2 * PAD; let idleW = 46; let padL = 14; let gap = 10; let padR = 16;
+  const inner = w - 2 * PAD; let idleW = 46; let padL = 13; let gap = 8; let padR = 15;
   const lab = lw[state.index] ?? 0;
-  if (w && inner - 3 * idleW < padL + ICON + gap + lab + padR) { idleW = 44; padL = 12; gap = 8; padR = 12; }
+  if (w && inner - 4 * idleW < padL + ICON + gap + lab + padR) { idleW = 42; padL = 11; gap = 7; padR = 12; }
   const activeW = padL + ICON + gap + lab + padR;
   const ready = w > 0 && lw.length === ITEMS.length && lw.every((x) => x > 0);
   const base = dk ? 'rgba(30,26,42,.72)' : 'rgba(255,255,255,.76)';
@@ -96,7 +97,7 @@ function TabBar({ state, navigation }: any) {
             const route = state.routes[i]; const isOn = state.index === i;
             return (
               <DockItem key={it.name} icon={it.icon} label={labels[i]} on={isOn} pal={pal} idleW={idleW} activeW={activeW}
-                badge={it.name === 'notifications' ? badges.pending + badges.waitlist + badges.inbox : 0} dot={false}
+                badge={it.name === 'today' ? badges.pending : 0} dot={false}
                 onPress={() => {
                   const ev = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                   if (!isOn && !ev.defaultPrevented) { Haptics.selectionAsync().catch(() => {}); navigation.navigate(route.name); }

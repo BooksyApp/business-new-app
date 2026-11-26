@@ -10,7 +10,7 @@ export default function BookingDeepLink() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const a = useLoad(() => api.appointment(String(id)), [id]);
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/calendar'));
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/today'));
   return (
     <Screen>
       {a.error ? <ErrorState error={a.error} onRetry={() => void a.reload()} /> : !a.data ? <Skeleton rows={2} height={90} /> : null}

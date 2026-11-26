@@ -29,7 +29,7 @@ export default function Bookings() {
   const rows = useMemo(() => (data.data ?? []).filter((a) => a.status !== 'CANCELLED').filter((a) => f === 'all' ? true : f === 'late' ? (a.lateMinutes ?? 0) > 0 : a.status === f).sort((a, b) => toMin(a.startTime) - toMin(b.startTime)), [data.data, f]);
   return (
     <Screen>
-      <Header title={tr('ux.bookingsTitle')} onBack={() => (router.canGoBack() ? router.back() : router.replace('/calendar'))}
+      <Header title={tr('ux.bookingsTitle')} onBack={() => (router.canGoBack() ? router.back() : router.replace('/today'))}
         subtitle={`${sameDay(date, new Date()) ? tr('common.today') : toDay(date)} · ${dayMonth(date)}`}
         right={<><Circ icon="back" label={tr('calendar.prevWeek')} onPress={() => setDate(addDays(date, -1))} /><Circ icon="chev" label={tr('calendar.nextWeek')} onPress={() => setDate(addDays(date, 1))} /></>} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginBottom: 14 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
