@@ -129,7 +129,7 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
                   ), "n-salon-alerts")
                 ))}
 
-                {showEmail && <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
+                {showEmail && <section className="crd2">
                   <h2 className="mb-3 text-base font-extrabold">{t("notifications.sender")}</h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label={t("notifications.fromName")} htmlFor="n-from" hint={t("notifications.emptyUsesYourBusinessName")}>

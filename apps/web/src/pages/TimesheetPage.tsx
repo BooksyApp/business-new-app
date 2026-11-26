@@ -146,7 +146,7 @@ export default function TimesheetPage() {
       <BooqiScope>
         <PageHeader title={t("timesheet.title")} subtitle={t("timesheet.subtitle")} />
         <div className={pageBody}>
-          <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+          <section className="crd2">
             <div className="flex flex-wrap items-end gap-3">
               {canManage ? (
                 <Field label={t("timesheet.who")} htmlFor="ts-who">

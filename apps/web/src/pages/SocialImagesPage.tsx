@@ -215,7 +215,7 @@ export default function SocialImagesPage() {
           </section>
 
           <section className="space-y-3">
-            <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+            <div className="crd2">
               {preview ? (
                 <img src={preview} alt={t("social.previewAlt")} className="mx-auto max-h-[70vh] w-auto max-w-full rounded-2xl" style={{ aspectRatio: `${size.w} / ${size.h}` }} />
               ) : (

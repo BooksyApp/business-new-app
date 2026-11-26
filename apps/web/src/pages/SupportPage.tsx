@@ -115,7 +115,7 @@ function NewRequest({ onCreated }: { onCreated: (t: SupportTicket) => void }) {
   };
 
   return (
-    <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+    <section className="crd2">
       <div className="mb-5 flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]"><LifeBuoy size={18} /></span>
         <div>
@@ -160,7 +160,7 @@ function Thread({ thread, onReply }: { thread: SupportThread; onReply: (body: st
 
   return (
     <section className="space-y-4">
-      <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+      <div className="crd2">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold text-[rgb(var(--reg-muted))]">{ticket.ref}</span>
           <StatusChip status={ticket.status} />
@@ -186,7 +186,7 @@ function Thread({ thread, onReply }: { thread: SupportThread; onReply: (body: st
       {ticket.status === "CLOSED" ? (
         <p className="rounded-2xl bg-[rgb(var(--reg-ink)/0.04)] px-4 py-3 text-sm text-[rgb(var(--reg-muted))]">{t("support.closedNote")}</p>
       ) : (
-        <form className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) void submit(); }}>
+        <form className="crd2" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) void submit(); }}>
           <Field label={ticket.status === "RESOLVED" ? t("support.replyResolved") : t("support.reply")} htmlFor="sp-reply">
             <textarea id="sp-reply" rows={4} maxLength={5000} className={cn(fieldCls, "h-auto py-3")} value={text} onChange={(e) => setText(e.target.value)} />
           </Field>

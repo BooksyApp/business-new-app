@@ -163,7 +163,7 @@ export default function MyDayPage() {
               {bookings.map((a) => (
                 <li
                   key={a.id}
-                  className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]"
+                  className="crd2"
                 >
                   <div className="text-2xl font-bold">{a.startTime.slice(0, 5)}</div>
                   <div className="mt-1 font-semibold">{a.clientName ?? "—"}</div>

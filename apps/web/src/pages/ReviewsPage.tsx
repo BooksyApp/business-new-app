@@ -255,7 +255,7 @@ function ReviewCard({ review: r, businessId, report, onReported, onSaved }: { re
   const staff = staffOf(r);
   const services = servicesOf(r);
   return (
-    <li className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
+    <li className="crd2">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -376,7 +376,7 @@ function GoogleLinkCard({ businessId }: { businessId: Id }) {
     }
   };
   return (
-    <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+    <section className="crd2">
       <h2 className="text-[15px] font-extrabold">{t("reviews.v3.googleTitle")}</h2>
       <p className="mt-1 text-[13px] text-[rgb(var(--reg-muted))]">{t("reviews.v3.googleHint")}</p>
       <label className="sr-only" htmlFor="google-review-url">{t("reviews.v3.googleTitle")}</label>

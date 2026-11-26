@@ -153,7 +153,7 @@ export default function ExpensesPage() {
           ) : null}
 
           {pl && pl.byCategory?.length ? (
-            <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+            <section className="crd2">
               <p className="mb-3 font-semibold">{t("expenses.byCategory")}</p>
               <ul className="space-y-2 text-sm">
                 {pl.byCategory.map((c) => (

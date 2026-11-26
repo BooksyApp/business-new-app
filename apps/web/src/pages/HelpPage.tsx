@@ -163,7 +163,7 @@ export default function HelpPage() {
             )}
           </section>
 
-          <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+          <section className="crd2">
             <div className="flex items-start gap-3">
               <LifeBuoy className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
               <div className="min-w-0">

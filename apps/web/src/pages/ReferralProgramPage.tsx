@@ -222,7 +222,7 @@ export default function ReferralProgramPage() {
                   </section>
 
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    <div className="crd2">
                       <SectionTitle>{t("referralProgram.invitedSalons")}</SectionTitle>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         <StatCard icon={Store} label={t("referralProgram.signedUp")} value={me.salons.signedUp} tone="violet" />
@@ -230,7 +230,7 @@ export default function ReferralProgramPage() {
                         <StatCard icon={Gift} label={t("referralProgram.freeMonthsEarned")} value={me.salons.freeMonths} tone="amber" />
                       </div>
                     </div>
-                    <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    <div className="crd2">
                       <SectionTitle>{t("referralProgram.invitedCustomers")}</SectionTitle>
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <StatCard icon={UserPlus} label={t("referralProgram.signedUp")} value={me.customers.signedUp} tone="violet" />

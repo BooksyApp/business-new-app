@@ -1,3 +1,4 @@
+import { Btn, DataTable, Tile, Tiles } from "@/components/bz";
 import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
@@ -39,37 +40,14 @@ export default function TaxPage() {
   const q = useQuery({ queryKey: ["tax-summary", businessId, start, end], queryFn: () => accountsService.taxSummary(businessId, start, end), enabled: Boolean(businessId) });
   const d = q.data;
 
-  const tile = (label: string, value: string) => (
-    <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
-      <p className="text-[13px] font-semibold text-[rgb(var(--reg-muted))]">{label}</p>
-      <p className="mt-2 text-[24px] font-extrabold leading-none tracking-[-0.03em] tabular-nums md:text-[26px]">{value}</p>
-    </div>
-  );
   const table = (rows: { key: string; label: string; count: unknown; net: unknown; tax: unknown; gross: unknown }[], first: string) => (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[480px] text-[14px]">
-        <thead>
-          <tr className="text-left text-[12px] text-[rgb(var(--reg-muted))]">
-            <th scope="col" className="pb-2 font-medium">{first}</th>
-            <th scope="col" className="pb-2 text-right font-medium">{t("ledger.taxCount")}</th>
-            <th scope="col" className="pb-2 text-right font-medium">{t("ledger.taxNet")}</th>
-            <th scope="col" className="pb-2 text-right font-medium">{t("ledger.taxTax")}</th>
-            <th scope="col" className="pb-2 text-right font-medium">{t("ledger.taxGross")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.key} className="border-t border-[rgb(var(--reg-line)/0.6)]">
-              <th scope="row" className="py-2.5 text-left font-semibold">{r.label}</th>
-              <td className="py-2.5 text-right tabular-nums">{fmtInt(n(r.count as number))}</td>
-              <td className="py-2.5 text-right tabular-nums">{fmtMoney(n(r.net as number))}</td>
-              <td className="py-2.5 text-right font-semibold tabular-nums">{fmtMoney(n(r.tax as number))}</td>
-              <td className="py-2.5 text-right tabular-nums">{fmtMoney(n(r.gross as number))}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      grid="1.4fr 0.8fr 1fr 1fr 1fr"
+      rows={rows}
+      rowKey={(r) => r.key}
+      columns={[first, t("ledger.taxCount"), t("ledger.taxNet"), t("ledger.taxTax"), t("ledger.taxGross")]}
+      render={(r) => [<b>{r.label}</b>, fmtInt(n(r.count as number)), fmtMoney(n(r.net as number)), <b>{fmtMoney(n(r.tax as number))}</b>, fmtMoney(n(r.gross as number))]}
+    />
   );
 
   return (
@@ -81,9 +59,9 @@ export default function TaxPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <PeriodPicker value={range} onChange={setRange} ranges={RANGES} />
-              <button type="button" className={secondaryBtn} disabled={!d || n(d.totals.count) === 0} onClick={() => d && exportCsv(d)}>
-                <Download size={16} aria-hidden /> {t("ledger.exportCsv")}
-              </button>
+              <Btn kind="ol" icon={<Download size={16} aria-hidden />} disabled={!d || n(d.totals.count) === 0} onClick={() => d && exportCsv(d)}>
+                {t("ledger.exportCsv")}
+              </Btn>
             </div>
           }
         />
@@ -96,17 +74,17 @@ export default function TaxPage() {
             <Empty>{t("ledger.taxNone")}</Empty>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-                {tile(t("ledger.taxTax"), fmtMoney(n(d.totals.tax)))}
-                {tile(t("ledger.taxNet"), fmtMoney(n(d.totals.net)))}
-                {tile(t("ledger.taxGross"), fmtMoney(n(d.totals.gross)))}
-                {tile(t("ledger.taxCount"), fmtInt(n(d.totals.count)))}
-              </div>
+              <Tiles cols={4}>
+                <Tile label={t("ledger.taxTax")} value={fmtMoney(n(d.totals.tax))} />
+                <Tile label={t("ledger.taxNet")} value={fmtMoney(n(d.totals.net))} />
+                <Tile label={t("ledger.taxGross")} value={fmtMoney(n(d.totals.gross))} />
+                <Tile label={t("ledger.taxCount")} value={fmtInt(n(d.totals.count))} />
+              </Tiles>
               <div className="grid gap-4 lg:grid-cols-2">
                 <Panel title={t("ledger.taxByRate")}>{table(d.byRate.map((r) => ({ key: String(r.rate), label: rateLabel(r.rate), ...r })), t("ledger.taxRate"))}</Panel>
                 <Panel title={t("ledger.taxByMonth")}>{table(d.byMonth.map((m) => ({ key: m.month, label: monthLabel(m.month), ...m })), t("ledger.taxMonth"))}</Panel>
               </div>
-              {n(d.voided) > 0 && <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("ledger.taxVoided", { count: n(d.voided) })}</p>}
+              {n(d.voided) > 0 && <small>{t("ledger.taxVoided", { count: n(d.voided) })}</small>}
             </>
           )}
         </div>
