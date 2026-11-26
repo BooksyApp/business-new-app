@@ -9,3 +9,10 @@ published design (`artifacts/business-final`, BF01-BF13, BF40-BF49, BF79) with t
 - Tabs: Təqvim, Müştərilər, Bildirişlər, Daha çox. Görünüşlər / Xidmətlər / Komanda / Rəylər / Mesajlar / Parametrlər are "Tezliklə" stubs.
 - Run: `npm run mobile:start` (port 8083). Typecheck runs in CI (`.github/workflows/ci-mobile.yml`).
 - Icons: Solar (CC BY 4.0), licence in `packages/shared/icons/LICENSE-ICONS.md`.
+
+## Startup safety (v0.2.1+)
+- `app/index.tsx` redirects by auth status (never to a guarded route); `app/+not-found.tsx` sends unknown deep links home.
+- `src/lib/crash.tsx`: root error boundary + `ErrorUtils` handler show a plain-RN error screen (message + stack, retry button) instead of a blank app.
+- Splash is force-hidden after 4s; fonts wait at most 3s; session bootstrap falls back to login after 6s; `expo-notifications` is lazy-loaded.
+- API calls time out after 25s (status 0 = offline); a failed token refresh over the network keeps the session.
+- Typecheck locally: `npx tsc --noEmit -p tsconfig.json` (needs node_modules; CI runs `ci-mobile`). Fix list: `FIXES.md`, `FIXES2.md`.

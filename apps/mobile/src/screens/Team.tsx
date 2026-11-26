@@ -46,8 +46,8 @@ export function Team({ onBack }: { onBack: () => void }) {
             </View>
             {sel.phone ? <Text style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{sel.phone}</Text> : null}
             {sel.email ? <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{sel.email}</Text> : null}
-            {sel.phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" onPress={() => void Linking.openURL(`tel:${sel.phone}`)} /> : null}
-            {sel.email ? <Btn label={tr('team.email')} icon="mail" variant="secondary" onPress={() => void Linking.openURL(`mailto:${sel.email}`)} /> : null}
+            {sel.phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" onPress={() => void Linking.openURL(`tel:${(sel.phone ?? '').replace(/\s+/g, '')}`).catch(() => {})} /> : null}
+            {sel.email ? <Btn label={tr('team.email')} icon="mail" variant="secondary" onPress={() => void Linking.openURL(`mailto:${sel.email}`).catch(() => {})} /> : null}
           </View>
         ) : null}
       </BottomSheet>
