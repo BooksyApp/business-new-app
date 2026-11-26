@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useState } from "react";
 import { salonToday } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
@@ -163,7 +164,7 @@ export default function OffersPage() {
           </div>
 
           {rows === null ? (
-            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : all.length === 0 ? (
             <EmptyState
               icon={Scissors}

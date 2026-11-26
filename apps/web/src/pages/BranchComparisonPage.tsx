@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
@@ -85,7 +86,7 @@ export default function BranchComparisonPage() {
           {error ? (
             <div className="rounded-[20px] bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-inset ring-rose-200">{t("cmp.couldNotLoad")}</div>
           ) : rows === null ? (
-            <div className="h-32 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : rows.length === 0 ? (
             <div className="rounded-[20px] border-2 border-dashed border-[rgb(var(--reg-line))] p-5 text-sm text-[rgb(var(--reg-muted))]">{t("cmp.noSalons")}</div>
           ) : (

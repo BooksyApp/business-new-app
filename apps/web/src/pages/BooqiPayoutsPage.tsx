@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -43,7 +44,7 @@ export default function BooqiPayoutsPage() {
           {q.isError ? (
             <Empty>{t("bwallet.loadFailed")}</Empty>
           ) : !d ? (
-            <div className="h-[200px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy="true" />
+            <P4Loading />
           ) : (
             <>
               {split.data && (

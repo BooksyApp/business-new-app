@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -74,7 +75,7 @@ export default function ReportDetailPage() {
           {km === null ? (
             <DiscountImpact businessId={businessId} startDate={start} endDate={end} />
           ) : !d ? (
-            q.isError ? <Empty>{t("reports.loadFailed")}</Empty> : <div className="h-[300px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            q.isError ? <Empty>{t("reports.loadFailed")}</Empty> : <P4Loading />
           ) : (
             <>
               <Headline d={d} k={km.key} unit={km.unit} goodWhen={km.goodWhen} />

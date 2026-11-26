@@ -1,3 +1,4 @@
+import { Skeleton as KitSkeleton } from "@/components/bz";
 import { useQuery } from "@tanstack/react-query";
 import { Percent, RefreshCw, Table2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -151,10 +152,10 @@ function Skeleton() {
     <div className="space-y-4" aria-busy="true" aria-label={t("common.loading2")}>
       <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="h-[132px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" />
+          <KitSkeleton key={i} lines={[100, 80, 60]} />
         ))}
       </div>
-      <div className="h-[340px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" />
+      <KitSkeleton lines={[100, 90, 80, 70, 85, 60]} />
     </div>
   );
 }

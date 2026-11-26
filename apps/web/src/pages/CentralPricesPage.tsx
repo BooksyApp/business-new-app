@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -118,7 +119,7 @@ export default function CentralPricesPage() {
         <PageHeader title={t("cp.title")} subtitle={t("cp.hint")} />
         <div className={pageBody}>
           {services === null || salons === null ? (
-            <div className="h-32 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : salons.length === 0 ? (
             <div className="rounded-[20px] border-2 border-dashed border-[rgb(var(--reg-line))] p-5 text-sm text-[rgb(var(--reg-muted))]">{t("cp.noOtherSalons")}</div>
           ) : (

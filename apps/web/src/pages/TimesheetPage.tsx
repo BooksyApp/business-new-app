@@ -1,3 +1,4 @@
+import { StatusPill } from "@/components/bz";
 import type { Id } from "@/types/id";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Pencil, Timer, Users } from "lucide-react";
@@ -170,8 +171,8 @@ export default function TimesheetPage() {
               ) : (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {open.map((o) => (
-                    <li key={o.id} className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                      {o.staff_name} · {t("timesheet.atWorkSince", { value: hhmm(o.clock_in) })}
+                    <li key={o.id}>
+                      <StatusPill kind="c">{o.staff_name} · {t("timesheet.atWorkSince", { value: hhmm(o.clock_in) })}</StatusPill>
                     </li>
                   ))}
                 </ul>
@@ -217,7 +218,7 @@ export default function TimesheetPage() {
                           <td className="px-4 py-3.5 font-semibold">{e.staff_name}</td>
                           <td className="px-4 py-3.5">{e.work_date}</td>
                           <td className="px-4 py-3.5">{hhmm(e.clock_in)}</td>
-                          <td className="px-4 py-3.5">{e.clock_out ? hhmm(e.clock_out) : <span className="font-semibold text-emerald-700">{t("timesheet.atWork")}</span>}</td>
+                          <td className="px-4 py-3.5">{e.clock_out ? hhmm(e.clock_out) : <StatusPill kind="c">{t("timesheet.atWork")}</StatusPill>}</td>
                           <td className="px-4 py-3.5">{e.break_minutes} {t("timesheet.min")}</td>
                           <td className="px-4 py-3.5">{e.worked_minutes != null ? `${(e.worked_minutes / 60).toFixed(1)} ${t("timesheet.h")}` : "—"}{e.edited_at ? <span className="ml-1 text-xs text-[rgb(var(--reg-muted))]">({t("timesheet.edited")})</span> : null}</td>
                           <td className="px-4 py-3.5 text-right">

@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -65,7 +66,7 @@ export default function ProfitPage() {
           {q.isError ? (
             <Empty>{t("ledger.loadFailed")}</Empty>
           ) : !d ? (
-            <div className="h-[320px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            <P4Loading />
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">

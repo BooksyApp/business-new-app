@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -74,7 +75,7 @@ export default function ConsentFormsPage() {
         <div className={pageBody}>
           <BackToSettings />
           {loading ? (
-            <div className="h-40 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : forms.length === 0 ? (
             <p className="text-sm text-[rgb(var(--reg-muted))]">{t("consentForms.empty")}</p>
           ) : (

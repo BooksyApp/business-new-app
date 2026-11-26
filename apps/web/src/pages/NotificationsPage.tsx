@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
@@ -103,7 +104,7 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
         <div className={pageBody}>
           {section && <BackToSettings />}
           {loading || !settings ? (
-            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : (
             <div className={cn("grid gap-6", showEmail ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "max-w-3xl")}>
               <div className="min-w-0 space-y-6">

@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -90,7 +91,7 @@ export default function TaxPage() {
           {q.isError ? (
             <Empty>{t("ledger.loadFailed")}</Empty>
           ) : !d ? (
-            <div className="h-[260px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            <P4Loading />
           ) : n(d.totals.count) === 0 ? (
             <Empty>{t("ledger.taxNone")}</Empty>
           ) : (

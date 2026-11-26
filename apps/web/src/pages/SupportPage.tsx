@@ -1,3 +1,4 @@
+import { StatusPill } from "@/components/bz";
 import { useCallback, useEffect, useState } from "react";
 import { LifeBuoy } from "lucide-react";
 import { toast } from "sonner";
@@ -19,19 +20,12 @@ import {
   type TicketStatus,
 } from "@/services/supportService";
 
-const CHIP: Record<TicketStatus, string> = {
-  NEW: "bg-sky-50 text-sky-800",
-  OPEN: "bg-sky-50 text-sky-800",
-  WAITING_ON_USER: "bg-amber-50 text-amber-800",
-  RESOLVED: "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]",
-  CLOSED: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]",
-};
 
 const statusLabel = (s: TicketStatus) => t(`support.status${s}` as "support.statusNEW");
 const categoryLabel = (c: TicketCategory) => t(`support.category${c}` as "support.categoryBOOKING");
 
 function StatusChip({ status }: { status: TicketStatus }) {
-  return <span className={cn("inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", CHIP[status])}>{statusLabel(status)}</span>;
+  return <StatusPill kind={status === "RESOLVED" ? "c" : status === "WAITING_ON_USER" ? "w" : status === "CLOSED" ? "x" : "d"}>{statusLabel(status)}</StatusPill>;
 }
 
 /** Dəstək: an owner or team member writes to Booqi support and follows the answer. */

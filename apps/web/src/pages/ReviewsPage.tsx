@@ -1,3 +1,4 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, MessageSquare, Star } from "lucide-react";
@@ -92,7 +93,7 @@ export default function ReviewsPage() {
           {reviewsQ.isError ? (
             <Empty>{t("reviews.v3.loadFailed")}</Empty>
           ) : !reviewsQ.data ? (
-            <div className="h-[220px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            <P4Loading />
           ) : (
             <>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">

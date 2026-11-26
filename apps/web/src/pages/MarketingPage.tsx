@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/bz";
 import { BooqiScope, EmptyState, FilterChips, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -678,7 +679,7 @@ function SkeletonGrid() {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy>
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-[168px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />
+        <Skeleton key={i} lines={[100, 80, 60]} />
       ))}
     </div>
   );
