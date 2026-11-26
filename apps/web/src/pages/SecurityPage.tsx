@@ -1,15 +1,10 @@
 import { useState } from "react";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
-import { Field } from "@/components/page/kit";
-import { fieldCls } from "@/components/page/kitStyles";
-import { BCard } from "@/components/biz/b-card";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Btn, Card, Field, Note } from "@/components/bz";
+import { SettingsFrame } from "@/components/bz/p3-Settings";
 import { businessService } from "@/services/businessService";
 import { t } from "@/i18n";
 
@@ -47,42 +42,39 @@ export default function SecurityPage() {
 
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader title={t("security.security")} subtitle={t("security.yourSignInDetails")} />
-        <div className={pageBody}>
-          <BCard className="max-w-xl" icon={<KeyRound size={18} />} title={t("security.changePassword")} hint={t("security.atLeastCharacters")}>
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (ready && !saving) void submit(); }}>
-              <Field label={t("security.currentPassword")} htmlFor="pw-current">
-                <input id="pw-current" type="password" className={fieldCls} value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
-              </Field>
-              <Field label={t("security.newPassword")} htmlFor="pw-new" hint={tooShort ? <span className="text-rose-700">{t("security.atLeastCharacters")}</span> : undefined}>
-                <input id="pw-new" type="password" className={fieldCls} value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" aria-invalid={tooShort} />
-                {next && (
-                  <div className="flex items-center gap-2 pt-1" aria-live="polite">
-                    <div className="flex flex-1 gap-1">
-                      {[1, 2, 3, 4].map((i) => (
-                        <span key={i} className={cn("h-1.5 flex-1 rounded-full", i <= strength ? (strength >= 3 ? "bg-[rgb(var(--reg-success))]" : "bg-amber-500") : "bg-[rgb(var(--reg-ink)/0.08)]")} />
-                      ))}
-                    </div>
-                    <span className="w-12 text-right text-xs font-semibold text-[rgb(var(--reg-muted))]">{strengthLabel}</span>
-                  </div>
-                )}
-              </Field>
-              <Field label={t("security.confirmNewPassword")} htmlFor="pw-confirm" hint={mismatch ? <span className="text-rose-700">{t("security.theseDoNotMatch")}</span> : undefined}>
-                <input id="pw-confirm" type="password" className={fieldCls} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" aria-invalid={mismatch} />
-              </Field>
-              {/* Said before the click, not after: someone changing a password because they
-                  think it leaked needs to know the other session actually gets closed. */}
-              <p className="flex items-center gap-2 rounded-2xl bg-[rgb(var(--reg-canvas))] px-3 py-2.5 text-sm text-[rgb(var(--reg-ink)/0.8)]">
-                <ShieldCheck size={16} className="shrink-0 text-[rgb(var(--reg-brand))]" />{" "}{t("security.changingYourPasswordSignsYou")}
-              </p>
-              <Button type="submit" className={primaryBtn} disabled={!ready || saving}>
+      <SettingsFrame title={t("security.security")} sub={t("security.yourSignInDetails")}>
+        <Card title={t("security.changePassword")} help={t("security.atLeastCharacters")}>
+          <form className="stk" onSubmit={(e) => { e.preventDefault(); if (ready && !saving) void submit(); }}>
+            <Field label={t("security.currentPassword")}>
+              <input id="pw-current" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+            </Field>
+            <Field label={t("security.newPassword")} error={tooShort ? t("security.atLeastCharacters") : undefined}>
+              <input id="pw-new" type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" aria-invalid={tooShort} />
+            </Field>
+            {next && (
+              <div className="row gap8" aria-live="polite">
+                <div style={{ display: "flex", flex: 1, gap: 4 }}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <span key={i} style={{ height: 6, flex: 1, borderRadius: 999, background: i <= strength ? (strength >= 3 ? "var(--bz-ok)" : "var(--bz-star)") : "var(--bz-fill2)" }} />
+                  ))}
+                </div>
+                <small style={{ width: 48, textAlign: "right", fontWeight: 700, color: "var(--bz-muted)" }}>{strengthLabel}</small>
+              </div>
+            )}
+            <Field label={t("security.confirmNewPassword")} error={mismatch ? t("security.theseDoNotMatch") : undefined}>
+              <input id="pw-confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" aria-invalid={mismatch} />
+            </Field>
+            {/* Said before the click, not after: someone changing a password because they
+                think it leaked needs to know the other session actually gets closed. */}
+            <Note kind="wa" icon={<ShieldCheck size={16} />}>{t("security.changingYourPasswordSignsYou")}</Note>
+            <div>
+              <Btn kind="v" type="submit" disabled={!ready || saving}>
                 {saving ? t("security.changing") : t("security.changePassword")}
-              </Button>
-            </form>
-          </BCard>
-        </div>
-      </BooqiScope>
+              </Btn>
+            </div>
+          </form>
+        </Card>
+      </SettingsFrame>
     </AppLayout>
   );
 }

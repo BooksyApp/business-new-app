@@ -68,3 +68,15 @@ export function SettingsFrame({ title, sub, right, helpSlug, children }: { title
     </BzPage>
   );
 }
+
+/** Dirty-only sticky save bar in kit style (replaces page/SettingsChrome SaveBar): quiet discard + the single gradient primary. */
+export function BzSaveBar({ dirty, saving, onSave, onDiscard }: { dirty: boolean; saving: boolean; onSave: () => void; onDiscard?: () => void }) {
+  if (!dirty && !saving) return null;
+  return (
+    <div className="a-card" role="status" style={{ position: "sticky", bottom: 16, zIndex: 20, flexDirection: "row", alignItems: "center", gap: 12, marginTop: 16 }}>
+      <b style={{ marginRight: "auto", fontSize: 15 }}>{t("setup.unsavedChanges")}</b>
+      {onDiscard ? <Btn kind="ol" disabled={saving} onClick={onDiscard}>{t("setup.discard")}</Btn> : null}
+      <Btn kind="v" disabled={saving} onClick={onSave}>{saving ? t("common.saving") : t("common.saveChanges")}</Btn>
+    </div>
+  );
+}
