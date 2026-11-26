@@ -2343,11 +2343,6 @@ export default function CalendarPage() {
                 </>
               )}
 
-              {viewType === "Day" && getAppointmentsForDate(currentDate).length === 0 && (
-                <p className="ml-auto hidden text-sm text-[rgb(var(--reg-muted))] lg:block">
-                  {tr("calendar.noBookingsYetClickA")}
-                </p>
-              )}
               {viewType === "Day" && (() => {
                 const { startHour, endHour, isEnabled } = getBusinessHoursForDate(currentDate);
                 return (
