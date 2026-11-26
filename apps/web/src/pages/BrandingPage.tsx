@@ -99,11 +99,11 @@ export default function BrandingPage() {
 
         <div className={pageBody}>
           {loading ? (
-            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="min-w-0 space-y-6">
-                <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+                <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                   <h2 className="text-base font-extrabold">{t("branding.brandColour")}</h2>
                   <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{t("branding.usedOnYourSalonProfile")}</p>
                   <div className="mt-4 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t("branding.suggestedColours")}>
@@ -145,7 +145,7 @@ export default function BrandingPage() {
                   </div>
                 </section>
 
-                <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+                <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                   <h2 className="text-base font-extrabold">{t("branding.receiptFooter")}</h2>
                   <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{t("branding.printedAtTheBottomOf")}</p>
                   <Textarea
@@ -158,7 +158,7 @@ export default function BrandingPage() {
                   />
                 </section>
 
-                <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:px-6">
+                <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:px-6">
                   <div>
                     <p className="font-semibold">{t("branding.coverLogoAndGallery")}</p>
                     <p className="text-sm text-[rgb(var(--reg-muted))]">{t("branding.photosHaveTheirOwnPage")}</p>

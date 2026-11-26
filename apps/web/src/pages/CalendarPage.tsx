@@ -28,7 +28,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { AppointmentBlock, StaffAvatar, type Appointment, type Staff } from "@/components/calendar/AppointmentBlock";
+import { MiniTile } from "@/components/biz/a-MiniTile";
+import { AppointmentBlock, StaffAvatar, appointmentServiceLabel, type Appointment, type Staff } from "@/components/calendar/AppointmentBlock";
+import { appointmentFlagKeys } from "@/lib/appointmentFlags";
 // The visit sheet (~700 lines plus refund dialog and client picker) is only needed once a
 // visit is opened: its own chunk, fetched on idle after the calendar has painted.
 const loadAppointmentModal = () => import("@/components/calendar/AppointmentModal");
@@ -53,6 +55,7 @@ import { isSalonToday, salonNow } from "@/lib/salonClock";
 import { VisibilityBanner } from "@/components/VisibilityBanner";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FlagIcons, FlagLegend, type CalendarDensity } from "@/components/calendar/AppointmentFlags";
 import { categoryTint, type CategoryTint } from "@/lib/serviceCategoryColor";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
@@ -192,6 +195,9 @@ function parseTime(time: string): number {
 
 // Slot height for better readability (20px per 15-minute slot)
 const SLOT_HEIGHT = 20;
+
+/** Overlapping bookings sit side by side up to this many columns; the rest go behind a "+N" chip. */
+const MAX_OVERLAP_COLUMNS = 3;
 
 /* The calendar's sheets (new booking, time off, block time): right sheet on a desktop,
    full screen on a phone, sticky header and footer, 48px fields as on the auth pages. */
@@ -1108,6 +1114,29 @@ export default function CalendarPage() {
     return null;
   };
 
+  /** Clients whose birthday (month-day) falls on a given appointment day, same three keys as visits. */
+  const birthdayByClient = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of clients) {
+      const md = typeof c.birthday === "string" && c.birthday.length >= 10 ? c.birthday.slice(5, 10) : "";
+      if (!md) continue;
+      map.set(`id:${c.id}`, md);
+      const name = `${c.firstName} ${c.lastName || ""}`.trim().toLowerCase();
+      if (name) map.set(`name:${name}`, md);
+      if (c.email) map.set(`email:${c.email.trim().toLowerCase()}`, md);
+    }
+    return map;
+  }, [clients]);
+
+  /** Everything the small icons need beyond the appointment row: birthday today, VIP (no list field yet). */
+  const flagCtxFor = (apt: { clientId?: Id; clientName?: string; clientEmail?: string; date?: Date }) => {
+    const md =
+      (apt.clientId != null ? birthdayByClient.get(`id:${apt.clientId}`) : undefined) ??
+      (apt.clientEmail ? birthdayByClient.get(`email:${apt.clientEmail.trim().toLowerCase()}`) : undefined) ??
+      (apt.clientName ? birthdayByClient.get(`name:${apt.clientName.trim().toLowerCase()}`) : undefined);
+    return { birthday: !!md && !!apt.date && format(apt.date, "MM-dd") === md };
+  };
+
   const blockVisuals = (apt: {
     clientName?: string;
     notes?: string;
@@ -1625,6 +1654,14 @@ export default function CalendarPage() {
     try { localStorage.setItem("calendar.showWaiting", on ? "1" : "0"); } catch { /* per-viewer convenience only */ }
   };
   const waitingVisible = flags.waitlist !== false && showWaiting;
+  // Row density: "comfy" (default) or "compact" for busy days; remembered per browser.
+  const [density, setDensityState] = useState<CalendarDensity>(() => {
+    try { return localStorage.getItem("calendar.density") === "compact" ? "compact" : "comfy"; } catch { return "comfy"; }
+  });
+  const setDensity = (d: CalendarDensity) => {
+    setDensityState(d);
+    try { localStorage.setItem("calendar.density", d); } catch { /* per-viewer convenience only */ }
+  };
   const waitingEnabled = waitingVisible && viewType === "Day";
   /** Masters (in calendar order) who do this waiter's service; all of them when the service lists none. */
   const mastersForService = (w: WaitlistEntry, from: Staff[]): Staff[] => {
@@ -2097,6 +2134,27 @@ export default function CalendarPage() {
                 </button>
               )}
 
+              {(viewType === "Day" || viewType === "Weekly") && (
+                <>
+                  <FlagLegend />
+                  <div role="group" aria-label={tr("calendar.densityTitle")} className="inline-flex h-10 items-center rounded-full bg-white p-1 ring-1 ring-[rgb(var(--reg-line))]">
+                    {(["comfy", "compact"] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={density === d}
+                        onClick={() => setDensity(d)}
+                        className={`h-8 rounded-full px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
+                          density === d ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
+                        }`}
+                      >
+                        {d === "comfy" ? tr("calendar.densityComfy") : tr("calendar.densityTight")}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
               {viewType === "Day" && getAppointmentsForDate(currentDate).length === 0 && (
                 <p className="ml-auto hidden text-sm text-[rgb(var(--reg-muted))] lg:block">
                   {tr("calendar.noBookingsYetClickA")}
@@ -2519,11 +2577,14 @@ export default function CalendarPage() {
                         }
                         const isDragging = dragSelection?.isDragging && dragSelection.staffId === staff.id;
                         
-                        return conflictGroups.flatMap((group) => {
+                        return conflictGroups.flatMap((fullGroup) => {
+                          // More than 3 overlapping: three columns plus a "+N" chip with the rest.
+                          const hiddenItems = fullGroup.length > MAX_OVERLAP_COLUMNS ? fullGroup.slice(MAX_OVERLAP_COLUMNS) : [];
+                          const group = hiddenItems.length ? fullGroup.slice(0, MAX_OVERLAP_COLUMNS) : fullGroup;
                           const groupSize = group.length;
                           
                           // For each item in the group, render it with calculated width/position
-                          return group.map((item, itemIndex) => {
+                          const rendered = group.map((item, itemIndex) => {
                             let top = 0;
                             let height = 0;
                             
@@ -2604,6 +2665,8 @@ export default function CalendarPage() {
                     >
                       <AppointmentBlock
                                     visits={visitsFor(item.item)}
+                                    flagCtx={flagCtxFor(item.item)}
+                                    density={density}
                                     height={height}
                                     appointment={item.item} 
                                     onClick={(e) => {
@@ -2698,6 +2761,59 @@ export default function CalendarPage() {
                               );
                             }
                           });
+                          if (hiddenItems.length === 0) return rendered;
+                          const tops = fullGroup.flatMap((x) =>
+                            x.type === "appointment" ? [getTimePosition(normalizeTime(x.item.startTime), normalizeTime(x.item.endTime), SLOT_HEIGHT).top]
+                            : x.type === "waiting" ? [getTimePosition(x.start, x.end, SLOT_HEIGHT).top] : []);
+                          const chipTop = tops.length ? Math.min(...tops) : 0;
+                          const chip = (
+                            <div key={`more-${fullGroup.map((x) => (x.type === "appointment" ? x.item.id : `${x.type}-${x.item.id}`)).join("_")}`} className="absolute right-1 z-30" style={{ top: `${chipTop + 2}px` }} data-appointment-block="true" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    data-testid="overlap-overflow"
+                                    aria-label={`${tr("calendar.overflowTitle")}: +${hiddenItems.length}`}
+                                    className="inline-flex h-5 items-center rounded-full bg-[rgb(var(--reg-ink))] px-1.5 text-[11px] font-bold leading-none text-white shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
+                                  >
+                                    +{hiddenItems.length}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-72 p-2">
+                                  <p className="px-2 pb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("calendar.overflowTitle")}</p>
+                                  <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+                                    {hiddenItems.map((x) => {
+                                      if (x.type === "appointment") {
+                                        return (
+                                          <li key={x.item.id}>
+                                            <button type="button" onClick={() => handleAppointmentClick(x.item)} className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-[rgb(var(--reg-canvas))]">
+                                              <span className="shrink-0 text-xs font-bold tabular-nums text-[rgb(var(--reg-brand-strong))]">{normalizeTime(x.item.startTime).slice(0, 5)}</span>
+                                              <span className="min-w-0 flex-1 truncate"><span className="font-semibold">{x.item.clientName}</span> · {appointmentServiceLabel(x.item)}</span>
+                                              <FlagIcons keys={appointmentFlagKeys(x.item, { visits: visitsFor(x.item), ...flagCtxFor(x.item) })} max={3} size={12} />
+                                            </button>
+                                          </li>
+                                        );
+                                      }
+                                      if (x.type === "waiting") {
+                                        return (
+                                          <li key={`w-${x.item.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                                            <span className="shrink-0 text-xs font-bold tabular-nums text-[rgb(var(--reg-muted))]">{x.start.slice(0, 5)}</span>
+                                            <span className="min-w-0 flex-1 truncate">{x.item.clientName}{x.item.serviceName ? ` · ${x.item.serviceName}` : ""}</span>
+                                          </li>
+                                        );
+                                      }
+                                      return (
+                                        <li key={`t-${x.item.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm text-[rgb(var(--reg-muted))]">
+                                          <span className="min-w-0 flex-1 truncate">{x.item.reason || tr("calendar.timeOff2")}</span>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          );
+                          return [...rendered, chip];
                         });
                       })()}
 
@@ -2729,13 +2845,13 @@ export default function CalendarPage() {
             <div className="flex flex-1 overflow-auto bg-white p-6">
               <div className="w-full">
                 {/* Month Calendar Grid */}
-                <div className="bg-white rounded-lg border border-gray-200">
+                <div className="bg-white rounded-lg border border-border">
                   {/* Day Headers */}
-                  <div className="grid grid-cols-7 border-b border-gray-200">
+                  <div className="grid grid-cols-7 border-b border-border">
                     {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
                       <div
                         key={day}
-                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-gray-200 last:border-r-0"
+                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-border last:border-r-0"
                       >
                         {day}
             </div>
@@ -2760,9 +2876,9 @@ export default function CalendarPage() {
                           <div
                             key={idx}
                             className={`
-                              min-h-[120px] border-r border-b border-gray-200 last:border-r-0
-                              ${isCurrentMonth ? "bg-white" : "bg-gray-50"}
-                              ${isCurrentDay ? "bg-blue-50" : ""}
+                              min-h-[120px] border-r border-b border-border last:border-r-0
+                              ${isCurrentMonth ? "bg-white" : "bg-muted"}
+                              ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}
                               p-2
                             `}
                           >
@@ -2771,7 +2887,7 @@ export default function CalendarPage() {
                               <span
                                 className={`
                                   text-sm font-medium
-                                  ${isCurrentDay ? "bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}
+                                  ${isCurrentDay ? "bg-[rgb(var(--reg-brand))] text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}
                                   ${!isCurrentMonth ? "text-muted-foreground/50" : ""}
                                 `}
                               >
@@ -2787,34 +2903,14 @@ export default function CalendarPage() {
                             {/* Appointments */}
                             <div className="space-y-1 mt-1">
                               {dayAppointments.slice(0, 3).map((apt) => (
-                                <div
+                                <MiniTile
                                   key={apt.id}
+                                  appointment={apt}
+                                  visits={visitsFor(apt)}
+                                  flagCtx={flagCtxFor(apt)}
                                   onClick={() => handleAppointmentClick(apt)}
-                                  className={`text-xs p-1.5 rounded cursor-pointer truncate border-l-4 hover:opacity-80 ${
-                                    blockVisuals(apt).colorClasses
-                                  }`}
-                                  title={`${apt.startTime?.slice(0, 5)} - ${apt.endTime?.slice(0, 5)}: ${apt.service}`}
-                                >
-                                  <div className="text-[10px] font-medium">
-                                    {apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}
-                                  </div>
-                                  <div className="flex items-center gap-1 text-[10px] font-semibold">
-                                    <span className="truncate">{apt.clientName}</span>
-                                    {blockVisuals(apt).tags.map(({ Icon, label, className }) => (
-                                      <span
-                                        key={label}
-                                        title={label}
-                                        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${className}`}
-                                      >
-                                        <Icon size={10} strokeWidth={2.5} />
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <div className="text-[10px] truncate">
-                                    {apt.service}
-              </div>
-            </div>
-          ))}
+                                />
+                              ))}
                               {dayAppointments.length > 3 && (
                                 <div 
                                   className="text-xs text-muted-foreground text-center pt-1 cursor-pointer hover:text-foreground hover:font-medium transition-colors"
@@ -2841,9 +2937,9 @@ export default function CalendarPage() {
           {viewType === "Weekly" && (
             <div className="flex flex-1 overflow-auto bg-white">
               {/* Staff Column */}
-              <div className="w-64 shrink-0 border-r border-gray-200 bg-white sticky left-0 z-10">
-                <div className="h-16 border-b border-gray-200 bg-white"></div>
-                <div className="divide-y divide-gray-200">
+              <div className="w-64 shrink-0 border-r border-border bg-white sticky left-0 z-10">
+                <div className="h-16 border-b border-border bg-white"></div>
+                <div className="divide-y divide-border">
                   {staff.map((staff) => {
                     // All rows should have the same height to fit 3 blocks + "+X more" row
                     // Height: 3 blocks (~180px with spacing) + "+X more" row (~40px) + padding (~16px) = ~250px
@@ -2852,9 +2948,9 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={staff.id}
-                        className={`${rowHeight} border-b border-gray-200 px-4 py-3 bg-white flex items-center gap-3`}
+                        className={`${rowHeight} border-b border-border px-4 py-3 bg-white flex items-center gap-3`}
                       >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[rgb(var(--reg-brand))] to-[#e83e63] flex items-center justify-center text-white font-semibold text-sm shrink-0">
                         {staff.initials}
                       </div>
                       <div className="flex flex-col min-w-0">
@@ -2876,14 +2972,14 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className="min-w-[200px] flex-1 border-r border-gray-200 last:border-r-0 bg-white"
+                      className="min-w-[200px] flex-1 border-r border-border last:border-r-0 bg-white"
                     >
                       {/* Day Header */}
-                      <div className={`h-16 border-b border-gray-200 flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-blue-50" : ""}`}>
+                      <div className={`h-16 border-b border-border flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}`}>
                         <div className="text-xs font-medium text-muted-foreground">
                           {format(day, "EEE")}
                         </div>
-                        <div className={`text-sm font-semibold ${isCurrentDay ? "text-blue-600" : ""}`}>
+                        <div className={`text-sm font-semibold ${isCurrentDay ? "text-[rgb(var(--reg-brand-strong))]" : ""}`}>
                           {format(day, "d")}
                         </div>
                         {dayAppointments.length > 0 && (
@@ -2894,7 +2990,7 @@ export default function CalendarPage() {
                       </div>
 
                       {/* Staff Rows with Appointments */}
-                      <div className="divide-y divide-gray-200">
+                      <div className="divide-y divide-border">
                         {staff.map((staff) => {
                           const staffAppointments = getAppointmentsForDateAndStaff(day, staff.id);
                           const waitChips = waitingChipsFor(day, staff.id);
@@ -2905,7 +3001,7 @@ export default function CalendarPage() {
                           return (
                             <div
                               key={staff.id}
-                              className={`${rowHeight} p-2 flex flex-col border-b border-gray-200`}
+                              className={`${rowHeight} p-2 flex flex-col border-b border-border`}
                             >
                               {waitChips.length > 0 && (
                                 <div className="mb-1 flex flex-wrap gap-1">
@@ -2932,39 +3028,19 @@ export default function CalendarPage() {
                                   {/* Appointment Blocks - Maximum 3 */}
                                   <div className="space-y-1">
                                     {staffAppointments.slice(0, 3).map((apt) => (
-                                      <div
+                                      <MiniTile
                                         key={apt.id}
+                                        appointment={apt}
+                                        visits={visitsFor(apt)}
+                                        flagCtx={flagCtxFor(apt)}
                                         onClick={() => handleAppointmentClick(apt)}
-                                        className={`text-xs p-1.5 rounded cursor-pointer border-l-4 hover:opacity-80 ${
-                                          blockVisuals(apt).colorClasses
-                                        }`}
-                                        title={`${apt.startTime?.slice(0, 5)} - ${apt.endTime?.slice(0, 5)}: ${apt.service}`}
-                                      >
-                                        <div className="text-[10px] font-medium truncate">
-                                          {apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-[10px] font-semibold">
-                                          <span className="truncate">{apt.clientName}</span>
-                                          {blockVisuals(apt).tags.map(({ Icon, label, className }) => (
-                                            <span
-                                              key={label}
-                                              title={label}
-                                              className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${className}`}
-                                            >
-                                              <Icon size={10} strokeWidth={2.5} />
-                                            </span>
-                                          ))}
-                                        </div>
-                                        <div className="text-[10px] truncate">
-                                          {apt.service}
-                                        </div>
-                                      </div>
+                                      />
                                     ))}
                                   </div>
                                   {/* "+X more" on separate row - Only show if more than 3 */}
                                   {staffAppointments.length > 3 && (
                                     <div 
-                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-gray-200"
+                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-border"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedWeeklyPopup({ day, staffId: staff.id });
@@ -3061,6 +3137,7 @@ export default function CalendarPage() {
                 >
                   <AppointmentBlock
                     visits={visitsFor(apt)}
+                    flagCtx={flagCtxFor(apt)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);
@@ -3109,6 +3186,7 @@ export default function CalendarPage() {
                 >
                   <AppointmentBlock
                     visits={visitsFor(apt)}
+                    flagCtx={flagCtxFor(apt)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);
@@ -3561,11 +3639,11 @@ export default function CalendarPage() {
 
             {/* Recurrence config */}
             {bookingMode === "recurring" && (
-              <div className="space-y-2 rounded-md border border-gray-200 p-2" data-testid="recurrence-config">
+              <div className="space-y-2 rounded-md border border-border p-2" data-testid="recurrence-config">
                 <Label className={FIELD_LABEL}>{tr("calendar.repeat")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">{tr("calendar.frequency")}</Label>
+                    <Label className="text-[10px] text-muted-foreground">{tr("calendar.frequency")}</Label>
                     <Select
                       value={recurrence.frequency === "MONTHLY" ? "MONTHLY" : recurrence.interval === 2 ? "BIWEEKLY" : "WEEKLY"}
                       onValueChange={(v) => setRecurrence(prev => ({ ...prev, frequency: v === "MONTHLY" ? "MONTHLY" : "WEEKLY", interval: v === "BIWEEKLY" ? 2 : 1 }))}
@@ -3579,7 +3657,7 @@ export default function CalendarPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">{tr("calendar.occurrences")}</Label>
+                    <Label className="text-[10px] text-muted-foreground">{tr("calendar.occurrences")}</Label>
                     <Input
                       type="number" min={2} max={52} value={recurrence.count}
                       data-testid="recurrence-count"
@@ -3593,7 +3671,7 @@ export default function CalendarPage() {
                     const row = seriesPreview?.find((r) => r.date === d);
                     const bad = row && row.conflicts.length > 0;
                     return (
-                      <li key={d} className={bad ? "text-amber-700" : "text-gray-600"}>
+                      <li key={d} className={bad ? "text-amber-700" : "text-muted-foreground"}>
                         <span className="font-medium">{d}</span>
                         {bad ? ` · ${row!.conflicts.map(describeConflict).join("; ")}` : row ? " ✓" : ""}
                       </li>
@@ -3784,15 +3862,15 @@ export default function CalendarPage() {
             {/* Group members — each gets their own staff + time. The primary
                 client above is member 1; add the rest here. */}
             {bookingMode === "group" && (
-              <div className="space-y-2 rounded-md border border-gray-200 p-2">
+              <div className="space-y-2 rounded-md border border-border p-2">
                 <div className="flex items-center justify-between">
                   <Label className={FIELD_LABEL}>{tr("calendar.groupMembers")}</Label>
-                  <span className="text-[10px] text-gray-500">{tr("calendar.primaryClientMember")}</span>
+                  <span className="text-[10px] text-muted-foreground">{tr("calendar.primaryClientMember")}</span>
                 </div>
                 {groupMembers.map((m, i) => (
-                  <div key={i} className="space-y-1 border-t border-gray-100 pt-2">
+                  <div key={i} className="space-y-1 border-t border-border pt-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-gray-500 w-16 shrink-0">{tr("calendar.member", { value: i + 2 })}</span>
+                      <span className="text-[10px] text-muted-foreground w-16 shrink-0">{tr("calendar.member", { value: i + 2 })}</span>
                       <Input
                         placeholder={tr("common.name")}
                         value={m.clientName}
@@ -3803,7 +3881,7 @@ export default function CalendarPage() {
                         type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeMember")} className="h-7 w-7 shrink-0"
                         onClick={() => setGroupMembers(prev => prev.filter((_, j) => j !== i))}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-2 pl-16">
@@ -3852,14 +3930,14 @@ export default function CalendarPage() {
             {bookingMode !== "group" && !(selectedPackage && !editingAppointmentId) && (
               <div className="space-y-2">
                 {extraServices.map((es, i) => (
-                  <div key={i} className="space-y-1 rounded-md border border-gray-200 p-2">
+                  <div key={i} className="space-y-1 rounded-md border border-border p-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[10px] text-gray-500">{editingVisit ? tr("calendar.service", { value: i + 2 }) : tr("calendar.extraService", { value: i + 1 })}</Label>
+                      <Label className="text-[10px] text-muted-foreground">{editingVisit ? tr("calendar.service", { value: i + 2 }) : tr("calendar.extraService", { value: i + 1 })}</Label>
                       <Button
                         type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeService")} className={`h-7 w-7 ${editingAppointmentId ? "hidden" : ""}`}
                         onClick={() => setExtraServices(prev => prev.filter((_, j) => j !== i))}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                     <Select
@@ -3898,7 +3976,7 @@ export default function CalendarPage() {
                   </div>
                 ))}
                 {editingVisit && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {tr("calendar.thisBookingHasServicesYou", { count: editingVisit.ids.length })}
                   </p>
                 )}
@@ -3933,9 +4011,9 @@ export default function CalendarPage() {
                 aria-pressed={appointmentForm.requestedByClient}
                 onClick={() => setAppointmentForm(prev => ({ ...prev, requestedByClient: !prev.requestedByClient }))}
               >
-                <Heart className={cn("h-3.5 w-3.5", appointmentForm.requestedByClient ? "fill-red-500 text-red-500" : "text-gray-400")} />
+                <Heart className={cn("h-3.5 w-3.5", appointmentForm.requestedByClient ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
               </Button>
-              <span className="text-xs text-gray-700">{tr("calendar.requestedByClient")}</span>
+              <span className="text-xs text-muted-foreground">{tr("calendar.requestedByClient")}</span>
             </div>
 
             {/* Financial Summary — reflects group members / extra services / occurrences */}
@@ -4569,8 +4647,8 @@ export default function CalendarPage() {
                 <Label htmlFor="approved" className="text-sm font-normal cursor-pointer">
                   {tr("calendar.approved")}
                 </Label>
-                <HelpCircle className="h-4 w-4 text-gray-400" />
-                <span className="text-xs text-gray-500">
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
                   {timeOffForm.isApproved 
                     ? tr("calendar.noManagerApprovalNeeded") 
                     : tr("calendar.requiresManagerApproval")}

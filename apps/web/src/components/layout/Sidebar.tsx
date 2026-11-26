@@ -233,9 +233,9 @@ function MaybeTip({ show, label, children }: { show: boolean; label: string; chi
 
 // One row height (32px) and one icon size (18) across the rail, so it fits a laptop screen.
 const itemBase =
-  "group relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]";
+  "group relative flex h-9 items-center gap-2.5 rounded-full px-3 text-[13.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]";
 const itemIdle = "text-[rgb(var(--reg-ink)/0.72)] hover:bg-[rgb(var(--reg-ink)/0.04)] hover:text-[rgb(var(--reg-ink))]";
-const itemOn = "bg-[rgb(var(--reg-brand)/0.1)] text-[rgb(var(--reg-brand-strong))] before:absolute before:-left-3 before:top-1.5 before:h-5 before:w-[3px] before:rounded-r-full before:bg-[rgb(var(--reg-brand))]";
+const itemOn = "bg-[rgb(var(--reg-brand-soft))] font-extrabold text-[rgb(var(--reg-brand-strong))]";
 
 /* ── desktop sidebar ────────────────────────────────────────────────────── */
 
@@ -268,7 +268,6 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
           )}
           {!collapsed && (
             <span className="flex items-center gap-0.5">
-            <NotificationBell side="right" />
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <button
@@ -333,6 +332,25 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* The one primary action: a new booking opens the calendar's form (?new=1). */}
+        {m.findEntry("calendar") && (
+          <div className="px-3 pb-2">
+            <MaybeTip show={collapsed} label={t("common.newBooking")}>
+              <button
+                type="button"
+                onClick={() => m.navigate(`${m.getPath(m.findEntry("calendar")!.path)}?new=1`)}
+                aria-label={t("common.newBooking")}
+                className={cn(
+                  "flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#6f52ed_0%,#e83e63_100%)] text-sm font-bold text-white shadow-[0_10px_24px_-8px_rgb(91_63_214/0.6)] transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)] focus-visible:ring-offset-2",
+                )}
+              >
+                <Plus size={18} strokeWidth={2.25} aria-hidden />
+                {!collapsed && <span className="truncate">{t("common.newBooking")}</span>}
+              </button>
+            </MaybeTip>
+          </div>
+        )}
 
         {/* Quick search (⌘K / Ctrl+K) */}
         {collapsed && <div className="px-3 pb-1">
@@ -459,6 +477,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {!collapsed && <NotificationBell side="right" />}
             <MaybeTip show label={t("layout.language")}>
               <button
                 type="button"

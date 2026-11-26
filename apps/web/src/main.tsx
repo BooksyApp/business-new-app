@@ -6,6 +6,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import App from "./App.tsx";
 import "./index.css";
+import "./styles/biz-ui.css";
 import { t, loadHubLocale } from "@/i18n";
 import { getHubLocale } from "@/lib/hubLocale";
 import { reloadOnceForNewBuild } from "@/lib/lazyWithReload";
@@ -15,6 +16,8 @@ import { handleImpersonationLanding } from "@/lib/impersonation";
 import { captureInstallPrompt, registerServiceWorker } from "@/lib/pwa";
 
 initSentry();
+// Business UI kit scope (styles/biz-ui.css): on <html> so portalled overlays are covered too.
+document.documentElement.classList.add("bz");
 
 // A redeploy deletes the old hashed chunks; an open tab then fails to load a lazy page.
 // Reload once (guarded, so a real outage cannot loop) to pick up the new build.

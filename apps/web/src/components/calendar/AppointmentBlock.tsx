@@ -1,8 +1,9 @@
 import type { Id } from "@/types/id";
-import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
+import { appointmentFlagKeys, type FlagContext } from "@/lib/appointmentFlags";
+import { FlagIcons, type CalendarDensity } from "@/components/calendar/AppointmentFlags";
 import { visitAccent } from "@/lib/servicePackage";
 import { cn } from "@/lib/utils";
-import { Link2, Package, TriangleAlert } from "lucide-react";
+import { Check, CircleDashed, Link2, Package, TriangleAlert, UserX, X, type LucideIcon } from "lucide-react";
 import { appointmentStatusStyle } from "@/lib/appointmentStatus";
 import { categoryTint } from "@/lib/serviceCategoryColor";
 import "@/components/auth/auth-tokens.css";
@@ -77,6 +78,8 @@ export interface Appointment {
   groupServices?: string[];
   /** The visit also has services with other staff: its other blocks are linked to this one. */
   linked?: boolean;
+  paymentStatus?: string | null;
+  depositPaid?: boolean | null;
 }
 
 /** "Haircut + Beard trim" for a multi-service visit, else just the service. */
@@ -100,7 +103,19 @@ interface AppointmentBlockProps {
   visits?: number | null;
   /** The block's rendered height in px, so it can pick a density (1, 2 or 3 lines). */
   height?: number;
+  /** What the page knows about the client (birthday, VIP) for the small icons. */
+  flagCtx?: FlagContext;
+  /** "comfy" (default) or "compact": shorter text rows, fewer icons, for busy days. */
+  density?: CalendarDensity;
 }
+
+/** At most one small status icon; confirmed is the plain stripe. */
+const STATUS_ICON: Record<string, LucideIcon> = {
+  PENDING: CircleDashed,
+  COMPLETED: Check,
+  NO_SHOW: UserX,
+  CANCELLED: X,
+};
 
 // Check if a color is a hex color
 const isHexColor = (color: string): boolean => {
@@ -126,7 +141,7 @@ const shouldUseWhiteText = (hexColor: string): boolean => {
   return luminance < 0.5; // Use white text if background is dark
 };
 
-export function AppointmentBlock({ appointment, onClick, visits, height }: AppointmentBlockProps) {
+export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx, density = "comfy" }: AppointmentBlockProps) {
   // Colour is the status now (accent + tint). It used to be a colour per client, which told
   // a receptionist nothing she could act on; the client's name is right there in bold.
   const s = appointmentStatusStyle(appointment.status);
@@ -139,12 +154,14 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
   const shortLabel = grouped && grouped.length > 1 ? `${grouped[0]} +${grouped.length - 1}` : appointment.service;
   // A package (or any multi-service visit) shares one accent per visitId across columns.
   const accent = appointment.isPackage || appointment.linked ? visitAccent(appointment.visitId) : null;
-  const tags = appointmentTags({ notes: appointment.notes, visits });
+  const flagKeys = appointmentFlagKeys(appointment, { visits, ...flagCtx });
+  const compact = density === "compact";
+  const StatusIcon = STATUS_ICON[statusKey];
   const start = appointment.startTime?.slice(0, 5);
   const end = appointment.endTime?.slice(0, 5);
   // Three densities, by the block's height in px: a 15-minute block gets one line, a
   // half hour two, anything longer the full card. Unknown height → the full card.
-  const size = height == null ? "lg" : height < 34 ? "sm" : height < 58 ? "md" : "lg";
+  const size = height == null ? "lg" : compact ? (height < 46 ? "sm" : height < 72 ? "md" : "lg") : height < 34 ? "sm" : height < 58 ? "md" : "lg";
   const cancelled = statusKey === "CANCELLED";
   const noShow = statusKey === "NO_SHOW";
   const completed = statusKey === "COMPLETED";
@@ -193,7 +210,7 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
         "hover:brightness-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]",
       )}
     >
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ backgroundColor: tint.accent }} />
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[4px]" style={{ backgroundColor: s.dot }} />
       {accent && <span aria-hidden className="absolute inset-y-0 right-0 w-[4px]" style={{ backgroundColor: accent }} />}
       {appointment.linked && (
         <span
@@ -212,43 +229,35 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
           data-testid="override-marker"
           aria-label={t("bookingConflict.markerTitle")}
           title={t("bookingConflict.markerTitle")}
-          className="absolute right-[22px] top-[3px] text-amber-700"
+          className="absolute bottom-1 right-5 text-amber-700"
         >
           <TriangleAlert size={12} strokeWidth={2.5} />
         </span>
       )}
-      {/* Status, apart from the category colour. */}
-      <span
-        aria-hidden
-        title={s.label}
-        className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-white"
-        style={{ backgroundColor: s.dot }}
-      />
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col",
-          size === "sm" ? "justify-center px-2" : size === "md" ? "justify-center px-2.5 py-[3px]" : "px-2.5 py-1.5",
+          size === "sm" ? "justify-center px-2" : size === "md" ? "justify-center px-2.5 py-[3px]" : compact ? "px-2 py-1" : "px-2.5 py-1.5",
         )}
       >
         {size === "sm" ? (
-          <p className="truncate text-[12px] leading-none">
-            <span className={cn("font-bold", cancelled && "line-through")}>{appointment.clientName}</span>
-            <span style={{ color: tint.muted }}> · {start} {shortLabel}</span>
-          </p>
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="min-w-0 flex-1 truncate text-[12px] leading-none">
+              <span className={cn("font-bold", cancelled && "line-through")}>{appointment.clientName}</span>
+              <span style={{ color: tint.muted }}> · {start} {shortLabel}</span>
+            </p>
+            <FlagIcons keys={flagKeys} max={compact ? 2 : 3} size={12} />
+            {StatusIcon && <StatusIcon size={12} strokeWidth={2.5} aria-label={s.label} role="img" className="shrink-0" style={{ color: s.dot }} />}
+          </div>
         ) : (
           <>
-            <div className="flex min-w-0 items-center gap-1">
-              <p className={cn("min-w-0 flex-1 truncate text-[13px] font-bold leading-tight", appointment.overrideApplied ? "pr-8" : "pr-3", cancelled && "line-through")}>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className={cn("min-w-0 flex-1 truncate font-bold leading-tight", compact ? "text-[12px]" : "text-[13px]", cancelled && "line-through")}>
                 {appointment.clientName}
               </p>
               {appointment.clientAlert && (
                 <TriangleAlert aria-label={t("calendar.clientAlert")} role="img" className="h-3.5 w-3.5 shrink-0 text-amber-700" />
               )}
-              {appointment.lateMinutes ? (
-                <span className="inline-flex h-4 shrink-0 items-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
-                  {t("calendar.lateBadge", { min: appointment.lateMinutes })}
-                </span>
-              ) : null}
               {appointment.isPackage && (
                 <span
                   title={appointment.guestName ? t("calendar.packageGuest", { name: appointment.guestName }) : t("calendar.packageStepTitle", { step: appointment.packageStep ?? 1 })}
@@ -258,15 +267,16 @@ export function AppointmentBlock({ appointment, onClick, visits, height }: Appoi
                   <Package size={10} strokeWidth={2.5} />{appointment.packageStep ?? ""}
                 </span>
               )}
-              {/* Did they ask for this person, is it their first visit, are they a regular. */}
-              {tags.map(({ Icon, label, className }) => (
-                <span key={label} title={label} className={cn("inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full", className)}>
-                  <Icon size={10} strokeWidth={2.5} />
-                </span>
-              ))}
+              {/* Small icons instead of text tags: new, VIP, chose this master, late, paid ... */}
+              <FlagIcons keys={flagKeys} max={compact ? 3 : 5} size={13} />
+              {StatusIcon && <StatusIcon size={13} strokeWidth={2.5} aria-label={s.label} role="img" className="shrink-0" style={{ color: s.dot }} />}
             </div>
             {size === "md" ? (
               <p className="mt-0.5 truncate text-[12px] leading-tight" style={{ color: tint.muted }}>
+                {start}–{end} · {serviceLabel}
+              </p>
+            ) : compact ? (
+              <p className="mt-0.5 truncate text-[11.5px] leading-tight" style={{ color: tint.muted }}>
                 {start}–{end} · {serviceLabel}
               </p>
             ) : (

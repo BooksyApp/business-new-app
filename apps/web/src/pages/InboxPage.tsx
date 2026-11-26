@@ -2,14 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, Card, CardContent, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
-import { Button } from "@/components/ui/button";
+import { MessageSquare, Send, Users } from "lucide-react";
+import { pageBody } from "@/components/page/booqiStyles";
+import { Btn, BzScope, Dialog, EmptyState, Field, PageHead } from "@/components/bz";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrentBusinessId } from "@/config/api";
 import { format } from "@/i18n/dateFns";
 import { t } from "@/i18n";
-import { cn } from "@/lib/utils";
 import { applyIncoming, localMessage, markStatus, mergeServer, resolveSent } from "@/lib/messageThread";
 import { messagingService, type InboxMessage, type InboxSummary, type InboxThread } from "@/services/messagingService";
 import { websocketService, type InboxMessageEvent } from "@/services/websocketService";
@@ -171,149 +170,141 @@ export default function InboxPage() {
     }
   };
 
+  const initials = (name: string) => (name || "?").trim().slice(0, 2).toUpperCase();
+  const convName = (c: { customerName?: string | null; customerEmail?: string | null }) => c.customerName || c.customerEmail || "";
+
   return (
     <AppLayout>
-      <BooqiScope>
+      <BzScope>
         <div className={pageBody}>
-          <PageHeader title={t("inbox.title")} subtitle={t("inbox.subtitle")} />
+          <PageHead title={t("inbox.title")} sub={t("inbox.subtitle")} />
 
-          <div className="grid gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
-            <Card className="overflow-hidden">
+          <div className="a-two">
+            <div className="l" style={{ width: 420 }}>
               {loaded && list.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground">{t("inbox.empty")}</p>
-              ) : null}
-              <ul className="divide-y">
-                {list.map((c) => (
-                  <li key={c.conversationId}>
-                    <button
-                      type="button"
+                <EmptyState icon={<MessageSquare className="ic" />} title={t("inbox.empty")} />
+              ) : (
+                <div className="a-lst">
+                  {list.map((c) => (
+                    <div
+                      key={c.conversationId}
+                      className={selected === c.conversationId ? "on" : undefined}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelected(c.conversationId)}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/50",
-                        selected === c.conversationId && "bg-muted",
-                      )}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{c.customerName || c.customerEmail}</span>
-                        <span className="block text-xs text-muted-foreground">{when(c.lastMessageAt)}</span>
-                      </span>
-                      {c.unread > 0 ? (
-                        <span
-                          className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
-                          aria-label={t("inbox.unread", { count: c.unread })}
-                        >
-                          {c.unread}
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-
-            <Card>
-              <CardContent className="flex flex-col gap-4 p-4">
-                {!selected || !thread ? (
-                  <p className="py-12 text-center text-sm text-muted-foreground">{t("inbox.selectPrompt")}</p>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{thread.customerName || thread.customerEmail}</div>
-                        <div className="truncate text-xs text-muted-foreground">{thread.customerEmail}</div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to="/clients">{t("inbox.openClients")}</Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setReporting((v) => !v)}>
-                          {t("inbox.report")}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {reporting ? (
-                      <div className="flex flex-col gap-2 rounded-lg border p-3">
-                        <Textarea
-                          value={reportText}
-                          maxLength={500}
-                          rows={2}
-                          placeholder={t("inbox.reportPlaceholder")}
-                          onChange={(e) => setReportText(e.target.value)}
-                        />
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setReporting(false)}>
-                            {t("inbox.reportCancel")}
-                          </Button>
-                          <Button size="sm" onClick={() => void report()}>
-                            {t("inbox.reportSend")}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div ref={scrollRef} className="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
-                      {thread.messages.map((m) => (
-                        <div
-                          key={m.messageId}
-                          className={cn(
-                            "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
-                            m.fromSalon ? "ml-auto bg-primary text-primary-foreground" : "bg-muted",
-                            m.status === "sending" && "opacity-70",
-                            m.status === "failed" && "ring-2 ring-destructive",
-                          )}
-                        >
-                          <div className="mb-0.5 text-[11px] opacity-70">
-                            {m.fromSalon ? t("inbox.you") : thread.customerName || t("inbox.client")}
-                          </div>
-                          {m.body}
-                          <div className="mt-1 flex items-center gap-2 text-[11px] opacity-70">
-                            {m.status === "failed" ? (
-                              <>
-                                <span>{t("inbox.failed")}</span>
-                                <button type="button" className="underline" onClick={() => retry(m)}>
-                                  {t("inbox.retry")}
-                                </button>
-                              </>
-                            ) : (
-                              when(m.sentAt)
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <form
-                      className="flex flex-col gap-2"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        send();
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") setSelected(c.conversationId);
                       }}
+                      style={{ cursor: "pointer" }}
                     >
-                      <Textarea
-                        value={draft}
-                        maxLength={MAX_BODY}
-                        rows={3}
-                        placeholder={t("inbox.placeholder")}
-                        onChange={(e) => setDraft(e.target.value)}
-                      />
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {t("inbox.charCount", { count: draft.length, max: MAX_BODY })}
-                        </span>
-                        <Button type="submit" className={primaryBtn} disabled={!draft.trim()}>
-                          {t("inbox.send")}
-                        </Button>
+                      <span className="a-av">{initials(convName(c))}</span>
+                      <div>
+                        <b style={{ fontWeight: c.unread > 0 ? 800 : 600 }}>{convName(c)}</b>
+                        {c.customerName && c.customerEmail ? <div className="sub">{c.customerEmail}</div> : null}
                       </div>
-                    </form>
-                    <p className="text-xs text-muted-foreground">{t("inbox.blockHint")}</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                      <span className="r">
+                        {c.unread > 0 ? <span className="pill" aria-label={t("inbox.unread", { count: c.unread })}>{c.unread}</span> : null}
+                        <div className="sub">{when(c.lastMessageAt)}</div>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="r">
+              {!selected || !thread ? (
+                <div className="a-card" style={{ flex: 1, justifyContent: "center" }}>
+                  <EmptyState icon={<MessageSquare className="ic" />} title={t("inbox.selectPrompt")} />
+                </div>
+              ) : (
+                <div className="a-card" style={{ flex: 1 }}>
+                  <div className="row sp">
+                    <div className="row gap12">
+                      <span className="a-av">{initials(convName(thread))}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <b style={{ fontSize: 18 }}>{thread.customerName || thread.customerEmail}</b>
+                        {thread.customerName ? <div className="a-note">{thread.customerEmail}</div> : null}
+                      </div>
+                    </div>
+                    <div className="a-chips">
+                      <Link to="/clients" className="btn btn-ol s" style={{ height: 40 }}>
+                        <Users className="ic" />
+                        {t("inbox.openClients")}
+                      </Link>
+                      <Btn kind="dg" style={{ height: 40 }} onClick={() => setReporting((v) => !v)}>
+                        {t("inbox.report")}
+                      </Btn>
+                    </div>
+                  </div>
+
+                  <div ref={scrollRef} style={{ display: "flex", flexDirection: "column", gap: 10, flex: 1, maxHeight: "55vh", overflowY: "auto" }}>
+                    {thread.messages.map((m) => (
+                      <div
+                        key={m.messageId}
+                        className={`a-msg${m.fromSalon ? " me" : ""}${m.status === "failed" ? " fail" : ""}`}
+                        style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", opacity: m.status === "sending" ? 0.7 : undefined }}
+                      >
+                        <small>
+                          {m.fromSalon ? t("inbox.you") : thread.customerName || t("inbox.client")} {"\u00b7 "}
+                          {m.status === "failed" ? t("inbox.failed") : when(m.sentAt)}
+                        </small>
+                        {m.body}
+                        {m.status === "failed" ? (
+                          <>
+                            <br />
+                            <b style={{ textDecoration: "underline", cursor: "pointer" }} role="button" tabIndex={0} onClick={() => retry(m)}>
+                              {t("inbox.retry")}
+                            </b>
+                          </>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+
+                  <form
+                    className="a-card"
+                    style={{ padding: "12px 16px" }}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      send();
+                    }}
+                  >
+                    <Field label={t("inbox.placeholder")} kind="ta" focused>
+                      <Textarea value={draft} maxLength={MAX_BODY} rows={3} placeholder={t("inbox.placeholder")} onChange={(e) => setDraft(e.target.value)} />
+                    </Field>
+                    <div className="row sp">
+                      <span className="a-note">{t("inbox.charCount", { count: draft.length, max: MAX_BODY })}</span>
+                      <Btn kind="v" type="submit" disabled={!draft.trim()} icon={<Send className="ic" />}>
+                        {t("inbox.send")}
+                      </Btn>
+                    </div>
+                  </form>
+                  <div className="a-note">{t("inbox.blockHint")}</div>
+                </div>
+              )}
+            </div>
           </div>
+
+          {reporting && selected && thread ? (
+            <Dialog
+              title={t("inbox.report")}
+              onClose={() => setReporting(false)}
+              width={560}
+              footer={
+                <>
+                  <Btn kind="ol" onClick={() => setReporting(false)}>{t("inbox.reportCancel")}</Btn>
+                  <Btn kind="v" onClick={() => void report()}>{t("inbox.reportSend")}</Btn>
+                </>
+              }
+            >
+              <Field label={t("inbox.reportPlaceholder")} kind="ta">
+                <Textarea value={reportText} maxLength={500} rows={3} placeholder={t("inbox.reportPlaceholder")} onChange={(e) => setReportText(e.target.value)} />
+              </Field>
+            </Dialog>
+          ) : null}
         </div>
-      </BooqiScope>
+      </BzScope>
     </AppLayout>
   );
 }

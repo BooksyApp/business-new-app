@@ -196,7 +196,7 @@ export default function EditStaffPage() {
             <div className="grid gap-6">
               {/* Left Panel - Staff Member Details */}
               <div className="space-y-6">
-                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] space-y-6">
+                <div className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] space-y-6">
                   {/* Profile Picture */}
                   {/* The camera button used to do nothing. */}
                   <StaffAvatarPicker
@@ -343,7 +343,7 @@ export default function EditStaffPage() {
 
               {/* Right Panel - Services Management */}
               <div className="space-y-6">
-                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] space-y-6">
+                <div className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] space-y-6">
                   {/* Services Tab */}
                   <div className="border-b border-[rgb(var(--reg-line)/0.8)]">
                     <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-[rgb(var(--reg-ink))]">
@@ -434,7 +434,7 @@ export default function EditStaffPage() {
             </div>
 
             {/* Working Hours */}
-            <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+            <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
               <h3 className="text-sm font-semibold text-[rgb(var(--reg-ink))] mb-1">{t("editStaff.workingHours")}</h3>
               <p className="text-xs text-[rgb(var(--reg-muted))] mb-4">
                 {t("editStaff.clientsCanOnlyBookThis")}

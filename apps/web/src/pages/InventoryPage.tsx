@@ -202,7 +202,7 @@ export default function InventoryPage() {
           </div>
 
           {products === null ? (
-            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
           ) : list.length === 0 ? (
             <EmptyState
               icon={Package}
@@ -227,11 +227,11 @@ export default function InventoryPage() {
               </div>
 
               {shown.length === 0 ? (
-                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                   {query ? t("common.nothingMatches", { query }) : t("inventory.nothingIsRunningOut")}
                 </p>
               ) : (
-                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                   {shown.map((p, i) => {
                     const low = p.lowStock && p.isActive;
                     return (

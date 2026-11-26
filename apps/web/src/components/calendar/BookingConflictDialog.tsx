@@ -73,19 +73,19 @@ export function BookingConflictDialog() {
 
   return (
     <Dialog open={!!pending} onOpenChange={(open) => { if (!open) finish(null); }}>
-      <DialogContent className="max-w-md" data-testid="booking-conflict-dialog">
+      <DialogContent className="max-w-md rounded-2xl" data-testid="booking-conflict-dialog">
         {pending && (
           <>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-600" aria-hidden />
+                <AlertTriangle className="h-8 w-8 rounded-full bg-amber-100 p-1.5 text-amber-700" aria-hidden />
                 {pending.canOverride ? t("bookingConflict.title") : t("bookingConflict.needManagerTitle")}
               </DialogTitle>
               <DialogDescription>
                 {pending.canOverride ? t("bookingConflict.intro") : t("bookingConflict.needManagerBody")}
               </DialogDescription>
             </DialogHeader>
-            <ul className="space-y-1.5 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            <ul className="space-y-1.5 rounded-xl border border-amber-200/70 bg-amber-50 p-3.5 text-sm text-amber-950">
               {pending.conflicts.map((c, i) => (
                 <li key={`${c.type}-${i}`} className="flex gap-2">
                   <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
@@ -107,12 +107,13 @@ export function BookingConflictDialog() {
               </div>
             )}
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="outline" onClick={() => finish(null)}>
+              <Button variant="outline" className="rounded-full" onClick={() => finish(null)}>
                 {pending.canOverride ? t("bookingConflict.back") : t("bookingConflict.close")}
               </Button>
               {pending.canOverride && (
                 <Button
-                  className="bg-amber-600 text-white hover:bg-amber-700"
+                  variant="brand"
+                  className="rounded-full"
                   data-testid="booking-conflict-confirm"
                   onClick={() => finish({ reason: reason.trim() || undefined })}
                 >

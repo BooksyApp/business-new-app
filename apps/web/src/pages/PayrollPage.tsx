@@ -205,18 +205,18 @@ export default function PayrollPage() {
                   <tbody>
                     {(run.lines ?? []).map((l) => (
                       <tr key={l.id} className="border-t border-[rgb(var(--reg-line)/0.6)]">
-                        <td className="px-4 py-2 font-semibold">{l.staff_name}</td>
-                        <td className="px-4 py-2">{Number(l.hours || 0).toFixed(1)}</td>
-                        <td className="px-4 py-2">{money(Number(l.base_pay || 0), sym)}</td>
-                        <td className="px-4 py-2">{money(Number(l.commission || 0), sym)}</td>
-                        <td className="px-4 py-2">{money(Number(l.tips || 0), sym)}</td>
-                        <td className="px-4 py-2" title={l.note ?? ""}>
+                        <td className="px-4 py-3.5 font-semibold">{l.staff_name}</td>
+                        <td className="px-4 py-3.5">{Number(l.hours || 0).toFixed(1)}</td>
+                        <td className="px-4 py-3.5">{money(Number(l.base_pay || 0), sym)}</td>
+                        <td className="px-4 py-3.5">{money(Number(l.commission || 0), sym)}</td>
+                        <td className="px-4 py-3.5">{money(Number(l.tips || 0), sym)}</td>
+                        <td className="px-4 py-3.5" title={l.note ?? ""}>
                           {money(Number(l.adjustment || 0), sym)}
                           {l.note ? <span className="block text-xs text-[rgb(var(--reg-muted))]">{l.note}</span> : null}
                         </td>
-                        <td className="px-4 py-2">{Number(l.advances || 0) > 0 ? `−${money(Number(l.advances), sym)}` : "—"}</td>
-                        <td className="px-4 py-2 font-semibold">{money(Number(l.total || 0), sym)}</td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-4 py-3.5">{Number(l.advances || 0) > 0 ? `−${money(Number(l.advances), sym)}` : "—"}</td>
+                        <td className="px-4 py-3.5 font-semibold">{money(Number(l.total || 0), sym)}</td>
+                        <td className="px-4 py-3.5 text-right">
                           {draft ? (
                             <Button variant="ghost" size="icon" aria-label={t("payroll.adjust")} onClick={() => { setLine(l); setAdj({ amount: String(l.adjustment ?? 0), note: l.note ?? "" }); }}>
                               <Pencil size={15} />

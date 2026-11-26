@@ -217,13 +217,13 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
   };
   // A single section reads as its own page: no repeated card title under the page title.
   const section_ = (icon: typeof CalendarCheck, title: string, children: React.ReactNode, tone?: string) =>
-    section ? <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6"><div className="space-y-4">{children}</div></section> : sectionCard(icon, title, children, tone);
+    section ? <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6"><div className="space-y-4">{children}</div></section> : sectionCard(icon, title, children, tone);
   const withPreview = !section || section === "online" || section === "cancellation";
 
   const sectionCard = (icon: typeof CalendarCheck, title: string, children: React.ReactNode, tone = "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]") => {
     const Icon = icon;
     return (
-      <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+      <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
         <div className="mb-4 flex items-center gap-3">
           <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tone)}><Icon size={18} /></span>
           <h2 className="text-base font-extrabold">{title}</h2>
@@ -256,7 +256,7 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
         <div className={pageBody}>
           {section && <BackToSettings />}
           {loading ? (
-            <div className="h-72 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <div className="h-72 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
           ) : (
             <div className={cn("grid gap-6", withPreview ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "max-w-3xl")}>
               <div className="min-w-0 space-y-6">

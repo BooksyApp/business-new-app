@@ -173,13 +173,13 @@ export default function ExpensesPage() {
                 <tbody>
                   {list.map((e) => (
                     <tr key={e.id} className="border-t border-[rgb(var(--reg-line)/0.6)] first:border-0">
-                      <td className="px-4 py-2">{e.spent_on}</td>
-                      <td className="px-4 py-2 font-semibold">
+                      <td className="px-4 py-3.5">{e.spent_on}</td>
+                      <td className="px-4 py-3.5 font-semibold">
                         <button type="button" onClick={() => edit(e)} className="rounded text-left underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]">{cat(e.category)}</button>
                       </td>
-                      <td className="px-4 py-2 text-[rgb(var(--reg-muted))]">{e.description ?? ""}{e.recurs_monthly ? ` · ${t("expenses.monthly")}` : ""}</td>
-                      <td className="px-4 py-2 text-right font-semibold">{money(n(e.amount), sym)}</td>
-                      <td className="px-4 py-2 text-right">
+                      <td className="px-4 py-3.5 text-[rgb(var(--reg-muted))]">{e.description ?? ""}{e.recurs_monthly ? ` · ${t("expenses.monthly")}` : ""}</td>
+                      <td className="px-4 py-3.5 text-right font-semibold">{money(n(e.amount), sym)}</td>
+                      <td className="px-4 py-3.5 text-right">
                         <Button variant="ghost" size="icon" aria-label={t("common.delete")} onClick={() => void remove(e)}>
                           <Trash2 size={15} />
                         </Button>

@@ -5,8 +5,8 @@ import { MapPin, Plus } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BooqiScope, PageHeader } from "@/components/page/booqi";
 import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
+import { BAvatar, BChip, BEmpty, BError, BListRow, BSkeleton } from "@/components/biz/b-card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { getCurrentBusinessId } from "@/config/api";
 import { getUserBusinesses } from "@/utils/businessUtils";
 import { t } from "@/i18n";
@@ -52,35 +52,25 @@ export default function LocationsPage() {
         />
         <div className={pageBody}>
           {salons === null && !error ? (
-            <div className="h-32 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <BSkeleton />
           ) : error ? (
-            <div className="rounded-[20px] bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-inset ring-rose-200">
-              {t("locations.couldNotLoadYourLocations")}
-            </div>
+            <BError>{t("locations.couldNotLoadYourLocations")}</BError>
+          ) : salons.length === 0 ? (
+            <BEmpty icon={<MapPin size={22} />}>{t("locations.oneLocationSoFarAdd")}</BEmpty>
           ) : (
             <ul className="grid gap-3 md:grid-cols-2">
               {salons.map((s) => {
                 const isCurrent = String(s.id) === String(currentId);
                 return (
-                  <li key={String(s.id)} className="flex items-start gap-3 rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
-                    <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", isCurrent ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]" : "bg-[rgb(var(--reg-ink)/0.05)] text-[rgb(var(--reg-ink)/0.7)]")}>
-                      <MapPin size={20} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-center gap-2">
-                        <span className="truncate text-[16px] font-bold">{s.name}</span>
-                        {isCurrent && <span className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-2 py-0.5 text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">{t("locations.mainLocation")}</span>}
-                      </p>
-                      <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{s.address || t("locations.noAddressSet")}</p>
-                    </div>
+                  <li key={String(s.id)}>
+                    <BListRow
+                      lead={<BAvatar name={s.name} className={isCurrent ? "" : "bg-[rgb(var(--reg-ink)/0.05)] text-[rgb(var(--reg-ink)/0.7)]"}><MapPin size={20} /></BAvatar>}
+                      title={<span className="flex items-center gap-2"><span className="truncate">{s.name}</span>{isCurrent && <BChip>{t("locations.mainLocation")}</BChip>}</span>}
+                      sub={s.address || t("locations.noAddressSet")}
+                    />
                   </li>
                 );
               })}
-              {salons.length === 0 && (
-                <li className="rounded-[20px] border-2 border-dashed border-[rgb(var(--reg-line))] p-5 text-sm text-[rgb(var(--reg-muted))]">
-                  {t("locations.oneLocationSoFarAdd")}
-                </li>
-              )}
             </ul>
           )}
         </div>

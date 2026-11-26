@@ -47,6 +47,9 @@ export interface Appointment {
   overrideApplied?: boolean;
   overrideReason?: string | null;
   overrideByName?: string | null;
+  /** For the calendar's "paid / deposit" icon. */
+  paymentStatus?: string | null;
+  depositPaid?: boolean | null;
 }
 
 // Frontend staff type
@@ -96,6 +99,8 @@ const convertAppointment = (apiAppt: ApiAppointment, date: Date): Appointment =>
     overrideApplied: !!apiAppt.overrideApplied,
     overrideReason: apiAppt.overrideReason,
     overrideByName: apiAppt.overrideByName,
+    paymentStatus: apiAppt.paymentStatus ?? null,
+    depositPaid: apiAppt.depositPaid ?? null,
   };
 };
 

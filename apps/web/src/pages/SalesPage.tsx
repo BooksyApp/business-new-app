@@ -26,8 +26,9 @@ import { myAccess } from "@/components/layout/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { FormSheet, StatCard } from "@/components/page/booqi";
+import { FormSheet } from "@/components/page/booqi";
 import { StatusChip } from "@/components/page/kit";
+import { Btn, Card, DataTable, EmptyState, PageHead, SegPills, Skeleton, StatusPill, Tag, Tile, Tiles } from "@/components/bz";
 import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import { quickSaleService, type QuickSaleItem as QuickSaleItemAPI } from "@/services/quickSaleService";
@@ -1466,40 +1467,28 @@ export default function SalesPage() {
       <div className="flex h-full w-full flex-col bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', fontFamily: BRAND_FONT }}>
         {/* Header: the page name and its two modes. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 py-4 backdrop-blur-xl md:px-8">
-          <h1 className="text-[28px] font-extrabold leading-none tracking-[-0.03em] md:text-[32px]">{tr("common.till")}</h1>
-          <div role="tablist" aria-label={tr("common.till")} className="flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
-          <button
-            role="tab"
-            aria-selected={activeTab === "NEW SALES"}
-            onClick={() => setActiveTab("NEW SALES")}
-            className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
-              activeTab === "NEW SALES"
-                ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
-                : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
-            }`}
-          >
-            {tr("sales.newSale")}
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === "TRANSACTIONS"}
-            onClick={() => setActiveTab("TRANSACTIONS")}
-            className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
-              activeTab === "TRANSACTIONS"
-                ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
-                : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
-            }`}
-          >
-            {tr("sales.transactions")}
-          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <PageHead
+              title={tr("common.till")}
+              right={
+                <SegPills
+                  items={[
+                    { key: "NEW SALES", label: tr("sales.newSale") },
+                    { key: "TRANSACTIONS", label: tr("sales.transactions") },
+                  ]}
+                  value={activeTab}
+                  onChange={setActiveTab}
+                />
+              }
+            />
           </div>
           {/* Invoices section disabled */}
           {/* <button
             onClick={() => setActiveTab("INVOICES")}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === "INVOICES"
-                ? "text-gray-900 border-b-2 border-gray-900"
-                : "text-gray-500 hover:text-gray-700"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-muted-foreground"
             }`}
           >
             INVOICES
@@ -1832,24 +1821,24 @@ export default function SalesPage() {
                     <div className="space-y-4 py-4">
                       {/* Search */}
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <input
                           type="text"
                           placeholder={tr("sales.searchByNamePhoneOr")}
                           value={searchQueryClient}
                           onChange={(e) => setSearchQueryClient(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                           autoFocus
                         />
                       </div>
                       {/* Client list */}
                       {loadingClients ? (
                         <div className="flex items-center justify-center py-6">
-                          <p className="text-sm text-gray-500">{tr("sales.loadingClients")}</p>
+                          <p className="text-sm text-muted-foreground">{tr("sales.loadingClients")}</p>
                         </div>
                       ) : filteredClients.length === 0 ? (
                         <div className="text-center py-6">
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {searchQueryClient ? tr("sales.noClientsMatchYourSearch") : tr("sales.noClientsYetCreateOne")}
                           </p>
                         </div>
@@ -1866,20 +1855,20 @@ export default function SalesPage() {
                               className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                                 selectedClient?.id === client.id
                                   ? "border-accent bg-accent/5"
-                                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                  : "border-border hover:border-border hover:bg-muted"
                               }`}
                             >
                               {/* Avatar placeholder */}
-                              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                                <User className="h-4 w-4 text-gray-600" />
+                              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                <User className="h-4 w-4 text-muted-foreground" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="text-sm font-medium text-foreground truncate">
                                   {getClientDisplayName(client)}
                                 </p>
                                 <div className="flex gap-3 mt-0.5">
-                                  {client.email && <span className="text-xs text-gray-500 truncate">{client.email}</span>}
-                                  {client.phone && <span className="text-xs text-gray-500 truncate">{client.phone}</span>}
+                                  {client.email && <span className="text-xs text-muted-foreground truncate">{client.email}</span>}
+                                  {client.phone && <span className="text-xs text-muted-foreground truncate">{client.phone}</span>}
                                 </div>
                               </div>
                               {selectedClient?.id === client.id && (
@@ -1941,55 +1930,50 @@ export default function SalesPage() {
               const revenue = paid.reduce((n, t) => n + Number(t.sale.total || 0), 0);
               const undone = shown.filter((t) => t.status === "CANCELLED" || t.status === "REFUNDED").length;
               const chip = (status: string) =>
-                status === "PAID" ? <StatusChip status="active" label={tr("common.paid")} /> : status === "CANCELLED" ? <StatusChip status="ended" label={tr("sales.voided")} /> : status === "REFUNDED" ? <StatusChip status="failed" label={tr("sales.refunded")} /> : <StatusChip status="draft" label={status.charAt(0) + status.slice(1).toLowerCase()} />;
+                status === "PAID" ? <StatusPill kind="c">{tr("common.paid")}</StatusPill> : status === "CANCELLED" ? <StatusPill kind="x">{tr("sales.voided")}</StatusPill> : status === "REFUNDED" ? <StatusPill kind="r">{tr("sales.refunded")}</StatusPill> : <StatusPill kind="d">{status.charAt(0) + status.slice(1).toLowerCase()}</StatusPill>;
               const methodChip = (m: string) => (
-                <span className="inline-flex max-w-[160px] truncate rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-2.5 py-1 text-xs font-semibold">{m}</span>
+                <Tag>{m}</Tag>
               );
               const itemsSummary = (t: Transaction) => (t.items.length ? t.items.map((i) => (i.quantity > 1 ? `${i.quantity}× ${i.name}` : i.name)).join(", ") : t.description || "—");
               return (
                 <>
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <StatCard icon={Receipt} label={tr("common.sales")} value={paid.length} hint={tr("sales.inRange", { count: shown.length })} tone="violet" />
-                    <StatCard icon={CreditCard} label={tr("common.revenue")} value={`${revenue.toFixed(2)} ${currencySymbol()}`} hint={tr("sales.paidSales")} tone="emerald" />
-                    <StatCard icon={User} label={tr("sales.averageTicket")} value={paid.length ? `${(revenue / paid.length).toFixed(2)} ${currencySymbol()}` : "—"} tone="sky" />
-                    <StatCard icon={XIcon} label={tr("sales.voidedRefunded")} value={undone} tone={undone ? "rose" : "slate"} />
-                  </div>
+                  <Tiles cols={4}>
+                    <Tile label={tr("common.sales")} value={paid.length} hint={tr("sales.inRange", { count: shown.length })} />
+                    <Tile label={tr("common.revenue")} value={`${revenue.toFixed(2)} ${currencySymbol()}`} hint={tr("sales.paidSales")} />
+                    <Tile label={tr("sales.averageTicket")} value={paid.length ? `${(revenue / paid.length).toFixed(2)} ${currencySymbol()}` : "—"} />
+                    <Tile label={tr("sales.voidedRefunded")} value={undone} />
+                  </Tiles>
 
                   {loadingTransactions ? (
-                    <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+                    <div aria-busy><Skeleton lines={[90, 70, 80, 55, 75]} /></div>
                   ) : shown.length === 0 ? (
-                    <div className="rounded-[20px] bg-white px-6 py-14 text-center ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                      <p className="text-lg font-extrabold">{tr("sales.noSalesHere")}</p>
-                      <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{transactions.length ? tr("sales.nothingMatchesTheseFilters") : tr("sales.salesYouTakeAtThe")}</p>
-                      {!transactions.length && <button type="button" onClick={() => setActiveTab("NEW SALES")} className="mt-4 inline-flex h-10 items-center rounded-full bg-[rgb(var(--reg-ink))] px-5 text-sm font-semibold text-white">{tr("sales.newSale")}</button>}
-                    </div>
+                    <EmptyState
+                      icon={<Receipt className="ic" />}
+                      title={tr("sales.noSalesHere")}
+                      text={transactions.length ? tr("sales.nothingMatchesTheseFilters") : tr("sales.salesYouTakeAtThe")}
+                      action={!transactions.length ? <Btn kind="v" onClick={() => setActiveTab("NEW SALES")}>{tr("sales.newSale")}</Btn> : undefined}
+                    />
                   ) : (
                     <>
-                      <div className="hidden overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] md:block">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-[rgb(var(--reg-line)/0.8)] text-left text-xs uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">
-                              {/* i18n-ignore: column ids, labels go through tOpt */ ["When", "Client", "Items", "Staff", "Method", "Total", "Status"].map((h) => (
-                                <th key={h} scope="col" className={cn("px-4 py-3 font-bold", h === "Total" && "text-right")}>{tOpt("salesCols", h)}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {shown.map((t) => (
-                              <tr key={t.id} onClick={() => setSelectedTransaction(t)} className="cursor-pointer border-t border-[rgb(var(--reg-line)/0.5)] transition hover:bg-[rgb(var(--reg-canvas)/0.7)]">
-                                <td className="whitespace-nowrap px-4 py-3"><span className="font-semibold tabular-nums">{t.time}</span><span className="block text-xs text-[rgb(var(--reg-muted))]">{t.date}</span></td>
-                                <td className="max-w-[180px] truncate px-4 py-3 font-semibold">
-                                  <button type="button" className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); setSelectedTransaction(t); }}>{t.clientName}</button>
-                                </td>
-                                <td className="max-w-[260px] truncate px-4 py-3 text-[rgb(var(--reg-ink)/0.8)]">{itemsSummary(t)}</td>
-                                <td className="px-4 py-3">{t.staffName || "—"}</td>
-                                <td className="px-4 py-3">{methodChip(t.paymentMethod)}</td>
-                                <td className={cn("px-4 py-3 text-right font-extrabold tabular-nums", t.status !== "PAID" && "text-[rgb(var(--reg-muted))] line-through")}>{t.amount}</td>
-                                <td className="px-4 py-3">{chip(t.status)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="hidden md:block">
+                        <Card>
+                          <DataTable
+                            grid="1fr 1.2fr 2fr 1fr 1fr 1fr 1fr"
+                            columns={/* i18n-ignore: column ids, labels go through tOpt */ ["When", "Client", "Items", "Staff", "Method", "Total", "Status"].map((h) => tOpt("salesCols", h))}
+                            rows={shown}
+                            rowKey={(t) => t.id}
+                            onRowClick={(t) => setSelectedTransaction(t)}
+                            render={(t) => [
+                              <><b>{t.time}</b><small style={{ display: "block" }}>{t.date}</small></>,
+                              <b>{t.clientName}</b>,
+                              itemsSummary(t),
+                              t.staffName || "—",
+                              methodChip(t.paymentMethod),
+                              <b style={t.status !== "PAID" ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>{t.amount}</b>,
+                              chip(t.status),
+                            ]}
+                          />
+                        </Card>
                       </div>
                       <ul className="space-y-2 md:hidden">
                         {shown.map((t) => (
@@ -2153,18 +2137,18 @@ export default function SalesPage() {
               <DialogTitle>{tr("sales.editQuickSaleItems")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {tr("sales.selectServicesAndCombosTo")}
               </p>
               
               {servicesLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <p className="text-gray-500">{tr("sales.loadingServices")}</p>
+                  <p className="text-muted-foreground">{tr("sales.loadingServices")}</p>
                 </div>
               ) : availableItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-gray-900 font-medium mb-2">{tr("sales.noServicesAvailable")}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-foreground font-medium mb-2">{tr("sales.noServicesAvailable")}</p>
+                  <p className="text-sm text-muted-foreground">
                     {tr("sales.createServicesAndCombosFirst")}
                   </p>
                 </div>
@@ -2176,8 +2160,8 @@ export default function SalesPage() {
                       className={`
                         flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors
                         ${selectedQuickSaleItems.includes(item.id)
-                          ? 'border-gray-900 bg-gray-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-foreground bg-muted'
+                          : 'border-border hover:border-border'
                         }
                       `}
                       onClick={() => {
@@ -2200,7 +2184,7 @@ export default function SalesPage() {
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-gray-900">{item.name}</h4>
+                          <h4 className="font-medium text-foreground">{item.name}</h4>
                           {item.type === 'combo' && (
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
                               {tr("sales.combo")}
@@ -2208,8 +2192,8 @@ export default function SalesPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-4 mt-1">
-                          <p className="text-sm text-gray-500">{item.duration}</p>
-                          <p className="text-sm font-medium text-gray-900">{item.price}</p>
+                          <p className="text-sm text-muted-foreground">{item.duration}</p>
+                          <p className="text-sm font-medium text-foreground">{item.price}</p>
                         </div>
                       </div>
                       <div 
@@ -2234,7 +2218,7 @@ export default function SalesPage() {
                 <Button
                   onClick={saveQuickSaleConfig}
                   disabled={selectedQuickSaleItems.length === 0}
-                  className="bg-gray-900 hover:bg-gray-800"
+                  className="bg-foreground hover:bg-foreground/90"
                 >
                   <Save size={16} className="mr-2" />
                   {tr("sales.saveChanges")}
