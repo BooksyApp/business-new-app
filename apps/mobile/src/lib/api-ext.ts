@@ -95,6 +95,11 @@ export const apiX = {
   // settings
   hours: (b: Id) => request<HoursRow[]>(`/business-hours/business/${b}`),
   saveHours: (b: Id, rows: { dayOfWeek: string; enabled: boolean; startTime: string; endTime: string }[]) => request<HoursRow[]>(`/business-hours/business/${b}`, { method: 'PUT', body: rows }),
+  hoursExceptions: (b: Id) => request<{ id: Id; startDate: string; endDate: string; closed: boolean; notes: string | null }[]>(`/business-hours-exceptions/business/${b}`),
+  addHoursException: (b: Id, startDate: string, endDate: string, notes: string) => request<unknown>('/business-hours-exceptions', { method: 'POST', body: { businessId: b, startDate, endDate, closed: true, openTime: null, closeTime: null, notes: notes || null } }),
+  removeHoursException: (b: Id, id: Id) => request<void>(`/business-hours-exceptions/${id}?businessId=${b}`, { method: 'DELETE' }),
+  hubEvents: (b: Id) => request<{ unread: number; events: { id: string; type: string; at: string; who?: string | null; what?: string | null; date?: string | null; time?: string | null; rating?: number | null; unread: boolean }[] }>(`/businesses/${b}/hub-events`),
+  readHubEvents: (b: Id) => request<{ unread: number }>(`/businesses/${b}/hub-events/read`, { method: 'POST', body: {} }),
   notifSettings: (b: Id) => request<NotifSettings>(`/businesses/${b}/notification-settings`),
   saveNotifSettings: (b: Id, body: NotifSettings) => request<NotifSettings>(`/businesses/${b}/notification-settings`, { method: 'PUT', body }),
   subscription: (b: Id) => request<SubStatus>(`/businesses/${b}/subscription`),

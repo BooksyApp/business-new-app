@@ -11,6 +11,7 @@ import { ErrorState, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
+import { rememberClients } from '@/lib/client-cache';
 import { addDays, monthLabel, sameDay, startOfWeek, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -55,6 +56,8 @@ export default function Calendar() {
   const staff = useLoad<Staff[]>(() => api.staff(sid), [sid]);
   const weekStart = startOfWeek(date);
   const day = useLoad(() => (mode === 'day' ? api.appointments(sid, date) : api.appointments(sid, weekStart, addDays(weekStart, 6))), [sid, mode, mode === 'day' ? date.toDateString() : weekStart.toDateString(), version]);
+  // Client stats feed the VIP / new / returning tile markers; failure just means no such markers.
+  const clientsQ = useLoad(async () => { const r = await api.clientsWithStats(sid).catch(() => []); rememberClients(r); return r.length; }, [sid, version]);
   const off = useLoad<TimeOff[]>(() => (mode === 'day' ? api.timeOffOn(sid, date).catch(() => []) : Promise.resolve([])), [sid, mode, date.toDateString(), version]);
 
   const all = useMemo(() => {

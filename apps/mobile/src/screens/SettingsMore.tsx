@@ -24,7 +24,14 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
   const sid = salon?.id ?? '';
   const q = useLoad(() => apiX.hours(sid), [sid]);
   const [rows, setRows] = useState<Record<string, { on: boolean; from: string; to: string }>>({});
+  const ex = useLoad(() => apiX.hoursExceptions(sid).catch(() => []), [sid]);
+  const [xf, setXf] = useState(''); const [xt, setXt] = useState(''); const [xn, setXn] = useState('');
   const [busy, setBusy] = useState(false);
+  async function addEx() {
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    if (!re.test(xf) || !re.test(xt || xf) || (xt || xf) < xf) { Alert.alert(tr('common.error'), tr('hr.badDate')); return; }
+    try { await apiX.addHoursException(sid, xf, xt || xf, xn.trim()); setXf(''); setXt(''); setXn(''); bump(); await ex.reload(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); }
+  }
   useEffect(() => {
     if (!q.data) return;
     setRows(Object.fromEntries(DAYS.map((d) => { const r = q.data!.find((x) => x.dayOfWeek === d); return [d, { on: !!r?.enabled, from: hm(r?.startTime) || '09:00', to: hm(r?.endTime) || '18:00' }]; })));
@@ -57,6 +64,17 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
             </View>
           ) : null)}
           <Btn label={tr('hr.save')} loading={busy} onPress={() => void save()} style={{ marginTop: 12 }} />
+          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 24, marginBottom: 8 }}>{tr('hr.exceptions')}</Text>
+          {(ex.data ?? []).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 8 }}>{tr('hr.none')}</Text> : (ex.data ?? []).map((x) => (
+            <Card key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginBottom: 8 }}>
+              <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{dateLabel(fromIso(x.startDate))}{x.endDate !== x.startDate ? ` - ${dateLabel(fromIso(x.endDate))}` : ''}{x.notes ? ` · ${x.notes}` : ''}</Text>
+              <Pressable onPress={() => void apiX.removeHoursException(sid, x.id).then(() => { bump(); return ex.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.gink }}>{tr('lk.delete')}</Text></Pressable>
+            </Card>
+          ))}
+          <Field label={tr('hr.from')} value={xf} onChangeText={setXf} keyboardType="numbers-and-punctuation" maxLength={10} />
+          <Field label={tr('hr.to')} value={xt} onChangeText={setXt} keyboardType="numbers-and-punctuation" maxLength={10} />
+          <Field label={tr('hr.note')} value={xn} onChangeText={setXn} />
+          <Btn label={tr('hr.addException')} variant="secondary" icon="plus" disabled={!xf} onPress={() => void addEx()} />
         </ScrollView>
       )}
     </Screen>

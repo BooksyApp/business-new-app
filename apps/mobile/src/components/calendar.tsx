@@ -5,7 +5,8 @@ import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { t as tr, type StringKey } from '@/i18n';
-import type { Appointment, Staff, TimeOff } from '@/lib/api';
+import type { Appointment, ClientWithStats, Staff, TimeOff } from '@/lib/api';
+import { recallClient } from '@/lib/client-cache';
 import { useDockInset } from '@/lib/dock';
 import { addDays, fromMin, hhmm, sameDay, startOfWeek, toMin, weekdayShort } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
@@ -22,11 +23,13 @@ const TILE_D: [string, string][] = [['#272040', '#cfc4ff'], ['#3a2130', '#ffb0c1
 const hash = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 
 export type Marker = { key: string; icon: string; label: StringKey };
-/** Small tile icon markers (design `.ni`), only from fields the booking response really carries.
- *  New / returning / VIP / birthday markers need client data the booking does not include: not shown. */
+/** Small tile icon markers (design `.ni`): booking fields plus client stats from the client list (VIP / new / returning). */
 export function markersOf(a: Appointment): Marker[] {
   const out: Marker[] = [];
   const online = (a.bookingSource ?? '').toLowerCase().startsWith('web');
+  const c = a.clientId != null ? recallClient(String(a.clientId)) as ClientWithStats | undefined : undefined;
+  if (c?.vip) out.push({ key: 'vip', icon: 'crown', label: 'marker.vip' });
+  else if (c) { const v = c.pastVisits ?? c.totalVisits ?? 0; out.push(v === 0 ? { key: 'new', icon: 'user-plus', label: 'marker.isNew' } : { key: 'ret', icon: 'user-check', label: 'marker.returning' }); }
   if (online) out.push({ key: 'online', icon: 'globe', label: 'marker.online' });
   if (online && a.staffAutoAssigned === false) out.push({ key: 'chosen', icon: 'user-check', label: 'marker.chosen' });
   if (a.guestName) out.push({ key: 'group', icon: 'users', label: 'marker.group' });

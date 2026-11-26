@@ -35,6 +35,7 @@ export default function Notifications() {
     return { pending: appts.filter((a) => a.status === 'PENDING').sort((a, b) => `${a.appointmentDate}${a.startTime}`.localeCompare(`${b.appointmentDate}${b.startTime}`)), waitlist };
   }, [salon?.id, version]);
   const [wlOpen, setWlOpen] = useState(false);
+  const ev = useLoad(() => apiX.hubEvents(salon?.id ?? '').catch(() => null), [salon?.id, version]);
   const pending = data.data?.pending ?? [];
   const waitlist = data.data?.waitlist ?? [];
   async function confirm(id: string) {
@@ -66,6 +67,23 @@ export default function Notifications() {
             {pushState !== 'on' ? <Btn label={tr('notifications.pushOn')} onPress={async () => setPushState((await enablePush()) ? 'on' : 'failed')} /> : null}
           </Card>
           {data.loading && !data.data ? <Skeleton rows={3} /> : null}
+          {(ev.data?.events ?? []).length ? (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4 }}>{tr('ev.title')}</Text>
+                {ev.data!.unread ? <Pressable onPress={() => void apiX.readHubEvents(salon?.id ?? '').then(() => ev.reload()).catch(() => {})} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 13.5, color: t.vtext }}>{tr('ev.markRead')}</Text></Pressable> : null}
+              </View>
+              {ev.data!.events.slice(0, 8).map((e) => (
+                <Card key={e.id} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: e.unread ? 1 : 0.7 }}>
+                  <Icon name={e.type === 'REVIEW' ? 'star' : e.type === 'WAITLIST' ? 'user-plus' : e.type === 'BOOKING_CANCELLED' ? 'x' : 'cal'} size={20} color={t.vtext} />
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{tr(`ev.${e.type}` as 'ev.REVIEW')}{e.who ? ` · ${e.who}` : ''}</Text>
+                    <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{[e.what, e.date, e.time?.slice(0, 5)].filter(Boolean).join(' · ')}</Text>
+                  </View>
+                </Card>
+              ))}
+            </View>
+          ) : null}
           {empty ? <StateView icon="bell" title={tr('notifications.empty')} /> : null}
           {pending.length ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4, marginTop: 4 }}>{tr('notifications.pending')}</Text> : null}
           {pending.map((a) => (

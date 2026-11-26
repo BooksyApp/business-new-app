@@ -112,6 +112,7 @@ export interface ClientWithStats extends Client {
   cancelledAppointments?: number;
   allowMarketingEmails?: boolean | null;
   allowSmsNotifications?: boolean | null;
+  vip?: boolean;
 }
 
 export interface ClientNote {
