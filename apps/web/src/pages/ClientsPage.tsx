@@ -1,6 +1,6 @@
 import type { Id } from "@/types/id";
 import { AppLayout, PageHeader } from "@/components/layout/AppLayout";
-import { Btn, Chip, ChipRow, Dialog as BzDialog, EmptyState, Field, FormGrid, PageHead, SegPills, Skeleton } from "@/components/bz";
+import { Btn, Chip, ChipRow, Dialog as BzDialog, EmptyState as BzEmptyState, Field, FormGrid, PageHead, SegPills, Skeleton } from "@/components/bz";
 import { salonToday } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { clientColorClasses } from "@/lib/appointmentVisuals";
@@ -692,14 +692,14 @@ export default function ClientsPage() {
           {loading ? (
             <Skeleton lines={[90, 70, 80, 55, 75]} />
           ) : allClientsWithPending.length === 0 ? (
-            <EmptyState
+            <BzEmptyState
               icon={<Users className="ic" />}
               title={tr("clients.noClientsYet")}
               text={tr("clients.anyoneWhoBooksLandsHere")}
               action={<Btn kind="v" icon={<Plus className="ic" />} onClick={() => setAddClientDialogOpen(true)}>{tr("clients.addClient")}</Btn>}
             />
           ) : visibleClients.length === 0 ? (
-            <EmptyState
+            <BzEmptyState
               icon={<Search className="ic" />}
               title={searchQuery ? tr("clients.nothingMatches", { searchQuery }) : tr("clients.nobodyHereYet")}
               text={tr("clients.searchRunsOverNameEmail", { value: segment !== "all" ? tr("clients.orShowEveryone") : "" })}

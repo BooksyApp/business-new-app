@@ -1,19 +1,8 @@
-import { ASection, APillGroup } from "@/components/biz/a-Section";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Btn, Chip, ChipRow, Field, Note, RowItem, SegPills, Tile, Tiles } from "@/components/bz";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/currency";
 import { t } from "@/i18n";
 import {
@@ -125,157 +114,105 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
     }
   };
 
+  const footer = (
+        <Btn kind="v" disabled={!valid || busy} onClick={() => void submit()}>
+          {busy
+            ? t("sales.saleRefund.submitting")
+            : t("sales.saleRefund.submit", {
+                value: formatPrice(mode === "lines" ? estimate : amountOk ? amountValue : 0),
+              })}
+        </Btn>
+  );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>{t("sales.saleRefund.title")}</DialogTitle>
-          <DialogDescription>{t("sales.saleRefund.description")}</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl bz-surface">
+      <DialogHeader>
+        <DialogTitle>{t("sales.saleRefund.title")}</DialogTitle>
+        <DialogDescription>{t("sales.saleRefund.description")}</DialogDescription>
+      </DialogHeader>
+      <div className="stk">
+      <Tiles cols={2}>
+        <Tile label={t("sales.saleRefund.paid")} value={formatPrice(sale.total)} />
+        <Tile label={t("sales.saleRefund.refundable")} value={formatPrice(refundable)} />
+      </Tiles>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-border bg-muted/50 p-3.5">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("sales.saleRefund.paid")}</p>
-              <p className="text-lg font-semibold tabular-nums">{formatPrice(sale.total)}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-muted/50 p-3.5">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("sales.saleRefund.refundable")}</p>
-              <p className="text-lg font-semibold tabular-nums">{formatPrice(refundable)}</p>
-            </div>
-          </div>
+      {summary?.onlinePayment && <Note kind="in">{t("sales.saleRefund.onlinePaid")}</Note>}
+      {summary && !summary.onlinePayment && refundable <= 0 && <Note kind="er">{t("sales.saleRefund.fullyRefunded")}</Note>}
 
-          {summary?.onlinePayment && (
-            <p className="text-sm text-muted-foreground">{t("sales.saleRefund.onlinePaid")}</p>
-          )}
-          {summary && !summary.onlinePayment && refundable <= 0 && (
-            <p className="text-sm text-rose-600">{t("sales.saleRefund.fullyRefunded")}</p>
-          )}
+      {!blocked && (
+        <>
+          <SegPills
+            items={[
+              { key: "lines", label: t("sales.saleRefund.byItems") },
+              { key: "amount", label: t("sales.saleRefund.byAmount") },
+            ]}
+            value={mode}
+            onChange={(k) => setMode(k as Mode)}
+          />
 
-          {!blocked && (
-            <>
-              <APillGroup>
-                <Button type="button" size="sm" className="rounded-full" variant={mode === "lines" ? "default" : "ghost"} onClick={() => setMode("lines")}>
-                  {t("sales.saleRefund.byItems")}
-                </Button>
-                <Button type="button" size="sm" className="rounded-full" variant={mode === "amount" ? "default" : "ghost"} onClick={() => setMode("amount")}>
-                  {t("sales.saleRefund.byAmount")}
-                </Button>
-              </APillGroup>
-
-              {mode === "lines" ? (
-                <div className="space-y-2">
-                  {pickable.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("sales.saleRefund.noItems")}</p>
-                  ) : (
-                    pickable.map((item) => {
-                      const id = String(item.id);
-                      return (
-                        <div key={id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate font-medium">{item.serviceName}</p>
-                            <p className="text-xs text-muted-foreground tabular-nums">
-                              {formatPrice(item.unitPrice)} × {item.quantity}
-                            </p>
-                          </div>
-                          <Label htmlFor={`refund-qty-${id}`} className="sr-only">
-                            {t("sales.saleRefund.quantity")}
-                          </Label>
-                          <Input
-                            id={`refund-qty-${id}`}
-                            className="w-20"
-                            inputMode="numeric"
-                            aria-label={t("sales.saleRefund.quantity")}
-                            value={quantities[id] ?? 0}
-                            onChange={(e) => setQty(item.id as Id, Number(e.target.value) || 0, item.quantity)}
-                          />
-                        </div>
-                      );
-                    })
-                  )}
-                  {chosenLines.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      {t("sales.saleRefund.estimate", { value: formatPrice(estimate) })}
-                    </p>
-                  )}
-                </div>
+          {mode === "lines" ? (
+            <div className="stk">
+              {pickable.length === 0 ? (
+                <Note kind="in">{t("sales.saleRefund.noItems")}</Note>
               ) : (
-                <div className="space-y-2">
-                  <Label htmlFor="sale-refund-amount">{t("sales.saleRefund.amount")}</Label>
-                  <Input
-                    id="sale-refund-amount"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                </div>
+                pickable.map((item) => {
+                  const id = String(item.id);
+                  return (
+                    <RowItem
+                      key={id}
+                      title={item.serviceName}
+                      sub={`${formatPrice(item.unitPrice)} × ${item.quantity}`}
+                      right={
+                        <div style={{ width: 96 }}>
+                          <Field label={t("sales.saleRefund.quantity")}>
+                            <input
+                              id={`refund-qty-${id}`}
+                              inputMode="numeric"
+                              aria-label={t("sales.saleRefund.quantity")}
+                              value={quantities[id] ?? 0}
+                              onChange={(e) => setQty(item.id as Id, Number(e.target.value) || 0, item.quantity)}
+                            />
+                          </Field>
+                        </div>
+                      }
+                    />
+                  );
+                })
               )}
+              {chosenLines.length > 0 && <div className="a-note">{t("sales.saleRefund.estimate", { value: formatPrice(estimate) })}</div>}
+            </div>
+          ) : (
+            <Field label={t("sales.saleRefund.amount")}>
+              <input id="sale-refund-amount" inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </Field>
+          )}
 
-              <ASection>
-              {!summary?.onlinePayment && (
-              <div className="space-y-2">
-                <Label htmlFor="sale-refund-method">{t("sales.saleRefund.method")}</Label>
-                <div className="flex flex-wrap gap-2">
-                  {METHODS.map((m) => (
-                    <Button
-                      key={m.value}
-                      type="button"
-                      size="sm"
-                      variant={method === m.value ? "default" : "outline"}
-                      onClick={() => setMethod(m.value)}
-                    >
-                      {m.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              )}
-
-              {method === "GIFT_CARD" && !summary?.onlinePayment && (
-                <div className="space-y-2">
-                  <Label htmlFor="sale-refund-card">{t("sales.saleRefund.giftCardCode")}</Label>
-                  <Input
-                    id="sale-refund-card"
-                    value={giftCardCode}
-                    onChange={(e) => setGiftCardCode(e.target.value)}
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="sale-refund-reason">{t("sales.saleRefund.reason")}</Label>
-                <Textarea
-                  id="sale-refund-reason"
-                  maxLength={255}
-                  rows={2}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-                {reason.trim() === "" && (
-                  <p className="text-xs text-muted-foreground">{t("sales.saleRefund.reasonRequired")}</p>
-                )}
-              </div>
-              </ASection>
+          {!summary?.onlinePayment && (
+            <>
+              <div className="lbl2">{t("sales.saleRefund.method")}</div>
+              <ChipRow>
+                {METHODS.map((m) => (
+                  <Chip key={m.value} on={method === m.value} onClick={() => setMethod(m.value)}>
+                    {m.label}
+                  </Chip>
+                ))}
+              </ChipRow>
             </>
           )}
-        </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="brand"
-            className="rounded-full"
-            disabled={!valid || busy}
-            onClick={() => void submit()}
-          >
-            {busy
-              ? t("sales.saleRefund.submitting")
-              : t("sales.saleRefund.submit", {
-                  value: formatPrice(mode === "lines" ? estimate : amountOk ? amountValue : 0),
-                })}
-          </Button>
-        </DialogFooter>
+          {method === "GIFT_CARD" && !summary?.onlinePayment && (
+            <Field label={t("sales.saleRefund.giftCardCode")}>
+              <input id="sale-refund-card" value={giftCardCode} onChange={(e) => setGiftCardCode(e.target.value)} />
+            </Field>
+          )}
+
+          <Field label={t("sales.saleRefund.reason")} kind="ta" hint={reason.trim() === "" ? t("sales.saleRefund.reasonRequired") : undefined}>
+            <textarea id="sale-refund-reason" maxLength={255} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+          </Field>
+        </>
+      )}
+      </div>
+      <div className="row gap8" style={{ justifyContent: "flex-end" }}>{footer}</div>
       </DialogContent>
     </Dialog>
   );
