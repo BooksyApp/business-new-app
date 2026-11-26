@@ -107,6 +107,11 @@ jobs:
           mkdir -p apps/mobile/node_modules
           [ -e apps/mobile/node_modules/expo ] || ln -s "$GITHUB_WORKSPACE/node_modules/expo" apps/mobile/node_modules/expo
           ls -d apps/mobile/node_modules/expo/android/src/main/java >/dev/null && echo "expo link ok"
+      - name: Metro monorepo fix (nested @types/react shadowed react)
+        working-directory: apps/mobile
+        run: |
+          ls -d node_modules/react node_modules/react/package.json ../../node_modules/react 2>&1 | head
+          rm -rf node_modules/@types/react
       - name: Assemble release
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
