@@ -28,7 +28,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { AppointmentBlock, StaffAvatar, type Appointment, type Staff } from "@/components/calendar/AppointmentBlock";
+import { AppointmentBlock, StaffAvatar, appointmentServiceLabel, type Appointment, type Staff } from "@/components/calendar/AppointmentBlock";
+import { appointmentFlagKeys } from "@/lib/appointmentFlags";
 // The visit sheet (~700 lines plus refund dialog and client picker) is only needed once a
 // visit is opened: its own chunk, fetched on idle after the calendar has painted.
 const loadAppointmentModal = () => import("@/components/calendar/AppointmentModal");
@@ -53,6 +54,7 @@ import { isSalonToday, salonNow } from "@/lib/salonClock";
 import { VisibilityBanner } from "@/components/VisibilityBanner";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FlagIcons, FlagLegend, type CalendarDensity } from "@/components/calendar/AppointmentFlags";
 import { categoryTint, type CategoryTint } from "@/lib/serviceCategoryColor";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
@@ -192,6 +194,9 @@ function parseTime(time: string): number {
 
 // Slot height for better readability (20px per 15-minute slot)
 const SLOT_HEIGHT = 20;
+
+/** Overlapping bookings sit side by side up to this many columns; the rest go behind a "+N" chip. */
+const MAX_OVERLAP_COLUMNS = 3;
 
 /* The calendar's sheets (new booking, time off, block time): right sheet on a desktop,
    full screen on a phone, sticky header and footer, 48px fields as on the auth pages. */
@@ -1108,6 +1113,29 @@ export default function CalendarPage() {
     return null;
   };
 
+  /** Clients whose birthday (month-day) falls on a given appointment day, same three keys as visits. */
+  const birthdayByClient = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of clients) {
+      const md = typeof c.birthday === "string" && c.birthday.length >= 10 ? c.birthday.slice(5, 10) : "";
+      if (!md) continue;
+      map.set(`id:${c.id}`, md);
+      const name = `${c.firstName} ${c.lastName || ""}`.trim().toLowerCase();
+      if (name) map.set(`name:${name}`, md);
+      if (c.email) map.set(`email:${c.email.trim().toLowerCase()}`, md);
+    }
+    return map;
+  }, [clients]);
+
+  /** Everything the small icons need beyond the appointment row: birthday today, VIP (no list field yet). */
+  const flagCtxFor = (apt: { clientId?: Id; clientName?: string; clientEmail?: string; date?: Date }) => {
+    const md =
+      (apt.clientId != null ? birthdayByClient.get(`id:${apt.clientId}`) : undefined) ??
+      (apt.clientEmail ? birthdayByClient.get(`email:${apt.clientEmail.trim().toLowerCase()}`) : undefined) ??
+      (apt.clientName ? birthdayByClient.get(`name:${apt.clientName.trim().toLowerCase()}`) : undefined);
+    return { birthday: !!md && !!apt.date && format(apt.date, "MM-dd") === md };
+  };
+
   const blockVisuals = (apt: {
     clientName?: string;
     notes?: string;
@@ -1625,6 +1653,14 @@ export default function CalendarPage() {
     try { localStorage.setItem("calendar.showWaiting", on ? "1" : "0"); } catch { /* per-viewer convenience only */ }
   };
   const waitingVisible = flags.waitlist !== false && showWaiting;
+  // Row density: "comfy" (default) or "compact" for busy days; remembered per browser.
+  const [density, setDensityState] = useState<CalendarDensity>(() => {
+    try { return localStorage.getItem("calendar.density") === "compact" ? "compact" : "comfy"; } catch { return "comfy"; }
+  });
+  const setDensity = (d: CalendarDensity) => {
+    setDensityState(d);
+    try { localStorage.setItem("calendar.density", d); } catch { /* per-viewer convenience only */ }
+  };
   const waitingEnabled = waitingVisible && viewType === "Day";
   /** Masters (in calendar order) who do this waiter's service; all of them when the service lists none. */
   const mastersForService = (w: WaitlistEntry, from: Staff[]): Staff[] => {
@@ -2097,6 +2133,27 @@ export default function CalendarPage() {
                 </button>
               )}
 
+              {(viewType === "Day" || viewType === "Weekly") && (
+                <>
+                  <FlagLegend />
+                  <div role="group" aria-label={tr("calendar.densityTitle")} className="inline-flex h-10 items-center rounded-full bg-white p-1 ring-1 ring-[rgb(var(--reg-line))]">
+                    {(["comfy", "compact"] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={density === d}
+                        onClick={() => setDensity(d)}
+                        className={`h-8 rounded-full px-3 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))] ${
+                          density === d ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
+                        }`}
+                      >
+                        {d === "comfy" ? tr("calendar.densityComfy") : tr("calendar.densityTight")}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
               {viewType === "Day" && getAppointmentsForDate(currentDate).length === 0 && (
                 <p className="ml-auto hidden text-sm text-[rgb(var(--reg-muted))] lg:block">
                   {tr("calendar.noBookingsYetClickA")}
@@ -2519,11 +2576,14 @@ export default function CalendarPage() {
                         }
                         const isDragging = dragSelection?.isDragging && dragSelection.staffId === staff.id;
                         
-                        return conflictGroups.flatMap((group) => {
+                        return conflictGroups.flatMap((fullGroup) => {
+                          // More than 3 overlapping: three columns plus a "+N" chip with the rest.
+                          const hiddenItems = fullGroup.length > MAX_OVERLAP_COLUMNS ? fullGroup.slice(MAX_OVERLAP_COLUMNS) : [];
+                          const group = hiddenItems.length ? fullGroup.slice(0, MAX_OVERLAP_COLUMNS) : fullGroup;
                           const groupSize = group.length;
                           
                           // For each item in the group, render it with calculated width/position
-                          return group.map((item, itemIndex) => {
+                          const rendered = group.map((item, itemIndex) => {
                             let top = 0;
                             let height = 0;
                             
@@ -2604,6 +2664,8 @@ export default function CalendarPage() {
                     >
                       <AppointmentBlock
                                     visits={visitsFor(item.item)}
+                                    flagCtx={flagCtxFor(item.item)}
+                                    density={density}
                                     height={height}
                                     appointment={item.item} 
                                     onClick={(e) => {
@@ -2698,6 +2760,59 @@ export default function CalendarPage() {
                               );
                             }
                           });
+                          if (hiddenItems.length === 0) return rendered;
+                          const tops = fullGroup.flatMap((x) =>
+                            x.type === "appointment" ? [getTimePosition(normalizeTime(x.item.startTime), normalizeTime(x.item.endTime), SLOT_HEIGHT).top]
+                            : x.type === "waiting" ? [getTimePosition(x.start, x.end, SLOT_HEIGHT).top] : []);
+                          const chipTop = tops.length ? Math.min(...tops) : 0;
+                          const chip = (
+                            <div key={`more-${fullGroup.map((x) => (x.type === "appointment" ? x.item.id : `${x.type}-${x.item.id}`)).join("_")}`} className="absolute right-1 z-30" style={{ top: `${chipTop + 2}px` }} data-appointment-block="true" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    data-testid="overlap-overflow"
+                                    aria-label={`${tr("calendar.overflowTitle")}: +${hiddenItems.length}`}
+                                    className="inline-flex h-5 items-center rounded-full bg-[rgb(var(--reg-ink))] px-1.5 text-[11px] font-bold leading-none text-white shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
+                                  >
+                                    +{hiddenItems.length}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-72 p-2">
+                                  <p className="px-2 pb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("calendar.overflowTitle")}</p>
+                                  <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+                                    {hiddenItems.map((x) => {
+                                      if (x.type === "appointment") {
+                                        return (
+                                          <li key={x.item.id}>
+                                            <button type="button" onClick={() => handleAppointmentClick(x.item)} className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-[rgb(var(--reg-canvas))]">
+                                              <span className="shrink-0 text-xs font-bold tabular-nums text-[rgb(var(--reg-brand-strong))]">{normalizeTime(x.item.startTime).slice(0, 5)}</span>
+                                              <span className="min-w-0 flex-1 truncate"><span className="font-semibold">{x.item.clientName}</span> · {appointmentServiceLabel(x.item)}</span>
+                                              <FlagIcons keys={appointmentFlagKeys(x.item, { visits: visitsFor(x.item), ...flagCtxFor(x.item) })} max={3} size={12} />
+                                            </button>
+                                          </li>
+                                        );
+                                      }
+                                      if (x.type === "waiting") {
+                                        return (
+                                          <li key={`w-${x.item.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                                            <span className="shrink-0 text-xs font-bold tabular-nums text-[rgb(var(--reg-muted))]">{x.start.slice(0, 5)}</span>
+                                            <span className="min-w-0 flex-1 truncate">{x.item.clientName}{x.item.serviceName ? ` · ${x.item.serviceName}` : ""}</span>
+                                          </li>
+                                        );
+                                      }
+                                      return (
+                                        <li key={`t-${x.item.id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm text-[rgb(var(--reg-muted))]">
+                                          <span className="min-w-0 flex-1 truncate">{x.item.reason || tr("calendar.timeOff2")}</span>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          );
+                          return [...rendered, chip];
                         });
                       })()}
 
@@ -3061,6 +3176,7 @@ export default function CalendarPage() {
                 >
                   <AppointmentBlock
                     visits={visitsFor(apt)}
+                    flagCtx={flagCtxFor(apt)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);
@@ -3109,6 +3225,7 @@ export default function CalendarPage() {
                 >
                   <AppointmentBlock
                     visits={visitsFor(apt)}
+                    flagCtx={flagCtxFor(apt)}
                     appointment={apt} 
                     onClick={() => {
                       handleAppointmentClick(apt);
