@@ -35,7 +35,7 @@ function Shell() {
     const N = loadNotifications();
     if (!N) return;
     try {
-      const go = (r: { notification: { request: { content: { data: unknown } } } } | null) => { if (r) router.push(routeOf(r.notification.request.content.data) as never); };
+      const go = (r: { notification: { request: { content: { data?: unknown } } } } | null) => { if (r) router.push(routeOf(r.notification.request.content.data) as never); };
       go(N.getLastNotificationResponse());
       const sub = N.addNotificationResponseReceivedListener(go);
       return () => sub.remove();

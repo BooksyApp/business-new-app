@@ -68,7 +68,7 @@ function Thread({ sid, c, onBack }: { sid: string; c: InboxSummary; onBack: () =
   return (
     <Screen>
       <Header title={c.customerName} subtitle={c.customerEmail} onBack={onBack} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         {th.error && !th.data ? <ErrorState error={th.error} onRetry={() => void th.reload()} /> : th.loading && !th.data ? <Skeleton rows={4} height={52} /> : (
           <FlatList ref={ref} data={msgs} keyExtractor={(m) => m.messageId} contentContainerStyle={{ padding: 16, gap: 8 }} onContentSizeChange={() => ref.current?.scrollToEnd({ animated: false })}
             refreshControl={<RefreshControl refreshing={th.refreshing} onRefresh={() => void th.reload()} tintColor={t.violet} />}

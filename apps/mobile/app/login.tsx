@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
@@ -45,15 +44,15 @@ export default function Login() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360, experimental_backgroundImage: mesh, opacity: t.dark ? 0.25 : 1 } as any} />
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: ins.top + 40, paddingBottom: ins.bottom + 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <Wordmark height={34} color={t.dark ? wordmarkOnDark : undefined} />
         <Text style={{ fontFamily: font.x, fontSize: 32, lineHeight: 38, letterSpacing: -0.8, color: t.ink, marginTop: 36 }}>{tr('login.title')}</Text>
         <Text style={{ fontFamily: font.m, fontSize: 16, color: t.muted, marginTop: 8, marginBottom: 28 }}>{tr('login.subtitle')}</Text>
-        <Field label={tr('login.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="username" keyboardType="email-address" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => pw.current?.focus()} blurOnSubmit={false} />
+        <Field label={tr('login.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="username" textContentType="username" keyboardType="email-address" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => pw.current?.focus()} blurOnSubmit={false} />
         <View>
-          <Field ref={pw} label={tr('login.password')} value={password} onChangeText={setPassword} secureTextEntry={!show} autoComplete="password" autoCapitalize="none" returnKeyType="go" onSubmitEditing={() => { if (email && password && !busy) void submit(); }} style={{ paddingRight: 52 }} />
+          <Field ref={pw} label={tr('login.password')} value={password} onChangeText={setPassword} secureTextEntry={!show} autoComplete="password" textContentType="password" autoCapitalize="none" returnKeyType="go" onSubmitEditing={() => { if (email && password && !busy) void submit(); }} style={{ paddingRight: 52 }} />
           <Pressable onPress={() => setShow((v) => !v)} accessibilityRole="button" accessibilityLabel={show ? tr('login.hidePassword') : tr('login.showPassword')} hitSlop={8} style={{ position: 'absolute', right: 8, bottom: 22, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name={show ? 'eyeoff' : 'eye'} size={22} color={t.muted} />
           </Pressable>
@@ -64,12 +63,12 @@ export default function Login() {
           </View>
         ) : null}
         <Btn label={tr('login.signIn')} onPress={() => void submit()} loading={busy} disabled={!email || !password} />
-        <View style={{ marginTop: 16, height: 52, borderRadius: 26, borderWidth: 1, borderColor: t.line, alignItems: 'center', justifyContent: 'center', opacity: 0.55 }}>
+        <View accessible accessibilityRole="button" accessibilityState={{ disabled: true }} style={{ marginTop: 16, height: 52, borderRadius: 26, borderWidth: 1, borderColor: t.line, alignItems: 'center', justifyContent: 'center', opacity: 0.55 }}>
           <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted }}>{tr('login.google')}</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22, marginTop: 28 }}>
           {SUPPORTED.map((l) => (
-            <Pressable key={l.code} onPress={() => void setLocale(l.code)} hitSlop={10}>
+            <Pressable key={l.code} onPress={() => void setLocale(l.code)} hitSlop={10} accessibilityRole="button" accessibilityLabel={l.endonym} accessibilityState={{ selected: getLocale() === l.code }}>
               <Text style={{ fontFamily: getLocale() === l.code ? font.b : font.m, fontSize: 15, color: getLocale() === l.code ? t.vtext : t.muted }}>{l.code.toUpperCase()}</Text>
             </Pressable>
           ))}

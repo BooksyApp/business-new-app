@@ -67,7 +67,7 @@ export default function Clients() {
         </Pressable>
       </View>
       <View style={{ paddingHorizontal: 18 }}>
-        <Field placeholder={tr('clients.search')} value={q} onChangeText={setQ} autoCorrect={false} accessibilityLabel={tr('clients.search')} />
+        <Field placeholder={tr('clients.search')} value={q} onChangeText={setQ} autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" accessibilityLabel={tr('clients.search')} />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginTop: 12, marginBottom: 12 }} contentContainerStyle={{ paddingHorizontal: 18, gap: 8 }}>
         {SEGS.map((s) => <Chip key={s.k} label={tr(s.label)} active={seg === s.k} onPress={() => setSeg(s.k)} />)}
@@ -82,6 +82,7 @@ export default function Clients() {
           keyExtractor={(c, i) => clientKey(c) || String(i)}
           contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: inset, gap: 10 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag" initialNumToRender={12} windowSize={9} removeClippedSubviews
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={all.length ? (
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>

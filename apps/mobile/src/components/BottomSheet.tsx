@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { t as tr } from '@/i18n';
 import { Modal, Pressable as RNPressable, StyleProp, StyleSheet, ViewStyle, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedKeyboard, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
@@ -60,7 +61,7 @@ export function BottomSheet({ open, onClose, children, snaps, radius = 28, conte
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,14,36,.5)' }, dim]}>
-          <RNPressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
+          <RNPressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel={tr('common.close')} />
         </Animated.View>
         <GestureDetector gesture={pan}>
           <Animated.View onLayout={(e) => setCh(e.nativeEvent.layout.height)}

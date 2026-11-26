@@ -31,7 +31,7 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
         </Pressable>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: onBack ? 22 : 32, letterSpacing: onBack ? -0.44 : -0.96, color: t.ink }}>{title}</Text>
+        <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.x, fontSize: onBack ? 22 : 32, letterSpacing: onBack ? -0.44 : -0.96, color: t.ink }}>{title}</Text>
         {subtitle ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted, marginTop: 1 }}>{subtitle}</Text> : null}
       </View>
       {right}
@@ -42,7 +42,7 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
 export function Card({ children, style, onPress }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const { t } = useTheme();
   const base: ViewStyle = { backgroundColor: t.surface, borderRadius: 22, padding: 14, ...cardShadow };
-  return onPress ? <Pressable onPress={onPress} style={[base, style]}>{children}</Pressable> : <View style={[base, style]}>{children}</View>;
+  return onPress ? <Pressable onPress={onPress} accessibilityRole="button" style={[base, style]}>{children}</Pressable> : <View style={[base, style]}>{children}</View>;
 }
 
 export function Btn({ label, onPress, variant = 'primary', loading, disabled, icon, style }: {
@@ -59,7 +59,7 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, ic
   );
   const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 52, borderRadius: 26, paddingHorizontal: 18 };
   return (
-    <Pressable onPress={onPress} disabled={off} haptic accessibilityRole="button" accessibilityState={{ disabled: !!off }} style={[{ opacity: off && !loading ? 0.5 : 1 }, style]}>
+    <Pressable onPress={onPress} disabled={off} haptic accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!off, busy: !!loading }} style={[{ opacity: off && !loading ? 0.5 : 1 }, style]}>
       {variant === 'primary' ? (
         <LinearGradient colors={[...gradCta]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[row, ctaShadow]}>{inner}</LinearGradient>
       ) : (
@@ -149,14 +149,14 @@ function Pulse({ style }: { style: ViewStyle }) {
 }
 /** Loading placeholder: a few pulsing rows. */
 export function Skeleton({ rows = 5, height = 68 }: { rows?: number; height?: number }) {
-  return <View style={{ paddingHorizontal: 18, gap: 10 }}>{Array.from({ length: rows }, (_, i) => <Pulse key={i} style={{ height }} />)}</View>;
+  return <View accessible accessibilityLabel={tr('common.loading')} accessibilityState={{ busy: true }} style={{ paddingHorizontal: 18, gap: 10 }}>{Array.from({ length: rows }, (_, i) => <Pulse key={i} style={{ height }} />)}</View>;
 }
 
 /** Empty / error / offline / coming-soon block in the design style: soft round icon, title, body, optional action. */
 export function StateView({ icon, title, body, actionLabel, onAction }: { icon: string; title: string; body?: string; actionLabel?: string; onAction?: () => void }) {
   const { t } = useTheme();
   return (
-    <View style={{ alignItems: 'center', paddingHorizontal: 32, paddingTop: 56, gap: 10 }}>
+    <View accessibilityLiveRegion="polite" style={{ alignItems: 'center', paddingHorizontal: 32, paddingTop: 56, gap: 10 }}>
       <LinearGradient colors={[t.dark ? '#2a2538' : '#e6deff', t.dark ? '#33263a' : '#ffe0e7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
         <Icon name={icon} size={34} color={t.vtext} />
       </LinearGradient>
@@ -178,7 +178,7 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry: () => vo
 export function Chip({ label, active, onPress, icon }: { label: string; active?: boolean; onPress: () => void; icon?: string }) {
   const { t } = useTheme();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!active }}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!active }}
       style={{ height: 40, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: active ? t.vsoft : t.surface, borderWidth: 1, borderColor: active ? 'rgba(111,82,237,.35)' : t.line }}>
       {icon ? <Icon name={icon} size={16} color={active ? t.vtext : t.muted} /> : null}
       <Text style={{ fontFamily: active ? font.b : font.s, fontSize: 14, color: active ? t.vtext : t.ink }}>{label}</Text>

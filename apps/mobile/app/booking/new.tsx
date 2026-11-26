@@ -103,7 +103,7 @@ export default function NewBooking() {
 
   const titles = [tr('create.client'), tr('create.pickService'), tr('create.pickTime'), tr('create.confirmTitle')];
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flex: 1, paddingTop: ins.top, paddingHorizontal: 16 }}>
         <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="back" size={22} color={t.ink} /></Pressable>
