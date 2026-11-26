@@ -51,6 +51,7 @@ export function installDemoFetch() {
       if (/\/import(\/preview)?$/.test(path)) { const r = routes.find(([re]) => re.test('/import/preview')); return ok(r ? r[1] : {}); }
       return ok({});
     }
+    if (mode === 'empty' && /\/readiness$/.test(path)) return ok({ bookable: false, missing: ['services', 'staff', 'onlineBooking'], recommended: ['photos'] });
     if (mode === 'empty' && !EMPTY_KEEP.test(path)) {
       return ok(/day-sheet|summary|dashboard|unread/.test(path) ? { date: '', totals: { bookings: 0, expected: 0, already_paid: 0 }, count: 0, average: null, unread: 0, kpis: {}, topServices: [], staff: [], sources: [] } : []);
     }

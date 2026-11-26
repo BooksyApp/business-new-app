@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Card, LoadRing, T } from '@/components/kit';
+import { BottomSheet } from '@/components/BottomSheet';
+import { LoadRing, T } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import { apiB } from '@/lib/api-biz';
 import { apiO } from '@/lib/api-onboard';
@@ -21,7 +22,7 @@ type Step = { k: string; done: boolean; title: string; sub?: string; on: () => v
 /**
  * Salonu hazırla (artifact "Bu gün · yeni salon"): the first-run checklist on Bu gün.
  * Required steps come from GET /businesses/{id}/readiness (category, services, staff, hours, online booking: same rule the backend uses to hide a salon from customers),
- * then two local steps (share the link, invite the team). Hidden once everything is done or the owner taps "Sonra".
+ * then two local steps (share the link, invite the team). Slim card (ring + next step) that opens the full list in a sheet; hidden once everything is done or the owner taps "Sonra".
  */
 export function SetupChecklist() {
   const { t } = useTheme();
@@ -29,6 +30,7 @@ export function SetupChecklist() {
   const { salon, version, bump, demo } = useApp();
   const sid = salon?.id ?? '';
   const q = useLoad(() => apiO.readiness(sid).catch(() => null), [sid, version]);
+  const [open, setOpen] = useState(false);
   const [flags, setFlags] = useState<{ shared: boolean; invited: boolean; hidden: boolean }>({ shared: false, invited: false, hidden: false });
   useEffect(() => {
     if (!sid || demo) return;
@@ -56,20 +58,24 @@ export function SetupChecklist() {
   const nextStep = steps.find((s) => !s.done);
 
   return (
-    <Card style={{ marginHorizontal: 20, marginTop: 6, paddingVertical: 16 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        <LoadRing value={done / steps.length} size={56}>
-          <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{done}/{steps.length}</Text>
+    <>
+      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`${tr('ob.setupTitle')} ${done}/${steps.length}. ${nextStep?.title ?? ''}`} noScale
+        style={{ marginHorizontal: 20, marginTop: 6, minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 22, backgroundColor: t.surface, boxShadow: '0 1px 2px rgba(29,23,48,.04), 0 6px 20px -10px rgba(29,23,48,.14)' } as object}>
+        <LoadRing value={done / steps.length} size={44}>
+          <Text style={{ fontFamily: font.b, fontSize: 12, color: t.ink }}>{done}/{steps.length}</Text>
         </LoadRing>
-        <View style={{ flex: 1 }}>
-          <T k="h2" style={{ fontSize: 18 }}>{r.bookable ? tr('ob.setupAlmost') : tr('ob.setupTitle')}</T>
-          <T k="sm" color={t.muted} lines={2}>{r.bookable ? tr('ob.setupBookable') : tr('ob.setupHidden')}</T>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{r.bookable ? tr('ob.setupAlmost') : tr('ob.setupTitle')}</Text>
+          <T k="sm" color={t.muted} lines={1}>{nextStep?.title}</T>
         </View>
-      </View>
-      <View style={{ marginTop: 10 }}>
+        <Icon name="chev" size={18} color={t.ink3} />
+      </Pressable>
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <T k="h2" style={{ fontSize: 18 }}>{tr('ob.setupTitle')}</T>
+        <T k="sm" color={t.muted} style={{ marginBottom: 6 }}>{r.bookable ? tr('ob.setupBookable') : tr('ob.setupHidden')}</T>
         {steps.map((s, i) => (
-          <Pressable key={s.k} onPress={s.on} accessibilityRole="button" accessibilityLabel={s.title} accessibilityState={{ checked: s.done }} noScale
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderTopWidth: i ? 1 : 0, borderTopColor: t.hair, minHeight: 52 }}>
+          <Pressable key={s.k} onPress={() => { setOpen(false); s.on(); }} accessibilityRole="button" accessibilityLabel={s.title} accessibilityState={{ checked: s.done }} noScale
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: t.hair, minHeight: 52 }}>
             <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: s.done ? t.ok : 'transparent', borderWidth: s.done ? 0 : 1.5, borderColor: s.k === nextStep?.k ? t.violet : t.hair }}>
               {s.done ? <Icon name="check" size={16} color="#fff" /> : null}
             </View>
@@ -80,10 +86,10 @@ export function SetupChecklist() {
             {!s.done ? <Icon name="chev" size={16} color={t.ink3} /> : null}
           </Pressable>
         ))}
-      </View>
-      <Pressable onPress={() => mark('hidden')} accessibilityRole="button" accessibilityLabel={tr('ob.later')} style={{ alignSelf: 'center', minHeight: 36, justifyContent: 'center', marginTop: 4 }}>
-        <Text style={{ fontFamily: font.b, fontSize: 13, color: t.ink3 }}>{tr('ob.later')}</Text>
-      </Pressable>
-    </Card>
+        <Pressable onPress={() => { setOpen(false); mark('hidden'); }} accessibilityRole="button" accessibilityLabel={tr('ob.later')} style={{ alignSelf: 'center', minHeight: 40, justifyContent: 'center', marginTop: 6 }}>
+          <Text style={{ fontFamily: font.b, fontSize: 13, color: t.ink3 }}>{tr('ob.later')}</Text>
+        </Pressable>
+      </BottomSheet>
+    </>
   );
 }

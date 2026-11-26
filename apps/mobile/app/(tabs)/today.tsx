@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
-import { Avatar, Button, EmptyState, IconBtn, Photo, Pill, SecHead, Skeleton, Spark, StoryBubble, T, Tile, TopBar } from '@/components/kit';
+import { Avatar, Button, IconBtn, Photo, Pill, SecHead, Skeleton, Spark, StoryBubble, T, Tile, TopBar } from '@/components/kit';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ErrorState, Screen } from '@/components/ui';
@@ -109,8 +109,14 @@ export default function Today() {
         ) : next ? (
           <Hero a={next} c={byId.get(String(next.clientId))} staff={team.find((s) => String(s.id) === String(next.staffId))} onOpen={() => router.push(`/booking/${next.id}`)} onArrived={() => void arrived(next)} />
         ) : (
-          <EmptyState photo="demo:p7755458" title={tr('v2.emptyTodayTitle')} body={tr('v2.emptyTodayBody')}
-            action={{ label: tr('v2.addBooking'), icon: 'plus', onPress: newBooking }} secondary={{ label: tr('v2.shareLink'), icon: 'share', onPress: () => setLink(true) }} />
+          <View style={{ marginHorizontal: 20, marginTop: 16 }}>
+            <T k="h2" style={{ fontSize: 18 }}>{tr('v2.emptyTodayTitle')}</T>
+            <T k="sm" color={t.muted} style={{ marginTop: 2 }}>{tr('v2.emptyTodayBody')}</T>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+              <Button label={tr('v2.addBooking')} icon="plus" onPress={newBooking} style={{ flex: 1 }} />
+              <Button label={tr('v2.shareLink')} icon="share" kind="ol" onPress={() => setLink(true)} style={{ flex: 1 }} />
+            </View>
+          </View>
         )}
 
         {!loading && !range.error ? (
