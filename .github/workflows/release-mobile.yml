@@ -100,21 +100,11 @@ jobs:
             echo "::warning::Keystore secrets missing (ANDROID_KEYSTORE_BASE64/_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): APK is signed with the DEBUG key, not for store upload"
             echo "SIGNING=DEBUG key (keystore secrets missing)" >> "$GITHUB_ENV"
           fi
-      - name: Diagnose node autolinking (monorepo)
-        working-directory: apps/mobile/android
-        continue-on-error: true
+      - name: Link hoisted expo into apps/mobile (Gradle autolinking expects apps/mobile/node_modules/expo)
         run: |
-          set +e
-          node --print "require.resolve('react-native/package.json')"; echo "rc=$?"
-          node --print "require.resolve('expo/package.json')"; echo "rc=$?"
-          node --print "require.resolve('@react-native/gradle-plugin/package.json',{paths:[require.resolve('react-native/package.json')]})"; echo "rc=$?"
-          npx --no-install react-native config 2>&1 | tail -30; echo "rc=$?"
-          npx --no-install expo-modules-autolinking resolve --platform android --json >/dev/null 2>/tmp/e1; echo "resolve rc=$?"; tail -15 /tmp/e1
-          npx --no-install expo-modules-autolinking react-native-config --json --platform android >/tmp/o2 2>/tmp/e2; echo "rn-config rc=$?"; tail -20 /tmp/e2; head -c 600 /tmp/o2
-          grep -n "inlineModules" gradle.properties || echo "no inlineModules prop"
-          ./gradlew help --no-daemon --debug > "$RUNNER_TEMP/gdebug.txt" 2>&1; echo "help rc=$?"
-          grep -n "Starting process 'command 'node'" "$RUNNER_TEMP/gdebug.txt" | cut -c1-500 | tail -8
-          L=$(grep -n "Starting process 'command 'node'" "$RUNNER_TEMP/gdebug.txt" | tail -1 | cut -d: -f1); [ -n "$L" ] && sed -n "$((L)),$((L+40))p" "$RUNNER_TEMP/gdebug.txt" | cut -c1-400
+          mkdir -p apps/mobile/node_modules
+          [ -e apps/mobile/node_modules/expo ] || ln -s "$GITHUB_WORKSPACE/node_modules/expo" apps/mobile/node_modules/expo
+          ls -d apps/mobile/node_modules/expo/android/src/main/java >/dev/null && echo "expo link ok"
       - name: Assemble release
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --stacktrace --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
