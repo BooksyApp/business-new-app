@@ -107,9 +107,17 @@ jobs:
           mkdir -p apps/mobile/node_modules
           [ -e apps/mobile/node_modules/expo ] || ln -s "$GITHUB_WORKSPACE/node_modules/expo" apps/mobile/node_modules/expo
           ls -d apps/mobile/node_modules/expo/android/src/main/java >/dev/null && echo "expo link ok"
+      - name: TEMP node wrapper (log args and stderr)
+        run: |
+          mkdir -p "$RUNNER_TEMP/nw"; REAL=$(command -v node)
+          printf '#!/bin/bash\n{ echo "ARGS: $*"; echo "PWD: $PWD"; } >> /tmp/nodelog.txt\n"%s" "$@" 2> >(tee -a /tmp/nodelog.txt >&2)\nrc=$?\necho "RC=$rc" >> /tmp/nodelog.txt\nexit $rc\n' "$REAL" > "$RUNNER_TEMP/nw/node"
+          chmod +x "$RUNNER_TEMP/nw/node"; echo "$RUNNER_TEMP/nw" >> "$GITHUB_PATH"
       - name: Assemble release
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+      - name: TEMP dump node log
+        if: failure()
+        run: grep -n -B3 -A12 "RC=1" /tmp/nodelog.txt | cut -c1-600 | head -60
       - name: Checksum
         working-directory: apps/mobile/android/app/build/outputs/apk/release
         run: |
