@@ -347,7 +347,7 @@ export function RecentTransfers({ businessId }: { businessId: Id }) {
   return (
     <section aria-label={t("inventory.recentTransfers")} className="space-y-2">
       <h2 className="text-sm font-bold">{t("inventory.recentTransfers")}</h2>
-      <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+      <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
         {rows.map((r, i) => (
           <li key={String(r.id)} className={"flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm md:px-5" + (i > 0 ? " border-t border-[rgb(var(--reg-line)/0.6)]" : "")}>
             <span className="min-w-0 flex-1 truncate font-semibold">{r.product_name}</span>

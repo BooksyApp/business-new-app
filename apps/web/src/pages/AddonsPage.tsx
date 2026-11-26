@@ -102,7 +102,7 @@ export default function AddonsPage({ startNew = false }: { startNew?: boolean } 
 
         <div className={pageBody}>
           {loading ? (
-            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
           ) : addons.length === 0 ? (
             <EmptyState
               icon={Package}
@@ -117,9 +117,9 @@ export default function AddonsPage({ startNew = false }: { startNew?: boolean } 
                 <input aria-label={t("addons.searchAddOns")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("addons.searchAddOns")} value={query} onChange={(e) => setQuery(e.target.value)} />
               </div>
               {shown.length === 0 ? (
-                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{t("common.nothingMatches", { query })}</p>
+                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">{t("common.nothingMatches", { query })}</p>
               ) : (
-                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                   {shown.map((a, i) => (
                     <li key={a.id} className={cn("flex items-center gap-3 px-4 py-3.5 md:px-5", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]">

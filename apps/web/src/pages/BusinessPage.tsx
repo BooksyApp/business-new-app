@@ -352,7 +352,7 @@ export default function BusinessPage() {
               <SalonQrCard salonUrl={publicUrl} salonName={business?.slug ?? business?.name} />
               <ShareKitCard salonUrl={publicUrl} salonName={business?.name ?? ""} businessId={String(business?.id ?? "")} />
 
-              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                 <SectionTitle>{t("business.about")}</SectionTitle>
                 <p className="whitespace-pre-line text-sm leading-relaxed text-[rgb(var(--reg-ink)/0.85)]">
                   {business?.description || <span className="text-[rgb(var(--reg-muted))]">{t("business.noDescriptionYetTwoLines")}</span>}
@@ -371,7 +371,7 @@ export default function BusinessPage() {
                 </dl>
               </section>
 
-              <section className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <section className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                 <div className="grid md:grid-cols-[minmax(0,1fr)_240px]">
                   <div className="p-5 md:p-6">
                     <SectionTitle>{t("business.location")}</SectionTitle>
@@ -393,7 +393,7 @@ export default function BusinessPage() {
                 </div>
               </section>
 
-              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                 <SectionTitle aside={<button type="button" className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => navigate(getPath("items-category"))}>{t("business.editMenu")}</button>}>
                   {t("common.services")}
                 </SectionTitle>
@@ -419,7 +419,7 @@ export default function BusinessPage() {
             </div>
 
             <aside className="min-w-0 space-y-4">
-              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{t("business.profileCompleteness")}</p>
                   <span className="text-sm font-bold">{completionTier}</span>
@@ -438,7 +438,7 @@ export default function BusinessPage() {
                 </ul>
               </section>
 
-              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                 <SectionTitle aside={reviews.length > 0 ? <button type="button" onClick={() => navigate(getPath("reviews"))} className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline">{t("business.seeAllAndReply")}</button> : undefined}>
                   {t("common.reviews")}
                 </SectionTitle>
@@ -464,7 +464,7 @@ export default function BusinessPage() {
               </section>
 
               {/* #42: subscription state and upgrade path (the salon's booqi plan). */}
-              <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                 <SectionTitle>{t("business.yourBooqiPlan")}</SectionTitle>
                 <p className="text-sm text-[rgb(var(--reg-ink)/0.85)]">
                   {subscription && subscription.status !== "NONE" ? (

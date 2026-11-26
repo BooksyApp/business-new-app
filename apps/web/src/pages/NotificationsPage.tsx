@@ -82,7 +82,7 @@ export default function NotificationsPage({ section }: { section?: "email" | "sm
     </li>
   );
   const card = (title: string, children: React.ReactNode) => (
-    <section className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+    <section className="overflow-hidden rounded-[20px] bg-white shadow-[var(--shadow-sm)] ring-1 ring-[rgb(var(--reg-line)/0.6)]">
       {title && <h2 className="px-4 pb-1 pt-4 text-base font-extrabold md:px-5">{title}</h2>}
       <ul>{children}</ul>
     </section>

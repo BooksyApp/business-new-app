@@ -183,7 +183,7 @@ export default function BusinessHoursPage() {
         <div className={pageBody}>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-6">
-              <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+              <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                 <SectionTitle
                   aside={
                     <div className="flex flex-wrap gap-2">
@@ -252,14 +252,14 @@ export default function BusinessHoursPage() {
                   {tr("businessHours.closedDaysSpecialHours")}
                 </SectionTitle>
                 {exceptions === null ? (
-                  <div className="h-24 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />
+                  <div className="h-24 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" />
                 ) : upcoming.length === 0 ? (
-                  <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  <div className="flex items-center gap-3 rounded-[20px] bg-white p-5 text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                     <CalendarOff size={20} className="shrink-0" aria-hidden />
                     {tr("businessHours.holidaysAndShortDaysGo")}
                   </div>
                 ) : (
-                  <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                     {upcoming.map((x, i) => (
                       <li key={x.id} className={cn("flex items-center gap-3 px-4 py-3.5 md:px-5", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
                         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", x.closed ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-800")}>

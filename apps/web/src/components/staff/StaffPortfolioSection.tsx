@@ -100,7 +100,7 @@ export function StaffPortfolioSection({ businessId, staffId, services }: {
   const iconBtn = "rounded-full bg-white/90 p-1.5 shadow disabled:opacity-40";
 
   return (
-    <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+    <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{t("staffPortfolio.title")}</h3>
         <span className="text-xs text-[rgb(var(--reg-muted))]">

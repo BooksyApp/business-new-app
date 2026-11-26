@@ -271,9 +271,9 @@ export default function ItemsCategoryPage() {
             <div data-testid="archived-list">
               <p className="mb-3 px-1 text-sm text-[rgb(var(--reg-muted))]">{t("itemsCategory.archivedHint")}</p>
               {archived.length === 0 ? (
-                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{t("itemsCategory.archivedEmpty")}</p>
+                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">{t("itemsCategory.archivedEmpty")}</p>
               ) : (
-                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                   {archived.map((s, i) => (
                     <li key={s.id} className={cn("flex items-center gap-3 px-3 py-3 md:px-4", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
                       <span className="min-w-0 flex-1">
@@ -296,7 +296,7 @@ export default function ItemsCategoryPage() {
               )}
             </div>
           ) : loading ? (
-            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
           ) : services.length === 0 ? (
             <EmptyState
               icon={Scissors}
@@ -308,7 +308,7 @@ export default function ItemsCategoryPage() {
             <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
               {/* Categories: a list on desktop, chips on a phone. */}
               <nav aria-label={t("itemsCategory.categories")} className="hidden lg:block">
-                <ul className="sticky top-[132px] space-y-0.5 rounded-[20px] bg-white p-2 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <ul className="sticky top-[132px] space-y-0.5 rounded-[20px] bg-white p-2 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                   {catOptions.map((o) => {
                     const on = selected === o.id;
                     return (
@@ -385,7 +385,7 @@ export default function ItemsCategoryPage() {
                 </div>
 
                 {filtered.length === 0 ? (
-                  <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                     {query ? t("common.nothingMatches", { query }) : t("itemsCategory.noServicesInThisCategory")}
                   </p>
                 ) : (
@@ -396,7 +396,7 @@ export default function ItemsCategoryPage() {
                           {g.title} <span className="text-xs font-semibold text-[rgb(var(--reg-muted))]">{g.items.length}</span>
                         </h2>
                       )}
-                      <ul className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                      <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                         {g.items.map((s, i) => {
                           const on = isVisible(s);
                           const people = (s.staffIds ?? []).map((id) => staffById.get(id)).filter(Boolean) as { id: Id; name: string; avatarUrl?: string }[];
