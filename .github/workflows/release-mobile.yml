@@ -90,6 +90,8 @@ jobs:
             "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" \
             "android.enableMinifyInReleaseBuilds=true" "android.enableShrinkResourcesInReleaseBuilds=true" \
             "expo.useLegacyPackaging=false" >> gradle.properties
+          # Gradle drops the empty-list arg of mirror-kotlin-inline-modules if this prop is missing -> node exits 1
+          grep -q '^expo.inlineModules.watchedDirectories=' gradle.properties || echo 'expo.inlineModules.watchedDirectories=[]' >> gradle.properties
           if [ -n "$KS_B64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             for k in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do echo "$k=${!k}" >> "$GITHUB_ENV"; done
@@ -107,7 +109,7 @@ jobs:
           ls -d apps/mobile/node_modules/expo/android/src/main/java >/dev/null && echo "expo link ok"
       - name: Assemble release
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --stacktrace --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+        run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
       - name: Checksum
         working-directory: apps/mobile/android/app/build/outputs/apk/release
         run: |
