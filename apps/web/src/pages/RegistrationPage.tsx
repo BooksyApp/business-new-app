@@ -17,8 +17,7 @@ import {
   Heart, Stethoscope, MapPin, X, Plus, Minus, Eye, EyeOff, User, Bell, 
   DollarSign, Building2, Clock, Users, Settings, CheckCircle2
 } from "lucide-react";
-import { CheckRow, Field, FormGrid, RadioGroup, SelectField } from "@/components/bz";
-import { Switch } from "@/components/ui/switch";
+import { CheckRow, Field, FormGrid, Note, RadioGroup, SelectField } from "@/components/bz";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { categoryService, type BusinessCategory } from "@/services/categoryService";
@@ -945,12 +944,10 @@ const RegistrationPage = () => {
             )}
 
             {screen.key === "address" && (
-              <div className="space-y-4">
+              <div className="stk">
                 <div>
-                  <label htmlFor="address" className={fieldLabel}>{tr("common.address")}</label>
-                  <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-                    <Input
+                  <Field label={tr("common.address")} suffix={<MapPin className="ic" aria-hidden />}>
+                    <input
                       id="address"
                       autoComplete="off"
                       value={addressSearch}
@@ -966,10 +963,9 @@ const RegistrationPage = () => {
                         }
                       }}
                       placeholder={tr("registration.startTypingYourStreet")}
-                      className={cn(authInput, "pl-11")}
                     />
-                  </div>
-                  {isSearching && <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{tr("registration.searching")}</p>}
+                  </Field>
+                  {isSearching && <p className="hint mt-2">{tr("registration.searching")}</p>}
                   {addressResults.length > 0 && !isSearching && (
                     <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl bg-white shadow-[0_2px_6px_rgb(var(--reg-ink)/0.05),0_18px_40px_-12px_rgb(var(--reg-ink)/0.16)] ring-1 ring-[rgb(var(--reg-ink)/0.06)]">
                       {addressResults.map((addr, index) => {
@@ -1005,20 +1001,18 @@ const RegistrationPage = () => {
                 </div>
 
                 {formData.address && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="buildingNumber" className={fieldLabel}>{tr("registration.buildingNo")}</label>
-                      <Input id="buildingNumber" value={formData.buildingNumber} onChange={(e) => updateFormData("buildingNumber", e.target.value)} className={authInput} />
-                    </div>
-                    <div>
-                      <label htmlFor="apartmentNumber" className={fieldLabel}>{tr("registration.flatUnit")}{" "}{optional}</label>
-                      <Input id="apartmentNumber" value={formData.apartmentNumber} onChange={(e) => updateFormData("apartmentNumber", e.target.value)} className={authInput} />
-                    </div>
-                  </div>
+                  <FormGrid cols={2}>
+                    <Field label={tr("registration.buildingNo")}>
+                      <input id="buildingNumber" value={formData.buildingNumber} onChange={(e) => updateFormData("buildingNumber", e.target.value)} />
+                    </Field>
+                    <Field label={<>{tr("registration.flatUnit")}{" "}{optional}</>}>
+                      <input id="apartmentNumber" value={formData.apartmentNumber} onChange={(e) => updateFormData("apartmentNumber", e.target.value)} />
+                    </Field>
+                  </FormGrid>
                 )}
 
                 <div>
-                  <p className={fieldLabel}>{tr("registration.checkThePin")}</p>
+                  <div className="lbl2" style={{ marginBottom: 8 }}>{tr("registration.checkThePin")}</div>
                   <div className="overflow-hidden rounded-2xl ring-1 ring-[rgb(var(--reg-line))]">
                     <AddressMapPicker
                       country={formData.countryCode || null}
@@ -1048,14 +1042,10 @@ const RegistrationPage = () => {
                     />
                   </div>
                   {unsupportedCountry && (
-                    <p role="alert" className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200">
-                      {tr("registration.booqiIsNotOpenIn", { value: formData.country || tr("registration.thisCountry") })}
-                    </p>
+                    <div role="alert" style={{ marginTop: 8 }}><Note kind="er">{tr("registration.booqiIsNotOpenIn", { value: formData.country || tr("registration.thisCountry") })}</Note></div>
                   )}
                   {geocodeUnavailable && (
-                    <p role="status" className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
-                      {tr("registration.addressLookupIsUnavailableRight")}
-                    </p>
+                    <div role="status" style={{ marginTop: 8 }}><Note kind="wa">{tr("registration.addressLookupIsUnavailableRight")}</Note></div>
                   )}
                   <button
                     type="button"
@@ -1077,45 +1067,48 @@ const RegistrationPage = () => {
             )}
 
             {screen.key === "hours" && (
-              <ul className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+              <div className="stk">
                 {daysOfWeek.map((day) => {
                   const dayHours = formData.businessHours[day.key];
                   return (
-                    <li key={day.key} className="flex min-h-[56px] items-center justify-between gap-3 px-4">
-                      <label className="flex cursor-pointer items-center gap-3 text-[15px] font-semibold">
-                        <Switch
-                          checked={dayHours.enabled}
+                    <div key={day.key} className="swr">
+                      <div><b>{day.label}</b></div>
+                      <div className="row gap8">
+                        {dayHours.enabled ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const [start, end] = dayHours.hours.split(" - ");
+                              setTempStartTime(start || "10:00");
+                              setTempEndTime(end || "19:00");
+                              setEditingDay(day.key);
+                            }}
+                            className="chip on"
+                            aria-label={tr("registration.hoursChange", { label: day.label, hours: dayHours.hours })}
+                          >
+                            {dayHours.hours}
+                          </button>
+                        ) : (
+                          <span className="hint">{tr("common.closed")}</span>
+                        )}
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={dayHours.enabled}
                           aria-label={tr("registration.openOn", { label: day.label })}
-                          className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
-                          onCheckedChange={(checked) => {
+                          className={cn("tg", !dayHours.enabled && "off")}
+                          style={{ border: 0, padding: 0 }}
+                          onClick={() => {
                             const newHours = { ...formData.businessHours };
-                            newHours[day.key] = { enabled: checked, hours: checked ? "10:00 - 19:00" : "Closed" };
+                            newHours[day.key] = { enabled: !dayHours.enabled, hours: !dayHours.enabled ? "10:00 - 19:00" : "Closed" };
                             updateFormData("businessHours", newHours);
                           }}
                         />
-                        {day.label}
-                      </label>
-                      {dayHours.enabled ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const [start, end] = dayHours.hours.split(" - ");
-                            setTempStartTime(start || "10:00");
-                            setTempEndTime(end || "19:00");
-                            setEditingDay(day.key);
-                          }}
-                          className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:bg-[rgb(var(--reg-brand)/0.15)]"
-                          aria-label={tr("registration.hoursChange", { label: day.label, hours: dayHours.hours })}
-                        >
-                          {dayHours.hours}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("common.closed")}</span>
-                      )}
-                    </li>
+                      </div>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             )}
 
             {screen.key === "team" && (
