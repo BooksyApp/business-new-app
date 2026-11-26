@@ -109,7 +109,9 @@ jobs:
           node --print "require.resolve('expo/package.json')"; echo "rc=$?"
           node --print "require.resolve('@react-native/gradle-plugin/package.json',{paths:[require.resolve('react-native/package.json')]})"; echo "rc=$?"
           npx --no-install react-native config 2>&1 | tail -30; echo "rc=$?"
-          npx --no-install expo-modules-autolinking resolve --platform android --json 2>&1 | tail -15
+          npx --no-install expo-modules-autolinking resolve --platform android --json >/dev/null 2>/tmp/e1; echo "resolve rc=$?"; tail -15 /tmp/e1
+          npx --no-install expo-modules-autolinking react-native-config --json --platform android >/tmp/o2 2>/tmp/e2; echo "rn-config rc=$?"; tail -20 /tmp/e2; head -c 600 /tmp/o2
+          npx --no-install expo-modules-autolinking --help 2>&1 | head -30
       - name: Assemble release
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --stacktrace --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
