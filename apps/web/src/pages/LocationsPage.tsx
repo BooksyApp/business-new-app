@@ -2,11 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Plus } from "lucide-react";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
-import { BAvatar, BChip, BEmpty, BError, BListRow, BSkeleton } from "@/components/biz/b-card";
-import { Button } from "@/components/ui/button";
+import { Avatar, Btn, EmptyState, ErrorState, PageHead, RowItem, Skeleton, Tag } from "@/components/bz";
+import { BzPage, initialsOf } from "@/components/bz/p2-page";
 import { getCurrentBusinessId } from "@/config/api";
 import { getUserBusinesses } from "@/utils/businessUtils";
 import { t } from "@/i18n";
@@ -35,46 +32,40 @@ export default function LocationsPage() {
   useEffect(load, []);
 
   return (
-    <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={t("locations.locations")}
-          subtitle={t("locations.yourSalonAndAnyOther")}
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => navigate("../branch-comparison")}>{t("cmp.compareSalons")}</Button>
-              <Button variant="outline" onClick={() => navigate("../central-prices")}>{t("cp.title")}</Button>
-              <Button className={primaryBtn} onClick={() => navigate("/create-business")}>
-                <Plus size={16} />{" "}{t("layout.addSalon")}
-              </Button>
-            </div>
-          }
-        />
-        <div className={pageBody}>
-          {salons === null && !error ? (
-            <BSkeleton />
-          ) : error ? (
-            <BError>{t("locations.couldNotLoadYourLocations")}</BError>
-          ) : salons.length === 0 ? (
-            <BEmpty icon={<MapPin size={22} />}>{t("locations.oneLocationSoFarAdd")}</BEmpty>
-          ) : (
-            <ul className="grid gap-3 md:grid-cols-2">
-              {salons.map((s) => {
-                const isCurrent = String(s.id) === String(currentId);
-                return (
-                  <li key={String(s.id)}>
-                    <BListRow
-                      lead={<BAvatar name={s.name} className={isCurrent ? "" : "bg-[rgb(var(--reg-ink)/0.05)] text-[rgb(var(--reg-ink)/0.7)]"}><MapPin size={20} /></BAvatar>}
-                      title={<span className="flex items-center gap-2"><span className="truncate">{s.name}</span>{isCurrent && <BChip>{t("locations.mainLocation")}</BChip>}</span>}
-                      sub={s.address || t("locations.noAddressSet")}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+    <BzPage>
+      <PageHead
+        title={t("locations.locations")}
+        sub={t("locations.yourSalonAndAnyOther")}
+        right={
+          <>
+            <Btn kind="ol" onClick={() => navigate("../branch-comparison")}>{t("cmp.compareSalons")}</Btn>
+            <Btn kind="ol" onClick={() => navigate("../central-prices")}>{t("cp.title")}</Btn>
+            <Btn kind="v" icon={<Plus className="ic" />} onClick={() => navigate("/create-business")}>{t("layout.addSalon")}</Btn>
+          </>
+        }
+      />
+      {salons === null && !error ? (
+        <Skeleton />
+      ) : error ? (
+        <ErrorState icon={<MapPin className="ic" />} title={t("locations.couldNotLoadYourLocations")} />
+      ) : salons.length === 0 ? (
+        <EmptyState icon={<MapPin className="ic" />} title={t("locations.oneLocationSoFarAdd")} />
+      ) : (
+        <div className="tbx">
+          {salons.map((s) => {
+            const isCurrent = String(s.id) === String(currentId);
+            return (
+              <RowItem
+                key={String(s.id)}
+                left={<Avatar initials={initialsOf(s.name)} size={46} />}
+                title={s.name}
+                sub={s.address || t("locations.noAddressSet")}
+                right={isCurrent ? <Tag kind="v">{t("locations.mainLocation")}</Tag> : undefined}
+              />
+            );
+          })}
         </div>
-      </BooqiScope>
-    </AppLayout>
+      )}
+    </BzPage>
   );
 }
