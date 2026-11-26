@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BookingRow } from '@/components/BookingRow';
+import { BottomSheet } from '@/components/BottomSheet';
 import { BookingSheet } from '@/components/BookingSheet';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
 import { Agenda, DayStrip, MonthView, StaffRail, Timeline, WeekView } from '@/components/calendar';
@@ -8,7 +10,7 @@ import { TodayHome } from '@/components/TodayHome';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Circ, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Circ, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -27,6 +29,7 @@ export default function Calendar() {
   const [focus, setFocus] = useState<string | null>(null);
   const [mode, setMode] = useState<'today' | 'day' | 'week' | 'month'>('today');
   const [dense, setDense] = useState(false);
+  const [monthDay, setMonthDay] = useState<Date | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [block, setBlock] = useState<TimeOff | null>(null);
 
@@ -105,7 +108,7 @@ export default function Calendar() {
         ) : isDay && !focus && !day.loading && (day.data ?? []).filter((a) => a.status !== 'CANCELLED').length === 0 && (off.data ?? []).length === 0 ? (
           <StateView icon="cal" title={tr('ux.emptyToday')} body={tr('ux.emptyBookingsBody')} actionLabel={tr('calendar.newAppointment')} onAction={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
         ) : mode === 'month' ? (
-          <MonthView date={date} appts={day.data ?? []} refreshing={day.refreshing} onRefresh={() => void day.reload()} onPickDay={(d) => { setDate(d); setMode('day'); }} />
+          <MonthView date={date} appts={day.data ?? []} refreshing={day.refreshing} onRefresh={() => void day.reload()} onPickDay={(d) => { setDate(d); setMonthDay(d); }} />
         ) : mode === 'week' ? (
           <WeekView date={date} appts={weekAppts} startHour={startHour} endHour={endHour} refreshing={day.refreshing}
             onRefresh={() => void day.reload()} onOpen={setOpen} onPickDay={(d) => { setDate(d); setMode('day'); }} />
@@ -119,6 +122,21 @@ export default function Calendar() {
         )}
       </View>
       {blockSheets}
+      <BottomSheet open={!!monthDay} onClose={() => setMonthDay(null)}>
+        {monthDay ? (
+          <View style={{ paddingBottom: 18, gap: 12 }}>
+            <View><Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, color: t.ink }}>{weekdayLong(monthDay)}</Text><Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{dayMonth(monthDay)} · {tr('ux.nBookings', { n: (day.data ?? []).filter((a) => a.status !== 'CANCELLED' && a.appointmentDate.slice(0, 10) === toDay(monthDay)).length })}</Text></View>
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+              {(day.data ?? []).filter((a) => a.status !== 'CANCELLED' && a.appointmentDate.slice(0, 10) === toDay(monthDay)).sort((a, b) => toMin(a.startTime) - toMin(b.startTime)).map((a) => <BookingRow key={a.id} a={a} staff={staff.data ?? []} onPress={() => { setMonthDay(null); setOpen(a); }} />)}
+              {(day.data ?? []).filter((a) => a.status !== 'CANCELLED' && a.appointmentDate.slice(0, 10) === toDay(monthDay)).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted, textAlign: 'center', paddingVertical: 18 }}>{tr('ux.emptyToday')}</Text> : null}
+            </ScrollView>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Btn label={tr('ux.openDay')} variant="secondary" style={{ flex: 1 }} onPress={() => { setMonthDay(null); setMode('day'); }} />
+              <Btn label={tr('calendar.newAppointment')} icon="plus" style={{ flex: 1.2 }} onPress={() => { const d = monthDay; setMonthDay(null); router.push({ pathname: '/booking/new', params: { date: toDay(d) } }); }} />
+            </View>
+          </View>
+        ) : null}
+      </BottomSheet>
     </Screen>
   );
 }

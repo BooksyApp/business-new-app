@@ -352,6 +352,7 @@ export function MonthView({ date, appts, onPickDay, refreshing, onRefresh }: { d
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i)).filter((d, i) => i < 35 || d.getMonth() === date.getMonth());
   const counts = useMemo(() => { const m = new Map<string, number>(); for (const a of appts) if (a.status !== 'CANCELLED') m.set(a.appointmentDate.slice(0, 10), (m.get(a.appointmentDate.slice(0, 10)) ?? 0) + 1); return m; }, [appts]);
   const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const byDay = useMemo(() => { const m = new Map<string, string[]>(); for (const a of appts) { if (a.status === 'CANCELLED') continue; const k = a.appointmentDate.slice(0, 10); const c = a.status === 'PENDING' ? '#d99a1e' : a.status === 'COMPLETED' ? t.ok : a.status === 'NO_SHOW' ? t.guava : t.violet; m.set(k, [...(m.get(k) ?? []), c]); } return m; }, [appts, t]);
   const today = new Date();
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: inset }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.violet} />}>
@@ -366,7 +367,7 @@ export function MonthView({ date, appts, onPickDay, refreshing, onRefresh }: { d
               <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: sel ? t.violet : isToday ? t.vsoft : 'transparent' }}>
                 <Text style={{ fontFamily: font.x, fontSize: 16, color: sel ? '#fff' : other ? t.ink3 : isToday ? t.vtext : t.ink }}>{d.getDate()}</Text>
               </View>
-              {n ? <View style={{ flexDirection: 'row', gap: 3 }}>{Array.from({ length: Math.min(3, n) }, (_, i) => <View key={i} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: other ? t.line : t.violet }} />)}</View> : <View style={{ height: 5 }} />}
+              {n ? <View style={{ flexDirection: 'row', gap: 3, alignItems: 'center' }}>{(byDay.get(key(d)) ?? []).slice(0, 3).map((c, i) => <View key={i} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: other ? t.line : c }} />)}{n > 3 ? <Text style={{ fontFamily: font.b, fontSize: 11, color: other ? t.ink3 : t.muted }}>+{n - 3}</Text> : null}</View> : <View style={{ height: 6 }} />}
             </Pressable>
           );
         })}

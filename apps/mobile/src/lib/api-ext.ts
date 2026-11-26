@@ -9,11 +9,12 @@ export interface ServiceFull {
   priceType?: 'FIXED' | 'FROM' | 'RANGE'; isActive: boolean; isVisible?: boolean; staffIds?: Id[]; depositPercent?: number | null;
   paddingBefore?: number; paddingAfter?: number; bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null;
   messageToClient?: string | null;
+  isClass?: boolean; maxParticipants?: number | null;
 }
 export interface ServiceBody {
   categoryId?: Id | null; name?: string; description?: string; durationMinutes?: number; price?: number; priceType?: 'FIXED' | 'FROM' | 'RANGE';
   staffIds?: Id[]; isVisible?: boolean; isActive?: boolean; depositPercent?: number | null; paddingBefore?: number; paddingAfter?: number;
-  bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null; messageToClient?: string | null;
+  bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null; messageToClient?: string | null; isClass?: boolean; maxParticipants?: number | null;
 }
 export interface StaffBody { avatarUrl?: string; name?: string; email?: string; phone?: string; position?: string; serviceIds?: Id[]; isActive?: boolean; schedule?: Record<string, string[]>; inviteAndCreateAccount?: boolean }
 export interface StaffFull {

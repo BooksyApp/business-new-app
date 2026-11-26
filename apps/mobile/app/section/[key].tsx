@@ -11,6 +11,7 @@ import { Payroll } from '@/screens/Payroll';
 import { Profile } from '@/screens/Profile';
 import { Roles } from '@/screens/Roles';
 import { Branches, Offers, OnlineShop, RotaView, Support } from '@/screens/More2';
+import { Groups } from '@/screens/Groups';
 import { Looks } from '@/screens/Looks';
 import { Reports } from '@/screens/Reports';
 import { Reviews } from '@/screens/Reviews';
@@ -30,6 +31,7 @@ export default function Section() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/more'));
   switch (key) {
     case 'services': return <Services onBack={back} />;
+    case 'groups': return <Groups onBack={back} />;
     case 'inventory': return <Inventory onBack={back} />;
     case 'expenses': return <Expenses onBack={back} />;
     case 'marketing': return <Marketing onBack={back} />;

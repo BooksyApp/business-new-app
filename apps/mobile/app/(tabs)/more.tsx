@@ -38,6 +38,7 @@ export default function More() {
       { k: 'sales', icon: 'wallet', title: tr('more.takings'), sub: `${tr('more.expected')} ${money(tot?.expected ?? 0, salon?.currency)} · ${tr('more.collected')} ${money(tot?.already_paid ?? 0, salon?.currency)}` },
       { k: 'team', icon: 'users', title: L('sections.team'), sub: team || L('sections.teamHint') },
       { k: 'services', icon: 'scissors', title: L('sections.services'), sub: L('sections.servicesHint') },
+      { k: 'groups', icon: 'users', title: tr('ux.classes'), sub: tr('ux.noClassesBody') },
       { k: 'views', icon: 'spark', title: L('sections.views'), sub: L('sections.viewsHint') },
       { k: 'reviews', icon: 'star', title: L('sections.reviews'), sub: L('sections.reviewsHint') },
       { k: 'messages', icon: 'chat', title: L('sections.messages'), sub: L('sections.messagesHint') },

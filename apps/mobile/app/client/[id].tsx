@@ -4,7 +4,10 @@ import { Alert, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { EditClientSheet } from '@/components/EditClientSheet';
+import { ClientPackages } from '@/components/ClientPackages';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
+import { apiM } from '@/lib/api-more';
 import { Pressable } from '@/components/Pressable';
 import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
@@ -50,6 +53,7 @@ export default function ClientCard() {
   const crmRun = async (fn: () => Promise<unknown>, after: () => void) => { setCrmBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { toast((e as Error).message, 'error'); } finally { setCrmBusy(false); } };
   const consents = useLoad(() => (client?.id ? apiX.clientConsents(client.id).catch(() => []) : Promise.resolve([])), [client?.id]);
   const [note, setNote] = useState('');
+  const [delOpen, setDelOpen] = useState(false);
   const [ctab, setCtab] = useState<'overview' | 'visits' | 'notes'>('overview');
   const [busy, setBusy] = useState(false);
   const stats = (client ?? {}) as Partial<ClientWithStats>;
@@ -138,6 +142,7 @@ export default function ClientCard() {
               </Card>
               </>) : null}
               {ctab === 'overview' ? (<>
+                <ClientPackages clientId={String(client.id)} clientName={name} />
               <Card style={{ gap: 4 }}>
                 <ToggleRow label={tr('ad.vip')} value={!!stats.vip} onChange={(v) => void crmRun(() => apiB.setVip(client.id, v), () => { stale.current = true; void loaded.reload(); })} />
                 {pts.data ? <Row label={tr('ad.points')} value={String(pts.data.pointsBalance ?? pts.data.points_balance ?? 0)} /> : null}
@@ -169,6 +174,7 @@ export default function ClientCard() {
                   <Row key={c.id} label={c.formName ?? '-'} value={(c.signedAt ?? c.createdAt ?? '').slice(0, 10)} />
                 ))}
               </Card>
+              <Btn label={tr('ux.deleteClient')} icon="trash" variant="danger" onPress={() => setDelOpen(true)} style={{ marginTop: 10 }} />
               </>) : null}
               {ctab === 'visits' ? (<>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
@@ -196,6 +202,17 @@ export default function ClientCard() {
           ) : null}
         </ScrollView>
       )}
+      <BottomSheet open={delOpen} onClose={() => setDelOpen(false)}>
+        <View style={{ paddingBottom: 18, gap: 12 }}>
+          <View style={{ width: 64, height: 64, borderRadius: 22, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={30} color={t.gink} /></View>
+          <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink }}>{tr('ux.deleteClient')}</Text>
+          <Text style={{ fontFamily: font.m, fontSize: 16, lineHeight: 23, color: t.muted }}>{name} — {tr('ux.deleteClientBody')}</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Btn label={tr('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={() => setDelOpen(false)} />
+            <Btn label={tr('lk.delete')} variant="danger" style={{ flex: 1 }} loading={crmBusy} onPress={() => { if (!client) return; void crmRun(() => apiM.deleteClient(String(client.id)), () => { setDelOpen(false); toast(tr('ux.deleted'), 'success'); bump(); router.back(); }); }} />
+          </View>
+        </View>
+      </BottomSheet>
       {client && editing ? <EditClientSheet client={client} open={editing} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); stale.current = true; void loaded.reload(); }} /> : null}
     </Screen>
   );

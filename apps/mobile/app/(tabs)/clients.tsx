@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { ImportSheet } from '@/components/ImportSheet';
 import { AddClientSheet } from '@/components/AddClientSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
@@ -35,6 +36,7 @@ export default function Clients() {
   const [q, setQ] = useState('');
   const [seg, setSeg] = useState<Seg>('all');
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const list = useLoad(async () => { const r = await api.clientsWithStats(salon?.id ?? ''); rememberClients(r); return r; }, [salon?.id, version]);
   const all = list.data ?? [];
   const rows = useMemo(() => {
@@ -51,7 +53,7 @@ export default function Clients() {
   return (
     <Screen>
       <Header title={tr('clients.title')} subtitle={all.length ? `${stats.total} ${tr('ux.members')} · ${tr('ux.returningN', { n: stats.returning })}` : undefined}
-        right={<Circ icon="user-plus" violet label={tr('cl.add')} onPress={() => setAdding(true)} />} />
+        right={<><Circ icon="paper" label={tr('ux.import')} onPress={() => setImporting(true)} /><Circ icon="user-plus" violet label={tr('cl.add')} onPress={() => setAdding(true)} /></>} />
       <View style={{ paddingHorizontal: 20 }}>
         <SearchBar value={q} onChangeText={setQ} placeholder={tr('clients.search')} />
       </View>
@@ -92,6 +94,7 @@ export default function Clients() {
           }}
         />
       )}
+      <ImportSheet open={importing} onClose={() => setImporting(false)} onDone={() => { void list.reload(); }} />
       <AddClientSheet open={adding} onClose={() => setAdding(false)} onCreated={(c) => { setAdding(false); router.push(`/client/${encodeURIComponent(String(c.id))}`); }} />
     </Screen>
   );

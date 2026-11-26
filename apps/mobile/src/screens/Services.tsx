@@ -45,6 +45,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [interval, setInterval_] = useState(String(service?.bookingInterval ?? 0));
   const [parallel, setParallel] = useState(String(service?.parallelClients ?? 1));
   const [mobile, setMobile] = useState(service?.mobileService ?? false);
+  const [isClass, setIsClass] = useState(service?.isClass ?? false);
+  const [maxP, setMaxP] = useState(service?.maxParticipants != null ? String(service.maxParticipants) : '8');
   const [msg, setMsg] = useState(service?.messageToClient ?? '');
   const [busy, setBusy] = useState(false);
   const peak = useLoad(() => (service ? apiB.peak(sid, service.id).catch(() => [] as PeakRule[]) : Promise.resolve([] as PeakRule[])), [service?.id]);
@@ -67,6 +69,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
       bookingInterval: Math.max(0, Math.round(num(interval)) || 0), parallelClients: Math.max(0, Math.round(num(parallel)) || 0),
       mobileService: mobile, messageToClient: msg.trim() || null, depositPercent: dep ?? (service ? -1 : undefined),
       taxRate: taxRate.trim() === '' ? null : num(taxRate),
+      isClass, maxParticipants: isClass ? Math.max(1, Math.round(num(maxP)) || 1) : undefined,
     };
     setBusy(true);
     try {
@@ -151,6 +154,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
             <Field label={tr('sx.interval')} value={interval} onChangeText={setInterval_} keyboardType="number-pad" />
             <Field label={tr('sx.parallel')} value={parallel} onChangeText={setParallel} keyboardType="number-pad" />
             <ToggleRow label={tr('sx.mobile')} value={mobile} onChange={setMobile} />
+            <ToggleRow label={tr('ux.isClass')} value={isClass} onChange={setIsClass} />
+            {isClass ? <Field label={tr('ux.maxP')} value={maxP} onChangeText={setMaxP} keyboardType="number-pad" /> : null}
             {service ? <Btn label={tr('sx.archive')} variant="danger" icon="trash" style={{ marginTop: 14 }} onPress={archive} /> : null}
           </>
         ) : null}
