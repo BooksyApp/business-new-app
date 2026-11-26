@@ -9,53 +9,53 @@
 
 @layer base {
   :root {
-    /* Base colors - Clean light theme */
-    --background: 0 0% 98%;
-    --foreground: 220 20% 14%;
+    /* booqi brand tokens (cream #fbf7f2, ink #1d1730, violet #6f52ed -> guava #e83e63) mapped
+       onto the shadcn variables, so every primitive picks the new look up at once. */
+    --background: 33 53% 97%;
+    --foreground: 254 35% 14%;
 
-    /* Cards & surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 14%;
+    --card-foreground: 254 35% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 14%;
+    --popover-foreground: 254 35% 14%;
 
-    /* Primary - Deep slate/navy for professional feel */
-    --primary: 220 18% 22%;
+    /* Primary - booqi violet */
+    --primary: 251 81% 63%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Soft neutral */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 14%;
+    /* Secondary - warm fill */
+    --secondary: 35 40% 94%;
+    --secondary-foreground: 254 35% 14%;
 
-    /* Muted tones */
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 35 40% 94%;
+    --muted-foreground: 28 10% 38%;
 
-    /* Accent - Soft green for CTAs */
-    --accent: 160 60% 45%;
+    /* Accent - violet as well (CTAs that used the old green keep white text) */
+    --accent: 251 81% 63%;
     --accent-foreground: 0 0% 100%;
 
-    /* Destructive */
-    --destructive: 0 72% 51%;
+    /* Guava, the second half of the signature gradient */
+    --guava: 346 79% 57%;
+
+    --destructive: 346 79% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & inputs */
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 160 60% 45%;
+    --border: 34 27% 85%;
+    --input: 34 27% 85%;
+    --ring: 251 81% 63%;
 
-    --radius: 0.5rem;
+    --radius: 0.875rem;
 
-    /* Sidebar styling */
-    --sidebar-background: 220 18% 22%;
-    --sidebar-foreground: 220 14% 80%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 220 18% 22%;
-    --sidebar-accent: 220 16% 30%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 16% 30%;
-    --sidebar-ring: 160 60% 45%;
+    /* Sidebar: light, on the cream canvas */
+    --sidebar-background: 33 53% 97%;
+    --sidebar-foreground: 254 35% 14%;
+    --sidebar-primary: 251 81% 63%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 248 100% 97%;
+    --sidebar-accent-foreground: 251 66% 55%;
+    --sidebar-border: 34 27% 85%;
+    --sidebar-ring: 251 81% 63%;
 
     /* Appointment colors - Pastel rainbow for visual distinction */
     --appointment-pink: 340 82% 76%;
@@ -72,49 +72,50 @@
     --status-pending: 45 93% 55%;
     --status-cancelled: 0 72% 51%;
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(220 20% 14% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(220 20% 14% / 0.08), 0 2px 4px -2px hsl(220 20% 14% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(220 20% 14% / 0.08), 0 4px 6px -4px hsl(220 20% 14% / 0.05);
+    /* Shadows (ink-tinted, soft) */
+    --shadow-sm: 0 1px 2px hsl(254 35% 14% / 0.04), 0 2px 8px -4px hsl(254 35% 14% / 0.08);
+    --shadow-md: 0 1px 2px hsl(254 35% 14% / 0.04), 0 8px 24px -8px hsl(254 35% 14% / 0.10);
+    --shadow-lg: 0 2px 4px hsl(254 35% 14% / 0.04), 0 16px 40px -12px hsl(254 35% 14% / 0.16);
+    --shadow-cta: 0 10px 24px -8px rgb(91 63 214 / 0.6);
   }
 
   .dark {
-    --background: 220 20% 10%;
-    --foreground: 210 20% 98%;
+    --background: 253 22% 10%;
+    --foreground: 260 40% 96%;
 
-    --card: 220 18% 14%;
-    --card-foreground: 210 20% 98%;
+    --card: 253 20% 14%;
+    --card-foreground: 260 40% 96%;
 
-    --popover: 220 18% 14%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 253 20% 14%;
+    --popover-foreground: 260 40% 96%;
 
-    --primary: 0 0% 100%;
-    --primary-foreground: 220 18% 22%;
+    --primary: 251 81% 68%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 16% 20%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 253 18% 20%;
+    --secondary-foreground: 260 40% 96%;
 
-    --muted: 220 16% 20%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 253 18% 20%;
+    --muted-foreground: 30 10% 70%;
 
-    --accent: 160 60% 45%;
+    --accent: 251 81% 68%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 45%;
+    --destructive: 346 79% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 16% 22%;
-    --input: 220 16% 22%;
-    --ring: 160 60% 45%;
+    --border: 253 16% 22%;
+    --input: 253 16% 22%;
+    --ring: 251 81% 68%;
 
-    --sidebar-background: 220 20% 8%;
-    --sidebar-foreground: 220 14% 80%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 220 18% 22%;
-    --sidebar-accent: 220 16% 16%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 220 16% 18%;
-    --sidebar-ring: 160 60% 45%;
+    --sidebar-background: 253 22% 10%;
+    --sidebar-foreground: 260 40% 96%;
+    --sidebar-primary: 251 81% 68%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 253 18% 18%;
+    --sidebar-accent-foreground: 255 100% 82%;
+    --sidebar-border: 253 16% 20%;
+    --sidebar-ring: 251 81% 68%;
   }
 }
 
@@ -125,6 +126,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -150,7 +152,7 @@
 @layer components {
   /* Appointment block styles */
   .appointment-block {
-    @apply rounded-lg p-3 transition-all duration-200 cursor-pointer;
+    @apply rounded-xl p-3 transition-all duration-200 cursor-pointer;
     @apply hover:shadow-md hover:scale-[1.02];
   }
 
@@ -321,7 +323,7 @@
 
   /* Gradient text */
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent to-purple-600;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent to-[hsl(var(--guava))];
   }
 
   /* Professional card styles */

@@ -15,7 +15,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -71,6 +71,7 @@ export default {
           teal: "hsl(var(--appointment-teal))",
           orange: "hsl(var(--appointment-orange))",
         },
+        guava: "hsl(var(--guava))",
         status: {
           completed: "hsl(var(--status-completed))",
           pending: "hsl(var(--status-pending))",
@@ -78,14 +79,16 @@ export default {
         },
       },
       borderRadius: {
+        xl: "calc(var(--radius) + 4px)",
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
       },
       boxShadow: {
         "sm": "var(--shadow-sm)",
         "md": "var(--shadow-md)",
         "lg": "var(--shadow-lg)",
+        "cta": "var(--shadow-cta)",
       },
       keyframes: {
         "accordion-down": {
