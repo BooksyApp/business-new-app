@@ -7,6 +7,7 @@ import { Text } from '@/components/Text';
 import { Btn, Card, Header, Row, Screen } from '@/components/ui';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { useApp } from '@/lib/app';
+import { HoursEditor, NotifEditor, SubscriptionCard } from '@/screens/SettingsMore';
 import { enablePush } from '@/lib/push';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -15,8 +16,11 @@ import { font } from '@/theme/tokens';
 export function Settings({ onBack }: { onBack: () => void }) {
   const { t, mode, setMode } = useTheme();
   const { user, salon, signOut } = useApp();
+  const [sub, setSub] = useState<'main' | 'hours' | 'notif'>('main');
   const [push, setPush] = useState<'idle' | 'on' | 'failed'>('idle');
   const h = (s: string) => <Text style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 8 }}>{s}</Text>;
+  if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
+  if (sub === 'notif') return <NotifEditor onBack={() => setSub('main')} />;
   return (
     <Screen>
       <Header title={tr('sections.settings')} onBack={onBack} />
@@ -29,6 +33,14 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <Row label={tr('set.currency')} value={salon?.currency} />
         </Card>
         <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('set.webHint')}</Text>
+        <Card onPress={() => setSub('hours')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Icon name="clock" size={22} color={t.vtext} /><Text style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{tr('hr.title')}</Text><Icon name="chev" size={18} color={t.ink3} />
+        </Card>
+        <Card onPress={() => setSub('notif')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Icon name="bell" size={22} color={t.vtext} /><Text style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{tr('ns.title')}</Text><Icon name="chev" size={18} color={t.ink3} />
+        </Card>
+        {h(tr('sub.title'))}
+        <SubscriptionCard />
         {h(tr('more.language'))}
         <Card style={{ paddingVertical: 4 }}>
           {SUPPORTED.map((l) => (

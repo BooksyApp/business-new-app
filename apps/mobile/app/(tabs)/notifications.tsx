@@ -12,6 +12,8 @@ import { useApp } from '@/lib/app';
 import { useDockInset } from '@/lib/dock';
 import { addDays, dateLabel, fromIso, hhmm } from '@/lib/format';
 import { enablePush } from '@/lib/push';
+import { WaitlistSheet } from '@/components/WaitlistSheet';
+import { apiX } from '@/lib/api-ext';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -32,6 +34,7 @@ export default function Notifications() {
     const [appts, waitlist] = await Promise.all([api.appointments(salon?.id ?? '', today, addDays(today, 30)), api.waitlist(salon?.id ?? '').catch(() => [])]);
     return { pending: appts.filter((a) => a.status === 'PENDING').sort((a, b) => `${a.appointmentDate}${a.startTime}`.localeCompare(`${b.appointmentDate}${b.startTime}`)), waitlist };
   }, [salon?.id, version]);
+  const [wlOpen, setWlOpen] = useState(false);
   const pending = data.data?.pending ?? [];
   const waitlist = data.data?.waitlist ?? [];
   async function confirm(id: string) {
@@ -85,7 +88,10 @@ export default function Notifications() {
               </Card>
             </Pressable>
           ))}
-          {waitlist.length ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4, marginTop: 4 }}>{tr('notifications.waitlist')}</Text> : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+            <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4 }}>{tr('notifications.waitlist')}</Text>
+            <Pressable onPress={() => setWlOpen(true)} accessibilityRole="button" accessibilityLabel={tr('wl.add')} hitSlop={8}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.vtext }}>+ {tr('wl.add')}</Text></Pressable>
+          </View>
           {waitlist.map((w) => (
             <Card key={w.id} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Icon name="user-plus" size={24} color={t.vtext} />
@@ -93,10 +99,13 @@ export default function Notifications() {
                 <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{w.clientName || '-'}</Text>
                 <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('notifications.waitingFor', { service: w.serviceName ?? '-' })}{w.preferredDate ? ` · ${toDay(fromIso(w.preferredDate))}` : ''}</Text>
               </View>
+              <Pressable onPress={() => router.push({ pathname: '/booking/new', params: { clientName: w.clientName ?? '', date: w.preferredDate ?? undefined } })} accessibilityRole="button" accessibilityLabel={tr('wl.book')}><Icon name="cal" size={22} color={t.vtext} /></Pressable>
+              <Pressable onPress={() => void apiX.removeWaitlist(salon?.id ?? '', w.id).then(() => { bump(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityRole="button" accessibilityLabel={tr('wl.remove')}><Icon name="trash" size={22} color={t.gink} /></Pressable>
             </Card>
           ))}
         </ScrollView>
       )}
+      <WaitlistSheet open={wlOpen} onClose={() => setWlOpen(false)} onAdded={() => { setWlOpen(false); void data.reload(); }} />
     </Screen>
   );
 }

@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Alert, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { EditClientSheet } from '@/components/EditClientSheet';
 import { Icon } from '@/components/Icon';
+import { Pressable } from '@/components/Pressable';
+import { apiX } from '@/lib/api-ext';
 import { Text } from '@/components/Text';
 import { Avatar, Btn, Card, ErrorState, Field, Header, Pill, Row, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
@@ -30,6 +33,8 @@ export default function ClientCard() {
   }, [key]);
   const client = loaded.data;
   const rec = useLoad(() => (client?.id ? api.clientRecord(salon?.id ?? '', client.id) : Promise.resolve(null)), [client?.id]);
+  const [editing, setEditing] = useState(false);
+  const consents = useLoad(() => (client?.id ? apiX.clientConsents(client.id).catch(() => []) : Promise.resolve([])), [client?.id]);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const stats = (client ?? {}) as Partial<ClientWithStats>;
@@ -55,7 +60,7 @@ export default function ClientCard() {
 
   return (
     <Screen>
-      <Header title={name || tr('clients.title')} onBack={() => router.back()} />
+      <Header title={name || tr('clients.title')} onBack={() => router.back()} right={client ? <Pressable onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel={tr('cx.edit')} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="edit" size={20} color={t.ink} /></Pressable> : undefined} />
       {loaded.error ? <ErrorState error={loaded.error} onRetry={() => void loaded.reload()} /> : !client && !loaded.loading ? <StateView icon="users" title={tr('state.errorTitle')} actionLabel={tr('state.retry')} onAction={() => void loaded.reload()} /> : !client ? <Skeleton rows={3} height={90} /> : (
         <ScrollView contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 60 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={loaded.refreshing || rec.refreshing} onRefresh={() => void refresh()} tintColor={t.violet} />}>
@@ -107,6 +112,15 @@ export default function ClientCard() {
                 <Btn label={tr('clients.addNote')} disabled={!note.trim()} loading={busy} onPress={() => void addNote()} />
               </Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                <Icon name="shield" size={20} color={t.vtext} />
+                <Text style={{ fontFamily: font.x, fontSize: 19, color: t.ink }}>{tr('cx.consents')}</Text>
+              </View>
+              <Card>
+                {(consents.data ?? []).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('cx.noConsents')}</Text> : (consents.data ?? []).map((c) => (
+                  <Row key={c.id} label={c.formName ?? '-'} value={(c.signedAt ?? c.createdAt ?? '').slice(0, 10)} />
+                ))}
+              </Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
                 <Icon name="clock" size={20} color={t.vtext} />
                 <Text style={{ fontFamily: font.x, fontSize: 19, color: t.ink }}>{tr('clients.history')}</Text>
               </View>
@@ -130,6 +144,7 @@ export default function ClientCard() {
           ) : null}
         </ScrollView>
       )}
+      {client && editing ? <EditClientSheet client={client} open={editing} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void loaded.reload(); }} /> : null}
     </Screen>
   );
 }
