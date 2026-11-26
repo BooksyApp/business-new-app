@@ -100,9 +100,19 @@ jobs:
             echo "::warning::Keystore secrets missing (ANDROID_KEYSTORE_BASE64/_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): APK is signed with the DEBUG key, not for store upload"
             echo "SIGNING=DEBUG key (keystore secrets missing)" >> "$GITHUB_ENV"
           fi
+      - name: Diagnose node autolinking (monorepo)
+        working-directory: apps/mobile/android
+        continue-on-error: true
+        run: |
+          set +e
+          node --print "require.resolve('react-native/package.json')"; echo "rc=$?"
+          node --print "require.resolve('expo/package.json')"; echo "rc=$?"
+          node --print "require.resolve('@react-native/gradle-plugin/package.json',{paths:[require.resolve('react-native/package.json')]})"; echo "rc=$?"
+          npx --no-install react-native config 2>&1 | tail -30; echo "rc=$?"
+          npx --no-install expo-modules-autolinking resolve --platform android --json 2>&1 | tail -15
       - name: Assemble release
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+        run: ./gradlew assembleRelease --stacktrace --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
       - name: Checksum
         working-directory: apps/mobile/android/app/build/outputs/apk/release
         run: |
