@@ -4,10 +4,8 @@ import { BookOpen, Copy, KeyRound, Plus, Send, Trash2, Webhook } from "lucide-re
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { myAccess } from "@/components/layout/navigation";
-import { BooqiScope, EmptyState, PageHeader, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
-import { Field } from "@/components/page/kit";
-import { fieldCls } from "@/components/page/kitStyles";
+import { Btn, Card, Chip, EmptyState, Field, Note, PageHead, RowItem, StatusPill, Tabs } from "@/components/bz";
+import { BzPage } from "@/components/bz/p3-Settings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,17 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { fmtDate, t, tDynamic } from "@/i18n";
 import { CalendarTab, DomainTab, FeedsTab, MarketplaceTab, SocialTab, TrackingTab, type IntegrationTab } from "@/pages/integrations/MarketplaceTabs";
 import { integrationService, type ApiKeyRow, type WebhookDelivery, type WebhookRow } from "@/services/integrationService";
 
-const card = "rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]";
-const chip = (on: boolean) =>
-  `inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 transition ${
-    on ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-[rgb(var(--reg-brand)/0.4)]" : "bg-white text-[rgb(var(--reg-muted))] ring-[rgb(var(--reg-line))]"
-  }`;
 const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 const when = (iso: string) => fmtDate(iso, { dateStyle: "medium", timeStyle: "short" });
 const errText = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
@@ -45,18 +37,13 @@ async function copy(text: string) {
 /** A secret shown once. */
 function SecretBox({ title, secret, hint, onDone }: { title: string; secret: string; hint: string; onDone: () => void }) {
   return (
-    <div role="alert" className="space-y-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
-      <p className="font-bold">{title}</p>
-      <p className="text-sm">{hint}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <code className="min-w-0 flex-1 break-all rounded-xl bg-white px-3 py-2 text-sm ring-1 ring-amber-200">{secret}</code>
-        <Button className={secondaryBtn} onClick={() => void copy(secret)}>
-          <Copy size={16} /> {t("integrations.copy")}
-        </Button>
+    <div role="alert" className="stk">
+      <Note kind="wa"><b>{title}</b><br />{hint}</Note>
+      <div className="cd" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <code style={{ flex: 1, minWidth: 0, wordBreak: "break-all" }}>{secret}</code>
+        <Btn kind="soft" icon={<Copy size={16} />} onClick={() => void copy(secret)}>{t("integrations.copy")}</Btn>
       </div>
-      <Button className={primaryBtn} onClick={onDone}>
-        {t("integrations.done")}
-      </Button>
+      <div><Btn kind="v" onClick={onDone}>{t("integrations.done")}</Btn></div>
     </div>
   );
 }
@@ -110,63 +97,48 @@ function KeysTab({ businessId }: { businessId: string }) {
   };
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-[rgb(var(--reg-muted))]">{t("integrations.keysIntro")}</p>
+    <div className="stk">
+      <span className="hint">{t("integrations.keysIntro")}</span>
       {secret && <SecretBox title={t("integrations.copyNow")} secret={secret} hint={t("integrations.secretOnce")} onDone={() => setSecret(null)} />}
 
       {open ? (
-        <section className={`${card} space-y-4`}>
-          <Field label={t("integrations.keyName")} htmlFor="ak-name">
-            <input id="ak-name" className={fieldCls} maxLength={120} placeholder={t("integrations.keyNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
+        <Card>
+          <Field label={t("integrations.keyName")}>
+            <input id="ak-name" maxLength={120} placeholder={t("integrations.keyNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <div>
-            <p className="mb-2 text-sm font-semibold">{t("integrations.scopes")}</p>
-            <div className="flex flex-wrap gap-2">
-              {scopes.map((s) => (
-                <button key={s} type="button" className={chip(picked.includes(s))} aria-pressed={picked.includes(s)} onClick={() => setPicked(toggle(picked, s))}>
+          <div className="lbl2">{t("integrations.scopes")}</div>
+          <div className="row gap8" style={{ flexWrap: "wrap" }}>
+            {scopes.map((s) => (
+              <span key={s} aria-pressed={picked.includes(s)}>
+                <Chip on={picked.includes(s)} onClick={() => setPicked(toggle(picked, s))}>
                   {tDynamic(`integrations.scope.${s}`, s)}
-                  <code className="text-xs opacity-70">{s}</code>
-                </button>
-              ))}
-            </div>
+                  <code style={{ fontSize: 12, opacity: 0.7 }}>{s}</code>
+                </Chip>
+              </span>
+            ))}
           </div>
-          <div className="flex gap-2">
-            <Button className={primaryBtn} disabled={busy || !name.trim() || picked.length === 0} onClick={() => void create()}>
-              {t("integrations.create")}
-            </Button>
-            <Button className={secondaryBtn} onClick={() => setOpen(false)}>
-              {t("integrations.cancel")}
-            </Button>
+          <div className="row gap8">
+            <Btn kind="v" disabled={busy || !name.trim() || picked.length === 0} onClick={() => void create()}>{t("integrations.create")}</Btn>
+            <Btn kind="ol" onClick={() => setOpen(false)}>{t("integrations.cancel")}</Btn>
           </div>
-        </section>
+        </Card>
       ) : (
-        <Button className={primaryBtn} onClick={() => setOpen(true)}>
-          <Plus size={16} /> {t("integrations.newKey")}
-        </Button>
+        <div><Btn kind="v" icon={<Plus size={16} />} onClick={() => setOpen(true)}>{t("integrations.newKey")}</Btn></div>
       )}
 
       {keys.length === 0 ? (
-        <EmptyState icon={KeyRound} title={t("integrations.keysEmpty")} />
+        <EmptyState icon={<KeyRound />} title={t("integrations.keysEmpty")} />
       ) : (
-        <ul className={`${card} divide-y divide-[rgb(var(--reg-line)/0.8)] py-1`}>
+        <div className="stk">
           {keys.map((k) => (
-            <li key={k.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="min-w-0">
-                <p className="font-semibold">
-                  {k.name} {k.revokedAt && <span className="ml-2 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-800 ring-1 ring-rose-200">{t("integrations.revoked")}</span>}
-                </p>
-                <p className="text-xs text-[rgb(var(--reg-muted))]">
-                  <code>{k.prefix}…</code> · {k.scopes.join(", ")} · {k.lastUsedAt ? t("integrations.lastUsed", { when: when(k.lastUsedAt) }) : t("integrations.neverUsed")}
-                </p>
-              </div>
-              {!k.revokedAt && (
-                <Button className={secondaryBtn} onClick={() => setToRevoke(k)}>
-                  <Trash2 size={16} /> {t("integrations.revoke")}
-                </Button>
-              )}
-            </li>
+            <RowItem
+              key={k.id}
+              title={<>{k.name} {k.revokedAt && <StatusPill kind="x">{t("integrations.revoked")}</StatusPill>}</>}
+              sub={<><code>{k.prefix}…</code> · {k.scopes.join(", ")} · {k.lastUsedAt ? t("integrations.lastUsed", { when: when(k.lastUsedAt) }) : t("integrations.neverUsed")}</>}
+              right={!k.revokedAt ? <Btn kind="dg" icon={<Trash2 size={16} />} onClick={() => setToRevoke(k)}>{t("integrations.revoke")}</Btn> : undefined}
+            />
           ))}
-        </ul>
+        </div>
       )}
 
       <AlertDialog open={toRevoke !== null} onOpenChange={(o) => { if (!o) setToRevoke(null); }}>
@@ -197,7 +169,7 @@ function DeliveryLog({ businessId, hookId }: { businessId: string; hookId: strin
     };
   }, [businessId, hookId]);
   if (rows === null) return null;
-  if (rows.length === 0) return <p className="text-sm text-[rgb(var(--reg-muted))]">{t("integrations.logEmpty")}</p>;
+  if (rows.length === 0) return <span className="hint">{t("integrations.logEmpty")}</span>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[520px] text-left text-sm">
@@ -206,9 +178,9 @@ function DeliveryLog({ businessId, hookId }: { businessId: string; hookId: strin
             <tr key={d.id} className="border-t border-[rgb(var(--reg-line)/0.8)]">
               <td className="py-2 pr-3 font-mono text-xs">{d.event}</td>
               <td className="py-2 pr-3">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-bold ring-1 ${d.status === "SUCCESS" ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : d.status === "FAILED" ? "bg-rose-50 text-rose-800 ring-rose-200" : "bg-amber-50 text-amber-900 ring-amber-200"}`}>
+                <StatusPill kind={d.status === "SUCCESS" ? "c" : d.status === "FAILED" ? "x" : "w"}>
                   {t(`integrations.delivery.${d.status}`)}
-                </span>
+                </StatusPill>
               </td>
               <td className="py-2 pr-3 text-xs">{d.statusCode ?? ""} {d.error ?? ""}</td>
               <td className="py-2 pr-3 text-xs">{t("integrations.attempts", { count: d.attempts })}</td>
@@ -271,75 +243,65 @@ function HooksTab({ businessId }: { businessId: string }) {
   };
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-[rgb(var(--reg-muted))]">{t("integrations.hooksIntro")}</p>
-      <p className="text-sm text-[rgb(var(--reg-muted))]">{t("marketplace.card.zapier_make.desc")}</p>
+    <div className="stk">
+      <span className="hint">{t("integrations.hooksIntro")}</span>
+      <span className="hint">{t("marketplace.card.zapier_make.desc")}</span>
       {secret && <SecretBox title={t("integrations.hookSecret")} secret={secret} hint={t("integrations.hookSecretOnce")} onDone={() => setSecret(null)} />}
 
       {open ? (
-        <section className={`${card} space-y-4`}>
-          <Field label={t("integrations.hookUrl")} htmlFor="wh-url">
-            <input id="wh-url" type="url" className={fieldCls} placeholder="https://example.com/booqi-webhook" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <Card>
+          <Field label={t("integrations.hookUrl")}>
+            <input id="wh-url" type="url" placeholder="https://example.com/booqi-webhook" value={url} onChange={(e) => setUrl(e.target.value)} />
           </Field>
-          <div>
-            <p className="mb-2 text-sm font-semibold">{t("integrations.hookEvents")}</p>
-            <div className="flex flex-wrap gap-2">
-              {events.map((ev) => (
-                <button key={ev} type="button" className={chip(picked.includes(ev))} aria-pressed={picked.includes(ev)} onClick={() => setPicked(toggle(picked, ev))}>
+          <div className="lbl2">{t("integrations.hookEvents")}</div>
+          <div className="row gap8" style={{ flexWrap: "wrap" }}>
+            {events.map((ev) => (
+              <span key={ev} aria-pressed={picked.includes(ev)}>
+                <Chip on={picked.includes(ev)} onClick={() => setPicked(toggle(picked, ev))}>
                   {tDynamic(`integrations.event.${ev}`, ev)}
-                  <code className="text-xs opacity-70">{ev}</code>
-                </button>
-              ))}
-            </div>
+                  <code style={{ fontSize: 12, opacity: 0.7 }}>{ev}</code>
+                </Chip>
+              </span>
+            ))}
           </div>
-          <div className="flex gap-2">
-            <Button className={primaryBtn} disabled={busy || !url.trim() || picked.length === 0} onClick={() => void create()}>
-              {t("integrations.create")}
-            </Button>
-            <Button className={secondaryBtn} onClick={() => setOpen(false)}>
-              {t("integrations.cancel")}
-            </Button>
+          <div className="row gap8">
+            <Btn kind="v" disabled={busy || !url.trim() || picked.length === 0} onClick={() => void create()}>{t("integrations.create")}</Btn>
+            <Btn kind="ol" onClick={() => setOpen(false)}>{t("integrations.cancel")}</Btn>
           </div>
-        </section>
+        </Card>
       ) : (
-        <Button className={primaryBtn} onClick={() => setOpen(true)}>
-          <Plus size={16} /> {t("integrations.newHook")}
-        </Button>
+        <div><Btn kind="v" icon={<Plus size={16} />} onClick={() => setOpen(true)}>{t("integrations.newHook")}</Btn></div>
       )}
 
       {hooks.length === 0 ? (
-        <EmptyState icon={Webhook} title={t("integrations.hooksEmpty")} />
+        <EmptyState icon={<Webhook />} title={t("integrations.hooksEmpty")} />
       ) : (
-        <ul className="space-y-3">
+        <div className="stk">
           {hooks.map((h) => (
-            <li key={h.id} className={`${card} space-y-3`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="break-all font-semibold">{h.url}</p>
-                  <p className="text-xs text-[rgb(var(--reg-muted))]">
+            <Card key={h.id}>
+              <div className="row sp" style={{ flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}>
+                  <b style={{ wordBreak: "break-all" }}>{h.url}</b>
+                  <div className="hint">
                     {h.events.join(", ")} · {h.active ? t("integrations.active") : t("integrations.paused")}
-                    {h.failedDeliveries > 0 && <span className="text-rose-700"> · {t("integrations.failedCount", { count: h.failedDeliveries })}</span>}
-                  </p>
+                    {h.failedDeliveries > 0 && <span style={{ color: "var(--bz-gink)" }}> · {t("integrations.failedCount", { count: h.failedDeliveries })}</span>}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button className={secondaryBtn} onClick={() => void act(() => integrationService.testWebhook(businessId, h.id), t("integrations.testQueued"))}>
-                    <Send size={16} /> {t("integrations.sendTest")}
-                  </Button>
-                  <Button className={secondaryBtn} onClick={() => void act(() => integrationService.updateWebhook(businessId, h.id, { events: h.events, active: !h.active }))}>
+                <div className="row gap8" style={{ flexWrap: "wrap" }}>
+                  <Btn kind="ol" icon={<Send size={16} />} onClick={() => void act(() => integrationService.testWebhook(businessId, h.id), t("integrations.testQueued"))}>{t("integrations.sendTest")}</Btn>
+                  <Btn kind="ol" onClick={() => void act(() => integrationService.updateWebhook(businessId, h.id, { events: h.events, active: !h.active }))}>
                     {h.active ? t("integrations.pause") : t("integrations.resume")}
-                  </Button>
-                  <Button className={secondaryBtn} onClick={() => setLogFor(logFor === h.id ? null : h.id)}>
+                  </Btn>
+                  <Btn kind="ol" onClick={() => setLogFor(logFor === h.id ? null : h.id)}>
                     {logFor === h.id ? t("integrations.hideLog") : t("integrations.showLog")}
-                  </Button>
-                  <Button className={secondaryBtn} onClick={() => setToDelete(h)} aria-label={t("integrations.delete")}>
-                    <Trash2 size={16} />
-                  </Button>
+                  </Btn>
+                  <Btn kind="dg" onClick={() => setToDelete(h)} aria-label={t("integrations.delete")} icon={<Trash2 size={16} />} />
                 </div>
               </div>
               {logFor === h.id && <DeliveryLog businessId={businessId} hookId={h.id} />}
-            </li>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
 
       <AlertDialog open={toDelete !== null} onOpenChange={(o) => { if (!o) setToDelete(null); }}>
@@ -367,63 +329,47 @@ export default function IntegrationsPage() {
   const isOwner = myAccess().isOwner;
   const [tab, setTab] = useState<IntegrationTab>("market");
 
+  const tabItems: Array<{ key: IntegrationTab; label: string }> = [
+    { key: "market", label: t("marketplace.tabMarketplace") },
+    { key: "keys", label: t("integrations.tabKeys") },
+    { key: "hooks", label: t("integrations.tabHooks") },
+    { key: "feeds", label: t("marketplace.tabFeeds") },
+    { key: "calendar", label: t("marketplace.tabCalendar") },
+    { key: "tracking", label: t("marketplace.tabTracking") },
+    { key: "social", label: t("marketplace.tabSocial") },
+    { key: "domain", label: t("marketplace.tabDomain") },
+  ];
+
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader
+      <BzPage>
+        <PageHead
           title={t("marketplace.title")}
-          subtitle={t("marketplace.subtitle")}
-          actions={
+          sub={t("marketplace.subtitle")}
+          right={
             isOwner ? (
-              <Link to={`/${salonKey ?? ""}/api-docs`} className={`${secondaryBtn} inline-flex items-center`}>
+              <Link to={`/${salonKey ?? ""}/api-docs`} className="btn btn-ol s" style={{ textDecoration: "none" }}>
                 <BookOpen size={16} /> {t("integrations.docsLink")}
               </Link>
             ) : undefined
           }
         />
-        <div className={pageBody}>
-          {!isOwner || !businessId ? (
-            <EmptyState icon={KeyRound} title={t("integrations.ownerOnly")} />
-          ) : (
-            <Tabs value={tab} onValueChange={(v) => setTab(v as IntegrationTab)}>
-              <TabsList>
-                <TabsTrigger value="market">{t("marketplace.tabMarketplace")}</TabsTrigger>
-                <TabsTrigger value="keys">{t("integrations.tabKeys")}</TabsTrigger>
-                <TabsTrigger value="hooks">{t("integrations.tabHooks")}</TabsTrigger>
-                <TabsTrigger value="feeds">{t("marketplace.tabFeeds")}</TabsTrigger>
-                <TabsTrigger value="calendar">{t("marketplace.tabCalendar")}</TabsTrigger>
-                <TabsTrigger value="tracking">{t("marketplace.tabTracking")}</TabsTrigger>
-                <TabsTrigger value="social">{t("marketplace.tabSocial")}</TabsTrigger>
-                <TabsTrigger value="domain">{t("marketplace.tabDomain")}</TabsTrigger>
-              </TabsList>
-              <TabsContent value="market">
-                <MarketplaceTab businessId={businessId} onOpen={setTab} />
-              </TabsContent>
-              <TabsContent value="keys">
-                <KeysTab businessId={businessId} />
-              </TabsContent>
-              <TabsContent value="hooks">
-                <HooksTab businessId={businessId} />
-              </TabsContent>
-              <TabsContent value="feeds">
-                <FeedsTab onOpen={setTab} />
-              </TabsContent>
-              <TabsContent value="calendar">
-                <CalendarTab businessId={businessId} />
-              </TabsContent>
-              <TabsContent value="tracking">
-                <TrackingTab businessId={businessId} />
-              </TabsContent>
-              <TabsContent value="social">
-                <SocialTab businessId={businessId} />
-              </TabsContent>
-              <TabsContent value="domain">
-                <DomainTab businessId={businessId} />
-              </TabsContent>
-            </Tabs>
-          )}
-        </div>
-      </BooqiScope>
+        {!isOwner || !businessId ? (
+          <EmptyState icon={<KeyRound />} title={t("integrations.ownerOnly")} />
+        ) : (
+          <div className="stk">
+            <Tabs items={tabItems} value={tab} onChange={(k) => setTab(k as IntegrationTab)} />
+            {tab === "market" && <MarketplaceTab businessId={businessId} onOpen={setTab} />}
+            {tab === "keys" && <KeysTab businessId={businessId} />}
+            {tab === "hooks" && <HooksTab businessId={businessId} />}
+            {tab === "feeds" && <FeedsTab onOpen={setTab} />}
+            {tab === "calendar" && <CalendarTab businessId={businessId} />}
+            {tab === "tracking" && <TrackingTab businessId={businessId} />}
+            {tab === "social" && <SocialTab businessId={businessId} />}
+            {tab === "domain" && <DomainTab businessId={businessId} />}
+          </div>
+        )}
+      </BzPage>
     </AppLayout>
   );
 }
