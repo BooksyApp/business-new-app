@@ -4,33 +4,36 @@ import { t } from "@/i18n";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FLAG_DEFS, flagDef, type FlagKey } from "@/lib/appointmentFlags";
 
-/** A compact row of small line icons; each has its own tooltip (title) and aria-label. */
-export function FlagIcons({ keys, max = 4, size = 13, className }: { keys: FlagKey[]; max?: number; size?: number; className?: string }) {
+/**
+ * The small line icons of a calendar block. `bare` emits only the frame's `<i class="ni">` items
+ * (BF02 `.nb > i.ni > svg.ic`, overflow as `<i class="nx">+N`) so a block can put them in its own `.nb`.
+ */
+export function FlagIcons({ keys, max = 4, size = 13, className, bare }: { keys: FlagKey[]; max?: number; size?: number; className?: string; bare?: boolean }) {
   if (keys.length === 0) return null;
   const shown = keys.slice(0, max);
   const rest = keys.slice(max);
-  return (
-    <span className={cn("inline-flex shrink-0 items-center gap-[3px]", className)}>
+  const items = (
+    <>
       {shown.map((k) => {
         const d = flagDef(k);
         const label = d.label();
         return (
-          <span
-            key={k}
-            role="img"
-            aria-label={label}
-            title={label}
-            className={cn("inline-flex", d.tone === "guava" ? "text-[#e83e63]" : "opacity-70")}
-          >
-            <d.Icon size={size} strokeWidth={2} aria-hidden />
-          </span>
+          <i key={k} role="img" aria-label={label} title={label} className={cn("ni", d.tone === "guava" && "lt")}>
+            <d.Icon className="ic" size={size} strokeWidth={2} aria-hidden />
+          </i>
         );
       })}
       {rest.length > 0 && (
-        <span title={rest.map((k) => flagDef(k).label()).join(" · ")} className="text-[10px] font-bold leading-none opacity-70">
+        <i className="nx" title={rest.map((k) => flagDef(k).label()).join(" · ")}>
           +{rest.length}
-        </span>
+        </i>
       )}
+    </>
+  );
+  if (bare) return items;
+  return (
+    <span className={cn("nb", className)}>
+      {items}
     </span>
   );
 }

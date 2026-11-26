@@ -56,7 +56,7 @@ export function MiniTile({
       <div className="hr2">
         <b style={cancelled ? { textDecoration: "line-through" } : undefined}>{appointment.clientName}</b>
         <span className="nb">
-          <FlagIcons keys={keys} max={3} size={13} />
+          <FlagIcons bare keys={keys} max={3} size={13} />
         </span>
       </div>
       <span>

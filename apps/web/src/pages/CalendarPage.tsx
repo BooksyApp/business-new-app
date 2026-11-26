@@ -1,5 +1,5 @@
 import type { Id } from "@/types/id";
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense, Fragment } from "react";
 import { lazyWithReload } from "@/lib/lazyWithReload";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
 import { ChevronLeft, ChevronRight, Bell, Search, Settings, SlidersHorizontal, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -1548,8 +1548,23 @@ export default function CalendarPage() {
     dayGridRef.current.scrollTop = Math.max(0, target) * 4 * SLOT_HEIGHT;
   }, [viewType, loading, openingHour, isCurrentDate, currentDate, salonTz]);
 
-  // Get current time position
-  const getCurrentTimePosition = (): number | null => {
+  // Day grid geometry (BF40): hour column 64px, columns 12px apart, widened to fill the card.
+  const HOUR_COL = isMobile ? 52 : 64;
+  const COL_GAP = 12;
+  const [gridW, setGridW] = useState(0);
+  useEffect(() => {
+    const el = dayGridRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setGridW(el.clientWidth));
+    ro.observe(el);
+    setGridW(el.clientWidth);
+    return () => ro.disconnect();
+  }, [viewType, loading, isMobile]);
+  const colCount = Math.max(1, visibleStaff.length);
+  const colW = Math.max(isMobile ? 120 : 200, Math.floor((gridW - 12 - HOUR_COL) / colCount) - COL_GAP);
+  const gridInnerW = HOUR_COL + colCount * (colW + COL_GAP);
+
+  // Get current time position = (): number | null => {
     if (!isCurrentDate) return null;
     
     const now = currentTime;
@@ -2386,120 +2401,61 @@ export default function CalendarPage() {
 
       {/* Calendar Grid - Conditional based on view type */}
           {viewType === "Day" && (
-          <div className="flex min-h-0 flex-1 overflow-hidden">
-          <div ref={dayGridRef} className="cal-card relative flex min-w-0 flex-1 overflow-auto md:mx-8 md:mb-4">
-            {/* Current Time Indicator - Full horizontal line across all columns */}
-            {isCurrentDate && (() => {
-              const timePosition = getCurrentTimePosition();
-              if (timePosition === null) return null;
-              
-              return (
-                <div
-                  className="pointer-events-none absolute left-14 right-0 z-30 md:left-16"
-                  style={{
-                    top: `${timePosition + 64}px`, // 64px for header height
-                    height: '2px',
-                  }}
-                >
-                  <div className="h-full w-full" style={{ background: "var(--bz-guava)", height: 2.5 }} />
-                  <span className="absolute -left-1 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full" style={{ background: "var(--bz-guava)", boxShadow: "0 0 0 3px var(--bz-surface)" }} />
-            </div>
-              );
-            })()}
-            
-            {/* Time Column */}
-            <div className="sticky left-0 z-20 w-14 shrink-0 self-start bg-[var(--bz-surface)] md:w-16">
-              <div className="sticky top-0 z-20 h-16 bg-[var(--bz-surface)]"></div>
-              
-              {/* Current Time Indicator in Time Column - Time badge */}
-              {isCurrentDate && (() => {
-                const timePosition = getCurrentTimePosition();
-                if (timePosition === null) return null;
-                
+          <div className="flex min-h-0 flex-1 gap-5 overflow-hidden px-3 pb-3 md:px-8 md:pb-8">
+          <div ref={dayGridRef} className="a-gridw min-w-0 flex-1" style={{ overflow: "auto", padding: "0 12px 12px 0" }}>
+            {/* Staff headers (BF40 .colh, one per column, absolutely placed above the grid). */}
+            <div style={{ position: "sticky", top: 0, zIndex: 8, height: 68, background: "var(--bz-surface)", minWidth: gridInnerW }}>
+              {visibleStaff.map((staff, colIdx) => {
+                const n = new Set(getAppointmentsForStaff(getAppointmentsForDate(currentDate), staff.id).map((a) => a.apiId ?? a.id)).size;
                 return (
-                  <div
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-30 pointer-events-none"
-                    style={{
-                      top: `${timePosition + 64}px`, // 64px for header height
-                    }}
-                  >
-                    <div className="cal-now-pill">
-                      {format(currentTime, "HH:mm")}
-        </div>
+                  <div key={staff.id} className="colh" style={{ position: "absolute", left: HOUR_COL + colIdx * (colW + COL_GAP), top: 12, width: colW, height: 56 }}>
+                    <div className="ring">
+                      {staff.avatar ? (
+                        <img src={staff.avatar} alt="" style={{ width: 36, height: 36 }} />
+                      ) : (
+                        <span style={{ width: 36, height: 36, fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{staff.initials || initialsOf(staff.name)}</span>
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 15, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{staff.name}</div>
+                      <div style={{ fontSize: 14, color: "var(--bz-muted)", fontWeight: 600 }}>
+                        {n ? tr("common.bookingCount", { count: n }) : staff.workingHours || tr("calendar.noBookings")}
+                      </div>
+                    </div>
                   </div>
                 );
-              })()}
-              
-          {/* Hour rows - one row per hour */}
-          {Array.from({ length: 24 }, (_, hour) => {
-            // Use business hours for current date
-            const { startHour, endHour, isEnabled } = getBusinessHoursForDate(currentDate);
-            // If day is disabled (business closed), no hours are business hours
-            const isBusiness = isEnabled && isBusinessHour(hour, startHour, endHour);
-            const timeString = `${hour.toString().padStart(2, "0")}:00`;
-            const hourHeight = 4 * SLOT_HEIGHT; // 4 slots per hour
-            
-            return (
-            <div
-              key={timeString}
-              className="relative"
-              style={{ height: `${hourHeight}px`, background: "var(--bz-surface)" }}
-            >
-              {hour > 0 && (
-                <span className="cal-th absolute -top-2.5 right-2" style={isBusiness ? undefined : { opacity: 0.55 }}>
-                  {timeString}
-                </span>
-              )}
+              })}
             </div>
-          );
-          })}
-          
-          {/* "Closed today" is said once, in the bar above, not over the hour labels. */}
-        </div>
 
-            {/* Staff Columns */}
-        {/* self-start: as a stretched flex item this row was only as tall as the viewport,
-            so the sticky staff headers scrolled away with it once the day opened at 09:00. */}
-        <div className="flex flex-1 self-start">
-              {visibleStaff.map((staff) => {
+            <div className="lt" style={{ position: "relative", height: timeSlots.length * SLOT_HEIGHT, minWidth: gridInnerW }}>
+              {Array.from({ length: 24 }, (_, hour) => (
+                <Fragment key={hour}>
+                  {hour > 0 && <div className="lt-h" style={{ top: hour * 4 * SLOT_HEIGHT - 10, left: 0 }}>{`${hour}:00`}</div>}
+                  <div className="lt-l" style={{ top: hour * 4 * SLOT_HEIGHT, left: HOUR_COL - 8 }} />
+                </Fragment>
+              ))}
+              {(() => {
+                const { startHour: bs, endHour: be, isEnabled: bOn } = getBusinessHoursForDate(currentDate);
+                const full = 24 * 4 * SLOT_HEIGHT;
+                const bands = !bOn ? [[0, full]] : [[0, bs * 4 * SLOT_HEIGHT], [be * 4 * SLOT_HEIGHT, full]];
+                return bands.filter(([a, b]) => b > a).map(([a, b]) => (
+                  <div key={a} className="a-off" style={{ left: HOUR_COL - 8, right: 0, top: a, height: b - a }} />
+                ));
+              })()}
+
+              {visibleStaff.map((staff, colIdx) => {
                 const dayAppointments = getAppointmentsForDate(currentDate);
                 const staffAppointments = getAppointmentsForStaff(dayAppointments, staff.id);
                 const staffTimeOffs = getTimeOffsForStaffAndDate(timeOffs, staff.id, currentDate);
-                const [startHour, endHour] = (staff.workingHours || "10:00-19:00").split("-").map((h) => parseInt(h.split(":")[0]));
-                
-                // Get business hours for current date
                 const { startHour: dayBusinessStartHour, endHour: dayBusinessEndHour, isEnabled: dayIsEnabled } = getBusinessHoursForDate(currentDate);
-                
-                return (
-            <div
-              key={staff.id}
-                    className="min-w-0 flex-1 border-r border-[var(--bz-line)] bg-[var(--bz-surface)] last:border-r-0 md:min-w-[220px]"
-                  >
-                    {/* Staff Header */}
-                    <div className="cal-colh sticky top-0 z-10">
-                      <div className="ring">
-                        {staff.avatar ? (
-                          <img src={staff.avatar} alt="" style={{ width: 36, height: 36 }} />
-                        ) : (
-                          <span style={{ width: 36, height: 36, fontSize: 13, fontWeight: 800 }}>{staff.initials || initialsOf(staff.name)}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate" style={{ margin: 0 }}>{staff.name}</p>
-                        <small className="truncate">
-                          {(() => {
-                            const n = new Set(staffAppointments.map((a) => a.apiId ?? a.id)).size;
-                            return n ? tr("common.bookingCount", { count: n }) : staff.workingHours || tr("calendar.noBookings");
-                          })()}
-                        </small>
-                      </div>
-                    </div>
+                const colLeft = HOUR_COL + colIdx * (colW + COL_GAP);
 
-                    {/* Appointments Area */}
+                return (
+                  <Fragment key={staff.id}>
                     <div 
-                      className="relative select-none" 
+                      className="select-none"
                       data-staff-col={staff.id}
-                      style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
+                      style={{ position: "absolute", left: colLeft, width: colW, top: 0, height: `${timeSlots.length * SLOT_HEIGHT}px` }}
                       onMouseDown={(e) => {
                         // Allow selection even if clicking on or near appointments
                         // Only prevent if clicking directly on appointment content
@@ -2623,51 +2579,6 @@ export default function CalendarPage() {
                         }
                       }}
                     >
-                      {/* Non-business hours overlay - calculated from actual business hours */}
-                      {(() => {
-                        // If day is disabled, show entire day as non-business
-                        if (!dayIsEnabled) {
-                  return (
-                    <div
-                              className="absolute left-0 right-0 bg-[rgb(var(--reg-ink)/0.025)]"
-                      style={{
-                                top: 0, 
-                                height: `${24 * 4 * SLOT_HEIGHT}px`, // Entire day
-                                backgroundImage: "repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--reg-ink) / 0.045) 7px 8px)"
-                              }}
-                            />
-                          );
-                        }
-                        
-                        // Show non-business hours before start time
-                        const beforeStart = dayBusinessStartHour > 0 ? (
-                          <div 
-                            key="before"
-                            className="absolute left-0 right-0 bg-[rgb(var(--reg-ink)/0.025)]"
-                            style={{ 
-                              top: 0, 
-                              height: `${dayBusinessStartHour * 4 * SLOT_HEIGHT}px`,
-                              backgroundImage: "repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--reg-ink) / 0.045) 7px 8px)"
-                            }}
-                          />
-                        ) : null;
-                        
-                        // Show non-business hours after end time
-                        const afterEnd = dayBusinessEndHour < 24 ? (
-                          <div 
-                            key="after"
-                            className="absolute left-0 right-0 bg-[rgb(var(--reg-ink)/0.025)]"
-                            style={{ 
-                              top: `${dayBusinessEndHour * 4 * SLOT_HEIGHT}px`,
-                              height: `${(24 - dayBusinessEndHour) * 4 * SLOT_HEIGHT}px`,
-                              backgroundImage: "repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--reg-ink) / 0.045) 7px 8px)"
-                            }}
-                          />
-                        ) : null;
-                        
-                        return [beforeStart, afterEnd].filter(Boolean);
-                      })()}
-
                       {/* Drag selection range highlight - show while dragging */}
                       {dragSelection && dragSelection.staffId === staff.id && dragSelection.isDragging && (
                         (() => {
@@ -2739,6 +2650,8 @@ export default function CalendarPage() {
                         })()
                       )}
 
+                    </div>
+
                       {/* Appointments and Time Offs - Grouped by conflicts */}
                       {(() => {
                         const conflictGroups = groupConflictingItems(staffAppointments, staffTimeOffs, dayBusinessStartHour, dayBusinessEndHour);
@@ -2789,12 +2702,84 @@ export default function CalendarPage() {
                               height = pos.height;
                             }
                             
-                            // Calculate position: each item gets equal share of width
-                            // Use percentage-based positioning with small gaps
-                            const gapPercent = groupSize > 1 ? 0.3 : 0; // Small gap between items
-                            const totalGapPercent = (groupSize - 1) * gapPercent;
-                            const widthPercent = (100 - totalGapPercent) / groupSize;
-                            const leftPercent = itemIndex * (widthPercent + gapPercent);
+                            // Each overlapping item gets an equal share of the column, in px like the frame's tiles.
+                            const laneGap = 4;
+                            const laneW = (colW - (groupSize - 1) * laneGap) / groupSize;
+                            const laneLeft = colLeft + itemIndex * (laneW + laneGap);
+
+                            if (item.type === 'appointment') {
+                              const draggingThis = dnd?.id === item.item.id;
+                              const canDrag = item.item.apiId && !item.item.isClass && !item.item.isPackage && !item.item.visitId && !["CANCELLED", "COMPLETED", "NO_SHOW"].includes((item.item.status || "").toUpperCase());
+                              return (
+                                <AppointmentBlock
+                                  key={item.item.id}
+                                  visits={visitsFor(item.item)}
+                                  flagCtx={flagCtxFor(item.item)}
+                                  density={density}
+                                  height={height}
+                                  appointment={item.item}
+                                  placed={{
+                                    style: {
+                                      position: "absolute",
+                                      top,
+                                      height: draggingThis && dnd.mode === "resize" ? Math.max(SLOT_HEIGHT, height + dnd.dy) : height,
+                                      left: laneLeft,
+                                      width: laneW,
+                                      transform: draggingThis && dnd.mode === "move" ? `translate(${dnd.dx}px, ${dnd.dy}px)` : undefined,
+                                      zIndex: draggingThis ? 40 : 3,
+                                      outline: draggingThis ? "2px solid var(--bz-violet)" : undefined,
+                                      touchAction: "pan-y",
+                                      pointerEvents: isDragging ? "none" : "auto",
+                                    },
+                                    props: {
+                                      "data-appointment-block": "true",
+                                      "data-testid": "appointment-block",
+                                      "data-apt-id": item.item.apiId,
+                                      onPointerDown: (e: React.PointerEvent) => { if (!(e.target as HTMLElement).closest('[data-resize-handle]')) beginDnd(e, item.item, "move"); },
+                                    },
+                                  }}
+                                  onClick={(e) => {
+                                    if (!isDragging && !justDragged.current) {
+                                      e?.stopPropagation?.();
+                                      handleAppointmentClick(item.item);
+                                    }
+                                  }}
+                                >
+                                  {canDrag && (
+                                    <div
+                                      data-resize-handle="true"
+                                      data-testid="resize-handle"
+                                      title={tr("calendar.dnd.resizeHint")}
+                                      className="absolute inset-x-0 bottom-0 hidden h-2 cursor-ns-resize items-end justify-center md:flex"
+                                      onPointerDown={(e) => beginDnd(e, item.item, "resize")}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <span className="mb-0.5 h-0.5 w-8 rounded-full bg-black/25" />
+                                    </div>
+                                  )}
+                                </AppointmentBlock>
+                              );
+                            } else if (item.type === 'waiting') {
+                              const pos = getTimePosition(item.start, item.end, SLOT_HEIGHT);
+                              top = pos.top;
+                              height = Math.max(pos.height, SLOT_HEIGHT * 2);
+                            } else {
+                              // For full day time offs, show them only during business hours for this day (or 00:00-00:00 if disabled)
+                              const startTime = item.item.isFullDay 
+                                ? (dayIsEnabled ? `${dayBusinessStartHour.toString().padStart(2, "0")}:00` : "00:00")
+                                : normalizeTime(item.item.startTime || "00:00");
+                              const endTime = item.item.isFullDay 
+                                ? (dayIsEnabled ? `${dayBusinessEndHour.toString().padStart(2, "0")}:00` : "00:00")
+                                : normalizeTime(item.item.endTime || "23:59");
+                              const pos = getTimePosition(startTime, endTime, SLOT_HEIGHT);
+                              top = pos.top;
+                              height = pos.height;
+                            }
+                            
+                            // Each overlapping item gets an equal share of the column, in px like the frame's tiles.
+                            const laneGap = 4;
+                            const laneW = (colW - (groupSize - 1) * laneGap) / groupSize;
+                            const laneLeft = colLeft + itemIndex * (laneW + laneGap);
 
                             if (item.type === 'appointment') {
                               return (
@@ -2879,9 +2864,8 @@ export default function CalendarPage() {
                                   style={{
                                     top: `${top}px`,
                                     height: `${height}px`,
-                                    left: groupSize === 1 ? '0.25rem' : `calc(0.25rem + ${leftPercent}%)`,
-                                    width: groupSize === 1 ? 'calc(100% - 0.5rem)' : `calc(${widthPercent}% - ${gapPercent * 0.5}%)`,
-                                    marginRight: itemIndex < groupSize - 1 ? `${gapPercent}%` : '0.5rem',
+                                    left: laneLeft,
+                                    width: laneW,
                                     pointerEvents: isDragging ? "none" : "auto",
                                   }}
                                   onMouseDown={(e) => { if (!isDragging) e.stopPropagation(); }}
@@ -2912,29 +2896,12 @@ export default function CalendarPage() {
                               return (
                                 <div
                                   key={`timeoff-${timeOff.id}`}
-                                  className="absolute z-15 pointer-events-auto cursor-pointer overflow-hidden rounded-[10px] bg-[rgb(var(--reg-ink)/0.04)] ring-1 ring-inset ring-[rgb(var(--reg-ink)/0.1)] transition-colors hover:bg-[rgb(var(--reg-ink)/0.07)]"
-                                  style={{
-                                    top: `${top}px`,
-                                    height: `${minHeight}px`,
-                                    left: groupSize === 1 
-                                      ? '0.25rem' 
-                                      : `calc(0.25rem + ${leftPercent}%)`,
-                                    width: groupSize === 1 
-                                      ? 'calc(100% - 0.5rem)' 
-                                      : `calc(${widthPercent}% - ${gapPercent * 0.5}%)`,
-                                    marginRight: itemIndex < groupSize - 1 ? `${gapPercent}%` : '0.5rem',
-                                    backgroundImage: "repeating-linear-gradient(135deg, transparent 0 6px, rgb(var(--reg-ink) / 0.06) 6px 7px)"
-                                  }}
+                                  className="tile a-off2"
+                                  style={{ top, height: minHeight, left: laneLeft, width: laneW, zIndex: 2 }}
                                   title={tr("calendar.timeOff", { dateStr, timeStr, value: timeOff.reason || tr("calendar.noReason") })}
                                 >
-                                  <div className="flex h-full flex-col px-2.5 py-1.5 text-[12px] leading-tight">
-                                    <p className="truncate font-bold text-[rgb(var(--reg-ink)/0.8)]">
-                                      {timeOff.reason || tr("calendar.timeOff2")}
-                                    </p>
-                                    <p className="mt-0.5 truncate text-[rgb(var(--reg-muted))]">
-                                      {timeOff.reason ? tr("calendar.timeOff3") : ""}{timeStr}
-                                    </p>
-                                  </div>
+                                  <b>{timeOff.reason || tr("calendar.timeOff2")}</b>
+                                  <span>{timeOff.reason ? tr("calendar.timeOff3") : ""}{timeStr}</span>
                                 </div>
                               );
                             }
@@ -2945,14 +2912,14 @@ export default function CalendarPage() {
                             : x.type === "waiting" ? [getTimePosition(x.start, x.end, SLOT_HEIGHT).top] : []);
                           const chipTop = tops.length ? Math.min(...tops) : 0;
                           const chip = (
-                            <div key={`more-${fullGroup.map((x) => (x.type === "appointment" ? x.item.id : `${x.type}-${x.item.id}`)).join("_")}`} className="absolute right-1 z-30" style={{ top: `${chipTop + 2}px` }} data-appointment-block="true" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                            <div key={`more-${fullGroup.map((x) => (x.type === "appointment" ? x.item.id : `${x.type}-${x.item.id}`)).join("_")}`} className="a-ov" style={{ left: colLeft + colW - 56, top: chipTop + 2 }} data-appointment-block="true" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onMouseUp={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button
                                     type="button"
                                     data-testid="overlap-overflow"
                                     aria-label={`${tr("calendar.overflowTitle")}: +${hiddenItems.length}`}
-                                    className="inline-flex h-5 items-center rounded-full bg-[rgb(var(--reg-ink))] px-1.5 text-[11px] font-bold leading-none text-white shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
+                                    className="bg-transparent p-0 font-[inherit] text-[inherit] font-extrabold text-white focus-visible:outline-none"
                                   >
                                     +{hiddenItems.length}
                                   </button>
@@ -2995,30 +2962,23 @@ export default function CalendarPage() {
                         });
                       })()}
 
-                      {/* Time grid lines - after each hour's 4 slots (after 00:45, 01:45, etc.) */}
-                {Array.from({ length: 24 }, (_, i) => {
-                  const isBusiness = dayIsEnabled && isBusinessHour(i, dayBusinessStartHour, dayBusinessEndHour);
-                  return (
-                  <div key={i}>
-                    <div
-                      className={`pointer-events-none absolute left-0 right-0 border-b border-dashed ${isBusiness ? "border-[var(--bz-line)] opacity-60" : "border-[var(--bz-line)] opacity-35"}`}
-                      style={{ top: `${(i * 4 + 2) * SLOT_HEIGHT}px` }}
-                    />
-                    <div
-                      className={`pointer-events-none absolute left-0 right-0 border-b ${isBusiness ? "border-[var(--bz-line)]" : "border-[var(--bz-line)] opacity-60"}`}
-                      style={{ top: `${(i + 1) * 4 * SLOT_HEIGHT}px` }}
-                    />
-                  </div>
-                  );
-                })}
-              </div>
-            </div>
+                  </Fragment>
                 );
               })}
+
+              {isCurrentDate && (() => {
+                const timePosition = getCurrentTimePosition();
+                if (timePosition === null) return null;
+                return (
+                  <div className="nowl" style={{ top: timePosition, left: HOUR_COL - 8 }}>
+                    <em>{format(currentTime, "HH:mm")}</em>
+                  </div>
+                );
+              })()}
             </div>
           </div>
           {!isMobile && (
-            <div className="hidden shrink-0 overflow-y-auto pb-4 pr-6 pt-0 xl:block" style={{ width: 324 }}>
+            <div className="hidden shrink-0 overflow-y-auto xl:block">
               <CalendarSidePanel
                 next={nextClient}
                 attention={attention}

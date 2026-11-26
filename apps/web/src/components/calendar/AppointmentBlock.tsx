@@ -107,6 +107,13 @@ interface AppointmentBlockProps {
   flagCtx?: FlagContext;
   /** "comfy" (default) or "compact": shorter text rows, fewer icons, for busy days. */
   density?: CalendarDensity;
+  /**
+   * Calendar grid: the tile itself is the absolutely positioned element of the frame (BF02
+   * `.tile` with top/height/left/width), so the page passes its position, drag handlers and
+   * data attributes here instead of wrapping the tile in another div.
+   */
+  placed?: { style: React.CSSProperties; props?: Record<string, unknown> };
+  children?: React.ReactNode;
 }
 
 /** At most one small status icon; confirmed is the plain stripe. */
@@ -141,7 +148,7 @@ const shouldUseWhiteText = (hexColor: string): boolean => {
   return luminance < 0.5; // Use white text if background is dark
 };
 
-export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx, density = "comfy" }: AppointmentBlockProps) {
+export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx, density = "comfy", placed, children }: AppointmentBlockProps) {
   // Colour is the status now (accent + tint). It used to be a colour per client, which told
   // a receptionist nothing she could act on; the client's name is right there in bold.
   const s = appointmentStatusStyle(appointment.status);
@@ -192,7 +199,7 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
           <Package size={13} strokeWidth={2.2} />{appointment.packageStep ?? ""}
         </i>
       )}
-      <FlagIcons keys={flagKeys} max={size === "sm" ? (compact ? 2 : 3) : compact ? 3 : 5} size={14} />
+      <FlagIcons bare keys={flagKeys} max={size === "sm" ? (compact ? 2 : 3) : compact ? 3 : 5} size={14} />
       {StatusIcon && (
         <i className="ni" style={{ color: s.dot }}>
           <StatusIcon size={14} strokeWidth={2.5} aria-label={s.label} role="img" />
@@ -220,7 +227,9 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
       title={appointment.participants && appointment.participants.length > 1
         ? appointment.participants.join("\n")
         : `${s.label}${appointment.categoryName ? ` · ${appointment.categoryName}` : ""}`}
+      {...(placed?.props ?? {})}
       style={{
+        ...(placed?.style ?? {}),
         backgroundColor: tint.fill,
         color: tint.ink,
         ["--bz-sc" as string]: s.dot,
@@ -228,7 +237,7 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
         boxShadow: accent ? `inset 0 0 0 2px ${accent}` : undefined,
         opacity: cancelled ? undefined : completed ? 0.82 : 1,
       }}
-      className={cn("tile in group cursor-pointer focus-visible:outline-none", tileSize, cancelled && "a-x", noShow && "a-n")}
+      className={cn("tile group cursor-pointer focus-visible:outline-none", !placed && "in", tileSize, statusKey === "CONFIRMED" && "s-ok", statusKey === "PENDING" && "s-w", cancelled && "a-x", noShow && "a-n")}
     >
       {accent && <span aria-hidden className="absolute inset-y-0 right-0 w-[4px]" style={{ backgroundColor: accent }} />}
       {appointment.linked && (
@@ -273,14 +282,12 @@ export function AppointmentBlock({ appointment, onClick, visits, height, flagCtx
           <span>
             {serviceLabel}
             {appointment.isPackage && appointment.guestName ? ` · ${t("calendar.packageGuest", { name: appointment.guestName })}` : ""}
-          </span>
-          <span>
-            {start}–{end}
-            {!compact && appointment.staffName ? ` · ${appointment.staffName}` : ""}
+            {" · "}{start}
           </span>
           {icons}
         </>
       )}
+      {children}
     </div>
   );
 }
