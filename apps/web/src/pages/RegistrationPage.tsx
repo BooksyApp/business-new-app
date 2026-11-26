@@ -6,18 +6,17 @@ import { useMarket } from "@/services/platformService";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { SalonPreview } from "@/components/auth/SalonPreview";
-import { authGhost, authInput, authLink, authSubtitle, authTitle, brandCta, choiceCard, webUrl } from "@/components/auth/authStyles";
+import { authLink, authSubtitle, authTitle, brandCta, webUrl } from "@/components/auth/authStyles";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Mail, ArrowLeft, Check, ChevronRight, Sparkles, Scissors, 
   Heart, Stethoscope, MapPin, X, Plus, Minus, Eye, EyeOff, User, Bell, 
   DollarSign, Building2, Clock, Users, Settings, CheckCircle2
 } from "lucide-react";
-import { Avatar, CheckRow, ChipRow, Field, FormGrid, Note, RadioGroup, RowItem, SelectField } from "@/components/bz";
+import { Avatar, Btn, CheckRow, ChipRow, Field, FooterBar, FormGrid, Note, RadioGroup, RowItem, SelectField } from "@/components/bz";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { categoryService, type BusinessCategory } from "@/services/categoryService";
@@ -679,7 +678,6 @@ const RegistrationPage = () => {
   const screenIndex = (key: string) => screens.findIndex((s) => s.key === key) + 1;
   const ownerName = `${formData.firstName} ${formData.lastName}`.trim();
   const openDays = Object.values(formData.businessHours).filter((d) => d.enabled).length;
-  const fieldLabel = "mb-1.5 block text-sm font-semibold text-[rgb(var(--reg-ink))]";
   const optional = <span className="font-normal text-[rgb(var(--reg-muted))]">{tr("registration.optional")}</span>;
 
   const preview = (
@@ -1312,30 +1310,21 @@ const RegistrationPage = () => {
           <DialogHeader>
             <DialogTitle>{tr("registration.addNewService")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{tr("registration.serviceName")}</Label>
-              <Input
-                value={newService.name}
+          <div className="stk">
+            <Field label={tr("registration.serviceName")}>
+              <input value={newService.name}
                 onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                placeholder={tr("registration.eGHaircut")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("registration.serviceType")}</Label>
-              <Input
-                value={newService.type}
+                placeholder={tr("registration.eGHaircut")} />
+            </Field>
+            <Field label={tr("registration.serviceType")}>
+              <input value={newService.type}
                 onChange={(e) => setNewService({ ...newService, type: e.target.value })}
-                placeholder={tr("registration.eGHairService")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{tr("registration.durationHours")}</Label>
-                <Select value={newService.durationHours} onValueChange={(v) => setNewService({ ...newService, durationHours: v })}>
-                  <SelectTrigger className="border-gray-300">
+                placeholder={tr("registration.eGHairService")} />
+            </Field>
+            <FormGrid cols={2}>
+              <SelectField label={tr("registration.durationHours")}>
+<Select value={newService.durationHours} onValueChange={(v) => setNewService({ ...newService, durationHours: v })}>
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1344,11 +1333,10 @@ const RegistrationPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{tr("registration.durationMinutes")}</Label>
-                <Select value={newService.durationMinutes} onValueChange={(v) => setNewService({ ...newService, durationMinutes: v })}>
-                  <SelectTrigger className="border-gray-300">
+              </SelectField>
+              <SelectField label={tr("registration.durationMinutes")}>
+<Select value={newService.durationMinutes} onValueChange={(v) => setNewService({ ...newService, durationMinutes: v })}>
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1357,22 +1345,17 @@ const RegistrationPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.price")}</Label>
-              <Input
-                type="number"
+              </SelectField>
+            </FormGrid>
+            <Field label={tr("common.price")}>
+              <input type="number"
                 value={newService.price}
                 onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                placeholder="0.00"
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("registration.priceType")}</Label>
-              <Select value={newService.priceType} onValueChange={(v) => setNewService({ ...newService, priceType: v })}>
-                <SelectTrigger className="border-gray-300">
+                placeholder="0.00" />
+            </Field>
+            <SelectField label={tr("registration.priceType")}>
+<Select value={newService.priceType} onValueChange={(v) => setNewService({ ...newService, priceType: v })}>
+                <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1380,13 +1363,11 @@ const RegistrationPage = () => {
                   <SelectItem value="From">{tr("common.from2")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setIsAddServiceOpen(false)} className="flex-1 border-gray-300">
-                {tr("common.cancel")}
-              </Button>
-              <Button onClick={handleAddService} className={cn(brandCta, "flex-1 h-10")}>{tr("registration.addService2")}</Button>
-            </div>
+            </SelectField>
+            <FooterBar>
+              <Btn kind="ol" onClick={() => setIsAddServiceOpen(false)}>{tr("common.cancel")}</Btn>
+              <Btn kind="v" onClick={handleAddService}>{tr("registration.addService2")}</Btn>
+            </FooterBar>
           </div>
         </DialogContent>
       </Dialog>
@@ -1397,31 +1378,22 @@ const RegistrationPage = () => {
           <DialogHeader>
             <DialogTitle>{tr("registration.addStaffMember")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{tr("common.name")}</Label>
-              <Input
-                value={newStaff.name}
+          <div className="stk">
+            <Field label={tr("common.name")}>
+              <input value={newStaff.name}
                 onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                placeholder={tr("registration.fullName")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.email")}</Label>
-              <Input
-                type="email"
+                placeholder={tr("registration.fullName")} />
+            </Field>
+            <Field label={tr("common.email")}>
+              <input type="email"
                 value={newStaff.email}
                 onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
-                placeholder={tr("registration.emailExampleCom")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.phone")}</Label>
-              <div className="flex gap-2">
+                placeholder={tr("registration.emailExampleCom")} />
+            </Field>
+            <FormGrid cols={2}>
+              <SelectField label={tr("registration.countryCode")}>
                 <Select value={newStaff.phonePrefix} onValueChange={(v) => setNewStaff({ ...newStaff, phonePrefix: v })}>
-                  <SelectTrigger className="w-28 border-gray-300">
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1430,29 +1402,24 @@ const RegistrationPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
+              </SelectField>
+              <Field label={tr("common.phone")}>
+                <input
                   value={newStaff.phone}
                   onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
                   placeholder="123 456 789"
-                  className="flex-1 border-gray-300"
                 />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.position")}</Label>
-              <Input
-                value={newStaff.position}
+              </Field>
+            </FormGrid>
+            <Field label={tr("common.position")}>
+              <input value={newStaff.position}
                 onChange={(e) => setNewStaff({ ...newStaff, position: e.target.value })}
-                placeholder={tr("registration.eGStylistTherapist")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setIsAddStaffOpen(false)} className="flex-1 border-gray-300">
-                {tr("common.cancel")}
-              </Button>
-              <Button onClick={handleAddStaff} className={cn(brandCta, "flex-1 h-10")}>{tr("registration.addStaff")}</Button>
-            </div>
+                placeholder={tr("registration.eGStylistTherapist")} />
+            </Field>
+            <FooterBar>
+              <Btn kind="ol" onClick={() => setIsAddStaffOpen(false)}>{tr("common.cancel")}</Btn>
+              <Btn kind="v" onClick={handleAddStaff}>{tr("registration.addStaff")}</Btn>
+            </FooterBar>
           </div>
         </DialogContent>
       </Dialog>
@@ -1465,37 +1432,22 @@ const RegistrationPage = () => {
               {tr("common.edit")}{" "}{editingDay && daysOfWeek.find(d => d.key === editingDay)?.label}{" "}{tr("registration.hours")}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{tr("registration.openingTime")}</Label>
-                <Input
-                  type="time"
-                  value={tempStartTime}
-                  onChange={(e) => setTempStartTime(e.target.value)}
-                  className={authInput}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{tr("registration.closingTime")}</Label>
-                <Input
-                  type="time"
-                  value={tempEndTime}
-                  onChange={(e) => setTempEndTime(e.target.value)}
-                  className={authInput}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setEditingDay(null)} 
-                className="flex-1 border-gray-300"
-              >
-                {tr("common.cancel")}
-              </Button>
-              <Button 
-                onClick={() => {
+          <div className="stk">
+            <FormGrid cols={2}>
+              <Field label={tr("registration.openingTime")}>
+              <input type="time"
+                value={tempStartTime}
+                onChange={(e) => setTempStartTime(e.target.value)} />
+            </Field>
+              <Field label={tr("registration.closingTime")}>
+              <input type="time"
+                value={tempEndTime}
+                onChange={(e) => setTempEndTime(e.target.value)} />
+            </Field>
+            </FormGrid>
+            <FooterBar>
+              <Btn kind="ol" onClick={() => setEditingDay(null)}>{tr("common.cancel")}</Btn>
+              <Btn kind="v" onClick={() => {
                   if (editingDay) {
                     const newHours = { ...formData.businessHours };
                     newHours[editingDay] = {
@@ -1505,12 +1457,8 @@ const RegistrationPage = () => {
                     updateFormData("businessHours", newHours);
                     setEditingDay(null);
                   }
-                }} 
-                className={cn(brandCta, "flex-1 h-10")}
-              >
-                {tr("common.save")}
-              </Button>
-            </div>
+                }}>{tr("common.save")}</Btn>
+            </FooterBar>
           </div>
         </DialogContent>
       </Dialog>
