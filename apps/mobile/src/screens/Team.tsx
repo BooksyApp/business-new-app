@@ -12,6 +12,7 @@ import { BackBar, Card as KCard, EmptyState, IconBtn, LoadRing, Pill as KPill, S
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
+import { ChairRentSheet, FeedSheet, PortfolioSheet } from '@/screens/HubExtras';
 import { apiX, type StaffBody, type StaffFull } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
 import { pickAndUpload } from '@/lib/pick';
@@ -53,6 +54,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
   })));
   const [busy, setBusy] = useState(false);
   const [block, setBlock] = useState(false);
+  const [tool, setTool] = useState<null | 'port' | 'rent' | 'feed'>(null);
   const [avatar, setAvatar] = useState(staff?.avatarUrl);
   async function pickAvatar() {
     if (!staff) return;
@@ -125,10 +127,17 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
               </Card>
             ))}
             <Btn label={tr('tm.addTimeOff')} variant="secondary" icon="plus" onPress={() => setBlock(true)} style={{ marginBottom: 8 }} />
+            <SectionTitle>{tr('hx.toolsPortfolio')}</SectionTitle>
+            <Btn label={tr('hx.toolsPortfolio')} variant="secondary" icon="img" onPress={() => setTool('port')} style={{ marginBottom: 8 }} />
+            <Btn label={tr('hx.toolsRent')} variant="secondary" icon="cash" onPress={() => setTool('rent')} style={{ marginBottom: 8 }} />
+            <Btn label={tr('hx.toolsFeed')} variant="secondary" icon="cal" onPress={() => setTool('feed')} style={{ marginBottom: 8 }} />
           </>
         ) : null}
       </ScrollView>
       <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save(false)} secondary={staff && email.trim() ? { label: tr('tm.invite'), onPress: () => void save(true) } : undefined} />
+      {staff ? <PortfolioSheet staffId={String(staff.id)} name={staff.name} open={tool === 'port'} onClose={() => setTool(null)} /> : null}
+      {staff ? <ChairRentSheet staffId={String(staff.id)} name={staff.name} open={tool === 'rent'} onClose={() => setTool(null)} /> : null}
+      {staff ? <FeedSheet staffId={String(staff.id)} name={staff.name} open={tool === 'feed'} onClose={() => setTool(null)} /> : null}
       {staff ? <BlockTimeSheet open={block} date={new Date()} masters={[{ id: staff.id, name: staff.name }]} preset={String(staff.id)} existing={null} onClose={() => setBlock(false)} onDone={() => { setBlock(false); void off.reload(); }} /> : null}
     </Screen>
   );

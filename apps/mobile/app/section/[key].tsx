@@ -22,6 +22,7 @@ import { Messages } from '@/screens/Messages';
 import { Sales } from '@/screens/Sales';
 import { Services } from '@/screens/Services';
 import { Settings } from '@/screens/Settings';
+import { LoyaltyCards, NotifTextsEditor, ResourceTypes, RevenuePlan } from '@/screens/HubExtras';
 import { HoursEditor } from '@/screens/SettingsMore';
 import { Team } from '@/screens/Team';
 import { t as tr, type StringKey } from '@/i18n';
@@ -64,6 +65,10 @@ export default function Section() {
     case 'sales': return <Sales onBack={back} />;
     case 'messages': return <Messages onBack={back} />;
     case 'settings': return <Settings onBack={back} />;
+    case 'resources': return <ResourceTypes onBack={back} />;
+    case 'plan': return <RevenuePlan onBack={back} />;
+    case 'loyaltycards': return <LoyaltyCards onBack={back} />;
+    case 'texts': return <NotifTextsEditor onBack={back} />;
     case 'hours': return <HoursEditor onBack={back} />;
     default: {
       const k = ICONS[key] ? key : 'views';

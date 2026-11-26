@@ -47,7 +47,7 @@ export default function More() {
     { k: 'link', icon: 'share', title: tr('v2.salonLink'), sub: salonShareLink(salon).replace(/^https?:\/\//, '').replace(/\?.*$/, '') },
   ];
   const rest: Row[] = [
-    { k: 'groups', icon: 'users', title: tr('ux.classes') }, { k: 'views', icon: 'spark', title: L('sections.views') }, { k: 'messages', icon: 'chat', title: L('sections.messages') },
+    { k: 'groups', icon: 'users', title: tr('ux.classes') }, { k: 'loyaltycards', icon: 'heart', title: tr('hx.cardsTitle') }, { k: 'resources', icon: 'box', title: tr('hx.resTitle') }, { k: 'plan', icon: 'spark', title: tr('hx.planTitle') }, { k: 'views', icon: 'spark', title: L('sections.views') }, { k: 'messages', icon: 'chat', title: L('sections.messages') },
     { k: 'finance', icon: 'cash', title: L('fn.title') }, { k: 'expenses', icon: 'receipt', title: L('ex.title') }, { k: 'suppliers', icon: 'store', title: tr('ux.suppliers') },
     { k: 'payroll', icon: 'users', title: L('pr.title') }, { k: 'custom', icon: 'paper', title: L('cr.title') }, { k: 'promotion', icon: 'spark', title: tr('ux.promo') },
     { k: 'offers', icon: 'tag', title: L('x2.offers') }, { k: 'shop', icon: 'bag', title: L('x2.shop') }, { k: 'branches', icon: 'map', title: L('x2.branches') },

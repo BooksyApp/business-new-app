@@ -145,7 +145,7 @@ export default function Register() {
               <Toggle on={terms} onChange={setTerms} label={tr('ob.terms')} />
               <Text style={{ flex: 1, fontFamily: font.m, fontSize: 13, lineHeight: 18, color: t.ink }}>
                 {tr('ob.terms')}{' '}
-                <Text accessibilityRole="link" onPress={() => void Linking.openURL(`${WEB_BASE}/legal/salon-terms`).catch(() => {})} style={{ fontFamily: font.b, color: t.vtext }}>{tr('ob.termsLink')}</Text>
+                <Text accessibilityRole="link" onPress={() => void Linking.openURL(`${WEB_BASE}/legal/terms`).catch(() => {})} style={{ fontFamily: font.b, color: t.vtext }}>{tr('ob.termsLink')}</Text>
                 {' · '}
                 <Text accessibilityRole="link" onPress={() => void Linking.openURL(`${WEB_BASE}/legal/privacy`).catch(() => {})} style={{ fontFamily: font.b, color: t.vtext }}>{tr('ob.privacyLink')}</Text>
               </Text>

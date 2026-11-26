@@ -50,6 +50,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
         {head(tr('set.salon'))}
         <KCard style={{ paddingHorizontal: 18 }}>
           <KListItem first title={tr('v3.salonInfo')} sub={salon?.name} lead={lead('store')} right={chev} onPress={() => router.push('/section/profile')} />
+          <KListItem title={tr('hx.textsTitle')} lead={lead('paper')} right={chev} onPress={() => router.push('/section/texts')} />
           <KListItem title={tr('hr.title')} lead={lead('clock')} right={chev} onPress={() => setSub('hours')} />
           <KListItem title={tr('sub.title')} lead={lead('crown')} right={chev} onPress={() => setSheet('sub')} />
         </KCard>

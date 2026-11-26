@@ -8,7 +8,7 @@ import type { Business } from '@/lib/api';
 const NEEDS: Record<string, string[] | null> = {
   sales: ['TILL', 'SALES_VIEW'], reports: ['ANALYTICS'], custom: ['ANALYTICS'], finance: ['MONEY'], payroll: ['MONEY'], expenses: ['MONEY'],
   promotion: null, roles: null, marketing: ['MARKETING'], offers: ['MARKETING'], inventory: ['CATALOG'], suppliers: ['CATALOG'],
-  team: ['TEAM'], profile: ['SETTINGS'], settings: ['SETTINGS'], hours: ['SETTINGS'], clients: ['CLIENTS_VIEW'],
+  team: ['TEAM'], plan: ['MONEY'], loyaltycards: ['MARKETING'], resources: ['CATALOG'], texts: ['SETTINGS'], profile: ['SETTINGS'], settings: ['SETTINGS'], hours: ['SETTINGS'], clients: ['CLIENTS_VIEW'],
 };
 
 export function canOpen(salon: Business | null | undefined, section: string): boolean {

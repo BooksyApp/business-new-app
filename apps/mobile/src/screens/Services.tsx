@@ -11,6 +11,7 @@ import { Btn, Card, Chip, Circ, ErrorState, Field, Header, HeroCard, Pill, Scree
 import { BackBar, Chip as KChip, ChipRow, EmptyState, IconBtn, ListItem, Pill as KPill, PhotoRow, SecHead, Skeleton as KSkel, Title } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
+import { apiH, type ResourceType } from '@/lib/api-hub';
 import { apiB, type PeakRule } from '@/lib/api-biz';
 import { apiX, type Category, type ServiceBody, type ServiceFull } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
@@ -54,6 +55,9 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [color, setColor] = useState(service?.color ?? '#6f52ed');
   const [availFrom, setAvailFrom] = useState(((service as { availableFrom?: string | null } | null)?.availableFrom ?? '').slice(0, 10));
   const [availTo, setAvailTo] = useState(((service as { availableTo?: string | null } | null)?.availableTo ?? '').slice(0, 10));
+  const rtypes = useLoad(() => apiH.resourceTypes(sid).catch(() => [] as ResourceType[]), [sid]);
+  const [resId, setResId] = useState(service?.resourceTypeId != null ? String(service.resourceTypeId) : '');
+  const [ovr, setOvr] = useState<Record<string, { price: string; min: string }>>(() => Object.fromEntries((service?.staffOverrides ?? []).map((o) => [String(o.staffId), { price: o.price != null ? String(o.price) : '', min: o.durationMinutes != null ? String(o.durationMinutes) : '' }])));
   const [virtual, setVirtual] = useState(service?.virtualAppointment ?? false);
   const [procD, setProcD] = useState(String(service?.processingDuring ?? 0));
   const [procA, setProcA] = useState(String(service?.processingAfter ?? 0));
@@ -83,6 +87,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
       taxRate: taxRate.trim() === '' ? null : num(taxRate),
       isClass, maxParticipants: isClass ? Math.max(1, Math.round(num(maxP)) || 1) : undefined,
       availableFrom: /^\d{4}-\d{2}-\d{2}$/.test(availFrom) ? availFrom : undefined, availableTo: /^\d{4}-\d{2}-\d{2}$/.test(availTo) ? availTo : undefined,
+      resourceTypeId: resId || undefined,
+      staffOverrides: ids.flatMap((i) => { const o = ovr[i]; const p = o && o.price.trim() !== '' ? num(o.price) : NaN; const m = o && o.min.trim() !== '' ? Math.round(num(o.min)) : NaN; return Number.isFinite(p) || Number.isFinite(m) ? [{ staffId: i, price: Number.isFinite(p) ? p : null, durationMinutes: Number.isFinite(m) && m > 0 ? m : null }] : []; }),
       serviceType: stype, color: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : undefined, virtualAppointment: virtual,
       processingDuring: Math.max(0, Math.round(num(procD)) || 0), processingAfter: Math.max(0, Math.round(num(procA)) || 0),
       travelFee: mobile && travel.trim() !== '' ? Math.max(0, num(travel) || 0) : undefined, serviceArea: mobile ? area.trim() || undefined : undefined,
@@ -166,6 +172,17 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
           <>
             <SectionTitle>{tr('sx.pickStaff')}</SectionTitle>
             {staff.loading && !staff.data ? <Skeleton rows={2} height={44} /> : <MultiChoice value={ids} onChange={setIds} options={(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => ({ value: String(s.id), label: s.name }))} />}
+            {ids.length ? (<>
+              <SectionTitle>{tr('hx.ovTitle')}</SectionTitle>
+              <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('hx.ovHint')}</Text>
+              {ids.map((i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text numberOfLines={1} style={{ width: 84, fontFamily: font.s, fontSize: 14, color: t.ink }}>{(staff.data ?? []).find((x) => String(x.id) === i)?.name ?? ''}</Text>
+                  <View style={{ flex: 1 }}><Field label={tr('hx.ovPrice')} value={ovr[i]?.price ?? ''} onChangeText={(v) => setOvr((m) => ({ ...m, [i]: { price: v, min: m[i]?.min ?? '' } }))} keyboardType="decimal-pad" /></View>
+                  <View style={{ flex: 1 }}><Field label={tr('hx.ovMin')} value={ovr[i]?.min ?? ''} onChangeText={(v) => setOvr((m) => ({ ...m, [i]: { price: m[i]?.price ?? '', min: v } }))} keyboardType="number-pad" /></View>
+                </View>
+              ))}
+            </>) : null}
           </>
         ) : null}
         {tab === 'online' ? (
@@ -200,6 +217,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
               <Field label={tr('pa.area')} value={area} onChangeText={setArea} maxLength={500} />
             </>) : null}
             <ToggleRow label={tr('pa.virtual')} value={virtual} onChange={setVirtual} />
+            <SectionTitle>{tr('hx.resPick')}</SectionTitle>
+            <Choice value={resId} onChange={setResId} options={[{ value: '', label: tr('hx.resNone') }, ...(rtypes.data ?? []).map((r) => ({ value: String(r.id), label: r.name }))]} />
             <Field label={tr('pa.availFrom')} value={availFrom} onChangeText={setAvailFrom} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" maxLength={10} />
             <Field label={tr('pa.availTo')} value={availTo} onChangeText={setAvailTo} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" maxLength={10} />
             <ToggleRow label={tr('ux.isClass')} value={isClass} onChange={setIsClass} />
