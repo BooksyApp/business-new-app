@@ -117,7 +117,7 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
       - name: TEMP dump node log
         if: failure()
-        run: grep -n -B3 -A12 "RC=1" /tmp/nodelog.txt | cut -c1-600 | head -60
+        run: head -c 3500 /tmp/nodelog.txt | cut -c1-700; echo ----; tail -n 20 /tmp/nodelog.txt | cut -c1-500
       - name: Checksum
         working-directory: apps/mobile/android/app/build/outputs/apk/release
         run: |
