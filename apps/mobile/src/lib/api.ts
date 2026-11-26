@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { ApiError, businessAudience, createApi, type Id } from '@booqi/business-shared';
 
 import { API_BASE } from './config';
+import { setOnline } from './net';
 import * as storage from './secureStorage';
 
 export { ApiError };
@@ -36,6 +37,9 @@ export interface Staff {
   position?: string;
   avatarUrl?: string;
   isActive?: boolean;
+  email?: string;
+  phone?: string;
+  role?: string;
 }
 
 export interface Service {
@@ -44,6 +48,9 @@ export interface Service {
   durationMinutes?: number;
   price?: number;
   isActive: boolean;
+  isVisible?: boolean;
+  categoryName?: string;
+  description?: string;
   staffIds?: Id[];
 }
 
@@ -92,6 +99,19 @@ export interface ClientWithStats extends Client {
   totalSpent: number | null;
   lastVisitDate: string | null;
   clientKey?: string;
+  avatarUrl?: string | null;
+  createdAt?: string | null;
+  pastVisits?: number;
+  avgPrice?: number | null;
+  favouriteService?: string | null;
+  favouriteMaster?: string | null;
+  nextVisitDate?: string | null;
+  nextVisitTime?: string | null;
+  nextServiceName?: string | null;
+  noShowAppointments?: number;
+  cancelledAppointments?: number;
+  allowMarketingEmails?: boolean | null;
+  allowSmsNotifications?: boolean | null;
 }
 
 export interface ClientNote {
@@ -131,6 +151,40 @@ export interface DaySheet {
   totals: { bookings: number; expected: number; already_paid: number };
 }
 
+export interface TimeOff {
+  id: Id;
+  staffId: Id;
+  staffName?: string;
+  startDate: string;
+  endDate: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  isFullDay: boolean;
+  reason?: string | null;
+}
+
+export interface Sale {
+  id: Id;
+  clientName?: string;
+  staffName?: string;
+  saleDate: string;
+  saleTime: string;
+  total: number;
+  tipAmount?: number;
+  paymentMethod: string;
+  items?: { name?: string; itemName?: string }[];
+}
+
+export interface InboxSummary {
+  conversationId: string;
+  customerName: string;
+  customerEmail: string;
+  unread: number;
+  lastMessageAt: string | null;
+}
+export interface InboxMessage { messageId: string; fromSalon: boolean; body: string; sentAt: string }
+export interface InboxThread { conversationId: string; customerName: string; customerEmail: string; messages: InboxMessage[] }
+
 export interface CreateAppointmentBody {
   businessId: Id;
   staffId: Id;
@@ -143,6 +197,7 @@ export interface CreateAppointmentBody {
   endTime: string;
   price?: number;
   notes?: string;
+  visitId?: string;
 }
 
 
@@ -219,7 +274,7 @@ function renew(): Promise<string | null> {
   return refreshing;
 }
 
-const { request } = createApi({
+const core = createApi({
   baseUrl: API_BASE,
   getToken: () => accessToken,
   renew,
@@ -228,6 +283,18 @@ const { request } = createApi({
     onSignedOut?.();
   },
 });
+
+/** Every call reports reachability to the offline banner (status 0 = the network failed; any HTTP answer = online). */
+async function request<T>(path: string, opts?: Parameters<typeof core.request>[1]): Promise<T> {
+  try {
+    const r = await core.request<T>(path, opts);
+    setOnline(true);
+    return r;
+  } catch (e) {
+    if (e instanceof ApiError) setOnline(e.status !== 0);
+    throw e;
+  }
+}
 
 const day = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -256,12 +323,13 @@ export const api = {
   appointments: (b: Id, from: Date, to: Date = from) =>
     request<Appointment[]>(`/bookings/business/${b}?startDate=${day(from)}&endDate=${day(to)}`),
   appointment: (id: string) => request<Appointment>(`/bookings/${id}`),
-  /** POST /api/bookings */
-  createAppointment: (body: CreateAppointmentBody) =>
+  /** POST /api/bookings (`override.confirm` accepts a reported conflict, same shape as the reschedule PUT). */
+  createAppointment: (body: CreateAppointmentBody, override?: boolean) =>
     request<Appointment>('/bookings', {
       method: 'POST',
       body: {
         ...body,
+        ...(override ? { override: { confirm: true } } : null),
         idempotencyKey: `${body.businessId}-${body.staffId}-${body.appointmentDate}-${body.startTime}-${Date.now()}`,
       },
     }),
@@ -273,6 +341,8 @@ export const api = {
     }),
   confirmAppointment: (id: string) =>
     request<Appointment>(`/bookings/${id}/confirm`, { method: 'PUT', body: {} }),
+  completeAppointment: (id: string) =>
+    request<Appointment>(`/bookings/${id}/complete`, { method: 'PUT', body: {} }),
   noShow: (id: string) =>
     request<Appointment>(`/bookings/${id}/no-show`, { method: 'PUT', body: {} }),
   cancelAppointment: (id: string, reason: string) =>
@@ -282,6 +352,25 @@ export const api = {
   staff: (b: Id) => request<Staff[]>(`/staff/business/${b}`),
   /** GET /api/services/business/{id} */
   services: (b: Id) => request<Service[]>(`/services/business/${b}`),
+  /** PUT /api/services/{id}/business/{b} - partial update (isActive, price, durationMinutes). */
+  updateService: (b: Id, id: Id, body: { isActive?: boolean; price?: number; durationMinutes?: number }) =>
+    request<Service>(`/services/${id}/business/${b}`, { method: 'PUT', body }),
+
+  /** GET /api/time-off/business/{id}/date/{date} */
+  timeOffOn: (b: Id, d: Date) => request<TimeOff[]>(`/time-off/business/${b}/date/${day(d)}`),
+  /** POST /api/time-off (same body as the hub; owner/manager blocks are approved on creation). */
+  createTimeOff: (body: { businessId: Id; staffId: Id; startDate: string; endDate: string; startTime?: string; endTime?: string; isFullDay: boolean; reason?: string }) =>
+    request<TimeOff>('/time-off', { method: 'POST', body: { ...body, isRecurring: false, isApproved: true } }),
+  deleteTimeOff: (id: Id) => request<void>(`/time-off/${id}`, { method: 'DELETE' }),
+
+  /** GET /api/sales/business/{id}?date= */
+  sales: (b: Id, d: Date) => request<Sale[]>(`/sales/business/${b}?date=${day(d)}`),
+
+  /** GET/POST /api/businesses/{b}/messages/conversations */
+  conversations: (b: Id) => request<InboxSummary[]>(`/businesses/${b}/messages/conversations`),
+  conversation: (b: Id, c: string) => request<InboxThread>(`/businesses/${b}/messages/conversations/${encodeURIComponent(c)}`),
+  replyConversation: (b: Id, c: string, body: string) =>
+    request<InboxMessage>(`/businesses/${b}/messages/conversations/${encodeURIComponent(c)}/messages`, { method: 'POST', body: { body } }),
   /** GET /api/public/studios/{b}/services/{s}/slots?date&staffId -> { availableSlots: string[] } */
   slots: (b: Id, serviceId: Id, date: Date, staffId?: Id) =>
     request<{ availableSlots: string[]; durationMinutes: number }>(
@@ -295,7 +384,7 @@ export const api = {
   /** GET /api/clients/business/{id} */
   clients: (b: Id) => request<Client[]>(`/clients/business/${b}`),
   /** POST /api/clients/business/{id} */
-  createClient: (b: Id, body: { firstName: string; lastName?: string; phone?: string }) =>
+  createClient: (b: Id, body: { firstName: string; lastName?: string; phone?: string; email?: string; allowMarketingEmails?: boolean; allowSmsNotifications?: boolean }) =>
     request<Client>(`/clients/business/${b}`, { method: 'POST', body }),
   /** GET /api/businesses/{b}/clients/{c}/record -> notes + visits */
   clientRecord: (b: Id, c: Id) => request<ClientRecord>(`/businesses/${b}/clients/${c}/record`),

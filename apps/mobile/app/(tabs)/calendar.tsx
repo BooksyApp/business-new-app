@@ -2,15 +2,16 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BookingSheet } from '@/components/BookingSheet';
-import { DayStrip, Timeline } from '@/components/calendar';
+import { BlockTimeSheet } from '@/components/BlockTimeSheet';
+import { DayStrip, Timeline, WeekView } from '@/components/calendar';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ErrorState, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
-import { api, toDay, type Appointment, type Staff } from '@/lib/api';
+import { api, toDay, type Appointment, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { addDays, monthLabel, toMin } from '@/lib/format';
+import { addDays, monthLabel, startOfWeek, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { circShadow, ctaShadow, font } from '@/theme/tokens';
@@ -46,10 +47,15 @@ export default function Calendar() {
   const [open, setOpen] = useState<Appointment | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [chips, setChips] = useState(true);
+  const [mode, setMode] = useState<'day' | 'week'>('day');
+  const [blockOpen, setBlockOpen] = useState(false);
+  const [block, setBlock] = useState<TimeOff | null>(null);
 
   const sid = salon?.id ?? '';
   const staff = useLoad<Staff[]>(() => api.staff(sid), [sid]);
-  const day = useLoad(() => api.appointments(sid, date), [sid, date.toDateString(), version]);
+  const weekStart = startOfWeek(date);
+  const day = useLoad(() => (mode === 'day' ? api.appointments(sid, date) : api.appointments(sid, weekStart, addDays(weekStart, 6))), [sid, mode, mode === 'day' ? date.toDateString() : weekStart.toDateString(), version]);
+  const off = useLoad<TimeOff[]>(() => (mode === 'day' ? api.timeOffOn(sid, date).catch(() => []) : Promise.resolve([])), [sid, mode, date.toDateString(), version]);
 
   const all = useMemo(() => {
     const list = (staff.data ?? []).filter((s) => s.isActive !== false);
@@ -58,6 +64,7 @@ export default function Calendar() {
     return orphan ? [...list, { id: '__none', name: tr('calendar.unassigned') } as Staff] : list;
   }, [staff.data, day.data]);
   const masters = focus ? all.filter((m) => String(m.id) === focus) : all;
+  const weekAppts = useMemo(() => (focus ? (day.data ?? []).filter((a) => String(a.staffId) === focus) : day.data ?? []), [day.data, focus]);
 
   // Visible hour range from data, never less than 9-19.
   const { startHour, endHour } = useMemo(() => {
@@ -77,6 +84,7 @@ export default function Calendar() {
           <Text style={{ fontFamily: font.x, fontSize: 32, lineHeight: 35, letterSpacing: -0.96, color: t.ink }}>{tr('calendar.title')}</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Circ icon="sliders" label={tr('calendar.allTeam')} onPress={() => setChips((v) => !v)} />
+            <Circ icon="clock-alert" label={tr('block.new')} onPress={() => { setBlock(null); setBlockOpen(true); }} />
             <Circ icon="plus" violet label={tr('calendar.newAppointment')} onPress={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
           </View>
         </View>
@@ -90,7 +98,8 @@ export default function Calendar() {
         <DayStrip date={date} onChange={setDate} />
         {chips ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14, flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
-            <Chip38 label={tr('calendar.day')} on />
+            <Chip38 label={tr('calendar.day')} on={mode === 'day'} onPress={() => setMode('day')} />
+            <Chip38 label={tr('calendar.week')} on={mode === 'week'} onPress={() => setMode('week')} />
             <Chip38 label={tr('calendar.allTeam')} icon="users" vo={!focus} onPress={() => setFocus(null)} />
             {all.map((m) => <Chip38 key={m.id} label={m.name} vo={focus === String(m.id)} onPress={() => setFocus(focus === String(m.id) ? null : String(m.id))} />)}
           </ScrollView>
@@ -103,12 +112,16 @@ export default function Calendar() {
           <Skeleton rows={5} height={80} />
         ) : masters.length === 0 ? (
           <StateView icon="users" title={tr('calendar.empty')} body={tr('sections.teamHint')} />
+        ) : mode === 'week' ? (
+          <WeekView date={date} appts={weekAppts} startHour={startHour} endHour={endHour} refreshing={day.refreshing}
+            onRefresh={() => void day.reload()} onOpen={setOpen} onPickDay={(d) => { setDate(d); setMode('day'); }} />
         ) : (
-          <Timeline date={date} masters={masters} appts={day.data ?? []} startHour={startHour} endHour={endHour}
-            refreshing={day.refreshing} onRefresh={() => void day.reload()} onOpen={setOpen} />
+          <Timeline date={date} masters={masters} appts={day.data ?? []} blocks={off.data ?? []} startHour={startHour} endHour={endHour}
+            refreshing={day.refreshing} onRefresh={() => { void day.reload(); void off.reload(); }} onOpen={setOpen} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} />
         )}
       </View>
       <BookingSheet appt={open} onClose={() => setOpen(null)} />
+      <BlockTimeSheet open={blockOpen} date={date} masters={all} preset={focus} existing={block} onClose={() => setBlockOpen(false)} onDone={() => { setBlockOpen(false); void off.reload(); }} />
     </Screen>
   );
 }

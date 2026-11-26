@@ -24,6 +24,8 @@ const ITEMS = [
  */
 function TabBar({ state, navigation }: any) {
   const { t } = useTheme(); const ins = useSafeAreaInsets();
+  const { badges } = useApp();
+  const count: Record<string, number> = { notifications: badges.pending + badges.waitlist };
   const bot = dockBottom(ins.bottom);
   const base = t.dark ? 'rgba(30,26,42,.66)' : 'rgba(255,255,255,.66)';
   const solid = t.dark ? 'rgba(30,26,42,.95)' : 'rgba(255,255,255,.95)'; // Android: no per-frame blur, near-opaque keeps 60fps
@@ -41,13 +43,20 @@ function TabBar({ state, navigation }: any) {
             const route = state.routes[i]; const on = state.index === i;
             const col = on ? t.vtext : t.muted;
             return (
-              <RNPressable key={it.name} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={tr(it.k)} android_ripple={null}
+              <RNPressable key={it.name} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={count[it.name] ? `${tr(it.k)}, ${count[it.name]}` : tr(it.k)} android_ripple={null}
                 onPress={() => {
                   const ev = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                   if (!on && !ev.defaultPrevented) { Haptics.selectionAsync().catch(() => {}); navigation.navigate(route.name); }
                 }}
                 style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 1, borderRadius: 999, backgroundColor: on ? t.surface : 'transparent', ...(on ? { boxShadow: '0 6px 16px -8px rgba(29,23,48,.35)' } : null) } as any}>
-                <Icon name={it.icon} filled={on} size={23} color={col} />
+                <View>
+                  <Icon name={it.icon} filled={on} size={23} color={col} />
+                  {count[it.name] ? (
+                    <View accessibilityLabel={String(count[it.name])} style={{ position: 'absolute', top: -5, right: -9, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: t.guava, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontFamily: font.x, fontSize: 11, color: '#fff' }}>{count[it.name] > 99 ? '99+' : count[it.name]}</Text>
+                    </View>
+                  ) : null}
+                </View>
                 <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, letterSpacing: -0.28, color: col }}>{tr(it.k)}</Text>
               </RNPressable>
             );

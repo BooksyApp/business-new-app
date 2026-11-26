@@ -1,4 +1,6 @@
 /** English strings; the shape every other locale is checked against. */
+import { extraEn } from './extra';
+
 export const en = {
   common: {
     cancel: 'Cancel',
@@ -21,6 +23,8 @@ export const en = {
   },
   tabs: { calendar: 'Calendar', clients: 'Clients', notifications: 'Alerts', more: 'More' },
   login: {
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     title: 'Run your salon from your pocket',
     subtitle: 'Sign in with your booqi business account',
     email: 'Email or phone',
@@ -32,6 +36,7 @@ export const en = {
     pickSalonHint: 'Your account manages several salons.',
   },
   calendar: {
+    week: 'Week',
     day: 'Day',
     allTeam: 'Everyone',
     prevWeek: 'Previous week',
@@ -59,6 +64,7 @@ export const en = {
     NO_SHOW: 'No-show',
   },
   appt: {
+    complete: 'Mark completed',
     arrived: 'Arrived',
     move: 'Move',
     messageClient: 'Message client',
@@ -87,6 +93,16 @@ export const en = {
     saved: 'Saved',
   },
   create: {
+    repeat: 'Repeat',
+    repeatNone: 'Once',
+    repeatWeekly: 'Weekly',
+    repeatBiweekly: 'Every 2 weeks',
+    repeatMonthly: 'Monthly',
+    repeatTimes: '{{n}} appointments in total',
+    fewer: 'Fewer',
+    more: 'More',
+    multiHint: 'You can pick several services; they are booked back to back.',
+    partial: '{{ok}} booked, {{bad}} not booked',
     stepClient: 'Client',
     stepService: 'Service',
     stepTime: 'Time',
@@ -167,6 +183,7 @@ export const en = {
     loadingMore: 'Loading…',
   },
   sections: {
+    sales: 'Till and sales',
     views: 'Looks',
     viewsHint: 'Your salon photos and stories',
     services: 'Services',
@@ -192,6 +209,7 @@ export const en = {
     birthday: 'Birthday',
   },
   days: { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' },
+  ...extraEn,
 };
 
 export type Strings = typeof en;

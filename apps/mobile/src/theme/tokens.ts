@@ -19,3 +19,11 @@ export const mesh = 'radial-gradient(60% 70% at 12% 10%, rgba(216,204,255,.9) 0%
 export const aura = ['#e6deff', '#ffe0e7'] as const;
 export const ringColors = ['#6f52ed', '#a98fff', '#ffa8bb', '#ffd2a1', '#6f52ed'] as const;
 export const font = { r: 'PlusJakartaSans_400Regular', m: 'PlusJakartaSans_500Medium', s: 'PlusJakartaSans_600SemiBold', b: 'PlusJakartaSans_700Bold', x: 'PlusJakartaSans_800ExtraBold' };
+
+// Brand constants used outside the light/dark theme objects (gradients, the dark action bar, text on violet).
+export const gradCta = ['#6f52ed', '#a24cd8'] as const;
+export const gradRing = ['#6f52ed', '#ff7aa2'] as const;
+export const brandInk = '#1d1730';
+export const onViolet = '#ffffff';
+export const wordmarkOnDark = '#f5f2fa';
+export const barBg = (dark: boolean) => (dark ? '#2a2538' : '#1d1730');

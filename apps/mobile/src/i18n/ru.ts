@@ -1,4 +1,5 @@
 import type { Strings } from './en';
+import { extraRu } from './extra';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends string ? string : DeepPartial<T[K]> };
 
@@ -24,6 +25,8 @@ export const ru: DeepPartial<Strings> = {
   },
   tabs: { calendar: 'Календарь', clients: 'Клиенты', notifications: 'Уведомления', more: 'Ещё' },
   login: {
+    showPassword: 'Показать пароль',
+    hidePassword: 'Скрыть пароль',
     title: 'Салон в вашем кармане',
     subtitle: 'Войдите в бизнес-аккаунт booqi',
     email: 'Email или телефон',
@@ -35,6 +38,7 @@ export const ru: DeepPartial<Strings> = {
     pickSalonHint: 'Ваш аккаунт управляет несколькими салонами.',
   },
   calendar: {
+    week: 'Неделя',
     title: 'Календарь',
     empty: 'Нет записей',
     allMasters: 'Все',
@@ -51,6 +55,7 @@ export const ru: DeepPartial<Strings> = {
     NO_SHOW: 'Не пришёл',
   },
   appt: {
+    complete: 'Завершено',
     title: 'Запись',
     client: 'Клиент',
     service: 'Услуга',
@@ -70,6 +75,16 @@ export const ru: DeepPartial<Strings> = {
     saved: 'Сохранено',
   },
   create: {
+    repeat: 'Повтор',
+    repeatNone: 'Один раз',
+    repeatWeekly: 'Каждую неделю',
+    repeatBiweekly: 'Раз в 2 недели',
+    repeatMonthly: 'Каждый месяц',
+    repeatTimes: 'Всего записей: {{n}}',
+    fewer: 'Меньше',
+    more: 'Больше',
+    multiHint: 'Можно выбрать несколько услуг; они записываются подряд.',
+    partial: 'Записано: {{ok}}, не записано: {{bad}}',
     title: 'Новая запись',
     client: 'Клиент',
     searchClient: 'Поиск по имени или телефону',
@@ -136,6 +151,7 @@ export const ru: DeepPartial<Strings> = {
     loadingMore: 'Загрузка…',
   },
   sections: {
+    sales: 'Касса и продажи',
     views: 'Образы',
     services: 'Услуги',
     team: 'Команда',
@@ -144,4 +160,5 @@ export const ru: DeepPartial<Strings> = {
     settings: 'Настройки',
   },
   days: { mon: 'Пн', tue: 'Вт', wed: 'Ср', thu: 'Чт', fri: 'Пт', sat: 'Сб', sun: 'Вс' },
+  ...extraRu,
 };

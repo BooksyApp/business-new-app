@@ -1,19 +1,34 @@
 import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header, Screen, StateView } from '@/components/ui';
+import { Messages } from '@/screens/Messages';
+import { Sales } from '@/screens/Sales';
+import { Services } from '@/screens/Services';
+import { Settings } from '@/screens/Settings';
+import { Team } from '@/screens/Team';
 import { t as tr, type StringKey } from '@/i18n';
 
-/** Sections of "Daha çox" that the app does not have yet: a clean "coming soon" state, no fake data. */
-const ICONS: Record<string, string> = { views: 'spark', services: 'scissors', team: 'users', reviews: 'star', messages: 'chat', settings: 'gear' };
+/** Sections of "Daha çox". Services, team, sales, messages and settings are real screens; looks and reviews stay a clean "coming soon" (no fake data). */
+const ICONS: Record<string, string> = { views: 'spark', services: 'scissors', team: 'users', reviews: 'star', messages: 'chat', settings: 'gear', sales: 'wallet' };
 
 export default function Section() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const router = useRouter();
-  const k = ICONS[key] ? key : 'settings';
-  return (
-    <Screen>
-      <Header title={tr(`sections.${k}` as StringKey)} onBack={() => router.back()} />
-      <StateView icon={ICONS[k]} title={tr('soon.title')} body={tr('soon.body')} />
-    </Screen>
-  );
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/more'));
+  switch (key) {
+    case 'services': return <Services onBack={back} />;
+    case 'team': return <Team onBack={back} />;
+    case 'sales': return <Sales onBack={back} />;
+    case 'messages': return <Messages onBack={back} />;
+    case 'settings': return <Settings onBack={back} />;
+    default: {
+      const k = ICONS[key] ? key : 'views';
+      return (
+        <Screen>
+          <Header title={tr(`sections.${k}` as StringKey)} onBack={back} />
+          <StateView icon={ICONS[k]} title={tr('soon.title')} body={tr('soon.body')} />
+        </Screen>
+      );
+    }
+  }
 }

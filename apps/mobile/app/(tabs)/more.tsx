@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -50,10 +50,11 @@ export default function More() {
   return (
     <Screen>
       <Header title={tr('more.title')} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: inset }} showsVerticalScrollIndicator={false}>
-        <Item icon="wallet" title={tr('more.takings')} sub={`${tr('more.expected')} ${money(tot?.expected ?? 0, salon?.currency)} · ${tr('more.collected')} ${money(tot?.already_paid ?? 0, salon?.currency)}`} />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: inset }} showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={today.refreshing} onRefresh={() => void today.reload()} tintColor={t.violet} />}>
+        <Item icon="wallet" title={tr('more.takings')} sub={`${tr('more.expected')} ${money(tot?.expected ?? 0, salon?.currency)} · ${tr('more.collected')} ${money(tot?.already_paid ?? 0, salon?.currency)}`} onPress={() => router.push('/section/sales')} />
         <Item icon="cal" title={tr('more.bookings')} sub={`${tr('common.today')} · ${tot?.bookings ?? 0}`} onPress={() => router.navigate('/calendar')} />
-        <Item icon="user" title={tr('more.profile')} sub={[user?.fullName, user?.role].filter(Boolean).join(' · ')} />
+        <Item icon="user" title={tr('more.profile')} sub={[user?.fullName, user?.role].filter(Boolean).join(' · ')} onPress={() => router.push('/section/settings')} />
         <Item icon="globe" title={tr('more.language')} sub={lang} onPress={() => setLangOpen(true)} />
         <Item icon="store" title={salons.length > 1 ? tr('more.switchSalon') : tr('more.salon')} sub={salon?.name} onPress={salons.length > 1 ? () => router.push('/salons') : undefined} />
         {MENU.map((m) => (

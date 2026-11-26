@@ -1,4 +1,5 @@
 import type { Strings } from './en';
+import { extraAz } from './extra';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends string ? string : DeepPartial<T[K]> };
 
@@ -29,6 +30,8 @@ export const az: DeepPartial<Strings> = {
     more: 'Daha çox',
   },
   login: {
+    showPassword: 'Şifrəni göstər',
+    hidePassword: 'Şifrəni gizlət',
     title: 'Salonunuz cibinizdə',
     subtitle: 'booqi biznes hesabınızla daxil olun',
     email: 'E-poçt və ya telefon',
@@ -40,6 +43,7 @@ export const az: DeepPartial<Strings> = {
     pickSalonHint: 'Hesabınız bir neçə salonu idarə edir.',
   },
   calendar: {
+    week: 'Həftə',
     day: 'Gün',
     allTeam: 'Hamısı',
     prevWeek: 'Əvvəlki həftə',
@@ -67,6 +71,7 @@ export const az: DeepPartial<Strings> = {
     NO_SHOW: 'Gəlmədi',
   },
   appt: {
+    complete: 'Tamamlandı',
     arrived: 'Gəldi',
     move: 'Köçür',
     messageClient: 'Müştəriyə mesaj',
@@ -95,6 +100,16 @@ export const az: DeepPartial<Strings> = {
     saved: 'Yadda saxlanıldı',
   },
   create: {
+    repeat: 'Təkrar',
+    repeatNone: 'Bir dəfə',
+    repeatWeekly: 'Hər həftə',
+    repeatBiweekly: '2 həftədən bir',
+    repeatMonthly: 'Hər ay',
+    repeatTimes: 'Cəmi {{n}} rezerv',
+    fewer: 'Azalt',
+    more: 'Artır',
+    multiHint: 'Bir neçə xidmət seçə bilərsiniz; ardıcıl yazılır.',
+    partial: '{{ok}} yazıldı, {{bad}} yazılmadı',
     stepClient: 'Müştəri',
     stepService: 'Xidmət',
     stepTime: 'Vaxt',
@@ -175,6 +190,7 @@ export const az: DeepPartial<Strings> = {
     loadingMore: 'Yüklənir…',
   },
   sections: {
+    sales: 'Kassa və satışlar',
     views: 'Görünüşlər',
     viewsHint: 'Salonun şəkilləri və hekayələri',
     services: 'Xidmətlər',
@@ -208,4 +224,5 @@ export const az: DeepPartial<Strings> = {
     sat: 'Şən.',
     sun: 'Baz.',
   },
+  ...extraAz,
 };

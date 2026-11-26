@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleProp, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Image, StyleProp, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,9 +7,11 @@ import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ApiError } from '@/lib/api';
+import { API_BASE } from '@/lib/config';
+import { useOnline } from '@/lib/net';
 import { initials } from '@/lib/format';
 import { t as tr } from '@/i18n';
-import { cardShadow, circShadow, ctaShadow, font } from '@/theme/tokens';
+import { cardShadow, circShadow, ctaShadow, font, gradCta, gradRing } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeContext';
 
 /** Full-screen canvas; `top` adds the status-bar inset (tab screens draw their own header). */
@@ -59,7 +61,7 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, ic
   return (
     <Pressable onPress={onPress} disabled={off} haptic accessibilityRole="button" accessibilityState={{ disabled: !!off }} style={[{ opacity: off && !loading ? 0.5 : 1 }, style]}>
       {variant === 'primary' ? (
-        <LinearGradient colors={['#6f52ed', '#a24cd8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[row, ctaShadow]}>{inner}</LinearGradient>
+        <LinearGradient colors={[...gradCta]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[row, ctaShadow]}>{inner}</LinearGradient>
       ) : (
         <View style={[row, { backgroundColor: variant === 'danger' ? t.gsoft : t.fill }]}>{inner}</View>
       )}
@@ -67,29 +69,54 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, ic
   );
 }
 
-export function Field({ label, style, ...rest }: TextInputProps & { label?: string }) {
+export const Field = React.forwardRef<TextInput, TextInputProps & { label?: string }>(function Field({ label, style, ...rest }, ref) {
   const { t } = useTheme();
   return (
     <View style={{ marginBottom: 14 }}>
       {label ? <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted, marginBottom: 6 }}>{label}</Text> : null}
       <TextInput
+        ref={ref}
         placeholderTextColor={t.ink3}
+        accessibilityLabel={label}
         {...rest}
         style={[{ minHeight: 52, borderRadius: 16, borderWidth: 1, borderColor: t.line, backgroundColor: t.surface, paddingHorizontal: 16, fontFamily: font.m, fontSize: 16, color: t.ink }, style]}
       />
     </View>
   );
-}
+});
 
-/** Initials in a violet-to-pink ring (staff / client avatar). */
-export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+/** Photo URLs from the API are origin-relative ("/api/public/uploads/..."). */
+export const photoUrl = (u?: string | null) => (u ? (/^https?:/i.test(u) ? u : `${API_BASE}${u.startsWith('/') ? '' : '/'}${u}`) : null);
+
+/** Photo (when the URL loads) or initials, in a violet-to-pink ring (staff / client avatar). */
+export function Avatar({ name, size = 44, uri }: { name: string; size?: number; uri?: string | null }) {
   const { t } = useTheme();
+  const [failed, setFailed] = React.useState(false);
+  const src = failed ? null : photoUrl(uri);
   return (
-    <LinearGradient colors={['#6f52ed', '#ff7aa2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}>
-      <View style={{ width: size - 4, height: size - 4, borderRadius: (size - 4) / 2, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: font.b, fontSize: Math.round(size * 0.34), color: t.vtext }}>{initials(name)}</Text>
+    <LinearGradient colors={[...gradRing]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: size - 4, height: size - 4, borderRadius: (size - 4) / 2, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {src ? (
+          <Image source={{ uri: src }} accessibilityIgnoresInvertColors onError={() => setFailed(true)} style={{ width: size - 4, height: size - 4 }} />
+        ) : (
+          <Text style={{ fontFamily: font.b, fontSize: Math.round(size * 0.34), color: t.vtext }}>{initials(name)}</Text>
+        )}
       </View>
     </LinearGradient>
+  );
+}
+
+/** Thin strip under the status bar while the last request could not reach the server. */
+export function OfflineBanner() {
+  const { t } = useTheme();
+  const ins = useSafeAreaInsets();
+  const online = useOnline();
+  if (online) return null;
+  return (
+    <View accessibilityRole="alert" pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, paddingTop: ins.top + 4, paddingBottom: 6, paddingHorizontal: 16, backgroundColor: t.guava, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+      <Icon name="wifioff" size={16} color="#fff" />
+      <Text style={{ fontFamily: font.b, fontSize: 13, color: '#fff' }}>{tr('net.offline')}</Text>
+    </View>
   );
 }
 

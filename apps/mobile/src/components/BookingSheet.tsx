@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, View, useWindowDimensions } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
 import { Avatar, Btn, Chip, Field, Pill, Skeleton } from '@/components/ui';
@@ -46,10 +47,12 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
     setBusy(true);
     try {
       await fn();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump();
       if (close) onClose();
       else await live.reload();
     } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       Alert.alert(tr('common.error'), (e as Error).message);
     } finally {
       setBusy(false);
@@ -112,6 +115,7 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
               <Btn label={tr('appt.move')} icon="repeat" variant="secondary" style={{ flex: 1 }} onPress={() => setStep('reschedule')} />
             </View>
           ) : null}
+          {open ? <Btn label={tr('appt.complete')} icon="check-badge" variant="secondary" loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
             {phone ? (
               <Pressable onPress={() => void Linking.openURL(`https://wa.me/${digits(phone)}`)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

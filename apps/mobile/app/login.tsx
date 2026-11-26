@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { Icon } from '@/components/Icon';
 import { Btn, Field } from '@/components/ui';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -10,7 +12,7 @@ import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { api, saveSession, ApiError } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { useTheme } from '@/theme/ThemeContext';
-import { font, mesh } from '@/theme/tokens';
+import { font, mesh, wordmarkOnDark } from '@/theme/tokens';
 
 /** Sign-in per design BF13 / BF79-3: wordmark, title, e-mail or phone, password, error line, disabled Google row, language switch. */
 export default function Login() {
@@ -21,6 +23,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [show, setShow] = useState(false);
+  const pw = React.useRef<any>(null);
 
   async function submit() {
     setBusy(true);
@@ -33,6 +37,7 @@ export default function Login() {
       const salons = await api.salonsForUser(u);
       await signedIn(u, salons);
     } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       setError(e instanceof ApiError && e.status === 0 ? tr('common.offline') : (e as Error).message);
     } finally {
       setBusy(false);
@@ -43,13 +48,18 @@ export default function Login() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360, experimental_backgroundImage: mesh, opacity: t.dark ? 0.25 : 1 } as any} />
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: ins.top + 40, paddingBottom: ins.bottom + 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <Wordmark height={34} color={t.dark ? '#f5f2fa' : undefined} />
+        <Wordmark height={34} color={t.dark ? wordmarkOnDark : undefined} />
         <Text style={{ fontFamily: font.x, fontSize: 32, lineHeight: 38, letterSpacing: -0.8, color: t.ink, marginTop: 36 }}>{tr('login.title')}</Text>
         <Text style={{ fontFamily: font.m, fontSize: 16, color: t.muted, marginTop: 8, marginBottom: 28 }}>{tr('login.subtitle')}</Text>
-        <Field label={tr('login.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="username" keyboardType="email-address" autoCorrect={false} />
-        <Field label={tr('login.password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" />
+        <Field label={tr('login.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="username" keyboardType="email-address" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => pw.current?.focus()} blurOnSubmit={false} />
+        <View>
+          <Field ref={pw} label={tr('login.password')} value={password} onChangeText={setPassword} secureTextEntry={!show} autoComplete="password" autoCapitalize="none" returnKeyType="go" onSubmitEditing={() => { if (email && password && !busy) void submit(); }} style={{ paddingRight: 52 }} />
+          <Pressable onPress={() => setShow((v) => !v)} accessibilityRole="button" accessibilityLabel={show ? tr('login.hidePassword') : tr('login.showPassword')} hitSlop={8} style={{ position: 'absolute', right: 8, bottom: 22, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name={show ? 'eyeoff' : 'eye'} size={22} color={t.muted} />
+          </Pressable>
+        </View>
         {error ? (
-          <View style={{ backgroundColor: t.gsoft, borderRadius: 14, padding: 12, marginBottom: 14 }}>
+          <View accessibilityRole="alert" style={{ backgroundColor: t.gsoft, borderRadius: 14, padding: 12, marginBottom: 14 }}>
             <Text style={{ fontFamily: font.s, fontSize: 14, color: t.gink }}>{error}</Text>
           </View>
         ) : null}

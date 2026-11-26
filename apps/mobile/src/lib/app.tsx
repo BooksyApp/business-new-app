@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, ApiError, clearSession, loadSession, saveSalon, saveSession, setSignedOutHandler, type AuthResponse, type Business } from '@/lib/api';
 import { loadLocale } from '@/i18n';
+import { registerIfGranted } from '@/lib/push';
 
 type Status = 'boot' | 'offline' | 'out' | 'in';
 type AppState = {
@@ -10,6 +11,8 @@ type AppState = {
   salons: Business[];
   /** Bumped after any mutation so lists reload. */
   version: number;
+  /** Tab badges: bookings waiting for confirmation (next 30 days) and open waitlist requests. */
+  badges: { pending: number; waitlist: number };
   bump: () => void;
   retryBoot: () => void;
   signedIn: (u: AuthResponse, salons: Business[]) => Promise<void>;
@@ -30,6 +33,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [salon, setSalon] = useState<Business | null>(null);
   const [version, setVersion] = useState(0);
   const [attempt, setAttempt] = useState(0);
+  const [badges, setBadges] = useState({ pending: 0, waitlist: 0 });
 
   const out = useCallback(() => { setUser(null); setSalons([]); setSalon(null); setStatus('out'); }, []);
 
@@ -59,8 +63,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { alive = false; };
   }, [attempt]);
 
+  // Tab badges follow the salon and every mutation; failures keep the previous numbers.
+  useEffect(() => {
+    if (status !== 'in' || !salon) { setBadges({ pending: 0, waitlist: 0 }); return; }
+    let alive = true;
+    const today = new Date();
+    const end = new Date(today); end.setDate(end.getDate() + 30);
+    void Promise.all([api.appointments(salon.id, today, end).catch(() => null), api.waitlist(salon.id).catch(() => null)]).then(([a, w]) => {
+      if (!alive) return;
+      setBadges((b) => ({
+        pending: a ? a.filter((x) => x.status === 'PENDING').length : b.pending,
+        waitlist: w ? w.filter((x) => (x.status ?? '').toUpperCase() === 'WAITING' || (x.status ?? '').toUpperCase() === 'ACTIVE').length : b.waitlist,
+      }));
+    });
+    return () => { alive = false; };
+  }, [status, salon?.id, version]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // A device that already granted notification permission keeps its push token fresh without asking again.
+  useEffect(() => { if (status === 'in' && salon) void registerIfGranted(); }, [status, salon?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = useMemo<AppState>(() => ({
-    status, user, salon, salons, version,
+    status, user, salon, salons, version, badges,
     bump: () => setVersion((v) => v + 1),
     retryBoot: () => { setStatus('boot'); setAttempt((n) => n + 1); },
     signedIn: async (u, list) => {
@@ -69,6 +92,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     chooseSalon: (b) => { setSalon(b); void saveSalon(b.id); setVersion((v) => v + 1); },
     signOut: () => { void api.logout().catch(() => undefined); void clearSession(); out(); },
-  }), [status, user, salon, salons, version, out]);
+  }), [status, user, salon, salons, version, badges, out]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

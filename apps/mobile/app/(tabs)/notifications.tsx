@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
@@ -22,7 +23,8 @@ import { font } from '@/theme/tokens';
 export default function Notifications() {
   const { t } = useTheme();
   const router = useRouter();
-  const { salon, version } = useApp();
+  const { salon, version, bump } = useApp();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const inset = useDockInset(16);
   const [pushState, setPushState] = useState<'idle' | 'on' | 'failed'>('idle');
   const data = useLoad(async () => {
@@ -32,6 +34,19 @@ export default function Notifications() {
   }, [salon?.id, version]);
   const pending = data.data?.pending ?? [];
   const waitlist = data.data?.waitlist ?? [];
+  async function confirm(id: string) {
+    setBusyId(id);
+    try {
+      await api.confirmAppointment(id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      bump();
+    } catch (e) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      Alert.alert(tr('common.error'), (e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
   const empty = !!data.data && !pending.length && !waitlist.length;
 
   return (
@@ -51,7 +66,7 @@ export default function Notifications() {
           {empty ? <StateView icon="bell" title={tr('notifications.empty')} /> : null}
           {pending.length ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4, marginTop: 4 }}>{tr('notifications.pending')}</Text> : null}
           {pending.map((a) => (
-            <Pressable key={a.id} onPress={() => router.navigate('/calendar')}>
+            <Pressable key={a.id} onPress={() => router.push(`/booking/${a.id}`)} accessibilityRole="button" accessibilityLabel={`${a.clientName ?? ''} ${a.serviceName ?? ''}`}>
               <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                 <Avatar name={a.clientName ?? ''} size={44} />
                 <View style={{ flex: 1 }}>
@@ -59,15 +74,25 @@ export default function Notifications() {
                   <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{a.serviceName}</Text>
                   <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{dateLabel(fromIso(a.appointmentDate))} · {hhmm(a.startTime)} · {a.staffName}</Text>
                 </View>
-                <Pill text={tr('status.PENDING')} tone="amber" />
+                <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                  <Pill text={tr('status.PENDING')} tone="amber" />
+                  <Pressable onPress={() => void confirm(a.id)} disabled={busyId === a.id} haptic accessibilityRole="button" accessibilityLabel={tr('appt.confirm')}
+                    style={{ height: 34, paddingHorizontal: 14, borderRadius: 17, backgroundColor: t.violet, flexDirection: 'row', alignItems: 'center', gap: 5, opacity: busyId === a.id ? 0.5 : 1 }}>
+                    <Icon name="check" size={16} color="#fff" />
+                    <Text style={{ fontFamily: font.b, fontSize: 13, color: '#fff' }}>{tr('appt.confirm')}</Text>
+                  </Pressable>
+                </View>
               </Card>
             </Pressable>
           ))}
           {waitlist.length ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4, marginTop: 4 }}>{tr('notifications.waitlist')}</Text> : null}
           {waitlist.map((w) => (
-            <Card key={w.id} style={{ padding: 14 }}>
-              <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{w.clientName || '-'}</Text>
-              <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('notifications.waitingFor', { service: w.serviceName ?? '-' })}{w.preferredDate ? ` · ${toDay(fromIso(w.preferredDate))}` : ''}</Text>
+            <Card key={w.id} style={{ padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Icon name="user-plus" size={24} color={t.vtext} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{w.clientName || '-'}</Text>
+                <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('notifications.waitingFor', { service: w.serviceName ?? '-' })}{w.preferredDate ? ` · ${toDay(fromIso(w.preferredDate))}` : ''}</Text>
+              </View>
             </Card>
           ))}
         </ScrollView>

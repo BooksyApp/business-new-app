@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { Avatar, Card, Header, Screen, StateView } from '@/components/ui';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
@@ -22,7 +23,7 @@ export default function Salons() {
       ) : (
         <ScrollView contentContainerStyle={{ padding: 18, gap: 10 }}>
           {salons.map((b) => (
-            <Card key={b.id} onPress={() => { chooseSalon(b); router.replace('/calendar'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 }}>
+            <Card key={b.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); chooseSalon(b); router.replace('/calendar'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 }}>
               <Avatar name={b.name} size={48} />
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16.5, color: t.ink }}>{b.name}</Text>
