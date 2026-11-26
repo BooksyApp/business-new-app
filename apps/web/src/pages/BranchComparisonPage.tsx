@@ -65,7 +65,7 @@ export default function BranchComparisonPage() {
     };
   }, [rows, picked]);
 
-  const cell = "px-3 py-2 text-right tabular-nums";
+  const cell = "px-3 py-3.5 text-right tabular-nums";
 
   return (
     <AppLayout>
@@ -108,7 +108,7 @@ export default function BranchComparisonPage() {
                     const id = String(r.id);
                     return (
                       <tr key={id} className="border-t border-[rgb(var(--reg-line)/0.6)]">
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-3.5">
                           <label className="flex items-center gap-2 font-semibold">
                             <input type="checkbox" checked={picked.has(id)} onChange={() => toggle(id)} aria-label={r.name} />
                             {r.name}
@@ -126,7 +126,7 @@ export default function BranchComparisonPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-[rgb(var(--reg-line))] font-bold">
-                    <td className="px-3 py-2">{t("cmp.totalOfTicked")}</td>
+                    <td className="px-3 py-3.5">{t("cmp.totalOfTicked")}</td>
                     <td className={cell}>{formatPrice(totals.revenue)}</td>
                     <td className={cell}>{totals.bookings}</td>
                     <td className={cell}>{totals.cancellations}</td>
