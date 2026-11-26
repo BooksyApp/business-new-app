@@ -1141,6 +1141,10 @@
     "verifyingAccess": "Проверяем доступ..."
   },
   "calendar": {
+    "choiceHeading": "Выбор",
+    "requestedByClientHint": "Клиент просил именно этого мастера. Блок показывает эту отметку.",
+    "notesLimit": "Не более 2000 символов.",
+    "selectService": "Выберите услугу",
     "openBooking": "Открыть запись",
     "pickDate": "Выбрать дату",
     "flagLate": "Опаздывает",

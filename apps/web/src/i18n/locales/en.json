@@ -1141,6 +1141,10 @@
     "verifyingAccess": "Verifying access..."
   },
   "calendar": {
+    "choiceHeading": "Choice",
+    "requestedByClientHint": "The client asked for exactly this specialist. The block shows this mark.",
+    "notesLimit": "Up to 2000 characters.",
+    "selectService": "Select a service",
     "openBooking": "Open booking",
     "pickDate": "Pick a date",
     "flagLate": "Running late",

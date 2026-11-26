@@ -1141,6 +1141,10 @@
     "verifyingAccess": "Giriş yoxlanılır..."
   },
   "calendar": {
+    "choiceHeading": "Seçim",
+    "requestedByClientHint": "Müştəri məhz bu mütəxəssisi istəyib. Blokda bu qeyd görünür.",
+    "notesLimit": "Ən çox 2000 simvol.",
+    "selectService": "Xidmət seçin",
     "openBooking": "Rezervi aç",
     "pickDate": "Tarixi seç",
     "flagLate": "Gecikir",

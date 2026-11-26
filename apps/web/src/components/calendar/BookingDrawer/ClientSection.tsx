@@ -1,41 +1,36 @@
-import { Check, ChevronsUpDown, User } from "lucide-react";
-import { Avatar, Field, FormGrid } from "@/components/bz";
+import { Check, ChevronDown, Mail, Phone, User } from "lucide-react";
+import { Avatar } from "@/components/bz";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { t as tr } from "@/i18n";
+import { AF, Sec } from "./AF";
 import type { BookingDrawerProps } from "./types";
 
 type P = Pick<BookingDrawerProps, "form" | "setForm" | "clients" | "clientSearchOpen" | "setClientSearchOpen" | "initialsOf">;
 
-/** Client: picker card (search / pick / new) + manual name, phone, email while no client is picked. */
+/** 1 Müştəri: combobox field (search / pick / new) + manual name, phone, email while no client is picked. */
 export function ClientSection({ form, setForm, clients, clientSearchOpen, setClientSearchOpen, initialsOf }: P) {
   const selected = form.clientId ? clients.find((c) => c.id.toString() === form.clientId) : undefined;
   const label = form.clientId
     ? selected
       ? `${selected.firstName} ${selected.lastName || ""}`.trim()
       : tr("calendar.selectClient")
-    : form.clientName || tr("calendar.searchClientsOrAddNew");
+    : form.clientName || "";
   return (
-    <section className="bkd-sec">
-      <div className="bkd-k">
-        {tr("common.client")} <em>{tr("calendar.optionalEmptyWalkIn")}</em>
-      </div>
+    <>
+      <Sec n={1} hint={tr("calendar.optionalEmptyWalkIn")}>
+        {tr("common.client")}
+      </Sec>
       <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
         <PopoverTrigger asChild>
-          <button type="button" role="combobox" aria-expanded={clientSearchOpen} className="card row gap12 bkd-client">
-            {form.clientName ? (
-              <Avatar initials={initialsOf(form.clientName)} size={44} />
-            ) : (
-              <span className="bkd-ico" aria-hidden>
-                <User className="ic" />
-              </span>
-            )}
-            <span className="tx">
-              <b>{label}</b>
-              {form.clientPhone || form.clientEmail ? <span className="sm t-m b7">{form.clientPhone || form.clientEmail}</span> : null}
-            </span>
-            <ChevronsUpDown className="ic" style={{ width: 18, height: 18, opacity: 0.5 }} />
-            <span className="btn btn-soft s">{tr("calendar.change")}</span>
+          <button type="button" role="combobox" aria-expanded={clientSearchOpen} className="af af-btn">
+            <div className="fld">
+              <div>
+                <small>{tr("common.client")}</small>
+                <b className={label ? undefined : "ph"}>{label || tr("calendar.searchClientsOrAddNew")}</b>
+              </div>
+              <ChevronDown className="ic" aria-hidden />
+            </div>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] rounded-2xl p-0" align="start">
@@ -92,19 +87,19 @@ export function ClientSection({ form, setForm, clients, clientSearchOpen, setCli
       </Popover>
       {!form.clientId && (
         <>
-          <Field label={tr("calendar.clientName")}>
-            <input value={form.clientName} onChange={(e) => setForm((prev) => ({ ...prev, clientName: e.target.value }))} />
-          </Field>
-          <FormGrid cols={2}>
-            <Field label={tr("common.phone")}>
-              <input value={form.clientPhone} onChange={(e) => setForm((prev) => ({ ...prev, clientPhone: e.target.value }))} />
-            </Field>
-            <Field label={tr("common.email")}>
-              <input type="email" value={form.clientEmail} onChange={(e) => setForm((prev) => ({ ...prev, clientEmail: e.target.value }))} />
-            </Field>
-          </FormGrid>
+          <AF label={tr("common.name")}>
+            <input placeholder={tr("calendar.clientName")} value={form.clientName} onChange={(e) => setForm((prev) => ({ ...prev, clientName: e.target.value }))} />
+          </AF>
+          <div className="a-g2">
+            <AF label={tr("common.phone")} icon={<Phone className="ic" aria-hidden />}>
+              <input placeholder={tr("common.phone")} value={form.clientPhone} onChange={(e) => setForm((prev) => ({ ...prev, clientPhone: e.target.value }))} />
+            </AF>
+            <AF label={tr("common.email")} icon={<Mail className="ic" aria-hidden />}>
+              <input type="email" placeholder={tr("common.email")} value={form.clientEmail} onChange={(e) => setForm((prev) => ({ ...prev, clientEmail: e.target.value }))} />
+            </AF>
+          </div>
         </>
       )}
-    </section>
+    </>
   );
 }

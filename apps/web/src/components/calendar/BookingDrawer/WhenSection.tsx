@@ -1,48 +1,56 @@
+import { useState } from "react";
 import { addDays, parse } from "date-fns";
 import { format } from "@/i18n/dateFns";
-import { Field, FormGrid } from "@/components/bz";
+import { Check, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { t as tr } from "@/i18n";
+import { AF, Sec } from "./AF";
 import type { BookingDrawerProps } from "./types";
 
 type DateP = Pick<BookingDrawerProps, "form" | "setForm" | "setCurrentDate" | "salonNow" | "salonToday" | "getBusinessHoursForDate">;
 
-/** Date: 21 days as three week strips (`.dstrip` look) + "other date" field. Picking syncs the viewed day. */
-export function DateSection({ form, setForm, setCurrentDate, salonNow, salonToday, getBusinessHoursForDate }: DateP) {
+/** 2 Tarix: day chips (today + 5 days) and "other date" (reveals a date field). Picking syncs the viewed day. */
+export function DateSection({ form, setForm, setCurrentDate, salonNow, salonToday }: DateP) {
   const pick = (v: string) => {
     setForm((prev) => ({ ...prev, date: v }));
     const parsed = parse(v, "yyyy-MM-dd", new Date());
     if (!isNaN(parsed.getTime())) setCurrentDate(parsed);
   };
-  const days = Array.from({ length: 21 }, (_, i) => addDays(salonNow(), i));
+  const days = Array.from({ length: 6 }, (_, i) => addDays(salonNow(), i));
+  const inChips = days.some((d) => format(d, "yyyy-MM-dd") === form.date);
+  const [otherOpen, setOtherOpen] = useState(false);
+  const showOther = otherOpen || (!!form.date && !inChips);
   return (
-    <section className="bkd-sec">
-      <div className="bkd-k">{tr("calendar.date2")}</div>
-      <div className="bkd-days" role="radiogroup" aria-label={tr("calendar.date2")}>
+    <>
+      <Sec n={2}>{tr("calendar.date2")}</Sec>
+      <div className="a-chips" role="radiogroup" aria-label={tr("calendar.date2")}>
         {days.map((d) => {
           const v = format(d, "yyyy-MM-dd");
           const on = form.date === v;
-          const open = getBusinessHoursForDate(d).isEnabled;
           return (
-            <button key={v} type="button" role="radio" aria-checked={on} onClick={() => pick(v)} className={`${on ? "on" : ""} ${open ? "" : "off"}`}>
-              <span>{salonToday(d) ? tr("common.today") : format(d, "EEE")}</span>
-              <b>{format(d, "d")}</b>
-              <span>{format(d, "MMM")}</span>
+            <button key={v} type="button" role="radio" aria-checked={on} onClick={() => { setOtherOpen(false); pick(v); }} className={cn("chip", on && !showOther && "vo")}>
+              {salonToday(d) ? tr("common.today") : format(d, "EEE")}
             </button>
           );
         })}
+        <button type="button" role="radio" aria-checked={showOther} onClick={() => setOtherOpen(true)} className={cn("chip", showOther && "vo")}>
+          {tr("calendar.otherDate")}
+        </button>
       </div>
-      <Field label={tr("calendar.otherDate")}>
-        <input
-          type="date"
-          value={form.date}
-          min={format(salonNow(), "yyyy-MM-dd")}
-          onChange={(e) => {
-            if (e.target.value) pick(e.target.value);
-          }}
-          aria-label={tr("calendar.date2")}
-        />
-      </Field>
-    </section>
+      {showOther && (
+        <AF label={tr("calendar.otherDate")}>
+          <input
+            type="date"
+            value={form.date}
+            min={format(salonNow(), "yyyy-MM-dd")}
+            onChange={(e) => {
+              if (e.target.value) pick(e.target.value);
+            }}
+            aria-label={tr("calendar.date2")}
+          />
+        </AF>
+      )}
+    </>
   );
 }
 
@@ -51,21 +59,39 @@ type RepP = Pick<
   "editing" | "selectedPackage" | "bookingMode" | "setBookingMode" | "recurrence" | "setRecurrence" | "recurrenceDates" | "seriesPreview" | "describeConflict"
 >;
 
-/** Repeat toggle (new, non-package bookings) + recurrence config with per-date conflict preview. */
+/** Repeat checkbox row (`.a-ck`, new non-package bookings) + recurrence config (`.a-rep`) with per-date conflict preview. */
 export function RepeatSection({ editing, selectedPackage, bookingMode, setBookingMode, recurrence, setRecurrence, recurrenceDates, seriesPreview, describeConflict }: RepP) {
+  const on = bookingMode === "recurring";
+  const toggle = () => setBookingMode(on ? "single" : "recurring");
   return (
     <>
       {!editing && !selectedPackage && (
-        <label className="bkd-rep" htmlFor="repeat-booking">
-          <input id="repeat-booking" type="checkbox" data-testid="repeat-toggle" checked={bookingMode === "recurring"} onChange={(e) => setBookingMode(e.target.checked ? "recurring" : "single")} />
-          {tr("calendar.series.repeatBooking")}
-        </label>
+        <div
+          className="a-ck"
+          role="checkbox"
+          tabIndex={0}
+          aria-checked={on}
+          data-testid="repeat-toggle"
+          style={{ cursor: "pointer" }}
+          onClick={toggle}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              toggle();
+            }
+          }}
+        >
+          <span className={on ? "bx on" : "bx"}>{on ? <Check className="ic" aria-hidden /> : null}</span>
+          <div>
+            <b>{tr("calendar.series.repeatBooking")}</b>
+          </div>
+        </div>
       )}
-      {bookingMode === "recurring" && (
-        <div className="bkd-box" data-testid="recurrence-config">
-          <div className="bkd-k">{tr("calendar.repeat")}</div>
-          <FormGrid cols={2}>
-            <Field label={tr("calendar.frequency")} kind="sel">
+      {on && (
+        <div className="a-rep" data-testid="recurrence-config">
+          <div className="hd">{tr("calendar.repeat")}</div>
+          <div className="a-g2">
+            <AF label={tr("calendar.frequency")}>
               <select
                 data-testid="recurrence-pattern"
                 value={recurrence.frequency === "MONTHLY" ? "MONTHLY" : recurrence.interval === 2 ? "BIWEEKLY" : "WEEKLY"}
@@ -78,8 +104,8 @@ export function RepeatSection({ editing, selectedPackage, bookingMode, setBookin
                 <option value="BIWEEKLY">{tr("calendar.series.biweekly")}</option>
                 <option value="MONTHLY">{tr("calendar.monthly")}</option>
               </select>
-            </Field>
-            <Field label={tr("calendar.occurrences")}>
+            </AF>
+            <AF label={tr("calendar.occurrences")}>
               <input
                 type="number"
                 min={2}
@@ -88,8 +114,8 @@ export function RepeatSection({ editing, selectedPackage, bookingMode, setBookin
                 data-testid="recurrence-count"
                 onChange={(e) => setRecurrence((prev) => ({ ...prev, count: Math.max(2, Math.min(52, parseInt(e.target.value) || 2)) }))}
               />
-            </Field>
-          </FormGrid>
+            </AF>
+          </div>
           <ul className="bkd-ul" data-testid="recurrence-dates">
             {recurrenceDates.map((d) => {
               const row = seriesPreview?.find((r) => r.date === d);
@@ -115,7 +141,7 @@ export function RepeatSection({ editing, selectedPackage, bookingMode, setBookin
 
 type TimeP = Pick<BookingDrawerProps, "form" | "setForm" | "editing" | "currentDate" | "salonNow" | "salonToday" | "getBusinessHoursForDate" | "timeOptionsWith">;
 
-/** Start time as a slot grid inside the day's hours (no past times today) + end-time select. */
+/** 5 Vaxt: start time as a 4-column slot grid inside the day's hours (no past times today) + end-time field. */
 export function TimeSection({ form, setForm, editing, currentDate, salonNow, salonToday, getBusinessHoursForDate, timeOptionsWith }: TimeP) {
   const day = parse(form.date || format(currentDate, "yyyy-MM-dd"), "yyyy-MM-dd", new Date());
   const { startHour, endHour, isEnabled } = getBusinessHoursForDate(isNaN(day.getTime()) ? currentDate : day);
@@ -129,27 +155,25 @@ export function TimeSection({ form, setForm, editing, currentDate, salonNow, sal
     return (h >= lo && h < hi) || t === form.startTime;
   });
   return (
-    <section className="bkd-sec">
-      <div className="bkd-k">{tr("calendar.time2")}</div>
+    <>
+      <Sec n={5}>{tr("calendar.time2")}</Sec>
       {!isEnabled && <div className="bkd-note">{tr("calendar.closedThisDayYouCan")}</div>}
-      <div className="bkd-slots" role="radiogroup" aria-label={tr("calendar.startTime")}>
+      <div className="a-note" style={{ fontWeight: 700, color: "var(--bz-ink)" }}>{tr("calendar.startTime")}</div>
+      <div className="a-g4" role="radiogroup" aria-label={tr("calendar.startTime")} style={{ maxHeight: 208, overflowY: "auto" }}>
         {slots.map((t) => (
-          <button key={t} type="button" role="radio" aria-checked={form.startTime === t} onClick={() => setForm((prev) => ({ ...prev, startTime: t }))} className={`slot${form.startTime === t ? " on" : ""}`}>
+          <button key={t} type="button" role="radio" aria-checked={form.startTime === t} onClick={() => setForm((prev) => ({ ...prev, startTime: t }))} className={`slot ${form.startTime === t ? "on" : "ln"}`} style={{ justifyContent: "center", border: 0, font: "inherit", cursor: "pointer" }}>
             {t}
           </button>
         ))}
       </div>
-      <div className="bkd-end">
-        <Field label={tr("common.ends")} kind="sel">
-          <select aria-label={tr("calendar.endTime")} value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}>
-            {!form.endTime && <option value="" disabled>{tr("calendar.endTime")}</option>}
-            {timeOptionsWith(form.endTime).map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </Field>
-        {form.serviceId && form.startTime && <span className="sm t-m b7">{tr("calendar.fromTheServiceLength")}</span>}
-      </div>
-    </section>
+      <AF label={tr("calendar.endTime")} icon={<Clock className="ic" aria-hidden />} hint={form.serviceId && form.startTime ? tr("calendar.fromTheServiceLength") : undefined}>
+        <select aria-label={tr("calendar.endTime")} value={form.endTime} onChange={(e) => setForm((prev) => ({ ...prev, endTime: e.target.value }))}>
+          {!form.endTime && <option value="" disabled>{tr("calendar.endTime")}</option>}
+          {timeOptionsWith(form.endTime).map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </AF>
+    </>
   );
 }
