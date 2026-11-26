@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Alert, ScrollView, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Choice, SectionTitle, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, Chip, Field, Header, Screen } from '@/components/ui';
+import { Btn, Card, Chip, Field, Header, Screen, ServiceThumb } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type SaleBody } from '@/lib/api-ext';
@@ -67,19 +68,26 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
   return (
     <Screen>
       <Header title={tr('sl.title')} subtitle={salon?.name} onBack={onClose} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
         <SectionTitle>{tr('sl.items')}</SectionTitle>
-        {lines.map((l) => (
-          <Card key={l.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginBottom: 8 }}>
-            <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{l.name}</Text>
-              <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{money(l.price, cur)}</Text>
-            </View>
-            <Pressable onPress={() => qty(l.key, -1)} accessibilityRole="button" accessibilityLabel={`${l.name} -1`}><Icon name="minus" size={22} color={t.ink} /></Pressable>
-            <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink, minWidth: 20, textAlign: 'center' }}>{l.qty}</Text>
-            <Pressable onPress={() => qty(l.key, 1)} accessibilityRole="button" accessibilityLabel={`${l.name} +1`}><Icon name="plus" size={22} color={t.ink} /></Pressable>
+        {lines.length ? (
+          <Card style={{ padding: 6, marginBottom: 12 }}>
+            {lines.map((l, i) => (
+              <View key={l.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderTopWidth: i ? 1 : 0, borderTopColor: t.line + '99' }}>
+                <ServiceThumb name={l.name} size={52} />
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16.5, letterSpacing: -0.2, color: t.ink }}>{l.name}</Text>
+                  <Text style={{ fontFamily: font.b, fontSize: 15, color: t.muted }}>{money(l.price * l.qty, cur)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.fill, borderRadius: 24, padding: 3 }}>
+                  <Pressable onPress={() => qty(l.key, -1)} accessibilityRole="button" accessibilityLabel={`${l.name} -1`} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="minus" size={18} color={t.ink} /></Pressable>
+                  <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink, minWidth: 22, textAlign: 'center' }}>{l.qty}</Text>
+                  <Pressable onPress={() => qty(l.key, 1)} accessibilityRole="button" accessibilityLabel={`${l.name} +1`} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={18} color={t.ink} /></Pressable>
+                </View>
+              </View>
+            ))}
           </Card>
-        ))}
+        ) : null}
         <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('sl.pickService')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
           {(quick.data ?? []).map((q) => <Chip key={`q${q.id}`} icon="star" label={`${q.serviceName} · ${money(q.price, cur)}`} onPress={() => add({ serviceId: q.serviceId, name: q.serviceName, price: q.price ?? 0, qty: 1 })} />)}
@@ -98,12 +106,23 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
         <SectionTitle>{tr('sl.method')}</SectionTitle>
         <Choice value={method} onChange={setMethod} options={METHODS.map((m) => ({ value: m, label: tr(`sales.m.${m}` as 'sales.m.CASH') }))} />
         {method === 'GIFT_CARD' ? <Field label={tr('sl.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" autoCorrect={false} /> : null}
-        <Card style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 12 }}>
-          <Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('sl.total')}</Text>
-          <Text style={{ fontFamily: font.x, fontSize: 24, color: t.ink }}>{money(total, cur)}</Text>
+        <Card style={{ gap: 6, marginTop: 8 }}>
+          {disc > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{tr('sl.discount')}</Text><Text style={{ fontFamily: font.b, fontSize: 15, color: t.ok }}>-{money(disc, cur)}</Text></View> : null}
+          {tipN > 0 ? <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{tr('sl.tip')}</Text><Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{money(tipN, cur)}</Text></View> : null}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Text style={{ fontFamily: font.s, fontSize: 16, color: t.muted }}>{tr('sl.total')}</Text>
+            <Text style={{ fontFamily: font.x, fontSize: 40, letterSpacing: -1.3, color: t.ink }}>{money(total, cur)}</Text>
+          </View>
         </Card>
-        <Btn label={`${tr('sl.charge')} ${money(total, cur)}`} loading={busy} disabled={!lines.length} onPress={() => void submit()} />
       </ScrollView>
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: 28 }}>
+        <Pressable onPress={() => void submit()} disabled={!lines.length || busy} haptic accessibilityRole="button" accessibilityLabel={tr('sl.charge')} style={{ opacity: !lines.length ? 0.5 : 1 }}>
+          <LinearGradient colors={['#1d1730', '#35276b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ height: 64, borderRadius: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 26, boxShadow: '0 16px 30px -12px rgba(29,23,48,.6)' } as any}>
+            <Text style={{ fontFamily: font.x, fontSize: 19, color: '#fff' }}>{busy ? '…' : `${money(total, cur)} ${tr('sl.charge').toLowerCase()}`}</Text>
+            <Icon name="chev" size={22} color="#fff" />
+          </LinearGradient>
+        </Pressable>
+      </View>
     </Screen>
   );
 }

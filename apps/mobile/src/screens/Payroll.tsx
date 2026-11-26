@@ -5,7 +5,7 @@ import { BottomSheet } from '@/components/BottomSheet';
 import { Choice, Line, TabBar, num } from '@/components/form';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, Chip, ErrorState, Field, Header, Pill, Ring, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
@@ -23,7 +23,8 @@ export function Payroll({ onBack }: { onBack: () => void }) {
   const { salon } = useApp();
   const sid = salon?.id ?? ''; const cur = salon?.currency;
   const [tab, setTab] = useState<'rules' | 'targets' | 'runs' | 'time'>('rules');
-  const month = toDay(new Date()).slice(0, 7);
+  const [mo, setMo] = useState(0);
+  const month = toDay(new Date(new Date().getFullYear(), new Date().getMonth() - mo, 1)).slice(0, 7);
   const rules = useLoad(() => apiB.commissionRules(sid), [sid]);
   const staff = useLoad(() => api.staff(sid), [sid]);
   const targets = useLoad(() => apiB.targets(sid, month).catch(() => []), [sid, month]);
@@ -43,7 +44,7 @@ export function Payroll({ onBack }: { onBack: () => void }) {
       <Header title={tr('pr.title')} subtitle={salon?.name} onBack={onBack} />
       <TabBar value={tab} onChange={setTab} tabs={[{ k: 'rules', label: tr('pr.rules') }, { k: 'targets', label: tr('pr.targets') }, { k: 'runs', label: tr('pr.runs') }, { k: 'time', label: tr('pr.time') }]} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48, gap: 10 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48, gap: 12 }}>
           {tab === 'rules' ? (
             <>
               {(rules.data ?? []).map((r) => (
@@ -62,14 +63,22 @@ export function Payroll({ onBack }: { onBack: () => void }) {
           ) : null}
           {tab === 'targets' ? (
             <>
-              <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{month}</Text>
-              {(targets.data ?? []).map((r) => (
-                <Card key={String(r.staffId)} onPress={() => { setTg({ id: String(r.staffId), name: r.staffName }); setRev(String(r.revenueTarget || '')); setBk(String(r.bookingsTarget || '')); }} style={{ gap: 2 }}>
-                  <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{r.staffName}</Text>
-                  <Line label={tr('rp.revenue')} value={`${money(r.revenueActual, cur)} / ${money(r.revenueTarget, cur)}`} />
-                  <Line label={tr('rp.bookings')} value={`${r.bookingsActual} / ${r.bookingsTarget}`} />
-                </Card>
-              ))}
+              <View style={{ flexDirection: 'row', gap: 8 }}>{[0, 1, 2].map((i) => <Chip key={i} label={toDay(new Date(new Date().getFullYear(), new Date().getMonth() - i, 1)).slice(0, 7)} active={mo === i} onPress={() => setMo(i)} />)}</View>
+              {(targets.data ?? []).map((r) => {
+                const pct = r.revenueTarget ? r.revenueActual / r.revenueTarget : 0;
+                const person = (staff.data ?? []).find((x) => String(x.id) === String(r.staffId));
+                return (
+                  <Card key={String(r.staffId)} onPress={() => { setTg({ id: String(r.staffId), name: r.staffName }); setRev(String(r.revenueTarget || '')); setBk(String(r.bookingsTarget || '')); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16 }}>
+                    <Avatar name={r.staffName} size={60} uri={person?.avatarUrl} />
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: t.ink }}>{r.staffName}</Text>
+                      <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{money(r.revenueActual, cur)}<Text style={{ fontFamily: font.m, color: t.muted }}> / {money(r.revenueTarget, cur)}</Text></Text>
+                      <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{r.bookingsActual} / {r.bookingsTarget} {tr('rp.bookings').toLowerCase()}</Text>
+                    </View>
+                    <Ring value={pct} size={66} />
+                  </Card>
+                );
+              })}
               {(targets.data ?? []).length === 0 ? <StateView icon="spark" title={tr('pr.noTargets')} /> : null}
             </>
           ) : null}
@@ -78,8 +87,9 @@ export function Payroll({ onBack }: { onBack: () => void }) {
               {(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => {
                 const on = (clocks.data ?? []).some((c) => String(c.staff_id) === String(s.id));
                 return (
-                  <Card key={String(s.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{s.name}</Text>{on ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.ok }}>{tr('pr.clockedIn')}</Text> : null}</View>
+                  <Card key={String(s.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <Avatar name={s.name} size={56} uri={s.avatarUrl} />
+                    <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink }}>{s.name}</Text>{on ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.ok }}>{tr('pr.clockedIn')}</Text> : null}</View>
                     <Btn label={on ? tr('pr.clockOut') : tr('pr.clockIn')} variant={on ? 'danger' : 'secondary'} loading={busy} onPress={() => void run(() => (on ? apiB.clockOut(sid, s.id) : apiB.clockIn(sid, s.id)), () => { void clocks.reload(); void sheet.reload(); })} />
                   </Card>
                 );

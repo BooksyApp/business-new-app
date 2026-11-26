@@ -121,8 +121,12 @@ const routes: [RegExp, Hit | unknown][] = [
   [/profit-and-loss/, { months: [{ month: '2026-11', revenue: 4820, expenses: 1240, wages: 1480, profit: 2100 }, { month: '2026-10', revenue: 4100, expenses: 1180, wages: 1400, profit: 1520 }], totals: { revenue: 8920, expenses: 2420, wages: 2880, profit: 3620 } }],
   [/\/tax/, { totals: { count: 120, net: 4090, tax: 730, gross: 4820 }, byRate: [{ rate: 18, net: 4090, tax: 730 }] }],
   [/\/cash-drawer/, null],
-  [/^\/team-permissions/, []],
-  [/^\/quick-sale/, []],
+  [/\/marketing-automation/, { birthdayEnabled: true, birthdayDaysBefore: 3, birthdaySubject: null, birthdayBody: null, winbackEnabled: false, winbackDaysAfter: 45, winbackSubject: null, winbackBody: null, sentLast30Days: 38 }],
+  [/^\/marketing\/campaigns/, [{ id: 1, name: 'Qara cümə endirimi', channel: 'EMAIL', segment: 'ALL_CLIENTS', subject: 's', body: 'b', status: 'SENT', recipientCount: 412, sentCount: 398 }, { id: 2, name: 'Yeni gel lak', channel: 'SMS', segment: 'VIP', subject: null, body: 'b', status: 'DRAFT', recipientCount: 86 }]],
+  [/\/staff-targets/, [{ staffId: 's1', staffName: 'Nigar', revenueTarget: 2400, bookingsTarget: 50, revenueActual: 2100, bookingsActual: 44 }, { staffId: 's2', staffName: 'Aysel', revenueTarget: 2000, bookingsTarget: 45, revenueActual: 1500, bookingsActual: 39 }, { staffId: 's3', staffName: 'Sabina', revenueTarget: 1800, bookingsTarget: 30, revenueActual: 1900, bookingsActual: 31 }]],
+  [/\/roles$/, [{ id: 1, name: 'Sahib', isOwner: true, isDefault: false, permissions: ['a', 'b', 'c', 'd'], memberCount: 1 }, { id: 2, name: 'Menecer', isOwner: false, isDefault: false, permissions: ['a', 'b'], memberCount: 2 }, { id: 3, name: 'Mütəxəssis', isOwner: false, isDefault: true, permissions: ['a'], memberCount: 4 }]],
+  [/^\/quick-sale/, [{ id: 1, serviceId: 'v3', serviceName: 'Gel lak', price: 40 }, { id: 2, serviceId: 'v2', serviceName: 'Qaş və kirpik', price: 35 }]],
+  [/^\/team-permissions/, [{ key: 'a', group: 'Rezerv', label: 'Rezervlərə baxış', description: '' }, { key: 'b', group: 'Rezerv', label: 'Rezerv əlavə et', description: '' }, { key: 'c', group: 'Kassa', label: 'Satış', description: '' }, { key: 'd', group: 'Kassa', label: 'Qaytarma', description: '' }]],
 ];
 
 export function install() {

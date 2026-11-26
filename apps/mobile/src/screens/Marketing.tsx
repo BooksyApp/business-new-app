@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Choice, Line, TabBar, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
+import { Btn, Card, Circ, ErrorState, Field, Header, Hero, Pill, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiB, type Automation } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
@@ -43,14 +44,14 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   const aud = useLoad(() => (sheet && tab === 'campaigns' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel, tab]);
   const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
-  const addBtn = <Pressable onPress={() => setSheet(true)} accessibilityRole="button" accessibilityLabel={tr('mk.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Circ icon="plus" violet label={tr('mk.add')} onPress={() => setSheet(true)} />;
   const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : tab === 'members' ? mem : tab === 'refs' ? refs : auto;
   return (
     <Screen>
       <Header title={tr('mk.title')} subtitle={salon?.name} onBack={onBack} right={tab === 'campaigns' || tab === 'promos' ? addBtn : undefined} />
       <TabBar value={tab} onChange={setTab} tabs={[{ k: 'campaigns', label: tr('mk.campaigns') }, { k: 'promos', label: tr('mk.promos') }, { k: 'auto', label: tr('mk.auto') }, { k: 'members', label: tr('x3.memberships') }, { k: 'refs', label: tr('x3.referrals') }]} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'members' ? (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}>
           {(mem.data ?? []).map((m) => (
             <Card key={String(m.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: m.active ? 1 : 0.6 }}>
               <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{m.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(m.price, salon?.currency)} / {m.billing_period_months} · -{m.discount_percent}% · {tr('sx.sessions', { n: m.included_sessions })}</Text></View>
@@ -86,40 +87,48 @@ export function Marketing({ onBack }: { onBack: () => void }) {
           <Btn label={tr('common.save')} loading={busy} disabled={!mn.trim() || !(num(mp) >= 0)} onPress={() => void run(() => apiB.createMembership(sid, { name: mn.trim(), price: num(mp), billingPeriodMonths: Math.max(1, Math.round(num(mm)) || 1), discountPercent: Math.min(100, Math.max(0, Math.round(num(md)) || 0)), includedSessions: Math.max(0, Math.round(num(ms)) || 0) }), () => { setMn(''); setMp(''); void mem.reload(); })} />
         </ScrollView>
       ) : tab === 'refs' ? (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}>
           {refs.data?.[1] ? <Card><Line label={tr('x3.codes')} value={`${refs.data[1].activeReferralCodes}/${refs.data[1].totalReferralCodes}`} /><Line label={tr('x3.uses')} value={`${refs.data[1].successfulUsages}/${refs.data[1].totalUsages}`} /><Line label={tr('x3.rewards')} value={money(refs.data[1].totalRewardsGiven, salon?.currency)} bold /></Card> : null}
           {(refs.data?.[0] ?? []).map((c) => <Card key={String(c.id)}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink, letterSpacing: 0.5 }}>{c.code}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{c.status} · {c.currentUses}{c.maxUses ? `/${c.maxUses}` : ''} · {money(c.rewardAmount, salon?.currency)}</Text></Card>)}
           {(refs.data?.[0] ?? []).length === 0 ? <StateView icon="share" title={tr('x3.noRefs')} /> : null}
         </ScrollView>
       ) : tab === 'auto' ? (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
           {au ? (
-            <>
-              <ToggleRow label={tr('mk.birthday')} hint={tr('mk.birthdayHint')} value={au.birthdayEnabled} onChange={(v) => setAu({ ...au, birthdayEnabled: v })} />
-              <Field label={tr('mk.daysBefore')} value={String(au.birthdayDaysBefore)} onChangeText={(v) => setAu({ ...au, birthdayDaysBefore: Math.max(0, Math.round(num(v)) || 0) })} keyboardType="number-pad" />
-              <ToggleRow label={tr('mk.winback')} hint={tr('mk.winbackHint')} value={au.winbackEnabled} onChange={(v) => setAu({ ...au, winbackEnabled: v })} />
-              <Field label={tr('mk.daysAfter')} value={String(au.winbackDaysAfter)} onChangeText={(v) => setAu({ ...au, winbackDaysAfter: Math.max(1, Math.round(num(v)) || 1) })} keyboardType="number-pad" />
-              <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 10 }}>{tr('mk.sent30', { n: au.sentLast30Days })}</Text>
+            <View style={{ gap: 12 }}>
+              <Hero><View style={{ padding: 20, gap: 2 }}><Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('mk.auto')}</Text><Text style={{ fontFamily: font.x, fontSize: 40, letterSpacing: -1.2, color: t.ink }}>{au.sentLast30Days}</Text><Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('mk.sent30', { n: au.sentLast30Days })}</Text></View></Hero>
+              <Card style={{ gap: 4 }}>
+                <ToggleRow label={tr('mk.birthday')} hint={tr('mk.birthdayHint')} value={au.birthdayEnabled} onChange={(v) => setAu({ ...au, birthdayEnabled: v })} />
+                {au.birthdayEnabled ? <Field label={tr('mk.daysBefore')} value={String(au.birthdayDaysBefore)} onChangeText={(v) => setAu({ ...au, birthdayDaysBefore: Math.max(0, Math.round(num(v)) || 0) })} keyboardType="number-pad" /> : null}
+              </Card>
+              <Card style={{ gap: 4 }}>
+                <ToggleRow label={tr('mk.winback')} hint={tr('mk.winbackHint')} value={au.winbackEnabled} onChange={(v) => setAu({ ...au, winbackEnabled: v })} />
+                {au.winbackEnabled ? <Field label={tr('mk.daysAfter')} value={String(au.winbackDaysAfter)} onChangeText={(v) => setAu({ ...au, winbackDaysAfter: Math.max(1, Math.round(num(v)) || 1) })} keyboardType="number-pad" /> : null}
+              </Card>
               <Btn label={tr('common.save')} loading={busy} onPress={() => void run(() => { const { sentLast30Days: _s, ...body } = au; return apiB.saveAutomation(sid, body); }, () => void auto.reload())} />
-            </>
+            </View>
           ) : null}
         </ScrollView>
       ) : tab === 'campaigns' ? (
-        <FlatList data={camps.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={camps.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={camps.refreshing} onRefresh={() => void camps.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="send" title={tr('mk.empty')} body={tr('mk.emptyBody')} />}
           renderItem={({ item: c }) => (
-            <Card style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{c.name}</Text>
-                <Pill text={c.status} tone={c.status === 'SENT' ? 'ok' : c.status === 'FAILED' ? 'guava' : 'muted'} />
+            <LinearGradient colors={c.status === 'SENT' ? ['#1d1730', '#35276b'] : c.status === 'FAILED' ? ['#e83e63', '#a02244'] : ['#6f52ed', '#a24cd8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 28, padding: 20, gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}><Icon name={c.channel === 'SMS' ? 'chat' : 'mail'} size={20} color="#fff" /></View>
+                <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: '#fff' }}>{c.name}</Text>
+                <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.18)', justifyContent: 'center' }}><Text style={{ fontFamily: font.b, fontSize: 13, color: '#fff' }}>{c.status}</Text></View>
               </View>
-              <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{c.channel} · {tr(`mk.seg.${c.segment}` as 'mk.seg.ALL_CLIENTS')} · {c.recipientCount}</Text>
-              {c.status === 'DRAFT' ? <Btn label={tr('mk.send')} variant="secondary" loading={busy} onPress={() => Alert.alert(tr('mk.sendConfirm'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('mk.send'), onPress: () => void run(() => apiB.queueCampaign(sid, c.id), () => void camps.reload()) }])} /> : null}
-            </Card>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <View><Text style={{ fontFamily: font.x, fontSize: 44, lineHeight: 48, letterSpacing: -1.5, color: '#fff' }}>{c.status === 'SENT' ? (c.sentCount ?? c.recipientCount) : c.recipientCount}</Text><Text style={{ fontFamily: font.s, fontSize: 14, color: 'rgba(255,255,255,.8)' }}>{tr(`mk.seg.${c.segment}` as 'mk.seg.ALL_CLIENTS')}</Text></View>
+                <Text style={{ fontFamily: font.b, fontSize: 14, color: 'rgba(255,255,255,.75)' }}>{c.channel}</Text>
+              </View>
+              {c.status === 'DRAFT' ? <Btn label={tr('mk.send')} small loading={busy} onPress={() => Alert.alert(tr('mk.sendConfirm'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('mk.send'), onPress: () => void run(() => apiB.queueCampaign(sid, c.id), () => void camps.reload()) }])} /> : null}
+            </LinearGradient>
           )} />
       ) : (
-        <FlatList data={promos.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={promos.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}
           ListEmptyComponent={<StateView icon="tag" title={tr('mk.noPromos')} />}
           renderItem={({ item: c }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: c.active ? 1 : 0.55 }}>

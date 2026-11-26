@@ -5,8 +5,9 @@ import { ToggleRow } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, Circ, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
+import { api } from '@/lib/api';
 import { apiB, type Role } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
 import { useLoad } from '@/lib/useLoad';
@@ -19,6 +20,7 @@ export function Roles({ onBack }: { onBack: () => void }) {
   const { salon } = useApp();
   const sid = salon?.id ?? '';
   const list = useLoad(() => apiB.roles(sid), [sid]);
+  const staff = useLoad(() => api.staff(sid).catch(() => []), [sid]);
   const perms = useLoad(() => apiB.perms().catch(() => []), []);
   const [edit, setEdit] = useState<Role | 'new' | null>(null);
   const [name, setName] = useState(''); const [desc, setDesc] = useState(''); const [sel, setSel] = useState<string[]>([]);
@@ -37,7 +39,7 @@ export function Roles({ onBack }: { onBack: () => void }) {
     return (
       <Screen>
         <Header title={edit === 'new' ? tr('rl.add') : edit.name} onBack={() => setEdit(null)} />
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
           <Field label={tr('sx.name')} value={name} onChangeText={setName} editable={!ro} />
           <Field label={tr('sx.description')} value={desc} onChangeText={setDesc} editable={!ro} />
           {groups.map((g) => (
@@ -54,22 +56,32 @@ export function Roles({ onBack }: { onBack: () => void }) {
       </Screen>
     );
   }
-  const addBtn = <Pressable onPress={() => open('new')} accessibilityRole="button" accessibilityLabel={tr('rl.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Circ icon="plus" violet label={tr('rl.add')} onPress={() => open('new')} />;
   return (
     <Screen>
       <Header title={tr('rl.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={4} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={list.data ?? []} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="shield" title={tr('rl.empty')} />}
           renderItem={({ item: r }) => (
-            <Card onPress={() => open(r)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Icon name="shield" size={22} color={t.vtext} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{r.name}</Text>
-                <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{tr('rl.members', { n: r.memberCount })}</Text>
+            <Card onPress={() => open(r)} style={{ gap: 14, padding: 18 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="shield" size={24} color={t.vtext} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink }}>{r.name}</Text>
+                  <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('rl.members', { n: r.memberCount })}</Text>
+                </View>
+                {r.isOwner ? <Pill text={tr('rl.owner')} tone="violet" /> : <Icon name="chev" size={20} color={t.ink3} />}
               </View>
-              {r.isOwner ? <Pill text={tr('rl.owner')} tone="violet" /> : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {(staff.data ?? []).filter((x) => x.isActive !== false).slice(0, Math.max(1, Math.min(4, r.memberCount || 1))).map((x, i) => <View key={x.id} style={{ marginLeft: i ? -12 : 0 }}><Avatar name={x.name} size={38} uri={x.avatarUrl} /></View>)}
+                {r.memberCount > 4 ? <Text style={{ marginLeft: 8, fontFamily: font.b, fontSize: 14, color: t.muted }}>+{r.memberCount - 4}</Text> : null}
+              </View>
+              {r.permissions.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {(perms.data ?? []).filter((x) => r.permissions.includes(x.key)).slice(0, 3).map((x) => <View key={x.key} style={{ height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: t.fill, justifyContent: 'center' }}><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13, color: t.ink }}>{x.label}</Text></View>)}
+                {r.permissions.length > 3 ? <View style={{ height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: t.vsoft, justifyContent: 'center' }}><Text style={{ fontFamily: font.b, fontSize: 13, color: t.vtext }}>+{r.permissions.length - 3}</Text></View> : null}
+              </View> : null}
             </Card>
           )} />
       )}

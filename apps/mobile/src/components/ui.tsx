@@ -33,17 +33,44 @@ export function Circ({ icon, onPress, label, violet, size = 44, badge }: { icon:
   );
 }
 
-/** Screen header. Top level: big left title (34/800) with an optional line under it. Pushed screen (onBack): round back button + 24/800 title. */
-export function Header({ title, subtitle, onBack, right }: { title: string; subtitle?: string; onBack?: () => void; right?: React.ReactNode }) {
+/** Back circle of the customer app (BackCircle): 40, surface, 1px line, 18 chevron. */
+export function BackCircle({ onPress }: { onPress: () => void }) {
   const { t } = useTheme();
   return (
-    <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: onBack ? 10 : 14 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 56, gap: 12 }}>
-        {onBack ? <Circ icon="back" onPress={onBack} label={tr('common.back')} /> : null}
-        <Text accessibilityRole="header" numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: onBack ? 24 : 34, lineHeight: onBack ? 30 : 42, letterSpacing: onBack ? -0.5 : -1.1, color: t.ink }}>{title}</Text>
-        {right ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>{right}</View> : null}
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={tr('common.back')} hitSlop={2}
+      style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: t.line }}>
+      <Icon name="back" size={18} color={t.ink} />
+    </Pressable>
+  );
+}
+
+/**
+ * Same two header types as the customer app. Tab level = `Title` (34/800, -1 tracking, 14/600 muted line under it, actions on the right).
+ * Pushed screen = `BookNav` (48 high: BackCircle, centred 15/800 title with a 12/600 line, right slot min 40).
+ */
+export function Header({ title, subtitle, onBack, right }: { title: string; subtitle?: string; onBack?: () => void; right?: React.ReactNode }) {
+  const { t } = useTheme();
+  if (onBack) {
+    return (
+      <View style={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 48, gap: 8 }}>
+          <BackCircle onPress={onBack} />
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.x, fontSize: 15, color: t.ink, lineHeight: 18 }}>{title}</Text>
+            {subtitle ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12, color: t.muted, lineHeight: 15 }}>{subtitle}</Text> : null}
+          </View>
+          <View style={{ minWidth: 40, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>{right}</View>
+        </View>
       </View>
-      {subtitle ? <Text numberOfLines={2} style={{ fontFamily: font.m, fontSize: 15, lineHeight: 21, color: t.muted, marginTop: onBack ? 0 : 2 }}>{subtitle}</Text> : null}
+    );
+  }
+  return (
+    <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flex: 1 }}>
+        <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.x, fontSize: 34, letterSpacing: -1, color: t.ink }}>{title}</Text>
+        {subtitle ? <Text numberOfLines={2} style={{ fontFamily: font.s, fontSize: 14, color: t.muted, marginTop: 2 }}>{subtitle}</Text> : null}
+      </View>
+      {right ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>{right}</View> : null}
     </View>
   );
 }
@@ -326,6 +353,21 @@ export function MiniBars({ prev, cur }: { prev: number; cur: number }) {
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 5, height: 34 }}>
       <View style={{ width: 12, height: Math.max(4, (prev / m) * 34), borderRadius: 5, backgroundColor: t.lilac }} />
       <View style={{ width: 12, height: Math.max(4, (cur / m) * 34), borderRadius: 5, backgroundColor: t.violet }} />
+    </View>
+  );
+}
+
+/** Circular progress (0..1) with a centred label. */
+export function Ring({ value, size = 64, label }: { value: number; size?: number; label?: string }) {
+  const { t } = useTheme();
+  const v = Math.max(0, Math.min(1, value)); const r = (size - 10) / 2; const c = 2 * Math.PI * r;
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
+        <Path d={`M${size / 2} 5 a${r} ${r} 0 1 1 0 ${2 * r} a${r} ${r} 0 1 1 0 ${-2 * r}`} fill="none" stroke={t.fill2} strokeWidth={7} />
+        <Path d={`M${size / 2} 5 a${r} ${r} 0 1 1 0 ${2 * r} a${r} ${r} 0 1 1 0 ${-2 * r}`} fill="none" stroke={v >= 1 ? t.ok : t.violet} strokeWidth={7} strokeLinecap="round" strokeDasharray={`${c * v} ${c}`} />
+      </Svg>
+      <Text style={{ fontFamily: font.x, fontSize: size * 0.24, color: t.ink }}>{label ?? `${Math.round(v * 100)}%`}</Text>
     </View>
   );
 }

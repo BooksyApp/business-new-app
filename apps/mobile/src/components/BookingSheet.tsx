@@ -77,9 +77,9 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
                 <Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>№ {String(a.id).slice(0, 6).toUpperCase()}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 }}>
-                <Avatar name={a.clientName ?? ''} size={64} uri={a.clientId != null ? (recallClient(String(a.clientId)) as { avatarUrl?: string | null } | undefined)?.avatarUrl : null} />
+                <Avatar name={a.clientName ?? ''} size={84} uri={a.clientId != null ? (recallClient(String(a.clientId)) as { avatarUrl?: string | null } | undefined)?.avatarUrl : null} />
                 <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.6, color: t.ink }}>{a.clientName || '-'}</Text>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 28, letterSpacing: -0.8, color: t.ink }}>{a.clientName || '-'}</Text>
                   <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{a.clientPhone || dateLabel(fromIso(a.appointmentDate))}</Text>
                 </View>
               </View>
@@ -103,6 +103,22 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
               ) : null}
             </View>
           </View>
+          {a.status !== 'CANCELLED' && a.status !== 'NO_SHOW' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6 }}>
+              {(['PENDING', 'CONFIRMED', 'COMPLETED'] as const).map((st, i, arr) => {
+                const idx = arr.indexOf(a.status as 'PENDING'); const done = i <= idx;
+                return (
+                  <React.Fragment key={st}>
+                    <View style={{ alignItems: 'center', gap: 6, width: 78 }}>
+                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: done ? t.violet : t.fill2, alignItems: 'center', justifyContent: 'center' }}>{done ? <Icon name="check" size={16} color="#fff" /> : null}</View>
+                      <Text numberOfLines={1} style={{ fontFamily: i === idx ? font.x : font.s, fontSize: 13, color: i === idx ? t.ink : t.muted }}>{tr(`status.${st}`)}</Text>
+                    </View>
+                    {i < arr.length - 1 ? <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i < idx ? t.violet : t.fill2, marginBottom: 20 }} /> : null}
+                  </React.Fragment>
+                );
+              })}
+            </View>
+          ) : null}
           {a.notes ? (
             <View style={{ borderRadius: 16, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, paddingHorizontal: 16, paddingTop: 9, paddingBottom: 10, minHeight: 58 }}>
               <Text style={{ fontFamily: font.s, fontSize: 14, color: t.muted }}>{tr('appt.salonNote')}</Text>

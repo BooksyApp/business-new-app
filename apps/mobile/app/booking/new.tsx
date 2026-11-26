@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from '@/lib/insets';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Chip, ErrorState, Field, Skeleton, StateView } from '@/components/ui';
+import { Avatar, ServiceThumb, Btn, Chip, ErrorState, Field, Skeleton, StateView } from '@/components/ui';
 import { DayStrip } from '@/components/calendar';
 import { t as tr } from '@/i18n';
 import * as Haptics from 'expo-haptics';
@@ -112,7 +112,7 @@ export default function NewBooking() {
   const titles = [tr('create.client'), tr('create.pickService'), tr('create.pickTime'), tr('create.confirmTitle')];
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={{ flex: 1, paddingTop: ins.top, paddingHorizontal: 16 }}>
+      <View style={{ flex: 1, paddingTop: ins.top + 10, paddingHorizontal: 20 }}>
         <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="back" size={22} color={t.ink} /></Pressable>
           <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink }}>{tr('create.title')}</Text>
@@ -136,7 +136,12 @@ export default function NewBooking() {
           {step === 2 && service ? <TimeStep sid={sid} service={service} picked={picked} master={master} date={date} time={time} setMaster={(m) => { setMaster(m); setTime(null); }} setDate={(d) => { setDate(d); setTime(null); }} setTime={setTime} /> : null}
           {step === 3 && client && service && master && time ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140, gap: 14 }}>
-              <View style={{ backgroundColor: t.surface, borderRadius: 22, padding: 18, gap: 12, ...cardShadow }}>
+              <View style={{ backgroundColor: t.surface, borderRadius: 28, padding: 20, gap: 14, ...cardShadow }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingBottom: 6 }}>
+                  <Avatar name={client.name} size={64} uri={(recallClient(client.id) as { avatarUrl?: string | null } | undefined)?.avatarUrl} />
+                  <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 22, letterSpacing: -0.5, color: t.ink }}>{client.name}</Text><Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{picked.map((x) => x.name).join(' + ')}</Text></View>
+                  <Avatar name={master.name} size={44} uri={master.avatarUrl} />
+                </View>
                 {([[tr('create.client'), client.name], [tr('create.service'), picked.map((x) => x.name).join(' + ')], [tr('create.master'), master.name], [tr('create.date'), dateLabel(date)], [tr('create.time'), `${time} – ${fromMin(toMin(time) + totalMin)}`], [tr('appt.price'), money(totalPrice, salon?.currency)]] as const).map(([k, v]) => (
                   <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                     <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{k}</Text>
@@ -176,12 +181,12 @@ export default function NewBooking() {
   );
 }
 
-function Row({ name, sub, on, onPress, uri }: { name: string; sub?: string; on: boolean; onPress: () => void; uri?: string | null }) {
+function Row({ name, sub, on, onPress, uri, thumb }: { name: string; sub?: string; on: boolean; onPress: () => void; uri?: string | null; thumb?: React.ReactNode }) {
   const { t } = useTheme();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 84, borderRadius: 26, backgroundColor: t.surface, borderWidth: on ? 2 : 0, borderColor: t.violet, ...cardShadow }}>
-      <Avatar name={name} size={56} uri={uri} />
+      {thumb ?? <Avatar name={name} size={56} uri={uri} />}
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{name}</Text>
         {sub ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{sub}</Text> : null}
@@ -262,7 +267,7 @@ function ServiceStep({ sid, sel, cur, onToggle }: { sid: string; sel: Service[];
     <View style={{ flex: 1 }}>
       <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted, marginTop: -6, marginBottom: 10 }}>{tr('create.multiHint')}</Text>
       <FlatList data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ gap: 10, paddingBottom: 140 }}
-        renderItem={({ item: s }) => <Row name={s.name} sub={`${s.durationMinutes ?? 30} ${tr('common.min')} · ${money(s.price, cur)}`} on={sel.some((x) => x.id === s.id)} onPress={() => onToggle(s)} />} />
+        renderItem={({ item: s }) => <Row thumb={<ServiceThumb name={s.name} cat={s.categoryName} size={56} />} name={s.name} sub={`${s.durationMinutes ?? 30} ${tr('common.min')} · ${money(s.price, cur)}`} on={sel.some((x) => x.id === s.id)} onPress={() => onToggle(s)} />} />
     </View>
   );
 }
@@ -280,7 +285,20 @@ function TimeStep({ sid, service, picked, master, date, time, setMaster, setDate
       {staff.error ? <ErrorState error={staff.error} onRetry={() => void staff.reload()} /> : staff.loading ? <Skeleton rows={1} height={72} /> : masters.length === 0 ? (
         <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{tr('create.noMasters')}</Text>
       ) : (
-        <View style={{ gap: 10 }}>{masters.map((m) => <Row key={m.id} uri={m.avatarUrl} name={m.name} sub={`${picked.map((x) => x.name).join(' + ')} · ${picked.reduce((n, x) => n + (x.durationMinutes ?? 30), 0)} ${tr('common.min')}`} on={master?.id === m.id} onPress={() => setMaster(m)} />)}</View>
+        <View>
+          <Text style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink, marginBottom: 12 }}>{tr('create.master')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}>
+            {masters.map((m) => {
+              const on = master?.id === m.id;
+              return (
+                <Pressable key={m.id} onPress={() => setMaster(m)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={m.name} style={{ alignItems: 'center', gap: 6, width: 82 }}>
+                  <View style={{ width: 78, height: 78, borderRadius: 39, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: on ? t.ink : 'transparent' }}><Avatar name={m.name} size={68} uri={m.avatarUrl} /></View>
+                  <Text numberOfLines={1} style={{ fontFamily: on ? font.x : font.s, fontSize: 14, color: on ? t.ink : t.muted }}>{m.name}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
       {master ? (
         <>
@@ -295,7 +313,7 @@ function TimeStep({ sid, service, picked, master, date, time, setMaster, setDate
                 const on = time === s;
                 return (
                   <Pressable key={s} onPress={() => setTime(s)} accessibilityRole="button" accessibilityState={{ selected: on }}
-                    style={{ width: '31.5%', height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? t.violet : t.vsoft }}>
+                    style={{ width: '31.5%', height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? t.violet : t.vsoft }}>
                     <Text style={{ fontFamily: font.b, fontSize: 14.5, color: on ? '#fff' : t.vtext }}>{hhmm(s)}</Text>
                   </Pressable>
                 );
