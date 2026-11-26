@@ -7,7 +7,7 @@ import { Choice, MultiChoice, SectionTitle, ToggleRow } from '@/components/form'
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Card, Circ, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, Circ, ErrorState, Field, Header, HeroCard, Pill, Screen, Section, Skeleton, StateView, StickyCta, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type StaffBody, type StaffFull } from '@/lib/api-ext';
@@ -71,30 +71,36 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
   return (
     <Screen>
       <Header title={staff ? tr('tm.editTitle') : tr('tm.newTitle')} subtitle={staff?.name} onBack={onClose} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}>
-        {staff ? <View style={{ alignItems: 'center', gap: 8, marginBottom: 12 }}><Avatar name={staff.name} uri={avatar} size={72} /><Btn label={tr('ad.avatar')} variant="secondary" icon="img" onPress={() => void pickAvatar()} /></View> : null}
-        <Field label={tr('tm.name')} value={name} onChangeText={setName} autoCapitalize="words" />
-        <Field label={tr('create.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-        <Field label={tr('cl.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
-        <Field label={tr('tm.position')} value={pos} onChangeText={setPos} />
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 4 }} showsVerticalScrollIndicator={false}>
+        <HeroCard photo={staff ? (avatar ?? null) : undefined} icon="user-plus" title={name || tr('tm.newTitle')} sub={pos}>
+          {staff ? <Btn label={tr('ad.avatar')} variant="secondary" small icon="img" onPress={() => void pickAvatar()} /> : null}
+        </HeroCard>
+        <Section title={tr('ux.secBasics')}>
+          <Field label={tr('tm.name')} value={name} onChangeText={setName} autoCapitalize="words" />
+          <Field label={tr('tm.position')} value={pos} onChangeText={setPos} />
+        </Section>
+        <Section title={tr('ux.secContact')}>
+          <Field label={tr('create.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <Field label={tr('cl.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
+        </Section>
         {staff ? <ToggleRow label={active ? tr('tm.deactivate') : tr('tm.activate')} value={active} onChange={setActive} /> : null}
         {staff?.role ? (<><SectionTitle>{tr('tm.role')}</SectionTitle><Choice value={role} onChange={setRole} options={['OWNER', 'MANAGER', 'STAFF'].map((r) => ({ value: r, label: r }))} /></>) : null}
         <SectionTitle>{tr('tm.services')}</SectionTitle>
         <MultiChoice value={ids} onChange={setIds} options={(svc.data ?? []).filter((s) => s.isActive).map((s) => ({ value: String(s.id), label: s.name }))} />
         <SectionTitle>{tr('tm.schedule')}</SectionTitle>
         {DAYS.map((d) => (
-          <View key={d} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Pressable onPress={() => setDay(d, { on: !sched[d].on })} accessibilityRole="button" accessibilityState={{ selected: sched[d].on }} style={{ width: 64, height: 44, borderRadius: 14, backgroundColor: sched[d].on ? t.vsoft : t.fill, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontFamily: font.b, fontSize: 14, color: sched[d].on ? t.vtext : t.muted }}>{tr(`tm.days.${d}` as 'tm.days.MONDAY')}</Text>
-            </Pressable>
+          <Card key={d} style={{ gap: 8, padding: 14, marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink }}>{tr(`tm.days.${d}` as 'tm.days.MONDAY')}</Text><Text style={{ fontFamily: font.m, fontSize: 14, color: sched[d].on ? t.ok : t.muted }}>{sched[d].on ? `${sched[d].from} - ${sched[d].to}` : tr('tm.closed')}</Text></View>
+              <Toggle on={sched[d].on} onChange={(v) => setDay(d, { on: v })} label={d} />
+            </View>
             {sched[d].on ? (
-              <>
-                <Field label="" value={sched[d].from} onChangeText={(v) => setDay(d, { from: v })} keyboardType="numbers-and-punctuation" maxLength={5} style={{ flex: 1, textAlign: 'center' }} />
-                <Text style={{ color: t.muted }}>-</Text>
-                <Field label="" value={sched[d].to} onChangeText={(v) => setDay(d, { to: v })} keyboardType="numbers-and-punctuation" maxLength={5} style={{ flex: 1, textAlign: 'center' }} />
-              </>
-            ) : <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{tr('tm.closed')}</Text>}
-          </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}><Field label={tr('ux.opensAt')} value={sched[d].from} onChangeText={(v) => setDay(d, { from: v })} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                <View style={{ flex: 1 }}><Field label={tr('ux.closesAt')} value={sched[d].to} onChangeText={(v) => setDay(d, { to: v })} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+              </View>
+            ) : null}
+          </Card>
         ))}
         {staff ? (
           <>
@@ -109,11 +115,8 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
             <Btn label={tr('tm.addTimeOff')} variant="secondary" icon="plus" onPress={() => setBlock(true)} style={{ marginBottom: 8 }} />
           </>
         ) : null}
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-          {staff && email.trim() ? <Btn label={tr('tm.invite')} variant="secondary" icon="mail" style={{ flex: 1 }} loading={busy} onPress={() => void save(true)} /> : null}
-          <Btn label={tr('common.save')} style={{ flex: 1 }} loading={busy} onPress={() => void save(false)} />
-        </View>
       </ScrollView>
+      <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save(false)} secondary={staff && email.trim() ? { label: tr('tm.invite'), onPress: () => void save(true) } : undefined} />
       {staff ? <BlockTimeSheet open={block} date={new Date()} masters={[{ id: staff.id, name: staff.name }]} preset={String(staff.id)} existing={null} onClose={() => setBlock(false)} onDone={() => { setBlock(false); void off.reload(); }} /> : null}
     </Screen>
   );

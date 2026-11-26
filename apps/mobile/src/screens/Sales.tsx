@@ -80,7 +80,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
           )} />
       )}
       <BottomSheet open={!!refund} onClose={() => setRefund(null)}>
-        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 4 }}>{tr('sl.refund')}</Text>
+        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('sl.refund')}</Text>
         <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 12 }}>{tr('sl.refundMax', { n: money(refund?.total, salon?.currency) })}</Text>
         <Field label={tr('sl.refundAmount')} value={amt} onChangeText={setAmt} keyboardType="decimal-pad" />
         <Field label={tr('sl.refundReason')} value={why} onChangeText={setWhy} />

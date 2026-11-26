@@ -2,6 +2,11 @@
 export const uxEn = {
   ux: {
     //@@en
+    me: 'You',
+    changePick: 'Pick another',
+    uploadNow: 'Upload',
+    camera: 'Camera',
+    gallery: 'Gallery',
     closesAt: 'Closes',
     opensAt: 'Opens',
     planLine: 'Plan',
@@ -76,6 +81,11 @@ export const uxEn = {
 export const uxAz: typeof uxEn = {
   ux: {
     //@@az
+    me: 'Siz',
+    changePick: 'Başqasını seç',
+    uploadNow: 'Yüklə',
+    camera: 'Kamera',
+    gallery: 'Qalereya',
     closesAt: 'Bağlanır',
     opensAt: 'Açılır',
     planLine: 'Plan',
@@ -150,6 +160,11 @@ export const uxAz: typeof uxEn = {
 export const uxRu: typeof uxEn = {
   ux: {
     //@@ru
+    me: 'Вы',
+    changePick: 'Выбрать другое',
+    uploadNow: 'Загрузить',
+    camera: 'Камера',
+    gallery: 'Галерея',
     closesAt: 'Закрытие',
     opensAt: 'Открытие',
     planLine: 'Тариф',

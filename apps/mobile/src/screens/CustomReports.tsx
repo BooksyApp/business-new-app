@@ -3,7 +3,7 @@ import { toast } from '@/lib/toast';
 import { Alert, ScrollView, View } from 'react-native';
 import { Choice, MultiChoice } from '@/components/form';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Card, Chip, ErrorState, Header, HeroCard, Screen, Section, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { toDay } from '@/lib/api';
 import { apiB, type ReportResult } from '@/lib/api-biz';
@@ -35,12 +35,15 @@ export function CustomReports({ onBack }: { onBack: () => void }) {
       <Header title={tr('cr.title')} subtitle={salon?.name} onBack={onBack} />
       {cat.error && !cat.data ? <ErrorState error={cat.error} onRetry={() => void cat.reload()} /> : cat.loading && !cat.data ? <Skeleton rows={3} /> : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}>
-          <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('cr.dataset')}</Text>
-          <Choice value={ds} onChange={(v) => { setDs(v); setCols([]); setRes(null); }} options={(cat.data ?? []).map((d) => ({ value: d.key, label: d.label }))} />
-          {cur ? (<><Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('cr.columns')}</Text><MultiChoice value={cols} onChange={setCols} options={cur.columns.map((c) => ({ value: c.key, label: c.label }))} /><Btn label={tr('cr.run')} loading={busy} onPress={() => void run()} /></>) : <StateView icon="spark" title={tr('cr.pick')} />}
+          <HeroCard dark icon="paper" title={tr('cr.title')} sub={tr('cr.dataset')} />
+          <Section title={tr('cr.dataset')}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>{(cat.data ?? []).map((d) => <Chip key={d.key} label={d.label} active={ds === d.key} onPress={() => { setDs(d.key); setCols([]); setRes(null); }} />)}</ScrollView>
+          </Section>
+          {cur ? (<Section title={tr('cr.columns')}><MultiChoice value={cols} onChange={setCols} options={cur.columns.map((c) => ({ value: c.key, label: c.label }))} /><Btn label={tr('cr.run')} loading={busy} onPress={() => void run()} /></Section>) : <StateView icon="spark" title={tr('cr.pick')} />}
           {res ? (res.rows.length === 0 ? <StateView icon="paper" title={tr('rp.empty')} /> : res.rows.slice(0, 100).map((r, i) => (
-            <Card key={i} style={{ gap: 2, padding: 12 }}>
-              {res.columns.map((c, j) => <View key={c.key} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{c.label}</Text><Text style={{ fontFamily: font.s, fontSize: 14, color: t.ink, flexShrink: 1, textAlign: 'right' }}>{String(r[j] ?? '-')}</Text></View>)}
+            <Card key={i} style={{ gap: 4, padding: 18 }}>
+              <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 22, letterSpacing: -0.5, color: t.ink, marginBottom: 4 }}>{String(r[0] ?? '-')}</Text>
+              {res.columns.slice(1).map((c, j0) => { const j = j0 + 1; return <View key={c.key} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}><Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{c.label}</Text><Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink, flexShrink: 1, textAlign: 'right' }}>{String(r[j] ?? '-')}</Text></View>; })}
             </Card>
           ))) : null}
         </ScrollView>

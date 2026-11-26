@@ -40,7 +40,7 @@ export function WaitlistSheet({ open, onClose, onAdded }: { open: boolean; onClo
   }
   return (
     <BottomSheet open={open} onClose={onClose}>
-      <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 10 }}>{tr('wl.add')}</Text>
+      <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('wl.add')}</Text>
       <Field label={tr('wl.name')} value={name} onChangeText={setName} autoCapitalize="words" />
       <Field label={tr('create.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       <SectionTitle>{tr('wl.service')}</SectionTitle>
@@ -76,7 +76,7 @@ export function OfferSheet({ entryId, open, onClose, onSent }: { entryId: string
   }
   return (
     <BottomSheet open={open} onClose={onClose}>
-      <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 4 }}>{tr('ad.offer')}</Text>
+      <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('ad.offer')}</Text>
       <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted, marginBottom: 10 }}>{tr('ad.offerBody')}</Text>
       <SectionTitle>{tr('ad.master')}</SectionTitle>
       <View style={{ maxHeight: 100 }}><Choice value={master || String((staff.data ?? [])[0]?.id ?? '')} onChange={setMaster} options={(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => ({ value: String(s.id), label: s.name }))} /></View>

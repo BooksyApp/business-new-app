@@ -29,3 +29,27 @@ export async function pickAndPostStory(businessId: string | number, caption: str
   await uploadForm(`/businesses/${businessId}/stories`, form);
   return true;
 }
+
+export type Picked = { uri: string; name: string; type: string };
+/** Gallery or camera; resolves null when cancelled. Throws 'permission' when denied. */
+export async function pickImage(source: 'library' | 'camera'): Promise<Picked | null> {
+  const perm = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) throw new Error('permission');
+  const opts = { mediaTypes: ['images'] as ('images')[], quality: 0.85 };
+  const r = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
+  if (r.canceled || !r.assets[0]) return null;
+  const a = r.assets[0];
+  return { uri: a.uri, name: a.fileName ?? 'photo.jpg', type: a.mimeType ?? 'image/jpeg' };
+}
+export async function uploadPicked(p: Picked, purpose: string): Promise<Uploaded> {
+  const form = new FormData();
+  form.append('file', { uri: p.uri, name: p.name, type: p.type } as unknown as Blob);
+  form.append('purpose', purpose);
+  return uploadForm<Uploaded>('/uploads', form);
+}
+export async function postStoryPicked(businessId: string | number, p: Picked, caption: string): Promise<void> {
+  const form = new FormData();
+  form.append('file', { uri: p.uri, name: p.name, type: p.type } as unknown as Blob);
+  if (caption.trim()) form.append('caption', caption.trim());
+  await uploadForm(`/businesses/${businessId}/stories`, form);
+}

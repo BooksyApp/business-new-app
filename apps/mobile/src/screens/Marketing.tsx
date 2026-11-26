@@ -145,7 +145,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
       <BottomSheet open={sheet} onClose={() => setSheet(false)}>
         {tab === 'campaigns' ? (
           <>
-            <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tr('mk.add')}</Text>
+            <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('mk.add')}</Text>
             <Field label={tr('sx.name')} value={name} onChangeText={setName} />
             <Choice value={channel} onChange={setChannel} options={[{ value: 'EMAIL' as const, label: 'E-mail' }, { value: 'SMS' as const, label: 'SMS' }]} />
             <View style={{ maxHeight: 90 }}><Choice value={seg} onChange={setSeg} options={SEGMENTS.map((s) => ({ value: s, label: tr(`mk.seg.${s}` as 'mk.seg.ALL_CLIENTS') }))} /></View>
@@ -156,7 +156,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
           </>
         ) : (
           <>
-            <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tr('mk.addPromo')}</Text>
+            <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('mk.addPromo')}</Text>
             <Field label={tr('mk.code')} value={code} onChangeText={setCode} autoCapitalize="characters" autoCorrect={false} />
             <Choice value={ptype} onChange={setPtype} options={[{ value: 'PERCENT' as const, label: '%' }, { value: 'FIXED' as const, label: tr('mk.fixed') }]} />
             <View style={{ flexDirection: 'row', gap: 10 }}>

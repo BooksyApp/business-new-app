@@ -115,7 +115,7 @@ export function Payroll({ onBack }: { onBack: () => void }) {
         </ScrollView>
       )}
       <BottomSheet open={!!tg} onClose={() => setTg(null)}>
-        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tg?.name}</Text>
+        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tg?.name}</Text>
         <Field label={`${tr('pr.revTarget')} (${cur ?? 'AZN'})`} value={rev} onChangeText={setRev} keyboardType="decimal-pad" />
         <Field label={tr('pr.bkTarget')} value={bk} onChangeText={setBk} keyboardType="number-pad" />
         <Btn label={tr('common.save')} loading={busy} onPress={() => tg && void run(() => apiB.setTarget(sid, tg.id, month, { revenueTarget: num(rev) || 0, bookingsTarget: Math.round(num(bk)) || 0 }), () => { setTg(null); void targets.reload(); })} />

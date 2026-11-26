@@ -62,7 +62,7 @@ export function Inventory({ onBack }: { onBack: () => void }) {
           )} />
       )}
       <BottomSheet open={!!edit} onClose={() => setEdit(null)}>
-        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 10 }}>{edit === 'new' ? tr('inv.add') : tr('inv.edit')}</Text>
+        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{edit === 'new' ? tr('inv.add') : tr('inv.edit')}</Text>
         <Field label={tr('sx.name')} value={name} onChangeText={setName} />
         <Field label="SKU" value={sku} onChangeText={setSku} autoCapitalize="characters" />
         <View style={{ flexDirection: 'row', gap: 10 }}>

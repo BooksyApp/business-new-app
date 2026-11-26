@@ -82,7 +82,7 @@ export function Reviews({ onBack }: { onBack: () => void }) {
           )} />
       )}
       <BottomSheet open={!!sel} onClose={() => setSel(null)}>
-        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{mode === 'reply' ? tr('rv.reply') : tr('rv.report')}</Text>
+        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{mode === 'reply' ? tr('rv.reply') : tr('rv.report')}</Text>
         {mode === 'report' ? (<><Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 10 }}>{tr('rv.reportBody')}</Text>
           <Choice value={reason} onChange={setReason} options={(['FAKE', 'ABUSIVE', 'OTHER'] as const).map((k) => ({ value: k, label: tr(`rv.reasons.${k}` as 'rv.reasons.FAKE') }))} /></>) : null}
         <Field label={mode === 'reply' ? tr('rv.yourReply') : tr('rv.reason')} value={text} onChangeText={setText} multiline style={{ minHeight: 96, paddingTop: 14, textAlignVertical: 'top' }} />

@@ -67,7 +67,7 @@ export function Expenses({ onBack }: { onBack: () => void }) {
           )} />
       )}
       <BottomSheet open={adding} onClose={() => setAdding(false)}>
-        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 10 }}>{tr('ex.add')}</Text>
+        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('ex.add')}</Text>
         <View style={{ maxHeight: 130 }}><Choice value={cat} onChange={setCat} options={CATS.map((c) => ({ value: c, label: tr(`ex.c.${c}` as 'ex.c.OTHER') }))} /></View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}><Field label={`${tr('ex.amount')} (${salon?.currency ?? 'AZN'})`} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" /></View>

@@ -6,7 +6,7 @@ import { Choice, MultiChoice, SectionTitle, ToggleRow, num } from '@/components/
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, Chip, Circ, ErrorState, Field, Header, Pill, Screen, ServiceThumb, Skeleton, StateView, Toggle } from '@/components/ui';
+import { Btn, Card, Chip, Circ, ErrorState, Field, Header, HeroCard, Pill, Screen, ServiceThumb, Skeleton, StateView, StickyCta, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB, type PeakRule } from '@/lib/api-biz';
@@ -88,10 +88,13 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   return (
     <Screen>
       <Header title={service ? tr('sx.editTitle') : tr('sx.newTitle')} subtitle={service?.name} onBack={onClose} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginBottom: 12 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
         {TABS.map((x) => <Chip key={x.k} label={tr(x.label)} active={tab === x.k} onPress={() => setTab(x.k)} />)}
       </ScrollView>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}>
+        <View style={{ marginBottom: 14 }}>
+          <HeroCard icon="scissors" title={name || tr('sx.newTitle')} sub={[cats.find((c) => String(c.id) === cat)?.name, dur ? `${dur} ${tr('common.min')}` : null].filter(Boolean).join(' · ')} stat={price ? money(num(price) || 0, salon?.currency) : undefined} />
+        </View>
         {tab === 'main' ? (
           <>
             <Field label={tr('sx.name')} value={name} onChangeText={setName} autoCapitalize="sentences" />
@@ -151,11 +154,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
             {service ? <Btn label={tr('sx.archive')} variant="danger" icon="trash" style={{ marginTop: 14 }} onPress={archive} /> : null}
           </>
         ) : null}
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-          <Btn label={tr('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={onClose} />
-          <Btn label={tr('common.save')} style={{ flex: 1 }} loading={busy} onPress={() => void save()} />
-        </View>
       </ScrollView>
+      <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save()} secondary={{ label: tr('common.cancel'), onPress: onClose }} />
     </Screen>
   );
 }
