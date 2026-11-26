@@ -1564,7 +1564,8 @@ export default function CalendarPage() {
   const colW = Math.max(isMobile ? 120 : 200, Math.floor((gridW - 12 - HOUR_COL) / colCount) - COL_GAP);
   const gridInnerW = HOUR_COL + colCount * (colW + COL_GAP);
 
-  // Get current time position = (): number | null => {
+  // Get current time position
+  const getCurrentTimePosition = (): number | null => {
     if (!isCurrentDate) return null;
     
     const now = currentTime;
@@ -2759,101 +2760,6 @@ export default function CalendarPage() {
                                   )}
                                 </AppointmentBlock>
                               );
-                            } else if (item.type === 'waiting') {
-                              const pos = getTimePosition(item.start, item.end, SLOT_HEIGHT);
-                              top = pos.top;
-                              height = Math.max(pos.height, SLOT_HEIGHT * 2);
-                            } else {
-                              // For full day time offs, show them only during business hours for this day (or 00:00-00:00 if disabled)
-                              const startTime = item.item.isFullDay 
-                                ? (dayIsEnabled ? `${dayBusinessStartHour.toString().padStart(2, "0")}:00` : "00:00")
-                                : normalizeTime(item.item.startTime || "00:00");
-                              const endTime = item.item.isFullDay 
-                                ? (dayIsEnabled ? `${dayBusinessEndHour.toString().padStart(2, "0")}:00` : "00:00")
-                                : normalizeTime(item.item.endTime || "23:59");
-                              const pos = getTimePosition(startTime, endTime, SLOT_HEIGHT);
-                              top = pos.top;
-                              height = pos.height;
-                            }
-                            
-                            // Each overlapping item gets an equal share of the column, in px like the frame's tiles.
-                            const laneGap = 4;
-                            const laneW = (colW - (groupSize - 1) * laneGap) / groupSize;
-                            const laneLeft = colLeft + itemIndex * (laneW + laneGap);
-
-                            if (item.type === 'appointment') {
-                              return (
-                                <div
-                                  key={item.item.id}
-                                  className={`absolute z-15 ${dnd?.id === item.item.id ? "opacity-80 shadow-xl ring-2 ring-[rgb(var(--reg-brand))] rounded-[10px]" : ""}`}
-                                  data-appointment-block="true"
-                                  data-testid="appointment-block"
-                                  data-apt-id={item.item.apiId}
-                                  onPointerDown={(e) => { if (!(e.target as HTMLElement).closest('[data-resize-handle]')) beginDnd(e, item.item, "move"); }}
-                                  style={{
-                                    top: `${top}px`,
-                                    height: `${dnd?.id === item.item.id && dnd.mode === "resize" ? Math.max(SLOT_HEIGHT, height + dnd.dy) : height}px`,
-                                    transform: dnd?.id === item.item.id && dnd.mode === "move" ? `translate(${dnd.dx}px, ${dnd.dy}px)` : undefined,
-                                    zIndex: dnd?.id === item.item.id ? 40 : undefined,
-                                    touchAction: "pan-y",
-                                    left: groupSize === 1 
-                                      ? '0.25rem' 
-                                      : `calc(0.25rem + ${leftPercent}%)`,
-                                    width: groupSize === 1 
-                                      ? 'calc(100% - 0.5rem)' 
-                                      : `calc(${widthPercent}% - ${gapPercent * 0.5}%)`,
-                                    marginRight: itemIndex < groupSize - 1 ? `${gapPercent}%` : '0.5rem',
-                                    pointerEvents: isDragging ? "none" : "auto",
-                                  }}
-                                  onClick={(e) => {
-                                    // Only handle click if not dragging
-                                    if (!isDragging && !justDragged.current) {
-                                      e.stopPropagation();
-                                      e.preventDefault();
-                                      handleAppointmentClick(item.item);
-                                    }
-                                  }}
-                                  onMouseDown={(e) => {
-                                    // Only stop propagation if not dragging
-                                    if (!isDragging) {
-                                      e.stopPropagation();
-                                    }
-                                  }}
-                                  onMouseUp={(e) => {
-                                    // Only stop propagation if not dragging
-                                    if (!isDragging) {
-                                      e.stopPropagation();
-                                    }
-                      }}
-                    >
-                      <AppointmentBlock
-                                    visits={visitsFor(item.item)}
-                                    flagCtx={flagCtxFor(item.item)}
-                                    density={density}
-                                    height={height}
-                                    appointment={item.item} 
-                                    onClick={(e) => {
-                                      // Only handle click if not dragging
-                                      if (!isDragging && !justDragged.current) {
-                                        e?.stopPropagation?.();
-                                        handleAppointmentClick(item.item);
-                                      }
-                                    }}
-                      />
-                      {item.item.apiId && !item.item.isClass && !item.item.isPackage && !item.item.visitId && !["CANCELLED", "COMPLETED", "NO_SHOW"].includes((item.item.status || "").toUpperCase()) && (
-                        <div
-                          data-resize-handle="true"
-                          data-testid="resize-handle"
-                          title={tr("calendar.dnd.resizeHint")}
-                          className="absolute inset-x-0 bottom-0 hidden h-2 cursor-ns-resize items-end justify-center md:flex"
-                          onPointerDown={(e) => beginDnd(e, item.item, "resize")}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="mb-0.5 h-0.5 w-8 rounded-full bg-black/25" />
-                        </div>
-                      )}
-                    </div>
-                  );
                             } else if (item.type === 'waiting') {
                               const wp = waitingProps({ entry: item.item, durationMin: item.item.serviceId ? serviceDuration(String(item.item.serviceId)) : 30, placement: item.placement });
                               return (
