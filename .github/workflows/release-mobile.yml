@@ -86,12 +86,12 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          # prebuild leaves gradle.properties without trailing newline: appending glued our line onto expo.inlineModules.watchedDirectories=[]
+          echo >> gradle.properties
           printf '%s\n' "reactNativeArchitectures=arm64-v8a,x86_64" "org.gradle.parallel=true" "org.gradle.caching=true" \
             "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" \
             "android.enableMinifyInReleaseBuilds=true" "android.enableShrinkResourcesInReleaseBuilds=true" \
             "expo.useLegacyPackaging=false" >> gradle.properties
-          # Gradle drops the empty-list arg of mirror-kotlin-inline-modules if this prop is missing -> node exits 1
-          grep -q '^expo.inlineModules.watchedDirectories=' gradle.properties || echo 'expo.inlineModules.watchedDirectories=[]' >> gradle.properties
           if [ -n "$KS_B64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
             echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             for k in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do echo "$k=${!k}" >> "$GITHUB_ENV"; done
@@ -107,17 +107,9 @@ jobs:
           mkdir -p apps/mobile/node_modules
           [ -e apps/mobile/node_modules/expo ] || ln -s "$GITHUB_WORKSPACE/node_modules/expo" apps/mobile/node_modules/expo
           ls -d apps/mobile/node_modules/expo/android/src/main/java >/dev/null && echo "expo link ok"
-      - name: TEMP node wrapper (log args and stderr)
-        run: |
-          mkdir -p "$RUNNER_TEMP/nw"; REAL=$(command -v node)
-          printf '#!/bin/bash\n{ echo "ARGS: $*"; echo "PWD: $PWD"; } >> /tmp/nodelog.txt\n"%s" "$@" 2> >(tee -a /tmp/nodelog.txt >&2)\nrc=$?\necho "RC=$rc" >> /tmp/nodelog.txt\nexit $rc\n' "$REAL" > "$RUNNER_TEMP/nw/node"
-          chmod +x "$RUNNER_TEMP/nw/node"; echo "$RUNNER_TEMP/nw" >> "$GITHUB_PATH"
       - name: Assemble release
         working-directory: apps/mobile/android
         run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
-      - name: TEMP dump node log
-        if: failure()
-        run: head -c 3500 /tmp/nodelog.txt | cut -c1-700; echo ----; tail -n 20 /tmp/nodelog.txt | cut -c1-500
       - name: Checksum
         working-directory: apps/mobile/android/app/build/outputs/apk/release
         run: |
