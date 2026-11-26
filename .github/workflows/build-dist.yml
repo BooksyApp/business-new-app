@@ -1,0 +1,26 @@
+name: Build dist (new-business staging)
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/new-ui]
+    paths: ["apps/web/**", ".github/workflows/build-dist.yml"]
+permissions: { contents: read }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Build apps/web (same-origin /api, base /)
+        env:
+          NODE_ENV: production
+        run: npm run build -w apps/web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: newhub-dist
+          path: apps/web/dist
+          retention-days: 3
+          if-no-files-found: error
