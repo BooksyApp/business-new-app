@@ -1498,8 +1498,8 @@ export default function SalesPage() {
             onClick={() => setActiveTab("INVOICES")}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === "INVOICES"
-                ? "text-gray-900 border-b-2 border-gray-900"
-                : "text-gray-500 hover:text-gray-700"
+                ? "text-foreground border-b-2 border-foreground"
+                : "text-muted-foreground hover:text-muted-foreground"
             }`}
           >
             INVOICES
@@ -1832,24 +1832,24 @@ export default function SalesPage() {
                     <div className="space-y-4 py-4">
                       {/* Search */}
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <input
                           type="text"
                           placeholder={tr("sales.searchByNamePhoneOr")}
                           value={searchQueryClient}
                           onChange={(e) => setSearchQueryClient(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+                          className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
                           autoFocus
                         />
                       </div>
                       {/* Client list */}
                       {loadingClients ? (
                         <div className="flex items-center justify-center py-6">
-                          <p className="text-sm text-gray-500">{tr("sales.loadingClients")}</p>
+                          <p className="text-sm text-muted-foreground">{tr("sales.loadingClients")}</p>
                         </div>
                       ) : filteredClients.length === 0 ? (
                         <div className="text-center py-6">
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {searchQueryClient ? tr("sales.noClientsMatchYourSearch") : tr("sales.noClientsYetCreateOne")}
                           </p>
                         </div>
@@ -1866,20 +1866,20 @@ export default function SalesPage() {
                               className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                                 selectedClient?.id === client.id
                                   ? "border-accent bg-accent/5"
-                                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                  : "border-border hover:border-border hover:bg-muted"
                               }`}
                             >
                               {/* Avatar placeholder */}
-                              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                                <User className="h-4 w-4 text-gray-600" />
+                              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                <User className="h-4 w-4 text-muted-foreground" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900 truncate">
+                                <p className="text-sm font-medium text-foreground truncate">
                                   {getClientDisplayName(client)}
                                 </p>
                                 <div className="flex gap-3 mt-0.5">
-                                  {client.email && <span className="text-xs text-gray-500 truncate">{client.email}</span>}
-                                  {client.phone && <span className="text-xs text-gray-500 truncate">{client.phone}</span>}
+                                  {client.email && <span className="text-xs text-muted-foreground truncate">{client.email}</span>}
+                                  {client.phone && <span className="text-xs text-muted-foreground truncate">{client.phone}</span>}
                                 </div>
                               </div>
                               {selectedClient?.id === client.id && (
@@ -2153,18 +2153,18 @@ export default function SalesPage() {
               <DialogTitle>{tr("sales.editQuickSaleItems")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 {tr("sales.selectServicesAndCombosTo")}
               </p>
               
               {servicesLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <p className="text-gray-500">{tr("sales.loadingServices")}</p>
+                  <p className="text-muted-foreground">{tr("sales.loadingServices")}</p>
                 </div>
               ) : availableItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-gray-900 font-medium mb-2">{tr("sales.noServicesAvailable")}</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-foreground font-medium mb-2">{tr("sales.noServicesAvailable")}</p>
+                  <p className="text-sm text-muted-foreground">
                     {tr("sales.createServicesAndCombosFirst")}
                   </p>
                 </div>
@@ -2176,8 +2176,8 @@ export default function SalesPage() {
                       className={`
                         flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors
                         ${selectedQuickSaleItems.includes(item.id)
-                          ? 'border-gray-900 bg-gray-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-foreground bg-muted'
+                          : 'border-border hover:border-border'
                         }
                       `}
                       onClick={() => {
@@ -2200,7 +2200,7 @@ export default function SalesPage() {
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-gray-900">{item.name}</h4>
+                          <h4 className="font-medium text-foreground">{item.name}</h4>
                           {item.type === 'combo' && (
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
                               {tr("sales.combo")}
@@ -2208,8 +2208,8 @@ export default function SalesPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-4 mt-1">
-                          <p className="text-sm text-gray-500">{item.duration}</p>
-                          <p className="text-sm font-medium text-gray-900">{item.price}</p>
+                          <p className="text-sm text-muted-foreground">{item.duration}</p>
+                          <p className="text-sm font-medium text-foreground">{item.price}</p>
                         </div>
                       </div>
                       <div 
@@ -2234,7 +2234,7 @@ export default function SalesPage() {
                 <Button
                   onClick={saveQuickSaleConfig}
                   disabled={selectedQuickSaleItems.length === 0}
-                  className="bg-gray-900 hover:bg-gray-800"
+                  className="bg-foreground hover:bg-foreground/90"
                 >
                   <Save size={16} className="mr-2" />
                   {tr("sales.saveChanges")}

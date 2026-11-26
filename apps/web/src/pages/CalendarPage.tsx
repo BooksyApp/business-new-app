@@ -2845,13 +2845,13 @@ export default function CalendarPage() {
             <div className="flex flex-1 overflow-auto bg-white p-6">
               <div className="w-full">
                 {/* Month Calendar Grid */}
-                <div className="bg-white rounded-lg border border-gray-200">
+                <div className="bg-white rounded-lg border border-border">
                   {/* Day Headers */}
-                  <div className="grid grid-cols-7 border-b border-gray-200">
+                  <div className="grid grid-cols-7 border-b border-border">
                     {[tr("common.dayMon"), tr("common.dayTue"), tr("common.dayWed"), tr("common.dayThu"), tr("common.dayFri"), tr("common.daySat"), tr("common.daySun")].map((day) => (
                       <div
                         key={day}
-                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-gray-200 last:border-r-0"
+                        className="p-3 text-center text-xs font-medium text-muted-foreground border-r border-border last:border-r-0"
                       >
                         {day}
             </div>
@@ -2876,8 +2876,8 @@ export default function CalendarPage() {
                           <div
                             key={idx}
                             className={`
-                              min-h-[120px] border-r border-b border-gray-200 last:border-r-0
-                              ${isCurrentMonth ? "bg-white" : "bg-gray-50"}
+                              min-h-[120px] border-r border-b border-border last:border-r-0
+                              ${isCurrentMonth ? "bg-white" : "bg-muted"}
                               ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}
                               p-2
                             `}
@@ -2937,9 +2937,9 @@ export default function CalendarPage() {
           {viewType === "Weekly" && (
             <div className="flex flex-1 overflow-auto bg-white">
               {/* Staff Column */}
-              <div className="w-64 shrink-0 border-r border-gray-200 bg-white sticky left-0 z-10">
-                <div className="h-16 border-b border-gray-200 bg-white"></div>
-                <div className="divide-y divide-gray-200">
+              <div className="w-64 shrink-0 border-r border-border bg-white sticky left-0 z-10">
+                <div className="h-16 border-b border-border bg-white"></div>
+                <div className="divide-y divide-border">
                   {staff.map((staff) => {
                     // All rows should have the same height to fit 3 blocks + "+X more" row
                     // Height: 3 blocks (~180px with spacing) + "+X more" row (~40px) + padding (~16px) = ~250px
@@ -2948,9 +2948,9 @@ export default function CalendarPage() {
                     return (
                       <div
                         key={staff.id}
-                        className={`${rowHeight} border-b border-gray-200 px-4 py-3 bg-white flex items-center gap-3`}
+                        className={`${rowHeight} border-b border-border px-4 py-3 bg-white flex items-center gap-3`}
                       >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[rgb(var(--reg-brand))] to-[#e83e63] flex items-center justify-center text-white font-semibold text-sm shrink-0">
                         {staff.initials}
                       </div>
                       <div className="flex flex-col min-w-0">
@@ -2972,10 +2972,10 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={day.toISOString()}
-                      className="min-w-[200px] flex-1 border-r border-gray-200 last:border-r-0 bg-white"
+                      className="min-w-[200px] flex-1 border-r border-border last:border-r-0 bg-white"
                     >
                       {/* Day Header */}
-                      <div className={`h-16 border-b border-gray-200 flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}`}>
+                      <div className={`h-16 border-b border-border flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}`}>
                         <div className="text-xs font-medium text-muted-foreground">
                           {format(day, "EEE")}
                         </div>
@@ -2990,7 +2990,7 @@ export default function CalendarPage() {
                       </div>
 
                       {/* Staff Rows with Appointments */}
-                      <div className="divide-y divide-gray-200">
+                      <div className="divide-y divide-border">
                         {staff.map((staff) => {
                           const staffAppointments = getAppointmentsForDateAndStaff(day, staff.id);
                           const waitChips = waitingChipsFor(day, staff.id);
@@ -3001,7 +3001,7 @@ export default function CalendarPage() {
                           return (
                             <div
                               key={staff.id}
-                              className={`${rowHeight} p-2 flex flex-col border-b border-gray-200`}
+                              className={`${rowHeight} p-2 flex flex-col border-b border-border`}
                             >
                               {waitChips.length > 0 && (
                                 <div className="mb-1 flex flex-wrap gap-1">
@@ -3040,7 +3040,7 @@ export default function CalendarPage() {
                                   {/* "+X more" on separate row - Only show if more than 3 */}
                                   {staffAppointments.length > 3 && (
                                     <div 
-                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-gray-200"
+                                      className="text-xs text-muted-foreground text-center pt-2 mt-auto cursor-pointer hover:text-foreground hover:font-medium transition-colors border-t border-border"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedWeeklyPopup({ day, staffId: staff.id });
@@ -3639,11 +3639,11 @@ export default function CalendarPage() {
 
             {/* Recurrence config */}
             {bookingMode === "recurring" && (
-              <div className="space-y-2 rounded-md border border-gray-200 p-2" data-testid="recurrence-config">
+              <div className="space-y-2 rounded-md border border-border p-2" data-testid="recurrence-config">
                 <Label className={FIELD_LABEL}>{tr("calendar.repeat")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">{tr("calendar.frequency")}</Label>
+                    <Label className="text-[10px] text-muted-foreground">{tr("calendar.frequency")}</Label>
                     <Select
                       value={recurrence.frequency === "MONTHLY" ? "MONTHLY" : recurrence.interval === 2 ? "BIWEEKLY" : "WEEKLY"}
                       onValueChange={(v) => setRecurrence(prev => ({ ...prev, frequency: v === "MONTHLY" ? "MONTHLY" : "WEEKLY", interval: v === "BIWEEKLY" ? 2 : 1 }))}
@@ -3657,7 +3657,7 @@ export default function CalendarPage() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-gray-500">{tr("calendar.occurrences")}</Label>
+                    <Label className="text-[10px] text-muted-foreground">{tr("calendar.occurrences")}</Label>
                     <Input
                       type="number" min={2} max={52} value={recurrence.count}
                       data-testid="recurrence-count"
@@ -3671,7 +3671,7 @@ export default function CalendarPage() {
                     const row = seriesPreview?.find((r) => r.date === d);
                     const bad = row && row.conflicts.length > 0;
                     return (
-                      <li key={d} className={bad ? "text-amber-700" : "text-gray-600"}>
+                      <li key={d} className={bad ? "text-amber-700" : "text-muted-foreground"}>
                         <span className="font-medium">{d}</span>
                         {bad ? ` · ${row!.conflicts.map(describeConflict).join("; ")}` : row ? " ✓" : ""}
                       </li>
@@ -3862,15 +3862,15 @@ export default function CalendarPage() {
             {/* Group members — each gets their own staff + time. The primary
                 client above is member 1; add the rest here. */}
             {bookingMode === "group" && (
-              <div className="space-y-2 rounded-md border border-gray-200 p-2">
+              <div className="space-y-2 rounded-md border border-border p-2">
                 <div className="flex items-center justify-between">
                   <Label className={FIELD_LABEL}>{tr("calendar.groupMembers")}</Label>
-                  <span className="text-[10px] text-gray-500">{tr("calendar.primaryClientMember")}</span>
+                  <span className="text-[10px] text-muted-foreground">{tr("calendar.primaryClientMember")}</span>
                 </div>
                 {groupMembers.map((m, i) => (
-                  <div key={i} className="space-y-1 border-t border-gray-100 pt-2">
+                  <div key={i} className="space-y-1 border-t border-border pt-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-gray-500 w-16 shrink-0">{tr("calendar.member", { value: i + 2 })}</span>
+                      <span className="text-[10px] text-muted-foreground w-16 shrink-0">{tr("calendar.member", { value: i + 2 })}</span>
                       <Input
                         placeholder={tr("common.name")}
                         value={m.clientName}
@@ -3881,7 +3881,7 @@ export default function CalendarPage() {
                         type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeMember")} className="h-7 w-7 shrink-0"
                         onClick={() => setGroupMembers(prev => prev.filter((_, j) => j !== i))}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-2 pl-16">
@@ -3930,14 +3930,14 @@ export default function CalendarPage() {
             {bookingMode !== "group" && !(selectedPackage && !editingAppointmentId) && (
               <div className="space-y-2">
                 {extraServices.map((es, i) => (
-                  <div key={i} className="space-y-1 rounded-md border border-gray-200 p-2">
+                  <div key={i} className="space-y-1 rounded-md border border-border p-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[10px] text-gray-500">{editingVisit ? tr("calendar.service", { value: i + 2 }) : tr("calendar.extraService", { value: i + 1 })}</Label>
+                      <Label className="text-[10px] text-muted-foreground">{editingVisit ? tr("calendar.service", { value: i + 2 }) : tr("calendar.extraService", { value: i + 1 })}</Label>
                       <Button
                         type="button" variant="ghost" size="icon" aria-label={tr("calendar.removeService")} className={`h-7 w-7 ${editingAppointmentId ? "hidden" : ""}`}
                         onClick={() => setExtraServices(prev => prev.filter((_, j) => j !== i))}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
                     <Select
@@ -3976,7 +3976,7 @@ export default function CalendarPage() {
                   </div>
                 ))}
                 {editingVisit && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {tr("calendar.thisBookingHasServicesYou", { count: editingVisit.ids.length })}
                   </p>
                 )}
@@ -4011,9 +4011,9 @@ export default function CalendarPage() {
                 aria-pressed={appointmentForm.requestedByClient}
                 onClick={() => setAppointmentForm(prev => ({ ...prev, requestedByClient: !prev.requestedByClient }))}
               >
-                <Heart className={cn("h-3.5 w-3.5", appointmentForm.requestedByClient ? "fill-red-500 text-red-500" : "text-gray-400")} />
+                <Heart className={cn("h-3.5 w-3.5", appointmentForm.requestedByClient ? "fill-red-500 text-red-500" : "text-muted-foreground")} />
               </Button>
-              <span className="text-xs text-gray-700">{tr("calendar.requestedByClient")}</span>
+              <span className="text-xs text-muted-foreground">{tr("calendar.requestedByClient")}</span>
             </div>
 
             {/* Financial Summary — reflects group members / extra services / occurrences */}
@@ -4647,8 +4647,8 @@ export default function CalendarPage() {
                 <Label htmlFor="approved" className="text-sm font-normal cursor-pointer">
                   {tr("calendar.approved")}
                 </Label>
-                <HelpCircle className="h-4 w-4 text-gray-400" />
-                <span className="text-xs text-gray-500">
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
                   {timeOffForm.isApproved 
                     ? tr("calendar.noManagerApprovalNeeded") 
                     : tr("calendar.requiresManagerApproval")}
