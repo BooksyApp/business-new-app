@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { API_BASE_URL } from "@/config/api";
 import { authService } from "@/services/authService";
 import { startSession } from "@/utils/session";
 import { t } from "@/i18n";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { authTitle, brandCta } from "@/components/auth/authStyles";
 
 type Invite = { salonName: string; staffName: string; email: string; accountExists: boolean };
 
@@ -70,9 +71,9 @@ const AcceptInvitePage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-bold">{t("acceptInvite.joinYourSalonOnBooqi")}</h1>
+    <AuthShell>
+      <div>
+        <h1 className={authTitle}>{t("acceptInvite.joinYourSalonOnBooqi")}</h1>
         {problem ? (
           <>
             <p className="mt-3 text-sm text-destructive">{problem}</p>
@@ -113,13 +114,13 @@ const AcceptInvitePage = () => {
                 />
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={busy}>
+            <button type="submit" className={`${brandCta} w-full`} disabled={busy} aria-busy={busy}>
               {busy ? t("acceptInvite.joining") : t("acceptInvite.joinTheTeam")}
-            </Button>
+            </button>
           </form>
         )}
       </div>
-    </div>
+    </AuthShell>
   );
 };
 

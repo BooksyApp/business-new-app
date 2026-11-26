@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { MiniTile } from "@/components/biz/a-MiniTile";
 import { AppointmentBlock, StaffAvatar, appointmentServiceLabel, type Appointment, type Staff } from "@/components/calendar/AppointmentBlock";
 import { appointmentFlagKeys } from "@/lib/appointmentFlags";
 // The visit sheet (~700 lines plus refund dialog and client picker) is only needed once a
@@ -2877,7 +2878,7 @@ export default function CalendarPage() {
                             className={`
                               min-h-[120px] border-r border-b border-gray-200 last:border-r-0
                               ${isCurrentMonth ? "bg-white" : "bg-gray-50"}
-                              ${isCurrentDay ? "bg-blue-50" : ""}
+                              ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}
                               p-2
                             `}
                           >
@@ -2886,7 +2887,7 @@ export default function CalendarPage() {
                               <span
                                 className={`
                                   text-sm font-medium
-                                  ${isCurrentDay ? "bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}
+                                  ${isCurrentDay ? "bg-[rgb(var(--reg-brand))] text-white rounded-full w-6 h-6 flex items-center justify-center" : ""}
                                   ${!isCurrentMonth ? "text-muted-foreground/50" : ""}
                                 `}
                               >
@@ -2902,34 +2903,14 @@ export default function CalendarPage() {
                             {/* Appointments */}
                             <div className="space-y-1 mt-1">
                               {dayAppointments.slice(0, 3).map((apt) => (
-                                <div
+                                <MiniTile
                                   key={apt.id}
+                                  appointment={apt}
+                                  visits={visitsFor(apt)}
+                                  flagCtx={flagCtxFor(apt)}
                                   onClick={() => handleAppointmentClick(apt)}
-                                  className={`text-xs p-1.5 rounded cursor-pointer truncate border-l-4 hover:opacity-80 ${
-                                    blockVisuals(apt).colorClasses
-                                  }`}
-                                  title={`${apt.startTime?.slice(0, 5)} - ${apt.endTime?.slice(0, 5)}: ${apt.service}`}
-                                >
-                                  <div className="text-[10px] font-medium">
-                                    {apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}
-                                  </div>
-                                  <div className="flex items-center gap-1 text-[10px] font-semibold">
-                                    <span className="truncate">{apt.clientName}</span>
-                                    {blockVisuals(apt).tags.map(({ Icon, label, className }) => (
-                                      <span
-                                        key={label}
-                                        title={label}
-                                        className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${className}`}
-                                      >
-                                        <Icon size={10} strokeWidth={2.5} />
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <div className="text-[10px] truncate">
-                                    {apt.service}
-              </div>
-            </div>
-          ))}
+                                />
+                              ))}
                               {dayAppointments.length > 3 && (
                                 <div 
                                   className="text-xs text-muted-foreground text-center pt-1 cursor-pointer hover:text-foreground hover:font-medium transition-colors"
@@ -2994,11 +2975,11 @@ export default function CalendarPage() {
                       className="min-w-[200px] flex-1 border-r border-gray-200 last:border-r-0 bg-white"
                     >
                       {/* Day Header */}
-                      <div className={`h-16 border-b border-gray-200 flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-blue-50" : ""}`}>
+                      <div className={`h-16 border-b border-gray-200 flex flex-col items-center justify-center px-2 bg-white sticky top-0 z-10 ${isCurrentDay ? "bg-[rgb(var(--reg-brand-soft))]" : ""}`}>
                         <div className="text-xs font-medium text-muted-foreground">
                           {format(day, "EEE")}
                         </div>
-                        <div className={`text-sm font-semibold ${isCurrentDay ? "text-blue-600" : ""}`}>
+                        <div className={`text-sm font-semibold ${isCurrentDay ? "text-[rgb(var(--reg-brand-strong))]" : ""}`}>
                           {format(day, "d")}
                         </div>
                         {dayAppointments.length > 0 && (
@@ -3047,33 +3028,13 @@ export default function CalendarPage() {
                                   {/* Appointment Blocks - Maximum 3 */}
                                   <div className="space-y-1">
                                     {staffAppointments.slice(0, 3).map((apt) => (
-                                      <div
+                                      <MiniTile
                                         key={apt.id}
+                                        appointment={apt}
+                                        visits={visitsFor(apt)}
+                                        flagCtx={flagCtxFor(apt)}
                                         onClick={() => handleAppointmentClick(apt)}
-                                        className={`text-xs p-1.5 rounded cursor-pointer border-l-4 hover:opacity-80 ${
-                                          blockVisuals(apt).colorClasses
-                                        }`}
-                                        title={`${apt.startTime?.slice(0, 5)} - ${apt.endTime?.slice(0, 5)}: ${apt.service}`}
-                                      >
-                                        <div className="text-[10px] font-medium truncate">
-                                          {apt.startTime?.slice(0, 5)} - {apt.endTime?.slice(0, 5)}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-[10px] font-semibold">
-                                          <span className="truncate">{apt.clientName}</span>
-                                          {blockVisuals(apt).tags.map(({ Icon, label, className }) => (
-                                            <span
-                                              key={label}
-                                              title={label}
-                                              className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${className}`}
-                                            >
-                                              <Icon size={10} strokeWidth={2.5} />
-                                            </span>
-                                          ))}
-                                        </div>
-                                        <div className="text-[10px] truncate">
-                                          {apt.service}
-                                        </div>
-                                      </div>
+                                      />
                                     ))}
                                   </div>
                                   {/* "+X more" on separate row - Only show if more than 3 */}
