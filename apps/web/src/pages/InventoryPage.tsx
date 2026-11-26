@@ -1,19 +1,15 @@
 import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowRightLeft, Boxes, Coins, MapPin, Minus, Package, Pencil, Plus, ScanLine, Search, Trash2, Truck } from "lucide-react";
+import { ArrowRightLeft, MapPin, Minus, Package, Plus, ScanLine, Search, Truck, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, Field, FilterChips, Meter } from "@/components/page/kit";
-import { fieldCls, money } from "@/components/page/kitStyles";
-import { Button } from "@/components/ui/button";
+import { Btn, Drawer, EmptyState, Field, FormGrid, PageHead, Skeleton, Tabs } from "@/components/bz";
+import { BzPage } from "@/components/bz/p2-page";
+import { money } from "@/components/page/kitStyles";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
-import { cn } from "@/lib/utils";
 import { LocationSelect, LocationsSheet, QuickTransferSheet, RecentTransfers, TransferSheet, useInvalidateStock, useStockLocations } from "@/components/inventory/StockLocations";
 import { productService, type Product } from "@/services/productService";
 import { salonDayService } from "@/services/salonDayService";
@@ -152,156 +148,154 @@ export default function InventoryPage() {
     .filter((p) => [p.name, p.sku].filter(Boolean).join(" ").toLowerCase().includes(query.trim().toLowerCase()))
     .sort((a, b) => Number(b.lowStock) - Number(a.lowStock) || a.name.localeCompare(b.name));
 
-  return (
-    <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={t("inventory.inventory")}
-          subtitle={t("inventory.whatYouBuyCountAnd")}
-          actions={
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" className={sheetSecondary} asChild>
-                <Link to="count">
-                  <ScanLine size={16} />{" "}{t("inventory.countButton")}
-                </Link>
-              </Button>
-              <Button variant="outline" className={sheetSecondary} asChild>
-                <Link to="suppliers">
-                  <Truck size={16} />{" "}{t("inventory.suppliersAndOrders")}
-                </Link>
-              </Button>
-              <Button
-                variant="outline"
-                className={sheetSecondary}
-                onClick={() => (locations.length > 1 ? setQuickTransfer(true) : (toast.info(t("inventory.transferNeedTwo")), setManaging(true)))}
-              >
-                <ArrowRightLeft size={16} />{" "}{t("inventory.transfer")}
-              </Button>
-              <Button variant="outline" className={sheetSecondary} onClick={() => setManaging(true)}>
-                <MapPin size={16} />{" "}{t("inventory.manageLocations")}
-              </Button>
-              <Button className={primaryBtn} onClick={() => open()}>
-                <Plus size={16} />{" "}{t("inventory.addProduct")}
-              </Button>
-            </div>
-          }
-        />
+  const drawer = sheet ? (
+    <Drawer
+      narrow
+      title={sheet.mode === "edit" ? t("inventory.editProduct") : t("inventory.addAProduct")}
+      sub={t("inventory.youLlBeWarnedWhen")}
+      onClose={() => setSheet(null)}
+      closeIcon={<X className="ic" />}
+      footer={
+        <>
+          <Btn kind="ol" onClick={() => setSheet(null)}>{t("common.cancel")}</Btn>
+          <Btn kind="v" onClick={() => void save()} disabled={saving}>
+            {saving ? t("common.saving") : sheet.mode === "edit" ? t("common.save") : t("inventory.addProduct")}
+          </Btn>
+        </>
+      }
+    >
+      <div className="g1">
+        <Field label={t("common.name")} required>
+          <input id="pr-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("inventory.shampooMl")} />
+        </Field>
+        <FormGrid cols={2}>
+          <Field label={t("inventory.skuOptional")}>
+            <input id="pr-sku" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+          </Field>
+          <Field label={t("inventory.price", { sym })}>
+            <input id="pr-price" type="number" inputMode="decimal" min={0} step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+          </Field>
+          <Field label={t("inventory.inStock2")}>
+            <input id="pr-qty" type="number" inputMode="numeric" min={0} value={form.quantityOnHand} onChange={(e) => setForm({ ...form, quantityOnHand: e.target.value })} />
+          </Field>
+          <Field label={t("inventory.reorderAt2")}>
+            <input id="pr-low" type="number" inputMode="numeric" min={0} value={form.lowStockThreshold} onChange={(e) => setForm({ ...form, lowStockThreshold: e.target.value })} />
+          </Field>
+        </FormGrid>
+      </div>
+    </Drawer>
+  ) : null;
 
-        <div className={pageBody}>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatCard icon={Package} label={t("inventory.products")} value={list.length} tone="violet" />
-            <StatCard icon={Boxes} label={t("inventory.unitsInStock")} value={units} tone="sky" />
-            <StatCard icon={Coins} label={t("inventory.stockValue")} value={money(Math.round(stockValue), sym)} hint={t("inventory.atSalePrice")} tone="emerald" />
-            <StatCard
-              icon={AlertTriangle}
-              label={t("inventory.runningOut")}
-              value={lowStock.length}
-              hint={lowStock.length ? lowStock.map((p) => p.name).slice(0, 2).join(", ") : t("inventory.nothingToReorder")}
-              tone={lowStock.length ? "rose" : "slate"}
-            />
+  return (
+    <BzPage overlay={drawer}>
+      <PageHead
+        title={t("inventory.inventory")}
+        sub={t("inventory.whatYouBuyCountAnd")}
+        right={
+          <>
+            <Link to="count" className="btn btn-ol s">
+              <ScanLine className="ic" />
+              {t("inventory.countButton")}
+            </Link>
+            <Link to="suppliers" className="btn btn-ol s">
+              <Truck className="ic" />
+              {t("inventory.suppliersAndOrders")}
+            </Link>
+            <Btn kind="ol" icon={<ArrowRightLeft className="ic" />} onClick={() => (locations.length > 1 ? setQuickTransfer(true) : (toast.info(t("inventory.transferNeedTwo")), setManaging(true)))}>
+              {t("inventory.transfer")}
+            </Btn>
+            <Btn kind="ol" icon={<MapPin className="ic" />} onClick={() => setManaging(true)}>{t("inventory.manageLocations")}</Btn>
+            <Btn kind="v" icon={<Plus className="ic" />} onClick={() => open()}>{t("inventory.addProduct")}</Btn>
+          </>
+        }
+      />
+
+      <div className="kp">
+        <div className="k"><small>{t("inventory.products")}</small><b>{list.length}</b><span /></div>
+        <div className="k"><small>{t("inventory.unitsInStock")}</small><b>{units}</b><span /></div>
+        <div className="k"><small>{t("inventory.stockValue")}</small><b>{money(Math.round(stockValue), sym)}</b><span>{t("inventory.atSalePrice")}</span></div>
+        <div className="k">
+          <small>{t("inventory.runningOut")}</small>
+          <b>{lowStock.length}</b>
+          <span>{lowStock.length ? lowStock.map((p) => p.name).slice(0, 2).join(", ") : t("inventory.nothingToReorder")}</span>
+        </div>
+      </div>
+      <div style={{ height: 14 }} />
+
+      {products === null ? (
+        <Skeleton />
+      ) : list.length === 0 ? (
+        <EmptyState
+          icon={<Package className="ic" />}
+          title={t("inventory.noProductsYet")}
+          text={t("inventory.addWhatYouKeepOn")}
+          action={<Btn kind="v" icon={<Plus className="ic" />} onClick={() => open()}>{t("inventory.addProduct")}</Btn>}
+        />
+      ) : (
+        <>
+          <Tabs
+            pill
+            value={filter}
+            onChange={(k) => setFilter(k as "all" | "low")}
+            items={[
+              { key: "all", label: `${t("common.all")} ${list.length}` },
+              { key: "low", label: `${t("inventory.runningOut")} ${lowStock.length}` },
+            ]}
+          />
+          <div style={{ height: 12 }} />
+          <div className="row gap8" style={{ flexWrap: "wrap", marginBottom: 14 }}>
+            <div className="srch" style={{ height: 52, maxWidth: 520, flex: 1, marginBottom: 0 }}>
+              <Search className="ic" aria-hidden />
+              <input
+                aria-label={t("inventory.searchProducts")}
+                placeholder={t("inventory.searchByNameOrSku")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                style={{ border: 0, background: "transparent", outline: 0, font: "inherit", flex: 1, color: "inherit" }}
+              />
+            </div>
+            <LocationSelect locations={locations} value={locationId} onChange={setLocationId} />
           </div>
 
-          {products === null ? (
-            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
-          ) : list.length === 0 ? (
-            <EmptyState
-              icon={Package}
-              title={t("inventory.noProductsYet")}
-              body={t("inventory.addWhatYouKeepOn")}
-              action={<Button className={primaryBtn} onClick={() => open()}><Plus size={16} />{" "}{t("inventory.addProduct")}</Button>}
-            />
+          {shown.length === 0 ? (
+            <EmptyState icon={<Search className="ic" />} title={query ? t("common.nothingMatches", { query }) : t("inventory.nothingIsRunningOut")} />
           ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative min-w-[200px] flex-1 md:max-w-md">
-                  <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-                  <input aria-label={t("inventory.searchProducts")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("inventory.searchByNameOrSku")} value={query} onChange={(e) => setQuery(e.target.value)} />
-                </div>
-                <LocationSelect locations={locations} value={locationId} onChange={setLocationId} />
-                <FilterChips<"all" | "low">
-                  label={t("inventory.filterProducts")}
-                  value={filter}
-                  onChange={setFilter}
-                  options={[{ value: "all", label: t("common.all"), count: list.length }, { value: "low", label: t("inventory.runningOut"), count: lowStock.length }]}
-                />
-              </div>
-
-              {shown.length === 0 ? (
-                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                  {query ? t("common.nothingMatches", { query }) : t("inventory.nothingIsRunningOut")}
-                </p>
-              ) : (
-                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                  {shown.map((p, i) => {
-                    const low = p.lowStock && p.isActive;
-                    return (
-                      <li key={p.id} className={cn("flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 md:flex-nowrap md:px-5", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]", !p.isActive && "opacity-60")}>
-                        <button type="button" onClick={() => open(p)} className="min-w-0 flex-1 basis-[60%] rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="truncate text-[15px] font-semibold">{p.name}</span>
-                            {low && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-800 ring-1 ring-inset ring-rose-200">{t("inventory.reorder")}</span>}
-                            {!p.isActive && <span className="rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-2 py-0.5 text-[11px] font-bold">{t("inventory.inactive")}</span>}
-                          </span>
-                          <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">
-                            {t("inventory.each", { value: p.sku ? t("inventory.sku", { sku: p.sku }) : t("inventory.noSku"), value2: money(p.price, sym) })}
-                          </span>
-                        </button>
-
-                        {/* The count, with its reorder level under it. */}
-                        <div className="w-[120px] shrink-0">
-                          <p className="flex items-baseline gap-1">
-                            <span className={cn("text-xl font-extrabold tabular-nums", low && "text-rose-700")}>{p.quantityOnHand}</span>
-                            <span className="text-xs text-[rgb(var(--reg-muted))]">{t("inventory.inStock")}</span>
-                          </p>
-                          <Meter
-                            className="mt-1"
-                            tone={low ? "rose" : "brand"}
-                            value={p.quantityOnHand}
-                            max={Math.max(p.lowStockThreshold * 3, p.quantityOnHand, 1)}
-                            label={t("inventory.inStockReorderAt", { name: p.name, quantityOnHand: p.quantityOnHand, lowStockThreshold: p.lowStockThreshold })}
-                          />
-                          <p className="mt-0.5 text-[11px] text-[rgb(var(--reg-muted))]">{t("inventory.reorderAt", { lowStockThreshold: p.lowStockThreshold })}</p>
-                        </div>
-
-                        <div className="ml-auto flex shrink-0 items-center gap-1">
-                          <button
-                            type="button"
-                            aria-label={t("inventory.oneFewer", { name: p.name })}
-                            disabled={moving === p.id || p.quantityOnHand <= 0}
-                            onClick={() => void move(p, -1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-inset ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-canvas))] disabled:opacity-40"
-                          >
-                            <Minus size={15} />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={t("inventory.oneMore", { name: p.name })}
-                            disabled={moving === p.id}
-                            onClick={() => void move(p, 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))] ring-1 ring-inset ring-[rgb(var(--reg-brand)/0.25)] hover:bg-[rgb(236_231_255)] disabled:opacity-40"
-                          >
-                            <Plus size={15} />
-                          </button>
-                          <ActionMenu
-                            label={t("common.moreFor", { name: p.name })}
-                            actions={[
-                              { label: t("common.edit"), icon: Pencil, onSelect: () => open(p) },
-                              ...(locations.length > 1 ? [{ label: t("inventory.transfer"), icon: ArrowRightLeft, onSelect: () => setTransferring(p) }] : []),
-                              { label: t("common.delete"), icon: Trash2, danger: true, onSelect: () => void remove(p) },
-                            ]}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </>
+            <div className="tbx">
+              {shown.map((p) => {
+                const low = p.lowStock && p.isActive;
+                return (
+                  <div key={p.id} className="lr" style={p.isActive ? undefined : { opacity: 0.6 }}>
+                    <span className="mn" style={{ background: "var(--bz-vsoft)", color: "var(--bz-vtext)" }}>
+                      <Package className="ic" />
+                    </span>
+                    <div className="tx" onClick={() => open(p)} role="button" tabIndex={0}>
+                      <b>{p.name}</b>
+                      <span>{t("inventory.each", { value: p.sku ? t("inventory.sku", { sku: p.sku }) : t("inventory.noSku"), value2: money(p.price, sym) })}</span>
+                    </div>
+                    {low && <span className="tag2 a">{t("inventory.reorder")}</span>}
+                    {low && <span className="tag2">{t("inventory.reorderAt", { lowStockThreshold: p.lowStockThreshold })}</span>}
+                    {!p.isActive && <span className="tag2">{t("inventory.inactive")}</span>}
+                    <span className="acts">
+                      <button type="button" className="tbtn" aria-label={t("inventory.oneFewer", { name: p.name })} disabled={moving === p.id || p.quantityOnHand <= 0} onClick={() => void move(p, -1)}>
+                        <Minus className="ic" />
+                      </button>
+                      <b style={{ minWidth: 30, textAlign: "center", ...(low ? { color: "var(--bz-gink)" } : {}) }} aria-label={t("inventory.inStockReorderAt", { name: p.name, quantityOnHand: p.quantityOnHand, lowStockThreshold: p.lowStockThreshold })}>{p.quantityOnHand}</b>
+                      <button type="button" className="tbtn" aria-label={t("inventory.oneMore", { name: p.name })} disabled={moving === p.id} onClick={() => void move(p, 1)}>
+                        <Plus className="ic" />
+                      </button>
+                      <Btn kind="ol" onClick={() => open(p)}>{t("common.edit")}</Btn>
+                      {locations.length > 1 && <Btn kind="ol" icon={<ArrowRightLeft className="ic" />} onClick={() => setTransferring(p)}>{t("inventory.transfer")}</Btn>}
+                      <Btn kind="dg" onClick={() => void remove(p)} aria-label={t("common.moreFor", { name: p.name })}>{t("common.delete")}</Btn>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           )}
-          <RecentTransfers businessId={businessId} />
-        </div>
-
-        <TransferSheet
+        </>
+      )}
+      <RecentTransfers businessId={businessId} />
+      <TransferSheet
           key={String(transferring?.id ?? "none")}
           businessId={businessId}
           product={transferring}
@@ -309,42 +303,9 @@ export default function InventoryPage() {
           locations={locations}
           onClose={() => setTransferring(null)}
         />
-        <QuickTransferSheet businessId={businessId} products={products ?? []} locations={locations} open={quickTransfer} onClose={() => setQuickTransfer(false)} />
-        <LocationsSheet businessId={businessId} open={managing} locations={locations} onClose={() => setManaging(false)} />
+      <QuickTransferSheet businessId={businessId} products={products ?? []} locations={locations} open={quickTransfer} onClose={() => setQuickTransfer(false)} />
+      <LocationsSheet businessId={businessId} open={managing} locations={locations} onClose={() => setManaging(false)} />
 
-        <FormSheet
-          open={!!sheet}
-          onOpenChange={(o) => !o && setSheet(null)}
-          title={sheet?.mode === "edit" ? t("inventory.editProduct") : t("inventory.addAProduct")}
-          description={t("inventory.youLlBeWarnedWhen")}
-          footer={
-            <>
-              <Button variant="outline" className={sheetSecondary} onClick={() => setSheet(null)}>{t("common.cancel")}</Button>
-              <Button className={sheetPrimary} onClick={() => void save()} disabled={saving}>
-                {saving ? t("common.saving") : sheet?.mode === "edit" ? t("common.save") : t("inventory.addProduct")}
-              </Button>
-            </>
-          }
-        >
-          <Field label={t("common.name")} htmlFor="pr-name">
-            <input id="pr-name" className={fieldCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("inventory.shampooMl")} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("inventory.skuOptional")} htmlFor="pr-sku">
-              <input id="pr-sku" className={fieldCls} value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-            </Field>
-            <Field label={t("inventory.price", { sym })} htmlFor="pr-price">
-              <input id="pr-price" type="number" inputMode="decimal" min={0} step="0.01" className={fieldCls} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-            </Field>
-            <Field label={t("inventory.inStock2")} htmlFor="pr-qty">
-              <input id="pr-qty" type="number" inputMode="numeric" min={0} className={fieldCls} value={form.quantityOnHand} onChange={(e) => setForm({ ...form, quantityOnHand: e.target.value })} />
-            </Field>
-            <Field label={t("inventory.reorderAt2")} htmlFor="pr-low">
-              <input id="pr-low" type="number" inputMode="numeric" min={0} className={fieldCls} value={form.lowStockThreshold} onChange={(e) => setForm({ ...form, lowStockThreshold: e.target.value })} />
-            </Field>
-          </div>
-        </FormSheet>
-      </BooqiScope>
-    </AppLayout>
+    </BzPage>
   );
 }
