@@ -52,6 +52,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [msg, setMsg] = useState(service?.messageToClient ?? '');
   const [stype, setStype] = useState(['standard', 'package', 'course'].includes(service?.serviceType ?? '') ? (service?.serviceType as string) : 'standard');
   const [color, setColor] = useState(service?.color ?? '#6f52ed');
+  const [availFrom, setAvailFrom] = useState(((service as { availableFrom?: string | null } | null)?.availableFrom ?? '').slice(0, 10));
+  const [availTo, setAvailTo] = useState(((service as { availableTo?: string | null } | null)?.availableTo ?? '').slice(0, 10));
   const [virtual, setVirtual] = useState(service?.virtualAppointment ?? false);
   const [procD, setProcD] = useState(String(service?.processingDuring ?? 0));
   const [procA, setProcA] = useState(String(service?.processingAfter ?? 0));
@@ -80,6 +82,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
       mobileService: mobile, messageToClient: msg.trim() || null, depositPercent: dep ?? (service ? -1 : undefined),
       taxRate: taxRate.trim() === '' ? null : num(taxRate),
       isClass, maxParticipants: isClass ? Math.max(1, Math.round(num(maxP)) || 1) : undefined,
+      availableFrom: /^\d{4}-\d{2}-\d{2}$/.test(availFrom) ? availFrom : undefined, availableTo: /^\d{4}-\d{2}-\d{2}$/.test(availTo) ? availTo : undefined,
       serviceType: stype, color: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : undefined, virtualAppointment: virtual,
       processingDuring: Math.max(0, Math.round(num(procD)) || 0), processingAfter: Math.max(0, Math.round(num(procA)) || 0),
       travelFee: mobile && travel.trim() !== '' ? Math.max(0, num(travel) || 0) : undefined, serviceArea: mobile ? area.trim() || undefined : undefined,
@@ -197,6 +200,8 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
               <Field label={tr('pa.area')} value={area} onChangeText={setArea} maxLength={500} />
             </>) : null}
             <ToggleRow label={tr('pa.virtual')} value={virtual} onChange={setVirtual} />
+            <Field label={tr('pa.availFrom')} value={availFrom} onChangeText={setAvailFrom} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" maxLength={10} />
+            <Field label={tr('pa.availTo')} value={availTo} onChangeText={setAvailTo} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" maxLength={10} />
             <ToggleRow label={tr('ux.isClass')} value={isClass} onChange={setIsClass} />
             {isClass ? <Field label={tr('ux.maxP')} value={maxP} onChangeText={setMaxP} keyboardType="number-pad" /> : null}
             {service ? <Btn label={tr('sx.archive')} variant="danger" icon="trash" style={{ marginTop: 14 }} onPress={archive} /> : null}

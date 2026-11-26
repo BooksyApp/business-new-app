@@ -17,7 +17,7 @@ export interface ServiceBody {
   categoryId?: Id | null; name?: string; description?: string; durationMinutes?: number; price?: number; priceType?: 'FIXED' | 'FROM' | 'RANGE';
   staffIds?: Id[]; isVisible?: boolean; isActive?: boolean; depositPercent?: number | null; paddingBefore?: number; paddingAfter?: number;
   bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null; messageToClient?: string | null; isClass?: boolean; maxParticipants?: number | null;
-  serviceType?: string; color?: string; virtualAppointment?: boolean; processingDuring?: number; processingAfter?: number; travelFee?: number | null; serviceArea?: string | null; questions?: { text: string; required?: boolean }[];
+  availableFrom?: string; availableTo?: string; serviceType?: string; color?: string; virtualAppointment?: boolean; processingDuring?: number; processingAfter?: number; travelFee?: number | null; serviceArea?: string | null; questions?: { text: string; required?: boolean }[];
 }
 export interface StaffBody { avatarUrl?: string; name?: string; email?: string; phone?: string; position?: string; serviceIds?: Id[]; isActive?: boolean; schedule?: Record<string, string[]>; inviteAndCreateAccount?: boolean }
 export interface StaffFull {

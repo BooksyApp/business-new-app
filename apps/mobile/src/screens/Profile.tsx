@@ -29,19 +29,22 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [logo, setLogo] = useState<string | null>(null);
   const [cover, setCover] = useState<string | null>(null);
   const [pay, setPay] = useState<string[]>(['CASH', 'CARD']);
+  const [assign, setAssign] = useState('FAIR_EARNINGS');
+  const [parallel, setParallel] = useState(false);
   const cats = useLoad(() => apiO.categories(getLocale()).catch(() => []), []);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const b = q.data; if (!b) return;
-    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', category: b.category ?? '', building: (b as { buildingNumber?: string }).buildingNumber ?? '', apartment: (b as { apartmentNumber?: string }).apartmentNumber ?? '', tax: b.taxRate != null ? String(b.taxRate) : '', lateFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : '', footer: b.receiptFooter ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
+    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', category: b.category ?? '', building: (b as { buildingNumber?: string }).buildingNumber ?? '', apartment: (b as { apartmentNumber?: string }).apartmentNumber ?? '', hsNote: (b as { healthSafetyNote?: string }).healthSafetyNote ?? '', tax: b.taxRate != null ? String(b.taxRate) : '', lateFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : '', footer: b.receiptFooter ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
     setOnline(b.onlineBookingEnabled ?? true); setLogo(b.logoUrl ?? null); setCover(b.coverImageUrl ?? null);
+    setAssign((b as { staffAssignmentMode?: string }).staffAssignmentMode ?? 'FAIR_EARNINGS'); setParallel(!!(b as { allowParallelServices?: boolean }).allowParallelServices);
     setPay((b.acceptedPaymentMethods ?? 'CASH,CARD').split(',').map((x) => x.trim()).filter(Boolean));
   }, [q.data]);
   const set = (k: string) => (v: string) => setF((m) => ({ ...m, [k]: v }));
   const int = (k: string) => { const n = Math.round(num(f[k] ?? '')); return Number.isFinite(n) && n >= 0 ? n : undefined; };
   async function save() {
     if (!(f.name ?? '').trim()) { toast(tr('tm.needName'), 'error'); return; }
-    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), buildingNumber: f.building || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
+    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: f.building || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
     setBusy(true);
     try { await apiB.updateBusiness(sid, body); if ((f.review ?? '') !== (q.data?.googleReviewUrl ?? '')) await apiB.setReviewLink(sid, f.review ? f.review : null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); onBack(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
@@ -97,6 +100,12 @@ export function Profile({ onBack }: { onBack: () => void }) {
             <SectionTitle>{tr('pa.payMethods')}</SectionTitle>
             <MultiChoice value={pay} onChange={setPay} options={[{ value: 'CASH', label: tr('sales.m.CASH') }, { value: 'CARD', label: tr('sales.m.CARD_TERMINAL') }, { value: 'ONLINE', label: tr('pa.payOnline') }]} />
             <Field label={tr('pf.reviewUrl')} value={f.review ?? ''} onChangeText={set('review')} keyboardType="url" autoCapitalize="none" />
+          </Section>
+          <Section title={tr('pa.secRules')}>
+            <SectionTitle>{tr('pa.assignMode')}</SectionTitle>
+            <Choice value={assign} onChange={setAssign} options={[{ value: 'FAIR_EARNINGS', label: tr('pa.assignFair') }, { value: 'ROUND_ROBIN', label: tr('pa.assignRound') }, { value: 'PRIORITY', label: tr('pa.assignPriority') }]} />
+            <ToggleRow label={tr('pa.parallel')} hint={tr('pa.parallelHint')} value={parallel} onChange={setParallel} />
+            <Field label={tr('pa.healthNote')} value={f.hsNote ?? ''} onChangeText={set('hsNote')} multiline maxLength={2000} style={{ minHeight: 70, paddingTop: 6, textAlignVertical: 'top' }} />
           </Section>
           <Section title={tr('pa.secReceipts')}>
             <Field label={tr('pa.tax')} value={f.tax ?? ''} onChangeText={set('tax')} keyboardType="decimal-pad" />

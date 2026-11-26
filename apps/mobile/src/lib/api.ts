@@ -83,6 +83,15 @@ export interface Appointment {
   staffAutoAssigned?: boolean | null;
   clientAlert?: boolean | null;
   guestName?: string | null;
+  /** JSON text [{question, answer}] the client gave to the service's booking questions. */
+  clientAnswers?: string | null;
+  clientAddress?: string | null;
+  travelFee?: number | null;
+  promoCode?: string | null;
+  paidAmount?: number | null;
+  prepaidAmount?: number | null;
+  cancellationReason?: string | null;
+  color?: string | null;
 }
 
 export interface Client {
