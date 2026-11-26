@@ -8,6 +8,7 @@ import { Avatar, Btn, Chip, Field, Pill, Skeleton } from '@/components/ui';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { t as tr } from '@/i18n';
+import { apiM } from '@/lib/api-more';
 import { api, ApiError, toDay, type Appointment } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { recallClient } from '@/lib/client-cache';
@@ -16,7 +17,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { cardShadow, font, mesh } from '@/theme/tokens';
 
-type Step = 'view' | 'cancel' | 'reschedule';
+type Step = 'view' | 'cancel' | 'reschedule' | 'wa';
 const TONE = { PENDING: 'violet', CONFIRMED: 'violet', COMPLETED: 'ok', CANCELLED: 'muted', NO_SHOW: 'guava' } as const;
 
 /** Booking sheet opened from a calendar tile: details, contact, late notice and the status actions (confirm, reschedule, no-show, cancel). */
@@ -136,9 +137,9 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
           {open ? <Btn label={tr('appt.complete')} icon="check-badge" variant="secondary" loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
             {phone ? (
-              <Pressable onPress={() => void Linking.openURL(`https://wa.me/${digits(phone)}`)} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Pressable onPress={() => setStep('wa')} accessibilityRole="button" accessibilityLabel={tr('ux.waRemind')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 }}>
                 <Icon name="chat" size={20} color={t.vtext} />
-                <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('appt.messageClient')}</Text>
+                <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{open ? tr('ux.waRemind') : tr('appt.messageClient')}</Text>
               </Pressable>
             ) : <View />}
             {open ? (
@@ -162,6 +163,8 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
           </View>
         </>
       ) : null}
+
+      {step === 'wa' ? <WaReminder a={a} onBack={() => setStep('view')} /> : null}
 
       {step === 'reschedule' ? <Reschedule a={a} onBack={() => setStep('view')} onDone={() => { bump(); onClose(); }} /> : null}
     </ScrollView>
@@ -221,5 +224,47 @@ function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () => void;
         <Btn label={tr('appt.reschedule')} style={{ flex: 1 }} disabled={!time} loading={busy} onPress={() => void save()} />
       </View>
     </>
+  );
+}
+
+/** Per-booking WhatsApp reminder: the server-built message (from the salon's template), who gets it, send via wa.me, mark as sent. */
+function WaReminder({ a, onBack }: { a: Appointment; onBack: () => void }) {
+  const { t } = useTheme();
+  const { salon } = useApp();
+  const sid = salon?.id ?? '';
+  const q = useLoad(() => apiM.waList(sid, a.appointmentDate.slice(0, 10)), [a.id]);
+  const row = (q.data?.rows ?? []).find((r) => String(r.id) === String(a.id));
+  const [busy, setBusy] = useState(false);
+  const [sentAt, setSentAt] = useState<string | null | undefined>(undefined);
+  const sent = sentAt === undefined ? row?.sentAt ?? null : sentAt;
+  const text = row?.text ?? '';
+  const url = row?.waUrl ?? (a.clientPhone ? `https://wa.me/${digits(a.clientPhone)}?text=${encodeURIComponent(text)}` : null);
+  async function send() {
+    if (!url) return;
+    setBusy(true);
+    try { await Linking.openURL(url); await apiM.waMark(sid, a.id, true); setSentAt(new Date().toISOString()); toast(tr('ux.waSentAt', { t: new Date().toTimeString().slice(0, 5) }), 'success'); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
+  }
+  async function unmark() { setBusy(true); try { await apiM.waMark(sid, a.id, false); setSentAt(null); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } }
+  return (
+    <View style={{ gap: 12 }}>
+      <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink }}>{tr('ux.waRemind')}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Avatar name={a.clientName ?? ''} size={48} uri={a.clientId != null ? (recallClient(String(a.clientId)) as { avatarUrl?: string | null } | undefined)?.avatarUrl : null} />
+        <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, color: t.ink }}>{a.clientName}</Text><Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{tr('ux.waTo')}: {a.clientPhone}</Text></View>
+        <Pill text={sent ? tr('ux.waSentAt', { t: String(sent).slice(11, 16) }) : tr('ux.waNotSent')} tone={sent ? 'ok' : 'amber'} />
+      </View>
+      {q.loading && !q.data ? <Skeleton rows={1} height={120} /> : row ? (
+        <View>
+          <Text style={{ fontFamily: font.b, fontSize: 13.5, color: t.muted, marginBottom: 6 }}>{tr('ux.waPreview')}</Text>
+          <View style={{ backgroundColor: '#dcf8c6', borderRadius: 22, borderTopLeftRadius: 6, padding: 16 }}>
+            <Text style={{ fontFamily: font.m, fontSize: 16, lineHeight: 23, color: '#1d1730' }}>{text}</Text>
+          </View>
+        </View>
+      ) : <Text style={{ fontFamily: font.m, fontSize: 15, lineHeight: 22, color: t.muted }}>{tr('ux.waNoRow')}</Text>}
+      <Btn label={tr('ux.waOpen')} icon="chat" loading={busy} disabled={!url || !row} onPress={() => void send()} />
+      {sent ? <Btn label={tr('ux.waMarkUnsent')} variant="secondary" loading={busy} onPress={() => void unmark()} /> : null}
+      <Btn label={tr('common.back')} variant="secondary" onPress={onBack} />
+    </View>
   );
 }

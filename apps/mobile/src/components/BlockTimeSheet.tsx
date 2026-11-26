@@ -10,7 +10,8 @@ import { Btn, Chip, Field, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { dateLabel, fromMin } from '@/lib/format';
+import { addDays, dateLabel, fromMin } from '@/lib/format';
+import { apiM } from '@/lib/api-more';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
@@ -46,13 +47,16 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
   const [to, setTo] = useState(13 * 60);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (open) { setStaffId(String(preset ?? masters[0]?.id ?? '')); setFull(false); setFrom(12 * 60); setTo(13 * 60); setReason(''); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [rep, setRep] = useState<'' | 'DAILY' | 'WEEKLY' | 'BIWEEKLY'>('');
+  const [weeks, setWeeks] = useState(8);
+  useEffect(() => { if (open) { setStaffId(String(preset ?? masters[0]?.id ?? '')); setFull(false); setFrom(12 * 60); setTo(13 * 60); setReason(''); setRep(''); setWeeks(8); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function create() {
     if (!salon || !staffId) return;
     setBusy(true);
     try {
-      await api.createTimeOff({ businessId: salon.id, staffId, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined });
+      if (rep) await apiM.createRecurringTimeOff({ businessId: salon.id, staffId, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined, recurrencePattern: rep, recurrenceEndDate: toDay(addDays(date, weeks * 7)) });
+      else await api.createTimeOff({ businessId: salon.id, staffId, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onDone();
     } catch (e) {
@@ -99,6 +103,15 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
           <Stepper label={tr('block.to')} value={Math.min(to, 23 * 60 + 59)} min={30} max={23 * 60 + 30} onChange={setTo} />
         </View>
       )}
+      <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted, marginTop: 6, marginBottom: 8 }}>{tr('ux.repeatRule')}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
+        {([['', 'ux.repNone'], ['DAILY', 'ux.repDaily'], ['WEEKLY', 'ux.repWeekly'], ['BIWEEKLY', 'ux.repBiweekly']] as const).map(([k, l]) => <Chip key={k} soft label={tr(l)} icon={k ? 'repeat' : undefined} active={rep === k} onPress={() => setRep(k)} />)}
+      </ScrollView>
+      {rep ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
+          {[4, 8, 12, 26].map((w) => <Chip key={w} soft label={tr('ux.repWeeks', { n: w })} active={weeks === w} onPress={() => setWeeks(w)} />)}
+        </ScrollView>
+      ) : null}
       <Field label={tr('block.reason')} value={reason} onChangeText={setReason} maxLength={200} />
       {!full && to <= from ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink, marginTop: -6, marginBottom: 8 }}>{tr('block.badRange')}</Text> : null}
       <View style={{ flexDirection: 'row', gap: 10, paddingBottom: 16 }}>

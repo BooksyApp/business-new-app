@@ -211,6 +211,7 @@ export function RotaView({ onBack }: { onBack: () => void }) {
   const staffQ = useLoad(() => api.staff(sid).catch(() => []), [sid]);
   const [sel, setSel] = useState<{ id: string; name: string; date: string } | null>(null);
   const [st, setSt] = useState('09:00'); const [en, setEn] = useState('18:00');
+  const [repW, setRepW] = useState(0);
   const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); setSel(null); void q.reload(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   const okT = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
@@ -253,9 +254,11 @@ export function RotaView({ onBack }: { onBack: () => void }) {
           <View style={{ flex: 1 }}><Field label={tr('hr.open')} value={st} onChangeText={setSt} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
           <View style={{ flex: 1 }}><Field label={tr('hr.closed')} value={en} onChangeText={setEn} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
         </View>
+        <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted, marginBottom: 8 }}>{tr('ux.repeatShiftWeeks')}</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>{[0, 2, 4, 8].map((n) => <Chip key={n} soft label={n === 0 ? tr('ux.repNone') : tr('ux.repWeeks', { n })} active={repW === n} onPress={() => setRepW(n)} />)}</View>
         <View style={{ flexDirection: 'row', gap: 10, paddingBottom: 16 }}>
-          <Btn label={tr('tm.closed')} variant="secondary" style={{ flex: 1 }} loading={busy} onPress={() => sel && void run(() => apiB.clearShift(sid, sel.id, sel.date))} />
-          <Btn label={tr('common.save')} style={{ flex: 1 }} loading={busy} onPress={() => { if (!sel) return; if (!okT(st) || !okT(en) || en <= st) { toast(tr('hr.badTime'), 'error'); return; } void run(() => apiB.setShift(sid, { staffId: sel.id, date: sel.date, start: st, end: en })); }} />
+          <Btn label={tr('tm.closed')} variant="secondary" style={{ flex: 1 }} loading={busy} onPress={() => sel && void run(async () => { for (let i = 0; i <= repW; i++) await apiB.clearShift(sid, sel.id, toDay(addDays(fromIso(sel.date), 7 * i))); })} />
+          <Btn label={tr('common.save')} style={{ flex: 1 }} loading={busy} onPress={() => { if (!sel) return; if (!okT(st) || !okT(en) || en <= st) { toast(tr('hr.badTime'), 'error'); return; } void run(async () => { for (let i = 0; i <= repW; i++) await apiB.setShift(sid, { staffId: sel.id, date: toDay(addDays(fromIso(sel.date), 7 * i)), start: st, end: en }); if (repW) toast(tr('ux.shiftSeries'), 'success'); }); }} />
         </View>
       </BottomSheet>
     </Screen>

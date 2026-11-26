@@ -44,11 +44,11 @@ export default function More() {
       { k: 'messages', icon: 'chat', title: L('sections.messages'), sub: L('sections.messagesHint') },
     ] },
     { title: tr('ux.groupMoney'), rows: [
-      { k: 'finance', icon: 'cash', title: L('fn.title') }, { k: 'expenses', icon: 'receipt', title: L('ex.title') }, { k: 'inventory', icon: 'box', title: L('inv.title') },
+      { k: 'finance', icon: 'cash', title: L('fn.title') }, { k: 'expenses', icon: 'receipt', title: L('ex.title') }, { k: 'inventory', icon: 'box', title: L('inv.title') }, { k: 'suppliers', icon: 'store', title: tr('ux.suppliers'), sub: tr('ux.stockCount') },
       { k: 'payroll', icon: 'users', title: L('pr.title') }, { k: 'reports', icon: 'spark', title: L('rp.title'), sub: L('rp.top') }, { k: 'custom', icon: 'paper', title: L('cr.title') },
     ] },
     { title: tr('ux.groupGrowth'), rows: [
-      { k: 'marketing', icon: 'send', title: L('mk.title') }, { k: 'offers', icon: 'tag', title: L('x2.offers') }, { k: 'shop', icon: 'bag', title: L('x2.shop') }, { k: 'branches', icon: 'map', title: L('x2.branches') },
+      { k: 'marketing', icon: 'send', title: L('mk.title') }, { k: 'promotion', icon: 'spark', title: tr('ux.promo') }, { k: 'offers', icon: 'tag', title: L('x2.offers') }, { k: 'shop', icon: 'bag', title: L('x2.shop') }, { k: 'branches', icon: 'map', title: L('x2.branches') },
     ] },
     { title: tr('ux.groupSetup'), rows: [
       { k: 'profile', icon: 'store', title: L('pf.title') }, { k: 'rota', icon: 'clock', title: L('x2.rota') }, { k: 'roles', icon: 'shield', title: L('rl.title') },

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, ScrollView, Switch, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Choice, MultiChoice, SectionTitle, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
@@ -196,6 +197,7 @@ function Categories({ cats, onBack, onChanged }: { cats: Category[]; onBack: () 
 
 /** Xidmətlər: list by category, on/off switch, add/edit (5 tabs), archive/restore, categories, packages. */
 export function Services({ onBack }: { onBack: () => void }) {
+  const router = useRouter();
   const { t } = useTheme();
   const { salon, bump } = useApp();
   const sid = salon?.id ?? '';
@@ -252,6 +254,7 @@ export function Services({ onBack }: { onBack: () => void }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginBottom: 14 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
         <Chip label={tr('cl.segAll')} active={filter === ''} onPress={() => setFilter('')} />
         {(cats.data ?? []).map((c) => <Chip key={c.id} label={c.name} active={filter === String(c.id)} onPress={() => setFilter(String(c.id))} />)}
+        <Chip label={tr('ux.combos')} icon="gift" onPress={() => router.push('/section/combos')} />
         <Chip label={tr('sx.categories')} icon="edit" onPress={() => setView('cats')} />
         <Chip label={tr('sx.packages')} icon="gift" onPress={() => setView('packages')} />
         <Chip label={tr('ad.addons')} icon="plus" onPress={() => setView('addons')} />

@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { api, ApiError, toDay, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { recallClient } from '@/lib/client-cache';
+import { apiM, type Combo } from '@/lib/api-more';
 import { addDays, dateLabel, fromIso, fromMin, hhmm, money, monthLabel, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -58,11 +59,32 @@ export default function NewBooking() {
   const [date, setDate] = useState(() => (params.date ? fromIso(params.date) : new Date()));
   const [time, setTime] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const combosQ = useLoad(() => apiM.combos(sid).catch(() => [] as Combo[]), [sid]);
+  const combo = picked.length === 1 ? (combosQ.data ?? []).find((c) => String(c.serviceId) === String(picked[0].id)) ?? null : null;
+  const [party, setParty] = useState(1);
+  const [guests, setGuests] = useState<string[]>([]);
 
   const back = () => (step === 0 ? router.back() : setStep(step - 1));
-  const can = [!!client, picked.length > 0, !!master && !!time, true][step];
+  const can = [!!client, picked.length > 0, (!!master || !!combo) && !!time, true][step];
+
+  async function bookCombo() {
+    if (busy || !client || !combo || !time) return;
+    setBusy(true);
+    const body = { businessId: sid, serviceId: combo.serviceId, partySize: party, guestNames: guests.slice(0, Math.max(0, party - 1)).map((g) => g.trim()), clientId: client.id, clientName: client.name, appointmentDate: toDay(date), startTime: time };
+    try {
+      try { await apiM.bookCombo(body); }
+      catch (e) {
+        const data = e instanceof ApiError ? (e.data as { code?: string; canOverride?: boolean } | null) : null;
+        if (data?.code === 'BOOKING_CONFLICTS' && data.canOverride && (await askOverride(`${dateLabel(date)} · ${time}\n${(e as Error).message}`))) await apiM.bookCombo(body, true);
+        else throw e;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      bump(); router.back();
+    } catch (e) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); toast((e as Error).message, 'error'); } finally { setBusy(false); }
+  }
 
   async function book() {
+    if (combo) { await bookCombo(); return; }
     if (busy || !client || !service || !master || !time) return;
     if (toMin(time) + totalMin > 24 * 60) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); Alert.alert(tr('create.pastMidnight')); return; }
     setBusy(true);
@@ -134,16 +156,16 @@ export default function NewBooking() {
         <View style={{ flex: 1 }}>
           {step === 0 ? <ClientStep sid={sid} sel={client} onPick={setClient} /> : null}
           {step === 1 ? <ServiceStep sid={sid} sel={picked} cur={salon?.currency} onToggle={(s) => { setPicked((p) => (p.some((x) => x.id === s.id) ? p.filter((x) => x.id !== s.id) : [...p, s])); setMaster(null); setTime(null); }} /> : null}
-          {step === 2 && service ? <TimeStep sid={sid} service={service} picked={picked} master={master} date={date} time={time} setMaster={(m) => { setMaster(m); setTime(null); }} setDate={(d) => { setDate(d); setTime(null); }} setTime={setTime} /> : null}
-          {step === 3 && client && service && master && time ? (
+          {step === 2 && service ? <TimeStep sid={sid} service={service} picked={picked} combo={combo} party={party} setParty={setParty} guests={guests} setGuests={setGuests} master={master} date={date} time={time} setMaster={(m) => { setMaster(m); setTime(null); }} setDate={(d) => { setDate(d); setTime(null); }} setTime={setTime} /> : null}
+          {step === 3 && client && service && (master || combo) && time ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140, gap: 14 }}>
               <View style={{ backgroundColor: t.surface, borderRadius: 28, padding: 20, gap: 14, ...cardShadow }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingBottom: 6 }}>
                   <Avatar name={client.name} size={64} uri={(recallClient(client.id) as { avatarUrl?: string | null } | undefined)?.avatarUrl} />
                   <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 22, letterSpacing: -0.5, color: t.ink }}>{client.name}</Text><Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{picked.map((x) => x.name).join(' + ')}</Text></View>
-                  <Avatar name={master.name} size={44} uri={master.avatarUrl} />
+                  {master ? <Avatar name={master.name} size={44} uri={master.avatarUrl} /> : null}
                 </View>
-                {([[tr('create.client'), client.name], [tr('create.service'), picked.map((x) => x.name).join(' + ')], [tr('create.master'), master.name], [tr('create.date'), dateLabel(date)], [tr('create.time'), `${time} – ${fromMin(toMin(time) + totalMin)}`], [tr('appt.price'), money(totalPrice, salon?.currency)]] as const).map(([k, v]) => (
+                {([[tr('create.client'), client.name], [tr('create.service'), picked.map((x) => x.name).join(' + ')], [tr('create.master'), master?.name ?? tr('ux.anyone')], [tr('create.date'), dateLabel(date)], [tr('create.time'), `${time} – ${fromMin(toMin(time) + totalMin)}`], [tr('appt.price'), money(totalPrice, salon?.currency)]] as const).map(([k, v]) => (
                   <View key={k} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                     <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{k}</Text>
                     <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink, flexShrink: 1, textAlign: 'right' }}>{v}</Text>
@@ -273,14 +295,43 @@ function ServiceStep({ sid, sel, cur, onToggle }: { sid: string; sel: Service[];
   );
 }
 
-function TimeStep({ sid, service, picked, master, date, time, setMaster, setDate, setTime }: {
-  sid: string; service: Service; picked: Service[]; master: Staff | null; date: Date; time: string | null; setMaster: (m: Staff) => void; setDate: (d: Date) => void; setTime: (s: string) => void;
+function TimeStep({ sid, service, picked, combo, party, setParty, guests, setGuests, master, date, time, setMaster, setDate, setTime }: {
+  sid: string; service: Service; picked: Service[]; combo: Combo | null; party: number; setParty: (n: number) => void; guests: string[]; setGuests: (g: string[]) => void; master: Staff | null; date: Date; time: string | null; setMaster: (m: Staff) => void; setDate: (d: Date) => void; setTime: (s: string) => void;
 }) {
   const { t } = useTheme();
   const staff = useLoad(() => api.staff(sid), [sid]);
   const masters = (staff.data ?? []).filter((m) => m.isActive !== false && picked.every((sv) => !sv.staffIds?.length || sv.staffIds.map(String).includes(String(m.id))));
   const slots = useLoad(() => (master ? api.slots(sid, service.id, date, master.id) : Promise.resolve(null)), [master?.id, service.id, date.toDateString()]);
   const list = slots.data?.availableSlots ?? [];
+  const cs = useLoad(() => (combo ? apiM.comboSlots(sid, combo.serviceId, toDay(date), party) : Promise.resolve(null)), [combo?.serviceId, date.toDateString(), party]);
+  if (combo) {
+    const cl = cs.data?.availableSlots ?? [];
+    return (
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140, gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: t.surface, borderRadius: 24, padding: 14, paddingLeft: 18, marginBottom: 8 }}>
+          <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink }}>{tr('ux.people', { n: party })}</Text><Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{combo.totalDurationMinutes} {tr('common.min')} · {money((combo.totalPrice ?? 0) * party, undefined)}</Text></View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: t.fill, borderRadius: 24, padding: 3 }}>
+            <Pressable onPress={() => { setParty(Math.max(1, party - 1)); setTime(''); }} accessibilityRole="button" accessibilityLabel="-" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="minus" size={18} color={t.ink} /></Pressable>
+            <Text style={{ fontFamily: font.x, fontSize: 17, minWidth: 24, textAlign: 'center', color: t.ink }}>{party}</Text>
+            <Pressable onPress={() => { setParty(Math.min(combo.maxPartySize, party + 1)); setTime(''); }} accessibilityRole="button" accessibilityLabel="+" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={18} color={t.ink} /></Pressable>
+          </View>
+        </View>
+        {Array.from({ length: Math.max(0, party - 1) }, (_, i) => <Field key={i} label={`${i + 2}.`} value={guests[i] ?? ''} onChangeText={(v) => { const g = [...guests]; g[i] = v; setGuests(g); }} />)}
+        <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 12, marginBottom: 6, textTransform: 'capitalize' }}>{monthLabel(date)}</Text>
+        <DayStrip date={date} onChange={(d) => setDate(d < new Date(new Date().setHours(0, 0, 0, 0)) ? addDays(new Date(), 0) : d)} />
+        <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 18, marginBottom: 8 }}>{tr('create.freeTimes')}</Text>
+        {cs.loading ? <ActivityIndicator color={t.violet} /> : cl.length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('create.noSlots')}</Text> : (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {cl.map((s) => { const on = time === s; return (
+              <Pressable key={s} onPress={() => setTime(s)} accessibilityRole="button" accessibilityState={{ selected: on }} style={{ width: '31.5%', height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? t.violet : t.vsoft }}>
+                <Text style={{ fontFamily: font.b, fontSize: 14.5, color: on ? '#fff' : t.vtext }}>{hhmm(s)}</Text>
+              </Pressable>
+            ); })}
+          </View>
+        )}
+      </ScrollView>
+    );
+  }
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
       {staff.error ? <ErrorState error={staff.error} onRetry={() => void staff.reload()} /> : staff.loading ? <Skeleton rows={1} height={72} /> : masters.length === 0 ? (

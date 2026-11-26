@@ -11,6 +11,9 @@ import { Payroll } from '@/screens/Payroll';
 import { Profile } from '@/screens/Profile';
 import { Roles } from '@/screens/Roles';
 import { Branches, Offers, OnlineShop, RotaView, Support } from '@/screens/More2';
+import { Combos } from '@/screens/Combos';
+import { Promotion } from '@/screens/Promotion';
+import { Suppliers } from '@/screens/Suppliers';
 import { Groups } from '@/screens/Groups';
 import { Looks } from '@/screens/Looks';
 import { Reports } from '@/screens/Reports';
@@ -32,6 +35,9 @@ export default function Section() {
   switch (key) {
     case 'services': return <Services onBack={back} />;
     case 'groups': return <Groups onBack={back} />;
+    case 'promotion': return <Promotion onBack={back} />;
+    case 'suppliers': return <Suppliers onBack={back} />;
+    case 'combos': return <Combos onBack={back} />;
     case 'inventory': return <Inventory onBack={back} />;
     case 'expenses': return <Expenses onBack={back} />;
     case 'marketing': return <Marketing onBack={back} />;
