@@ -58,6 +58,7 @@ function Shell() {
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="salons" />
+          <Stack.Screen name="bookings" />
           <Stack.Screen name="client/[id]" />
           <Stack.Screen name="booking/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
           <Stack.Screen name="section/[key]" />

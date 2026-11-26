@@ -49,6 +49,7 @@ export default function ClientCard() {
   const crmRun = async (fn: () => Promise<unknown>, after: () => void) => { setCrmBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setCrmBusy(false); } };
   const consents = useLoad(() => (client?.id ? apiX.clientConsents(client.id).catch(() => []) : Promise.resolve([])), [client?.id]);
   const [note, setNote] = useState('');
+  const [ctab, setCtab] = useState<'overview' | 'visits' | 'notes'>('overview');
   const [busy, setBusy] = useState(false);
   const stats = (client ?? {}) as Partial<ClientWithStats>;
   const name = client ? `${client.firstName} ${client.lastName ?? ''}`.trim() : '';
@@ -97,6 +98,14 @@ export default function ClientCard() {
             <Btn label={tr('cl.newBooking')} icon="plus" style={{ marginTop: 10 }}
               onPress={() => router.push({ pathname: '/booking/new', params: { clientId: String(client.id), clientName: name } })} />
           </View></Hero>
+          <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.line }}>
+            {([['overview', tr('ux.tabOverview')], ['visits', `${tr('ux.tabVisits')}${(rec.data?.visits ?? []).length ? ` · ${(rec.data?.visits ?? []).length}` : ''}`], ['notes', tr('ux.tabNotes')]] as const).map(([k, label]) => (
+              <Pressable key={k} onPress={() => setCtab(k)} accessibilityRole="tab" accessibilityState={{ selected: ctab === k }} noScale style={{ paddingHorizontal: 4, marginRight: 22, height: 48, justifyContent: 'center', borderBottomWidth: 3, borderBottomColor: ctab === k ? t.violet : 'transparent', marginBottom: -1 }}>
+                <Text style={{ fontFamily: ctab === k ? font.x : font.s, fontSize: 16, color: ctab === k ? t.vtext : t.muted }}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {ctab === 'overview' ? (
           <Card style={{ paddingVertical: 8 }}>
             <Row label={tr('clients.visits')} value={String(visits)} />
             <Row label={tr('clients.spent')} value={money(stats.totalSpent, salon?.currency)} />
@@ -106,8 +115,10 @@ export default function ClientCard() {
             {stats.favouriteService ? <Row label={tr('cl.favService')} value={stats.favouriteService} /> : null}
             {stats.favouriteMaster ? <Row label={tr('cl.favMaster')} value={stats.favouriteMaster} /> : null}
           </Card>
+          ) : null}
           {client.id ? (
             <>
+              {ctab === 'notes' ? (<>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
                 <Icon name="note" size={20} color={t.vtext} />
                 <Text style={{ fontFamily: font.x, fontSize: 19, color: t.ink }}>{tr('clients.notes')}</Text>
@@ -124,6 +135,8 @@ export default function ClientCard() {
                 <Field placeholder={tr('clients.noteHint')} value={note} onChangeText={setNote} multiline style={{ minHeight: 80, paddingTop: 14, textAlignVertical: 'top' }} />
                 <Btn label={tr('clients.addNote')} disabled={!note.trim()} loading={busy} onPress={() => void addNote()} />
               </Card>
+              </>) : null}
+              {ctab === 'overview' ? (<>
               <Card style={{ gap: 4 }}>
                 <ToggleRow label={tr('ad.vip')} value={!!stats.vip} onChange={(v) => void crmRun(() => apiB.setVip(client.id, v), () => { stale.current = true; void loaded.reload(); })} />
                 {pts.data ? <Row label={tr('ad.points')} value={String(pts.data.pointsBalance ?? pts.data.points_balance ?? 0)} /> : null}
@@ -155,6 +168,8 @@ export default function ClientCard() {
                   <Row key={c.id} label={c.formName ?? '-'} value={(c.signedAt ?? c.createdAt ?? '').slice(0, 10)} />
                 ))}
               </Card>
+              </>) : null}
+              {ctab === 'visits' ? (<>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
                 <Icon name="clock" size={20} color={t.vtext} />
                 <Text style={{ fontFamily: font.x, fontSize: 19, color: t.ink }}>{tr('clients.history')}</Text>
@@ -175,6 +190,7 @@ export default function ClientCard() {
                   </Card>
                 ))
               )}
+              </>) : null}
             </>
           ) : null}
         </ScrollView>

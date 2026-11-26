@@ -60,9 +60,9 @@ export function TabBar<T extends string>({ tabs, value, onChange }: { tabs: { k:
 export function Line({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   const { t } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 8 }}>
-      <Text style={{ flex: 1, fontFamily: font.m, fontSize: 15, color: t.muted }}>{label}</Text>
-      <Text style={{ fontFamily: bold ? font.x : font.s, fontSize: 15, color: t.ink, textAlign: 'right' }}>{value}</Text>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 10, minHeight: 44, alignItems: 'center' }}>
+      <Text style={{ flex: 1, fontFamily: font.m, fontSize: 15.5, color: t.muted }}>{label}</Text>
+      <Text style={{ fontFamily: bold ? font.x : font.b, fontSize: bold ? 18 : 15.5, color: t.ink, textAlign: 'right' }}>{value}</Text>
     </View>
   );
 }

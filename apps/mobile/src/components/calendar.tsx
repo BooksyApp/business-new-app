@@ -15,7 +15,7 @@ import { ctaShadow, font } from '@/theme/tokens';
 /** Mobile BF02 numbers: hour label column 48 + line from x=58, 144-wide master columns 6 apart, 92 px per hour (`.lt`, `.lt-h`, `.lt-l`). */
 const GUTTER = 58;
 const COL_GAP = 6;
-const HOUR_PX = 92;
+const HOUR_PX = 100;
 
 // Tile palette of the design (.t1-.t4 on --c1..--c4), light and dark.
 const TILE_L: [string, string][] = [['#ece6ff', '#3b2a96'], ['#ffe4ea', '#a02244'], ['#fbecd6', '#7a4a00'], ['#e2f1e9', '#0d5a3b']];
@@ -95,26 +95,27 @@ function Tile({ a, top, height, left, width, onOpen }: { a: Appointment; top: nu
   const { t } = useTheme();
   const [bg, fg] = (t.dark ? TILE_D : TILE_L)[hash(String(a.serviceId ?? a.serviceName)) % 4];
   const markers = markersOf(a);
+  const narrow = width < 128;
   const cp = height < 70;
   const noShow = a.status === 'NO_SHOW';
   const bar = stripe(a.status, t.violet, t.ok);
-  const mk = markers.slice(0, 3).map((m) => <Icon key={m.key} name={m.icon} size={16} color={m.key === 'late' ? t.guava : fg} />);
+  const mk = markers.slice(0, narrow ? 2 : 3).map((m) => <Icon key={m.key} name={m.icon} size={16} color={m.key === 'late' ? t.guava : fg} />);
   return (
     <Pressable onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${hhmm(a.startTime)} ${a.clientName ?? ''} ${a.serviceName ?? ''}`} noScale
       style={{ position: 'absolute', top, height, left, width, borderRadius: 14, backgroundColor: noShow ? t.gsoft : bg, overflow: 'hidden', opacity: a.status === 'COMPLETED' ? 0.75 : 1,
         paddingTop: cp ? 0 : 7, paddingBottom: cp ? 0 : 6, paddingRight: cp ? 9 : 10, paddingLeft: cp ? 15 : 17, flexDirection: cp ? 'row' : 'column', alignItems: cp ? 'center' : 'stretch', gap: cp ? 8 : 1 }}>
       {bar ? <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: bar }} /> : null}
-      <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: cp ? 14.5 : 15, lineHeight: 19, letterSpacing: -0.15, color: noShow ? t.gink : fg, textDecorationLine: noShow ? 'line-through' : 'none', flexShrink: cp ? 1 : 0 }}>{a.clientName || '-'}</Text>
-      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, lineHeight: 18, color: fg, opacity: cp ? 0.75 : 0.82, flexShrink: cp ? 1 : 0 }}>{cp ? hhmm(a.startTime) : `${a.serviceName ?? ''} · ${hhmm(a.startTime)}`}</Text>
-      {mk.length ? <View style={{ flexDirection: 'row', gap: 7, ...(cp ? { marginLeft: 'auto' } : { marginTop: 'auto', paddingTop: 2 }) }}>{mk}</View> : null}
+      <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: cp ? 14.5 : 15, lineHeight: 19, letterSpacing: -0.15, color: noShow ? t.gink : fg, textDecorationLine: noShow ? 'line-through' : 'none', flexShrink: 1, minWidth: 48 }}>{narrow ? (a.clientName || '-').split(' ')[0] : a.clientName || '-'}</Text>
+      {narrow && cp ? null : <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, lineHeight: 18, color: fg, opacity: cp ? 0.75 : 0.82, flexShrink: cp ? 1 : 0 }}>{cp ? hhmm(a.startTime) : narrow ? hhmm(a.startTime) : `${a.serviceName ?? ''} · ${hhmm(a.startTime)}`}</Text>}
+      {mk.length && !(narrow && cp) ? <View style={{ flexDirection: 'row', gap: 7, ...(cp ? { marginLeft: 'auto' } : { marginTop: 'auto', paddingTop: 2 }) }}>{mk}</View> : null}
     </Pressable>
   );
 }
 
 /** Day timeline `.lt` (BF02 390): sticky master header (`.colh`: ring avatar 36 + name 16/800), hour labels in a 48 px gutter, lines from x=58, now line with the guava dot and time pill. */
-export function Timeline({ date, masters, appts, blocks = [], startHour, endHour, refreshing, onRefresh, onOpen, onBlock, onPickMaster }: {
+export function Timeline({ date, masters, appts, blocks = [], startHour, endHour, refreshing, onRefresh, onOpen, onBlock, onPickMaster, hourPx = HOUR_PX }: {
   date: Date; masters: Staff[]; appts: Appointment[]; blocks?: TimeOff[]; startHour: number; endHour: number;
-  refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void; onPickMaster?: (m: Staff) => void;
+  refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void; onPickMaster?: (m: Staff) => void; hourPx?: number;
 }) {
   const { t } = useTheme();
   const { width } = useWindowDimensions();
@@ -122,7 +123,7 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
   const head = useRef<ScrollView>(null);
   const body = useRef<ScrollView>(null);
   const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
-  const total = hours.length * HOUR_PX;
+  const total = hours.length * hourPx;
   const colW = Math.floor((width - 32 - GUTTER - COL_GAP) / 2);
   const placed = useMemo(() => masters.map((m) => {
     const mine = appts.filter((a) => a.status !== 'CANCELLED' && (String(a.staffId) === String(m.id) || (m.id === '__none' && !masters.some((x) => String(x.id) === String(a.staffId)))));
@@ -131,11 +132,11 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const showNow = sameDay(date, now) && nowMin >= startHour * 60 && nowMin <= endHour * 60;
-  const nowTop = ((nowMin - startHour * 60) / 60) * HOUR_PX;
+  const nowTop = ((nowMin - startHour * 60) / 60) * hourPx;
   const contentW = masters.length * (colW + COL_GAP);
   // today opens about an hour above "now"; other days at the first booking
   const first = appts.length ? Math.min(...appts.map((a) => toMin(a.startTime))) : startHour * 60;
-  const target = Math.max(0, (((showNow ? nowMin - 60 : first - 30) - startHour * 60) / 60) * HOUR_PX);
+  const target = Math.max(0, (((showNow ? nowMin - 60 : first - 30) - startHour * 60) / 60) * hourPx);
   const done = useRef('');
   const key = `${date.toDateString()}|${appts.length}`;
   const settle = () => { if (done.current !== key) { done.current = key; body.current?.scrollTo({ y: target, animated: false }); } };
@@ -157,17 +158,17 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
       <View style={{ flexDirection: 'row', paddingLeft: 16, paddingTop: 10 }}>
         <View style={{ width: GUTTER, height: total }}>
           {hours.map((h, i) => (
-            <Text key={h} style={{ position: 'absolute', top: i * HOUR_PX - 10, left: 0, width: 48, textAlign: 'right', fontFamily: font.s, fontSize: 14, color: t.ink3 }}>{h}:00</Text>
+            <Text key={h} style={{ position: 'absolute', top: i * hourPx - 10, left: 0, width: 48, textAlign: 'right', fontFamily: font.s, fontSize: 14, color: t.ink3 }}>{h}:00</Text>
           ))}
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} scrollEventThrottle={16} onScroll={(e) => head.current?.scrollTo({ x: e.nativeEvent.contentOffset.x, animated: false })}>
           <View style={{ width: Math.max(contentW, width - 32 - GUTTER), height: total }}>
-            {hours.map((h, i) => <View key={h} style={{ position: 'absolute', top: i * HOUR_PX, left: 0, right: 0, height: 1, backgroundColor: t.line }} />)}
+            {hours.map((h, i) => <View key={h} style={{ position: 'absolute', top: i * hourPx, left: 0, right: 0, height: 1, backgroundColor: t.line }} />)}
             {placed.map(({ m, mine, lane }, ci) => mine.map((a) => {
               const l = lane.get(a.id) ?? { lane: 0, n: 1 };
               const w = colW / l.n;
-              const top = ((toMin(a.startTime) - startHour * 60) / 60) * HOUR_PX + 1;
-              const h = Math.max(40, ((toMin(a.endTime) - toMin(a.startTime)) / 60) * HOUR_PX - 3);
+              const top = ((toMin(a.startTime) - startHour * 60) / 60) * hourPx + 1;
+              const h = Math.max(40, ((toMin(a.endTime) - toMin(a.startTime)) / 60) * hourPx - 3);
               return <Tile key={`${m.id}-${a.id}`} a={a} top={top} height={h} left={ci * (colW + COL_GAP) + l.lane * w} width={w - (l.n > 1 ? 2 : 0)} onOpen={onOpen} />;
             }))}
             {masters.map((m, ci) => blocks.filter((b) => String(b.staffId) === String(m.id)).map((b) => {
@@ -176,7 +177,7 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
               if (to <= from) return null;
               return (
                 <Pressable key={`blk-${b.id}`} noScale onPress={() => onBlock?.(b)} accessibilityRole="button" accessibilityLabel={`${tr('block.title')} ${hhmm(fromMin(from))}-${hhmm(fromMin(to))} ${b.reason ?? ''}`}
-                  style={{ position: 'absolute', top: ((from - startHour * 60) / 60) * HOUR_PX + 1, height: ((to - from) / 60) * HOUR_PX - 3, left: ci * (colW + COL_GAP), width: colW, borderRadius: 14, backgroundColor: t.fill2, borderWidth: 1, borderStyle: 'dashed', borderColor: t.ink3, padding: 8, overflow: 'hidden' }}>
+                  style={{ position: 'absolute', top: ((from - startHour * 60) / 60) * hourPx + 1, height: ((to - from) / 60) * hourPx - 3, left: ci * (colW + COL_GAP), width: colW, borderRadius: 14, backgroundColor: t.fill2, borderWidth: 1, borderStyle: 'dashed', borderColor: t.ink3, padding: 8, overflow: 'hidden' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Icon name="lock" size={15} color={t.muted} />
                     <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 13.5, color: t.muted }}>{b.reason || tr('block.title')}</Text>
@@ -203,8 +204,8 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
 
 
 /** Single-master day (BF40 "Yığcam"): time column on the left, one full-width tile per booking, "now" marker, breathing room between plates. */
-export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen, onBlock, empty }: {
-  date: Date; appts: Appointment[]; blocks?: TimeOff[]; refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void; empty?: React.ReactNode;
+export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen, onBlock, empty, compact }: {
+  date: Date; appts: Appointment[]; blocks?: TimeOff[]; refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void; empty?: React.ReactNode; compact?: boolean;
 }) {
   const { t } = useTheme();
   const inset = useDockInset(24);
@@ -213,7 +214,7 @@ export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen
   const isToday = sameDay(date, now);
   const nextIdx = isToday ? list.findIndex((a) => toMin(a.endTime) > nowMin) : -1;
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: inset, gap: 12 }} showsVerticalScrollIndicator={false}
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: inset, gap: compact ? 8 : 14 }} showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.violet} />}>
       {list.length === 0 && blocks.length === 0 ? empty : null}
       {list.map((a, i) => {
@@ -235,11 +236,11 @@ export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen
                 <Text style={{ fontFamily: font.m, fontSize: 13, color: t.ink3, marginTop: 1 }}>{Math.max(5, toMin(a.endTime) - toMin(a.startTime))} {tr('common.min')}</Text>
               </View>
               <Pressable onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${hhmm(a.startTime)} ${a.clientName ?? ''} ${a.serviceName ?? ''}`} noScale
-                style={{ flex: 1, minHeight: 84, borderRadius: 22, backgroundColor: noShow ? t.gsoft : bg, overflow: 'hidden', paddingVertical: 14, paddingRight: 16, paddingLeft: 22, opacity: a.status === 'COMPLETED' ? 0.78 : 1, boxShadow: '0 8px 20px -14px rgba(29,23,48,.35)' } as any}>
+                style={{ flex: 1, minHeight: compact ? 60 : 92, borderRadius: 22, backgroundColor: noShow ? t.gsoft : bg, overflow: 'hidden', paddingVertical: compact ? 10 : 16, paddingRight: 16, paddingLeft: 22, opacity: a.status === 'COMPLETED' ? 0.78 : 1, boxShadow: '0 8px 20px -14px rgba(29,23,48,.35)' } as any}>
                 {bar ? <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, backgroundColor: bar }} /> : null}
                 <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: noShow ? t.gink : fg, textDecorationLine: noShow ? 'line-through' : 'none' }}>{a.clientName || '-'}</Text>
                 <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 15, color: fg, opacity: 0.85, marginTop: 2 }}>{a.serviceName ?? ''} · {hhmm(a.startTime)} – {hhmm(a.endTime)}</Text>
-                {mk.length ? <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>{mk.map((m) => <Icon key={m.key} name={m.icon} size={18} color={m.key === 'late' ? t.guava : fg} />)}</View> : null}
+                {mk.length && !compact ? <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>{mk.map((m) => <Icon key={m.key} name={m.icon} size={18} color={m.key === 'late' ? t.guava : fg} />)}</View> : null}
               </Pressable>
             </View>
           </View>
@@ -316,6 +317,59 @@ export function WeekView({ date, appts, startHour, endHour, refreshing, onRefres
             });
           })}
         </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+
+/** Instagram-style rail: "Komanda" + one gradient-ringed photo per specialist; the picked one gets an ink ring. */
+export function StaffRail({ masters, focus, onPick }: { masters: Staff[]; focus: string | null; onPick: (id: string | null) => void }) {
+  const { t } = useTheme();
+  const item = (key: string | null, label: string, body: React.ReactNode) => {
+    const on = focus === key;
+    return (
+      <Pressable key={String(key)} onPress={() => onPick(key)} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: on }} style={{ width: 72, alignItems: 'center', gap: 6 }}>
+        <View style={{ width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: on ? t.ink : 'transparent' }}>{body}</View>
+        <Text numberOfLines={1} style={{ fontFamily: on ? font.x : font.s, fontSize: 13.5, color: on ? t.ink : t.muted, maxWidth: 72 }}>{label}</Text>
+      </Pressable>
+    );
+  };
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 6, paddingHorizontal: 16 }}>
+      {item(null, tr('calendar.allTeam'), <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="users" size={26} color={t.vtext} /></View>)}
+      {masters.map((m) => item(String(m.id), m.name, <Avatar name={m.name} size={58} uri={m.avatarUrl} />))}
+    </ScrollView>
+  );
+}
+
+/** Ay: month grid with a count pill per day; tapping a day opens it. */
+export function MonthView({ date, appts, onPickDay, refreshing, onRefresh }: { date: Date; appts: Appointment[]; onPickDay: (d: Date) => void; refreshing: boolean; onRefresh: () => void }) {
+  const { t } = useTheme();
+  const inset = useDockInset(24);
+  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const start = startOfWeek(first);
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i)).filter((d, i) => i < 35 || d.getMonth() === date.getMonth());
+  const counts = useMemo(() => { const m = new Map<string, number>(); for (const a of appts) if (a.status !== 'CANCELLED') m.set(a.appointmentDate.slice(0, 10), (m.get(a.appointmentDate.slice(0, 10)) ?? 0) + 1); return m; }, [appts]);
+  const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = new Date();
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: inset }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.violet} />}>
+      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+        {cells.slice(0, 7).map((d) => <Text key={d.getDay()} style={{ flex: 1, textAlign: 'center', fontFamily: font.s, fontSize: 14, color: t.muted }}>{weekdayShort(d)}</Text>)}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', backgroundColor: t.surface, borderRadius: 26, padding: 6 }}>
+        {cells.map((d) => {
+          const n = counts.get(key(d)) ?? 0; const sel = sameDay(d, date); const isToday = sameDay(d, today); const other = d.getMonth() !== date.getMonth();
+          return (
+            <Pressable key={d.toISOString()} onPress={() => onPickDay(d)} accessibilityRole="button" accessibilityLabel={`${d.getDate()} ${n}`} noScale style={{ width: `${100 / 7}%`, height: 64, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+              <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: sel ? t.violet : isToday ? t.vsoft : 'transparent' }}>
+                <Text style={{ fontFamily: font.x, fontSize: 16, color: sel ? '#fff' : other ? t.ink3 : isToday ? t.vtext : t.ink }}>{d.getDate()}</Text>
+              </View>
+              {n ? <View style={{ flexDirection: 'row', gap: 3 }}>{Array.from({ length: Math.min(3, n) }, (_, i) => <View key={i} style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: other ? t.line : t.violet }} />)}</View> : <View style={{ height: 5 }} />}
+            </Pressable>
+          );
+        })}
       </View>
     </ScrollView>
   );

@@ -6,7 +6,7 @@ import { ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Card, Circ, ErrorState, Field, Header, Pill, Screen, ServiceThumb, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiB, type Product } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
@@ -38,7 +38,7 @@ export function Inventory({ onBack }: { onBack: () => void }) {
     } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
   }
   const del = () => { if (edit && edit !== 'new') Alert.alert(tr('inv.confirmDelete'), edit.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteProduct(sid, edit.id).then(() => { setEdit(null); return list.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); } }]); };
-  const addBtn = <Pressable onPress={() => open('new')} accessibilityRole="button" accessibilityLabel={tr('inv.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Circ icon="plus" violet label={tr('inv.add')} onPress={() => open('new')} />;
   return (
     <Screen>
       <Header title={tr('inv.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
@@ -47,13 +47,14 @@ export function Inventory({ onBack }: { onBack: () => void }) {
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="box" title={tr('inv.empty')} actionLabel={tr('inv.add')} onAction={() => open('new')} />}
           renderItem={({ item: p }) => (
-            <Card onPress={() => open(p)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, opacity: p.isActive ? 1 : 0.6 }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{p.name}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{[p.sku, money(p.price, salon?.currency)].filter(Boolean).join(' · ')}</Text>
+            <Card onPress={() => open(p)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, minHeight: 88, opacity: p.isActive ? 1 : 0.6 }}>
+              <ServiceThumb name={p.name} cat="box" size={64} />
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.3, color: t.ink }}>{p.name}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{[p.sku, money(p.price, salon?.currency)].filter(Boolean).join(' · ')}</Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink }}>{p.quantityOnHand}</Text>
+                <Text style={{ fontFamily: font.x, fontSize: 22, letterSpacing: -0.5, color: t.ink }}>{p.quantityOnHand}</Text>
                 {p.lowStock ? <Pill text={tr('inv.low')} tone="guava" /> : null}
               </View>
             </Card>

@@ -290,7 +290,7 @@ export function ServiceThumb({ name, cat, uri, size = 88 }: { name: string; cat?
   const { t } = useTheme();
   const h = [...(cat || name)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % THUMB.length;
   const src = photoUrl(uri);
-  const icon = /dırnaq|nail|ногт/i.test(cat ?? '') ? 'spark' : /saç|hair|волос/i.test(cat ?? '') ? 'scissors' : /üz|face|лиц|qaş|brow/i.test(cat ?? '') ? 'heart' : 'spark';
+  const icon = cat === 'box' ? 'box' : /dırnaq|nail|ногт/i.test(cat ?? '') ? 'spark' : /saç|hair|волос/i.test(cat ?? '') ? 'scissors' : /üz|face|лиц|qaş|brow/i.test(cat ?? '') ? 'heart' : 'spark';
   return src ? <Image source={{ uri: src }} accessibilityIgnoresInvertColors style={{ width: size, height: size, borderRadius: size * 0.24 }} /> : (
     <LinearGradient colors={[...THUMB[h]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size * 0.24, alignItems: 'center', justifyContent: 'center' }}>
       <Icon name={icon} size={size * 0.4} color={t.dark ? t.vtext : '#5b3fd6'} />

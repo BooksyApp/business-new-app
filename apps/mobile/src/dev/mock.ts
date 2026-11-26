@@ -5,6 +5,12 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Dev preview clock: pin "now" to 13:40 so the now-line, next-client hero and fixtures line up with the frames (BF01/BF02 show 13:40).
+{
+  const R = Date; const t0 = new R(); t0.setHours(13, 40, 0, 0); const off = t0.getTime() - R.now();
+  class MockDate extends R { constructor(...a: unknown[]) { if (a.length === 0) super(R.now() + off); else super(...(a as [number])); } static now() { return R.now() + off; } }
+  (globalThis as { Date: DateConstructor }).Date = MockDate as unknown as DateConstructor;
+}
 const IMG = process.env.EXPO_PUBLIC_MOCK_IMG || 'http://localhost:8762';
 const ph = (n: string) => `${IMG}/${n}.jpg`;
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -36,17 +42,18 @@ const clientsAll = names.map(([f, l, p], i) => ({
   totalVisits: 14 - i, pastVisits: 14 - i, totalSpent: 1240 - i * 90, lastVisitDate: D(-(i + 1) * 3), avatarUrl: p ? ph(p) : null, vip: i < 2, avgPrice: 62, favouriteService: services[i % 7].name, favouriteMaster: staff[i % 4].name,
   nextVisitDate: i < 3 ? D(i + 1) : null, nextVisitTime: '14:30', nextServiceName: 'Gel lak', noShowAppointments: i === 4 ? 2 : 0, cancelledAppointments: 1, createdAt: D(-200 + i * 9),
 }));
-const ap = (id: string, staffId: string, clientIdx: number, sv: number, start: string, end: string, status: string, extra: object = {}) => {
+const ap = (id: string, staffId: string, clientIdx: number, sv: number, start: string, end: string, status: string, extra: Record<string, unknown> = {}) => {
   const c = clientsAll[clientIdx]; const s = services[sv];
   return { id, businessId: 'b1', staffId, staffName: staff.find((x) => x.id === staffId)!.name, clientId: c.id, clientName: `${c.firstName} ${c.lastName[0]}.`, clientPhone: c.phone, serviceId: s.id, serviceName: s.name, appointmentDate: D(0), startTime: start, endTime: end, status, paymentStatus: null, price: s.price, bookingSource: 'web', ...extra };
 };
+const nm = new Date(); const r5 = (m: number) => Math.ceil(m / 5) * 5; const hm = (m: number) => `${pad(Math.floor(m / 60) % 24)}:${pad(m % 60)}`; const n0 = Math.min(r5(nm.getHours() * 60 + nm.getMinutes() + 20), 14 * 60 + 30);
 const appts = [
-  ap('a1', 's1', 0, 2, '10:00', '11:00', 'CONFIRMED'), ap('a2', 's2', 1, 3, '09:30', '10:30', 'COMPLETED', { paymentStatus: 'PAID' }),
-  ap('a3', 's1', 3, 0, '12:00', '14:00', 'CONFIRMED', { notes: 'Qızılı çalar' }), ap('a4', 's2', 2, 5, '11:00', '11:45', 'PENDING'),
+  ap('a1', 's1', 0, 2, hm(n0), hm(n0 + 75), 'CONFIRMED', { lateMinutes: 10 }), ap('a2', 's2', 1, 3, '09:30', '10:30', 'COMPLETED', { paymentStatus: 'PAID' }),
+  ap('a3', 's1', 3, 0, '12:00', '14:00', 'CONFIRMED', { notes: 'Qızılı çalar' }), ap('a4', 's2', 2, 5, hm(n0 + 90), hm(n0 + 135), 'PENDING'),
   ap('a5', 's3', 5, 4, '10:30', '11:45', 'CONFIRMED'), ap('a6', 's2', 7, 2, '13:00', '14:00', 'CONFIRMED', { guestName: 'Qonaq' }),
-  ap('a7', 's4', 8, 1, '15:00', '15:45', 'PENDING'), ap('a8', 's1', 9, 3, '15:00', '16:00', 'CONFIRMED'), ap('a9', 's3', 6, 6, '14:00', '14:45', 'CONFIRMED'),
+  ap('a7', 's4', 8, 1, hm(n0 + 150), hm(n0 + 195), 'PENDING'), ap('a8', 's1', 9, 3, hm(n0 + 210), hm(n0 + 270), 'CONFIRMED'), ap('a9', 's3', 6, 6, '14:00', '14:45', 'CONFIRMED'),
   ap('a10', 's2', 4, 2, '16:00', '17:00', 'NO_SHOW'), ap('a11', 's4', 0, 1, '11:30', '12:15', 'CONFIRMED'),
-].map((a, i) => ({ ...a, lateMinutes: i === 6 ? 10 : null }));
+];
 const sales = [
   { id: 1, clientName: 'Nərmin H.', staffName: 'Nigar', saleDate: D(0), saleTime: '11:05', total: 40, tipAmount: 5, paymentMethod: 'CARD_TERMINAL', items: [{ name: 'Gel lak' }] },
   { id: 2, clientName: 'Fidan A.', staffName: 'Aysel', saleDate: D(0), saleTime: '10:40', total: 45, tipAmount: 0, paymentMethod: 'CASH', items: [{ name: 'Saç kəsimi' }] },
@@ -111,6 +118,9 @@ const routes: [RegExp, Hit | unknown][] = [
   [/^\/businesses\/[^/]+\/tips/, { totals: { total: 120, outstanding: 40, cash: 50, card: 70, lines: 12 }, byStaff: [{ staff_name: 'Nigar', earned: 60, outstanding: 20 }] }],
   [/^\/businesses\/b[^/]*$/, biz],
   [/^\/products\/business\//, [{ id: 1, name: 'Gel lak bazası', sku: 'GL-1', price: 12, quantityOnHand: 2, lowStockThreshold: 5, isActive: true, lowStock: true }, { id: 2, name: 'Şampun 500ml', sku: 'SH-5', price: 24, quantityOnHand: 14, lowStockThreshold: 4, isActive: true, lowStock: false }]],
+  [/profit-and-loss/, { months: [{ month: '2026-11', revenue: 4820, expenses: 1240, wages: 1480, profit: 2100 }, { month: '2026-10', revenue: 4100, expenses: 1180, wages: 1400, profit: 1520 }], totals: { revenue: 8920, expenses: 2420, wages: 2880, profit: 3620 } }],
+  [/\/tax/, { totals: { count: 120, net: 4090, tax: 730, gross: 4820 }, byRate: [{ rate: 18, net: 4090, tax: 730 }] }],
+  [/\/cash-drawer/, null],
   [/^\/team-permissions/, []],
   [/^\/quick-sale/, []],
 ];
