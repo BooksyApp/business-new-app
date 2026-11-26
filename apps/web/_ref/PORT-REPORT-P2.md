@@ -20,11 +20,12 @@ Helper added: src/components/bz/p2-page.tsx (BzPage wrapper = AppLayout + .dsh/.
 - StaffPage (2281 lines: members, shifts, resources, commissions, time-off/payout/rule dialogs)
 - SuppliersOrdersPage, StockCountPage; Peak pricing card, Portfolio section, ChairRentCard, WorkingHoursEditor, RoleSelect, StaffAvatarPicker (old-styled widgets kept as children)
 
-## Does not fit the artifact structure
-- RolesPage: instant-save permission matrix (flip per switch, phone one-role view) removed; permissions are edited in the role Drawer only (artifact has no matrix).
-- BusinessHoursPage: client preview card ("your salon page") dropped; per-day copy kept as the existing ActionMenu in the .cp slot.
-- CreateBusinessPage: SalonPreview aside and AuthShell header link dropped (artifact is a bare centered form).
-- AddonsPage: preview shows only the add-on line (artifact), sample service line removed.
-- InventoryPage: Meter bar removed (artifact shows count only); reorder level shown as tag.
-- ItemsCategoryPage: mobile category chip row and mobile category menu replaced by the .rail (check responsive in visual QA).
-- Dialogs/Drawers now use kit fixed overlays: no Radix focus trap / Esc handling.
+## Does not fit the artifact structure (resolved)
+All earlier regressions restored in commit "fix(port-p2): restore dropped features" (CI green):
+- Roles: instant-save permission matrix (desktop table + phone one-role view) back, in a Card under the role rows.
+- Business hours: client preview (ClientPreview) back under the cards.
+- Create business: SalonPreview back as an aside beside the form.
+- Inventory: Meter bar + reorder level back in each row.
+- Add-ons: preview again shows the sample service line plus the add-on line.
+- Services: mobile category chip row + category menu back (lg:hidden); .rail hidden below lg (max-lg:hidden); verify visually.
+- Drawer, Dialog, ConfirmDialog in bz/Overlay.tsx now use Radix Dialog (Esc, focus trap, aria), rendered without portal so scope wrappers apply.
