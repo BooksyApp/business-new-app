@@ -4,11 +4,12 @@ import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { useNavigate } from "react-router-dom";
 import { CalendarClock, CalendarRange, Pencil, Percent, Plus, Scissors, Tag, TrendingDown, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, ClientPreview, Field, RowAction, SectionTitle, StatusChip } from "@/components/page/kit";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { ActionMenu, ClientPreview, Field, RowAction, SectionTitle } from "@/components/page/kit";
 import { GUAVA, dateRange, fieldCls, lifecycleOf, money, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { getCurrentBusinessId } from "@/config/api";

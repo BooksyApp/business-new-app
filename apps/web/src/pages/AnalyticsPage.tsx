@@ -2,15 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Percent, RefreshCw, Table2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NavCard, NavCardGrid } from "@/components/layout/NavCards";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, secondaryBtn } from "@/components/page/booqiStyles";
-import { BarRows, CohortTable, Empty, Heatmap, KpiTile, Panel, PanelLink, PeriodPicker, TrendChart } from "@/components/reports/ReportsKit";
+import { secondaryBtn } from "@/components/page/booqiStyles";
+import { BarRows, CohortTable, Heatmap, PanelLink, TrendChart } from "@/components/reports/ReportsKit";
 import { fmtInt, fmtMoney, fmtPct, fmtPeriod, useReportPeriod } from "@/components/reports/reportsFormat";
 import { SOURCE_KEYS, dashboardService, type Dashboard } from "@/services/dashboardService";
 import { pageAllowed, myAccess } from "@/components/layout/navigation";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useNavigation } from "@/utils/navigationUtils";
 import { t, type TKey } from "@/i18n";
+import { BooqiScope, Empty, KpiTile, PageHeader, Panel, PeriodPicker, pageBody } from "@/components/bz/p4-compat";
 
 /**
  * Reports (HUB-V3, 2026-11-19): what a salon owner reads first, for the chosen period and

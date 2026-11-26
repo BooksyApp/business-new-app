@@ -2,11 +2,12 @@ import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { CopyPlus, Gift, Minus, Palette, Plus, Search, Stamp, Trophy, Users, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, FilterChips, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, ClientPreview, Field, FilterChips, RowAction, StatusChip } from "@/components/page/kit";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { ActionMenu, ClientPreview, Field, RowAction } from "@/components/page/kit";
 import { fieldCls, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";

@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, History, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
+import { primaryBtn } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { getHubLocale } from "@/lib/hubLocale";
 import { formatDate } from "@/i18n/format";
 import { t } from "@/i18n";
 import { auditLogService, type AuditLogEntry } from "@/services/auditLogService";
+import { BooqiScope, EmptyState, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 const PAGE = 50;
 /** The most rows one CSV export takes; the server caps a page at 500 too. */

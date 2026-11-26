@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, Clock, Copy, Gift, RefreshCw, Share2, Store, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
-import { ClientPreview, SectionTitle, StatusChip } from "@/components/page/kit";
+import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { ClientPreview, SectionTitle } from "@/components/page/kit";
 import { money, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";

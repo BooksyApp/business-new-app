@@ -3,10 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, MessageSquare, Star } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { fieldCls } from "@/components/page/kitStyles";
-import { Empty } from "@/components/reports/ReportsKit";
 import { fmtDay, loc } from "@/components/reports/reportsFormat";
 import { reviewService, type Review, type ReviewReport } from "@/services/reviewService";
 import { businessService } from "@/services/businessService";
@@ -16,6 +14,7 @@ import { formatDate, formatNumber } from "@/i18n/format";
 import { cn } from "@/lib/utils";
 import { t, tDynamic } from "@/i18n";
 import type { Id } from "@/types/id";
+import { BooqiScope, Empty, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 /** Stars as one shape filled by the score; the number beside them carries the value. */
 function Stars({ value, size = 14 }: { value: number; size?: number }) {

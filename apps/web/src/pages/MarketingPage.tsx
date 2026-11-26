@@ -1,3 +1,4 @@
+import { BooqiScope, EmptyState, FilterChips, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,18 +20,9 @@ import {
 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import {
-  ActionMenu,
-  ClientPreview,
-  Field,
-  FilterChips,
-  Meter,
-  RowAction,
-  Segmented,
-  StatusChip,
-} from "@/components/page/kit";
+import { FormSheet, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/page/booqi";
+import { primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { ActionMenu, ClientPreview, Field, Meter, RowAction, Segmented } from "@/components/page/kit";
 import { GUAVA, dateRange, fieldCls, lifecycleOf, money, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

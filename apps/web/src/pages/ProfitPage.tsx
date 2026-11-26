@@ -2,9 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
-import { BarRows, Empty, Panel, PanelLink } from "@/components/reports/ReportsKit";
+import { BarRows, PanelLink } from "@/components/reports/ReportsKit";
 import { fmtMoney, loc } from "@/components/reports/reportsFormat";
 import { accountsService, n, type ProfitMonth } from "@/services/accountsService";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -12,6 +10,7 @@ import { useNavigation } from "@/utils/navigationUtils";
 import { formatDate, formatNumber } from "@/i18n/format";
 import { t, type TKey } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { BooqiScope, Empty, PageHeader, Panel, pageBody } from "@/components/bz/p4-compat";
 
 const monthShort = (m: string) => formatDate(loc(), `${m}-15T12:00:00`, { month: "short" });
 const monthLong = (m: string) => formatDate(loc(), `${m}-15T12:00:00`, { month: "long", year: "numeric" });

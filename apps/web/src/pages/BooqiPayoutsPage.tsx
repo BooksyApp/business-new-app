@@ -2,13 +2,11 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
-import { Empty } from "@/components/reports/ReportsKit";
 import { fmtMoney } from "@/components/reports/reportsFormat";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { booqiWalletService } from "@/services/booqiWalletService";
 import { t, type TKey } from "@/i18n";
+import { BooqiScope, Empty, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 const day = (iso: string) => new Date(/(?:[zZ]|[+-]\d\d:?\d\d)$/.test(iso) ? iso : `${iso}Z`).toLocaleDateString();
 

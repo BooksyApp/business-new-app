@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, secondaryBtn } from "@/components/page/booqiStyles";
-import { Empty, Panel, PeriodPicker } from "@/components/reports/ReportsKit";
+import { secondaryBtn } from "@/components/page/booqiStyles";
 import { fmtInt, fmtMoney, fmtPeriod, loc, useReportPeriod, type RangeKey } from "@/components/reports/reportsFormat";
 import { accountsService, n, type TaxSummary } from "@/services/accountsService";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { formatDate, formatNumber } from "@/i18n/format";
 import { t } from "@/i18n";
+import { BooqiScope, Empty, PageHeader, Panel, PeriodPicker, pageBody } from "@/components/bz/p4-compat";
 
 const RANGES: readonly RangeKey[] = ["mtd", "lastMonth", "90d", "12m"];
 

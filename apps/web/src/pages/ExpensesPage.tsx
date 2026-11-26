@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Receipt, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls, money } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { salonDayService, type Expense, type ExpenseCategory, type ProfitAndLoss } from "@/services/salonDayService";
 import { t } from "@/i18n";
+import { BooqiScope, EmptyState, PageHeader, StatCard, pageBody } from "@/components/bz/p4-compat";
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   "RENT", "STOCK", "UTILITIES", "WAGES", "MARKETING", "EQUIPMENT", "INSURANCE", "SOFTWARE", "TRAVEL", "FEES", "OTHER",

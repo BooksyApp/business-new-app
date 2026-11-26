@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Pencil, Timer, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls, money } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { currencySymbol } from "@/lib/currency";
 import { salonDayService, type TimeEntry, type TimesheetRow } from "@/services/salonDayService";
 import { staffService, type Staff } from "@/services/staffService";
 import { t } from "@/i18n";
+import { BooqiScope, EmptyState, PageHeader, StatCard, pageBody } from "@/components/bz/p4-compat";
 
 /** Monday of the week that contains `d`, as yyyy-mm-dd. */
 export function weekStart(d: Date): string {

@@ -4,26 +4,33 @@ import { AlertTriangle } from "lucide-react";
 import { BzScope, Chip, ChipRow, ErrorState, PageHead, Skeleton, StatusPill } from "./index";
 import { t, type TKey } from "@/i18n";
 
-/** P4 page frame: `.mainx` content column + `.pgt` PageHead (keeps the optional help "?" link). */
-export function P4Page({ title, sub, right, helpSlug, children }: { title: string; sub?: string; right?: ReactNode; helpSlug?: string; children?: ReactNode }) {
+/** `.pgt` PageHead (keeps the optional help "?" link). */
+export function P4HeadOnly({ title, sub, right, helpSlug }: { title: string; sub?: string; right?: ReactNode; helpSlug?: string }) {
   const { salonKey } = useParams<{ salonKey?: string }>();
   return (
+    <PageHead
+      title={
+        <>
+          {title}
+          {helpSlug && salonKey ? (
+            <Link to={`/${salonKey}/help/${helpSlug}`} aria-label={t("helpCenter.helpLink")} title={t("helpCenter.helpLink")} style={{ marginLeft: 8, fontSize: 13, fontWeight: 700, opacity: 0.7 }}>
+              ?
+            </Link>
+          ) : null}
+        </>
+      }
+      sub={sub}
+      right={right}
+    />
+  );
+}
+
+/** P4 page frame: `.mainx` content column + `.pgt` PageHead. */
+export function P4Page({ title, sub, right, helpSlug, children }: { title: string; sub?: string; right?: ReactNode; helpSlug?: string; children?: ReactNode }) {
+  return (
     <BzScope>
-      <div className="mainx" style={{ overflow: "visible" }}>
-        <PageHead
-          title={
-            <>
-              {title}
-              {helpSlug && salonKey ? (
-                <Link to={`/${salonKey}/help/${helpSlug}`} aria-label={t("helpCenter.helpLink")} title={t("helpCenter.helpLink")} style={{ marginLeft: 8, fontSize: 13, fontWeight: 700, opacity: 0.7 }}>
-                  ?
-                </Link>
-              ) : null}
-            </>
-          }
-          sub={sub}
-          right={right}
-        />
+      <div className="mainx bz-surface" style={{ overflow: "visible", minHeight: "100%" }}>
+        <P4HeadOnly title={title} sub={sub} right={right} helpSlug={helpSlug} />
         <div style={{ display: "grid", gap: 16 }}>{children}</div>
       </div>
     </BzScope>
