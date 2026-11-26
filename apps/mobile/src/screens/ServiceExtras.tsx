@@ -1,0 +1,108 @@
+import { useState } from 'react';
+import { Alert, FlatList, Switch, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { BottomSheet } from '@/components/BottomSheet';
+import { Choice, num } from '@/components/form';
+import { Icon } from '@/components/Icon';
+import { Pressable } from '@/components/Pressable';
+import { Text } from '@/components/Text';
+import { Btn, Card, ErrorState, Field, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { t as tr } from '@/i18n';
+import { api } from '@/lib/api';
+import { apiB } from '@/lib/api-biz';
+import { useApp } from '@/lib/app';
+import { money } from '@/lib/format';
+import { useLoad } from '@/lib/useLoad';
+import { useTheme } from '@/theme/ThemeContext';
+import { font } from '@/theme/tokens';
+
+const plus = (t: { violet: string }, on: () => void, label: string) => <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+
+/** Paketlər: prepaid session packages (create, switch on/off). */
+export function Packages({ onBack }: { onBack: () => void }) {
+  const { t } = useTheme();
+  const { salon } = useApp();
+  const sid = salon?.id ?? '';
+  const list = useLoad(() => apiB.packages(sid), [sid]);
+  const svc = useLoad(() => api.services(sid), [sid]);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(''); const [service, setService] = useState(''); const [n, setN] = useState('5'); const [price, setPrice] = useState(''); const [days, setDays] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    const sess = Math.round(num(n)); const p = num(price);
+    if (!name.trim() || !(sess > 0) || !(p >= 0)) { Alert.alert(tr('common.error'), tr('sx.needName')); return; }
+    setBusy(true);
+    try { await apiB.createPackage(sid, { name: name.trim(), serviceId: service || undefined, sessionsTotal: sess, price: p, validDays: days.trim() ? Math.round(num(days)) : undefined }); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setOpen(false); setName(''); setPrice(''); void list.reload(); }
+    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+  }
+  return (
+    <Screen>
+      <Header title={tr('ad.packages')} subtitle={salon?.name} onBack={onBack} right={plus(t, () => setOpen(true), tr('ad.newPackage'))} />
+      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={3} /> : (
+        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+          ListEmptyComponent={<StateView icon="gift" title={tr('sx.noPackages')} actionLabel={tr('ad.newPackage')} onAction={() => setOpen(true)} />}
+          renderItem={({ item: p }) => (
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: p.active ? 1 : 0.6 }}>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{p.name}</Text>
+                <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{tr('sx.sessions', { n: p.sessions_total })} · {money(p.price, salon?.currency)}</Text>
+              </View>
+              <Switch value={p.active} onValueChange={(v) => void apiB.setPackageActive(sid, p.id, v).then(() => list.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityLabel={p.name} trackColor={{ true: t.violet, false: t.fill2 }} />
+            </Card>
+          )} />
+      )}
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tr('ad.newPackage')}</Text>
+        <Field label={tr('sx.name')} value={name} onChangeText={setName} />
+        <View style={{ maxHeight: 100 }}><Choice value={service} onChange={setService} options={[{ value: '', label: tr('pr.everyone') }, ...(svc.data ?? []).filter((s) => s.isActive).slice(0, 12).map((s) => ({ value: String(s.id), label: s.name }))]} /></View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}><Field label={tr('ad.sessionsTotal')} value={n} onChangeText={setN} keyboardType="number-pad" /></View>
+          <View style={{ flex: 1 }}><Field label={tr('sl.price')} value={price} onChangeText={setPrice} keyboardType="decimal-pad" /></View>
+          <View style={{ flex: 1 }}><Field label={tr('ad.validDays')} value={days} onChangeText={setDays} keyboardType="number-pad" /></View>
+        </View>
+        <Btn label={tr('common.save')} loading={busy} onPress={() => void save()} />
+        <View style={{ height: 16 }} />
+      </BottomSheet>
+    </Screen>
+  );
+}
+
+/** Əlavələr (add-ons): small extras a client adds to a service. */
+export function Addons({ onBack }: { onBack: () => void }) {
+  const { t } = useTheme();
+  const { salon } = useApp();
+  const sid = salon?.id ?? '';
+  const list = useLoad(() => apiB.addons(sid), [sid]);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(''); const [price, setPrice] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    const p = num(price);
+    if (!name.trim() || !(p >= 0)) { Alert.alert(tr('common.error'), tr('sx.needName')); return; }
+    setBusy(true);
+    try { await apiB.createAddon(sid, { name: name.trim(), price: p, priceType: 'FIXED' }); setOpen(false); setName(''); setPrice(''); void list.reload(); }
+    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+  }
+  return (
+    <Screen>
+      <Header title={tr('ad.addons')} subtitle={salon?.name} onBack={onBack} right={plus(t, () => setOpen(true), tr('ad.addAddon'))} />
+      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={3} /> : (
+        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+          ListEmptyComponent={<StateView icon="plus" title={tr('lk.empty')} actionLabel={tr('ad.addAddon')} onAction={() => setOpen(true)} />}
+          renderItem={({ item: a }) => (
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{a.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(a.price, salon?.currency)}</Text></View>
+              <Pressable onPress={() => Alert.alert(tr('lk.confirmDelete'), a.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteAddon(sid, a.id).then(() => list.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); } }])} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
+            </Card>
+          )} />
+      )}
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tr('ad.addAddon')}</Text>
+        <Field label={tr('sx.name')} value={name} onChangeText={setName} />
+        <Field label={tr('sl.price')} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+        <Btn label={tr('common.save')} loading={busy} onPress={() => void save()} />
+        <View style={{ height: 16 }} />
+      </BottomSheet>
+    </Screen>
+  );
+}

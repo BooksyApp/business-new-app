@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Alert, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -6,12 +6,14 @@ import { EditClientSheet } from '@/components/EditClientSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { apiX } from '@/lib/api-ext';
+import { apiB } from '@/lib/api-biz';
+import { ToggleRow, num } from '@/components/form';
 import { Text } from '@/components/Text';
 import { Avatar, Btn, Card, ErrorState, Field, Header, Pill, Row, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, type Client, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { recallClient } from '@/lib/client-cache';
+import { recallClient, rememberClients } from '@/lib/client-cache';
 import { dateLabel, digits, fromIso, hhmm, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -26,14 +28,25 @@ export default function ClientCard() {
   const { salon, bump } = useApp();
   const { id } = useLocalSearchParams<{ id: string }>();
   const key = decodeURIComponent(String(id));
+  const stale = useRef(false);
   const fromList = recallClient(key);
   const loaded = useLoad<Client | ClientWithStats | null>(async () => {
-    if (fromList) return fromList;
-    return (await api.clients(salon?.id ?? '')).find((c) => String(c.id) === key) ?? null;
+    if (fromList && !stale.current) return fromList;
+    const all = await api.clients(salon?.id ?? '');
+    rememberClients(all);
+    stale.current = false;
+    return all.find((c) => String(c.id) === key) ?? null;
   }, [key]);
   const client = loaded.data;
   const rec = useLoad(() => (client?.id ? api.clientRecord(salon?.id ?? '', client.id) : Promise.resolve(null)), [client?.id]);
   const [editing, setEditing] = useState(false);
+  const crm = useLoad(() => (client?.id && salon ? apiB.crm(salon.id, client.id).catch(() => null) : Promise.resolve(null)), [client?.id]);
+  const bal = useLoad(() => (client?.id ? apiB.balance(client.id).catch(() => null) : Promise.resolve(null)), [client?.id]);
+  const pts = useLoad(() => (client?.id && salon ? apiB.loyalty(salon.id, client.id).catch(() => null) : Promise.resolve(null)), [client?.id]);
+  const [reason, setReason] = useState('');
+  const [settle, setSettle] = useState('');
+  const [crmBusy, setCrmBusy] = useState(false);
+  const crmRun = async (fn: () => Promise<unknown>, after: () => void) => { setCrmBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setCrmBusy(false); } };
   const consents = useLoad(() => (client?.id ? apiX.clientConsents(client.id).catch(() => []) : Promise.resolve([])), [client?.id]);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -111,6 +124,28 @@ export default function ClientCard() {
                 <Field placeholder={tr('clients.noteHint')} value={note} onChangeText={setNote} multiline style={{ minHeight: 80, paddingTop: 14, textAlignVertical: 'top' }} />
                 <Btn label={tr('clients.addNote')} disabled={!note.trim()} loading={busy} onPress={() => void addNote()} />
               </Card>
+              <Card style={{ gap: 4 }}>
+                <ToggleRow label={tr('ad.vip')} value={!!stats.vip} onChange={(v) => void crmRun(() => apiB.setVip(client.id, v), () => { stale.current = true; void loaded.reload(); })} />
+                {pts.data ? <Row label={tr('ad.points')} value={String(pts.data.pointsBalance ?? pts.data.points_balance ?? 0)} /> : null}
+                {bal.data ? <Row label={bal.data.outstanding > 0 ? tr('ad.owes') : tr('ad.credit')} value={money(bal.data.outstanding > 0 ? bal.data.outstanding : bal.data.credit, salon?.currency)} /> : null}
+                {bal.data && bal.data.outstanding > 0 ? (
+                  <>
+                    <Field label={tr('ex.amount')} value={settle} onChangeText={setSettle} keyboardType="decimal-pad" />
+                    <Btn label={tr('ad.settle')} variant="secondary" loading={crmBusy} disabled={!(num(settle) > 0)} onPress={() => void crmRun(() => apiB.settle(client.id, Math.min(num(settle), bal.data!.outstanding), 'CASH'), () => { setSettle(''); void bal.reload(); })} />
+                  </>
+                ) : null}
+                {crm.data?.blocked ? (
+                  <>
+                    <Pill text={tr('ad.blocked')} tone="guava" />
+                    <Btn label={tr('ad.unblock')} variant="secondary" loading={crmBusy} onPress={() => salon && void crmRun(() => apiB.unblock(salon.id, client.id), () => void crm.reload())} />
+                  </>
+                ) : (
+                  <>
+                    <Field label={tr('ad.blockReason')} value={reason} onChangeText={setReason} />
+                    <Btn label={tr('ad.block')} variant="danger" loading={crmBusy} disabled={!reason.trim()} onPress={() => salon && void crmRun(() => apiB.block(salon.id, client.id, reason.trim()), () => { setReason(''); void crm.reload(); })} />
+                  </>
+                )}
+              </Card>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
                 <Icon name="shield" size={20} color={t.vtext} />
                 <Text style={{ fontFamily: font.x, fontSize: 19, color: t.ink }}>{tr('cx.consents')}</Text>
@@ -144,7 +179,7 @@ export default function ClientCard() {
           ) : null}
         </ScrollView>
       )}
-      {client && editing ? <EditClientSheet client={client} open={editing} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void loaded.reload(); }} /> : null}
+      {client && editing ? <EditClientSheet client={client} open={editing} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); stale.current = true; void loaded.reload(); }} /> : null}
     </Screen>
   );
 }

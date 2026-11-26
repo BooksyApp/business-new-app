@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
-import { Choice, TabBar, num } from '@/components/form';
+import { Choice, TabBar, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
-import { apiB } from '@/lib/api-biz';
+import { apiB, type Automation } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -21,9 +21,12 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? '';
-  const [tab, setTab] = useState<'campaigns' | 'promos'>('campaigns');
+  const [tab, setTab] = useState<'campaigns' | 'promos' | 'auto'>('campaigns');
   const camps = useLoad(() => apiB.campaigns(sid), [sid]);
   const promos = useLoad(() => apiB.promos(sid), [sid]);
+  const auto = useLoad(() => (tab === 'auto' ? apiB.automation(sid).catch(() => null) : Promise.resolve(null)), [sid, tab]);
+  const [au, setAu] = useState<Automation | null>(null);
+  useEffect(() => { if (auto.data) setAu(auto.data); }, [auto.data]);
   const [sheet, setSheet] = useState(false);
   const [name, setName] = useState(''); const [channel, setChannel] = useState<'EMAIL' | 'SMS'>('EMAIL'); const [seg, setSeg] = useState<(typeof SEGMENTS)[number]>('ALL_CLIENTS');
   const [subject, setSubject] = useState(''); const [body, setBody] = useState('');
@@ -32,12 +35,25 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const aud = useLoad(() => (sheet && tab === 'campaigns' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel, tab]);
   const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
   const addBtn = <Pressable onPress={() => setSheet(true)} accessibilityRole="button" accessibilityLabel={tr('mk.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
-  const q = tab === 'campaigns' ? camps : promos;
+  const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : auto;
   return (
     <Screen>
       <Header title={tr('mk.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
-      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'campaigns', label: tr('mk.campaigns') }, { k: 'promos', label: tr('mk.promos') }]} />
-      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'campaigns' ? (
+      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'campaigns', label: tr('mk.campaigns') }, { k: 'promos', label: tr('mk.promos') }, { k: 'auto', label: tr('mk.auto') }]} />
+      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'auto' ? (
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+          {au ? (
+            <>
+              <ToggleRow label={tr('mk.birthday')} hint={tr('mk.birthdayHint')} value={au.birthdayEnabled} onChange={(v) => setAu({ ...au, birthdayEnabled: v })} />
+              <Field label={tr('mk.daysBefore')} value={String(au.birthdayDaysBefore)} onChangeText={(v) => setAu({ ...au, birthdayDaysBefore: Math.max(0, Math.round(num(v)) || 0) })} keyboardType="number-pad" />
+              <ToggleRow label={tr('mk.winback')} hint={tr('mk.winbackHint')} value={au.winbackEnabled} onChange={(v) => setAu({ ...au, winbackEnabled: v })} />
+              <Field label={tr('mk.daysAfter')} value={String(au.winbackDaysAfter)} onChangeText={(v) => setAu({ ...au, winbackDaysAfter: Math.max(1, Math.round(num(v)) || 1) })} keyboardType="number-pad" />
+              <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 10 }}>{tr('mk.sent30', { n: au.sentLast30Days })}</Text>
+              <Btn label={tr('common.save')} loading={busy} onPress={() => void run(() => { const { sentLast30Days: _s, ...body } = au; return apiB.saveAutomation(sid, body); }, () => void auto.reload())} />
+            </>
+          ) : null}
+        </ScrollView>
+      ) : tab === 'campaigns' ? (
         <FlatList data={camps.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={camps.refreshing} onRefresh={() => void camps.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="send" title={tr('mk.empty')} body={tr('mk.emptyBody')} />}

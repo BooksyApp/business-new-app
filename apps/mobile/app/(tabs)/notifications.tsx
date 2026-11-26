@@ -12,7 +12,8 @@ import { useApp } from '@/lib/app';
 import { useDockInset } from '@/lib/dock';
 import { addDays, dateLabel, fromIso, hhmm } from '@/lib/format';
 import { enablePush } from '@/lib/push';
-import { WaitlistSheet } from '@/components/WaitlistSheet';
+import { findClient } from '@/lib/client-cache';
+import { OfferSheet, WaitlistSheet } from '@/components/WaitlistSheet';
 import { apiX } from '@/lib/api-ext';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -35,6 +36,7 @@ export default function Notifications() {
     return { pending: appts.filter((a) => a.status === 'PENDING').sort((a, b) => `${a.appointmentDate}${a.startTime}`.localeCompare(`${b.appointmentDate}${b.startTime}`)), waitlist };
   }, [salon?.id, version]);
   const [wlOpen, setWlOpen] = useState(false);
+  const [offerId, setOfferId] = useState<string | null>(null);
   const ev = useLoad(() => apiX.hubEvents(salon?.id ?? '').catch(() => null), [salon?.id, version]);
   const pending = data.data?.pending ?? [];
   const waitlist = data.data?.waitlist ?? [];
@@ -117,12 +119,14 @@ export default function Notifications() {
                 <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{w.clientName || '-'}</Text>
                 <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('notifications.waitingFor', { service: w.serviceName ?? '-' })}{w.preferredDate ? ` · ${toDay(fromIso(w.preferredDate))}` : ''}</Text>
               </View>
-              <Pressable onPress={() => router.push({ pathname: '/booking/new', params: { clientName: w.clientName ?? '', date: w.preferredDate ?? undefined } })} accessibilityRole="button" accessibilityLabel={tr('wl.book')}><Icon name="cal" size={22} color={t.vtext} /></Pressable>
+              <Pressable onPress={() => setOfferId(String(w.id))} accessibilityRole="button" accessibilityLabel={tr('ad.offer')}><Icon name="send" size={22} color={t.vtext} /></Pressable>
+              <Pressable onPress={() => { const c = findClient(w.clientName, w.clientPhone); router.push({ pathname: '/booking/new', params: { ...(c ? { clientId: String(c.id), clientName: `${c.firstName} ${c.lastName ?? ''}`.trim() } : {}), date: w.preferredDate ?? undefined } }); }} accessibilityRole="button" accessibilityLabel={tr('wl.book')}><Icon name="cal" size={22} color={t.vtext} /></Pressable>
               <Pressable onPress={() => void apiX.removeWaitlist(salon?.id ?? '', w.id).then(() => { bump(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityRole="button" accessibilityLabel={tr('wl.remove')}><Icon name="trash" size={22} color={t.gink} /></Pressable>
             </Card>
           ))}
         </ScrollView>
       )}
+      <OfferSheet entryId={offerId} open={!!offerId} onClose={() => setOfferId(null)} onSent={() => setOfferId(null)} />
       <WaitlistSheet open={wlOpen} onClose={() => setWlOpen(false)} onAdded={() => { setWlOpen(false); void data.reload(); }} />
     </Screen>
   );

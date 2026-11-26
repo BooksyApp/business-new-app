@@ -9,6 +9,7 @@ import { Btn, Card, Chip, Field, Header, Screen } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type SaleBody } from '@/lib/api-ext';
+import { apiB } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
 import { money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
@@ -26,6 +27,7 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
   const cur = salon?.currency;
   const svc = useLoad(() => api.services(sid), [sid]);
   const staff = useLoad(() => api.staff(sid), [sid]);
+  const quick = useLoad(() => apiB.quickSale(sid).catch(() => []), [sid]);
   const [lines, setLines] = useState<Line[]>([]);
   const [master, setMaster] = useState('');
   const [clientName, setClientName] = useState('');
@@ -80,7 +82,8 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
         ))}
         <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('sl.pickService')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
-          {(svc.data ?? []).filter((s) => s.isActive).map((s) => <Chip key={s.id} label={`${s.name} · ${money(s.price, cur)}`} onPress={() => add({ serviceId: s.id, name: s.name, price: s.price ?? 0, qty: 1 })} />)}
+          {(quick.data ?? []).map((q) => <Chip key={`q${q.id}`} icon="star" label={`${q.serviceName} · ${money(q.price, cur)}`} onPress={() => add({ serviceId: q.serviceId, name: q.serviceName, price: q.price ?? 0, qty: 1 })} />)}
+          {(svc.data ?? []).filter((s) => s.isActive && !(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id))).map((s) => <Chip key={s.id} label={`${s.name} · ${money(s.price, cur)}`} onPress={() => add({ serviceId: s.id, name: s.name, price: s.price ?? 0, qty: 1 })} />)}
         </ScrollView>
         <Field label={tr('sl.customName')} value={cName} onChangeText={setCName} />
         <Field label={`${tr('sl.price')} (${cur ?? 'AZN'})`} value={cPrice} onChangeText={setCPrice} keyboardType="decimal-pad" />

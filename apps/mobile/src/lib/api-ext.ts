@@ -15,7 +15,7 @@ export interface ServiceBody {
   staffIds?: Id[]; isVisible?: boolean; isActive?: boolean; depositPercent?: number | null; paddingBefore?: number; paddingAfter?: number;
   bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null; messageToClient?: string | null;
 }
-export interface StaffBody { name?: string; email?: string; phone?: string; position?: string; serviceIds?: Id[]; isActive?: boolean; schedule?: Record<string, string[]>; inviteAndCreateAccount?: boolean }
+export interface StaffBody { avatarUrl?: string; name?: string; email?: string; phone?: string; position?: string; serviceIds?: Id[]; isActive?: boolean; schedule?: Record<string, string[]>; inviteAndCreateAccount?: boolean }
 export interface StaffFull {
   id: Id; name: string; email?: string; phone?: string; position?: string; avatarUrl?: string; role?: string; isActive?: boolean;
   workingHoursStart?: Record<string, string>; workingHoursEnd?: Record<string, string>; serviceIds?: Id[];

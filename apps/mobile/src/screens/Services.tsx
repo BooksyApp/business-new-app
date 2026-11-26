@@ -8,9 +8,11 @@ import { Text } from '@/components/Text';
 import { Btn, Card, Chip, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
+import { apiB, type PeakRule } from '@/lib/api-biz';
 import { apiX, type Category, type ServiceBody, type ServiceFull } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
 import { money } from '@/lib/format';
+import { Addons, Packages } from '@/screens/ServiceExtras';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -22,6 +24,7 @@ const TABS: { k: Tab; label: 'sx.tabMain' | 'sx.tabPrice' | 'sx.tabStaff' | 'sx.
 
 /** Five-tab service editor (main, price, specialists, online booking, settings); `service` null = create. */
 function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | null; cats: Category[]; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTheme();
   const { salon, bump } = useApp();
   const sid = salon?.id ?? '';
   const staff = useLoad(() => api.staff(sid), [sid]);
@@ -43,6 +46,10 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [mobile, setMobile] = useState(service?.mobileService ?? false);
   const [msg, setMsg] = useState(service?.messageToClient ?? '');
   const [busy, setBusy] = useState(false);
+  const peak = useLoad(() => (service ? apiB.peak(sid, service.id).catch(() => [] as PeakRule[]) : Promise.resolve([] as PeakRule[])), [service?.id]);
+  const [rules, setRules] = useState<PeakRule[] | null>(null);
+  const [pw, setPw] = useState('5'); const [pf, setPf] = useState('17:00'); const [pto, setPto] = useState('20:00'); const [pp, setPp] = useState('20');
+  const peakList = rules ?? peak.data ?? [];
 
   async function save() {
     const p = num(price); const d = Math.round(num(dur));
@@ -62,7 +69,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
     };
     setBusy(true);
     try {
-      if (service) await apiX.updateServiceFull(sid, service.id, body); else await apiX.createService(sid, body);
+      if (service) { await apiX.updateServiceFull(sid, service.id, body); if (rules) await apiB.savePeak(sid, service.id, rules); } else await apiX.createService(sid, body);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); onSaved();
     } catch (e) {
@@ -100,6 +107,25 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
             <Field label={`${tr('appt.price')} (${salon?.currency ?? 'AZN'})`} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
             <Field label={tr('sx.deposit')} value={deposit} onChangeText={setDeposit} keyboardType="number-pad" />
             <Field label={tr('sx.tax')} value={taxRate} onChangeText={setTaxRate} keyboardType="decimal-pad" />
+            {service ? (
+              <>
+                <SectionTitle>{tr('ad.peak')}</SectionTitle>
+                <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('ad.peakHint')}</Text>
+                {peakList.map((r, i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
+                    <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{r.weekday} · {r.startTime.slice(0, 5)}-{r.endTime.slice(0, 5)} · +{r.percent}%</Text>
+                    <Pressable onPress={() => setRules(peakList.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
+                  </View>
+                ))}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}><Field label={tr('ad.weekday')} value={pw} onChangeText={setPw} keyboardType="number-pad" maxLength={1} /></View>
+                  <View style={{ flex: 1.4 }}><Field label="→" value={pf} onChangeText={setPf} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                  <View style={{ flex: 1.4 }}><Field label=" " value={pto} onChangeText={setPto} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                  <View style={{ flex: 1 }}><Field label={tr('ad.percent')} value={pp} onChangeText={setPp} keyboardType="number-pad" /></View>
+                </View>
+                <Btn label={tr('ad.addRule')} variant="secondary" icon="plus" onPress={() => { const w = Number(pw); const p = Number(pp); if (!(w >= 1 && w <= 7) || !/^\d{2}:\d{2}$/.test(pf) || !/^\d{2}:\d{2}$/.test(pto) || pto <= pf || !(p > 0)) { Alert.alert(tr('common.error'), tr('hr.badTime')); return; } setRules([...peakList, { weekday: w, startTime: pf, endTime: pto, percent: p }]); }} />
+              </>
+            ) : null}
           </>
         ) : null}
         {tab === 'staff' ? (
@@ -169,12 +195,12 @@ export function Services({ onBack }: { onBack: () => void }) {
   const sid = salon?.id ?? '';
   const list = useLoad(() => apiX.servicesFull(sid), [sid]);
   const cats = useLoad(() => apiX.categories(sid).catch(() => [] as Category[]), [sid]);
-  const [view, setView] = useState<'list' | 'edit' | 'cats' | 'archived' | 'packages'>('list');
+  const [view, setView] = useState<'list' | 'edit' | 'cats' | 'archived' | 'packages' | 'addons'>('list');
   const [edit, setEdit] = useState<ServiceFull | null>(null);
   const [filter, setFilter] = useState('');
+  const quick = useLoad(() => apiB.quickSale(sid).catch(() => []), [sid]);
   const [local, setLocal] = useState<Record<string, boolean>>({});
   const archived = useLoad(() => (view === 'archived' ? apiX.archivedServices(sid) : Promise.resolve([] as ServiceFull[])), [sid, view]);
-  const pk = useLoad(() => (view === 'packages' ? apiX.packages(sid) : Promise.resolve([])), [sid, view]);
   const rows = useMemo(() => (list.data ?? []).filter((s) => !filter || String(s.categoryId ?? '') === filter).sort((a, b) => (a.categoryName ?? '').localeCompare(b.categoryName ?? '') || a.name.localeCompare(b.name)), [list.data, filter]);
 
   async function toggle(s: ServiceFull, v: boolean) {
@@ -192,13 +218,15 @@ export function Services({ onBack }: { onBack: () => void }) {
   }
   if (view === 'edit') return <Editor service={edit} cats={cats.data ?? []} onClose={() => setView('list')} onSaved={() => { setView('list'); void list.reload(); }} />;
   if (view === 'cats') return <Categories cats={cats.data ?? []} onBack={() => { setView('list'); void list.reload(); }} onChanged={() => void cats.reload()} />;
-  if (view === 'archived' || view === 'packages') {
-    const isArch = view === 'archived';
+  if (view === 'packages') return <Packages onBack={() => setView('list')} />;
+  if (view === 'addons') return <Addons onBack={() => setView('list')} />;
+  if (view === 'archived') {
+    const isArch = true;
     return (
       <Screen>
         <Header title={isArch ? tr('sx.showArchived') : tr('sx.packages')} onBack={() => setView('list')} />
-        <FlatList data={(isArch ? archived.data : pk.data) as { id: string; name?: string; serviceName?: string; sessions?: number; price?: number }[] ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
-          ListEmptyComponent={(isArch ? archived.loading : pk.loading) ? <Skeleton rows={3} /> : <StateView icon="scissors" title={isArch ? tr('lk.empty') : tr('sx.noPackages')} />}
+        <FlatList data={archived.data as { id: string; name?: string; serviceName?: string; sessions?: number; price?: number }[] ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+          ListEmptyComponent={archived.loading ? <Skeleton rows={3} /> : <StateView icon="scissors" title={isArch ? tr('lk.empty') : tr('sx.noPackages')} />}
           renderItem={({ item: s }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1 }}>
@@ -220,6 +248,7 @@ export function Services({ onBack }: { onBack: () => void }) {
         {(cats.data ?? []).map((c) => <Chip key={c.id} label={c.name} active={filter === String(c.id)} onPress={() => setFilter(String(c.id))} />)}
         <Chip label={tr('sx.categories')} icon="edit" onPress={() => setView('cats')} />
         <Chip label={tr('sx.packages')} icon="gift" onPress={() => setView('packages')} />
+        <Chip label={tr('ad.addons')} icon="plus" onPress={() => setView('addons')} />
         <Chip label={tr('sx.archived')} icon="box" onPress={() => setView('archived')} />
       </ScrollView>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={6} /> : (
@@ -235,6 +264,7 @@ export function Services({ onBack }: { onBack: () => void }) {
                   <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{[s.categoryName, s.durationMinutes ? `${s.durationMinutes} ${tr('common.min')}` : null, money(s.price, salon?.currency)].filter(Boolean).join(' · ')}</Text>
                   {s.isVisible === false ? <Pill text={tr('sx.tabOnline')} tone="muted" /> : null}
                 </View>
+                <Pressable onPress={() => { const ids = (quick.data ?? []).map((q) => String(q.serviceId)); const next = ids.includes(String(s.id)) ? ids.filter((x) => x !== String(s.id)) : [...ids, String(s.id)]; void apiB.setQuickSale(sid, next).then(() => quick.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); }} accessibilityRole="button" accessibilityLabel={tr('sl.quick')} accessibilityState={{ selected: (quick.data ?? []).some((q) => String(q.serviceId) === String(s.id)) }}><Icon name="star" size={22} color={(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id)) ? '#f5a524' : t.ink3} filled={(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id))} /></Pressable>
                 <Switch value={on} onValueChange={(v) => void toggle(s, v)} accessibilityLabel={s.name} trackColor={{ true: t.violet, false: t.fill2 }} />
               </Card>
             );

@@ -26,6 +26,7 @@ export interface Addon { id: Id; name: string; price?: number; priceType?: strin
 export interface PeakRule { weekday: number; startTime: string; endTime: string; percent: number }
 export interface Pkg { id: Id; name: string; service_id: Id | null; sessions_total: number; price: number; active: boolean }
 export interface GiftCard { id: Id; code: string; amount: number; balance: number; status?: string }
+export interface Automation { birthdayEnabled: boolean; birthdayDaysBefore: number; birthdaySubject: string | null; birthdayBody: string | null; winbackEnabled: boolean; winbackDaysAfter: number; winbackSubject: string | null; winbackBody: string | null; sentLast30Days: number }
 export interface Balance { outstanding: number; credit: number; balance: number }
 export interface Crm { blocked: boolean; blockReason: string | null }
 export interface AuditRow { actor_name: string | null; method: string; entity_type: string | null; summary: string | null; path: string; created_at: string }
@@ -68,6 +69,14 @@ export const apiB = {
   approvePayroll: (b: Id, id: Id) => request<PayrollRun>(`${B(b)}/payroll/${id}/approve`, { method: 'POST', body: {} }),
   payPayroll: (b: Id, id: Id, paidOn: string, method: string) => request<PayrollRun>(`${B(b)}/payroll/${id}/paid`, { method: 'POST', body: { paidOn, method } }),
 
+  clockedIn: (b: Id) => request<{ id: Id; staff_id: Id; staff_name: string; clock_in: string }[]>(`${B(b)}/timesheets/open`),
+  clockIn: (b: Id, staffId: Id) => request<unknown>(`${B(b)}/timesheets/clock-in`, { method: 'POST', body: { staffId } }),
+  clockOut: (b: Id, staffId: Id) => request<unknown>(`${B(b)}/timesheets/clock-out`, { method: 'POST', body: { staffId, breakMinutes: 0 } }),
+  timesheets: (b: Id, from: string, to: string) => request<{ byStaff: { staff_id: Id; staff_name: string | null; shifts: number; hours: number; pay: number }[] }>(`${B(b)}/timesheets?from=${from}&to=${to}`),
+  quickSale: (b: Id) => request<{ id: Id; serviceId: Id; serviceName: string; price?: number }[]>(`/quick-sale/business/${b}`),
+  setQuickSale: (b: Id, serviceIds: Id[]) => request<unknown>(`/quick-sale/business/${b}`, { method: 'PUT', body: serviceIds }),
+  automation: (b: Id) => request<Automation>(`${B(b)}/marketing-automation`),
+  saveAutomation: (b: Id, body: Omit<Automation, 'sentLast30Days'>) => request<Automation>(`${B(b)}/marketing-automation`, { method: 'PUT', body }),
   tips: (b: Id, from?: string, to?: string) => request<TipSummary>(`${B(b)}/tips${rng(from, to)}`),
   payOutTips: (b: Id, staffId?: Id) => request<{ amount: number; lines: number }>(`${B(b)}/tips/payout`, { method: 'POST', body: { staffId: staffId ?? null, upTo: null } }),
   drawer: (b: Id) => request<Drawer | null>(`${B(b)}/cash-drawer`),

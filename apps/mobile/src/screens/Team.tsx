@@ -11,6 +11,7 @@ import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type StaffBody, type StaffFull } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
+import { pickAndUpload } from '@/lib/pick';
 import { dateLabel, fromIso } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -40,6 +41,12 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
   })));
   const [busy, setBusy] = useState(false);
   const [block, setBlock] = useState(false);
+  const [avatar, setAvatar] = useState(staff?.avatarUrl);
+  async function pickAvatar() {
+    if (!staff) return;
+    try { const up = await pickAndUpload('STAFF_AVATAR'); if (up) { await apiX.updateStaff(sid, staff.id, { avatarUrl: up.url }); setAvatar(up.url); bump(); } }
+    catch (e) { Alert.alert(tr('common.error'), (e as Error).message === 'permission' ? tr('ad.permission') : (e as Error).message); }
+  }
 
   async function save(invite: boolean) {
     if (!name.trim()) { Alert.alert(tr('common.error'), tr('tm.needName')); return; }
@@ -64,6 +71,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
     <Screen>
       <Header title={staff ? tr('tm.editTitle') : tr('tm.newTitle')} subtitle={staff?.name} onBack={onClose} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
+        {staff ? <View style={{ alignItems: 'center', gap: 8, marginBottom: 12 }}><Avatar name={staff.name} uri={avatar} size={72} /><Btn label={tr('ad.avatar')} variant="secondary" icon="img" onPress={() => void pickAvatar()} /></View> : null}
         <Field label={tr('tm.name')} value={name} onChangeText={setName} autoCapitalize="words" />
         <Field label={tr('create.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <Field label={tr('cl.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />

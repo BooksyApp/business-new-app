@@ -22,11 +22,13 @@ export function Payroll({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? ''; const cur = salon?.currency;
-  const [tab, setTab] = useState<'rules' | 'targets' | 'runs'>('rules');
+  const [tab, setTab] = useState<'rules' | 'targets' | 'runs' | 'time'>('rules');
   const month = toDay(new Date()).slice(0, 7);
   const rules = useLoad(() => apiB.commissionRules(sid), [sid]);
   const staff = useLoad(() => api.staff(sid), [sid]);
   const targets = useLoad(() => apiB.targets(sid, month).catch(() => []), [sid, month]);
+  const clocks = useLoad(() => (tab === 'time' ? apiB.clockedIn(sid).catch(() => []) : Promise.resolve([])), [sid, tab]);
+  const sheet = useLoad(() => (tab === 'time' ? apiB.timesheets(sid, toDay(addDays(new Date(), -13)), toDay(new Date())).catch(() => null) : Promise.resolve(null)), [sid, tab]);
   const runs = useLoad(() => apiB.payrollRuns(sid).catch(() => []), [sid]);
   const [rc, setRc] = useState<(typeof CATS)[number]>('DEFAULT'); const [rt, setRt] = useState<'PERCENTAGE' | 'FIXED_AMOUNT'>('PERCENTAGE'); const [rv, setRv] = useState(''); const [rs, setRs] = useState('');
   const [tg, setTg] = useState<{ id: string; name: string } | null>(null); const [rev, setRev] = useState(''); const [bk, setBk] = useState('');
@@ -34,12 +36,12 @@ export function Payroll({ onBack }: { onBack: () => void }) {
   const detail = useLoad(() => (open != null ? apiB.payrollRun(sid, open) : Promise.resolve(null)), [sid, open]);
   const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after?.(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
-  const q = tab === 'rules' ? rules : tab === 'targets' ? targets : runs;
+  const q = tab === 'rules' ? rules : tab === 'targets' ? targets : tab === 'time' ? clocks : runs;
   const staffName = (id?: string | number) => (staff.data ?? []).find((s) => String(s.id) === String(id))?.name ?? tr('pr.everyone');
   return (
     <Screen>
       <Header title={tr('pr.title')} subtitle={salon?.name} onBack={onBack} />
-      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'rules', label: tr('pr.rules') }, { k: 'targets', label: tr('pr.targets') }, { k: 'runs', label: tr('pr.runs') }]} />
+      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'rules', label: tr('pr.rules') }, { k: 'targets', label: tr('pr.targets') }, { k: 'runs', label: tr('pr.runs') }, { k: 'time', label: tr('pr.time') }]} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48, gap: 10 }}>
           {tab === 'rules' ? (
@@ -69,6 +71,21 @@ export function Payroll({ onBack }: { onBack: () => void }) {
                 </Card>
               ))}
               {(targets.data ?? []).length === 0 ? <StateView icon="spark" title={tr('pr.noTargets')} /> : null}
+            </>
+          ) : null}
+          {tab === 'time' ? (
+            <>
+              {(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => {
+                const on = (clocks.data ?? []).some((c) => String(c.staff_id) === String(s.id));
+                return (
+                  <Card key={String(s.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{s.name}</Text>{on ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.ok }}>{tr('pr.clockedIn')}</Text> : null}</View>
+                    <Btn label={on ? tr('pr.clockOut') : tr('pr.clockIn')} variant={on ? 'danger' : 'secondary'} loading={busy} onPress={() => void run(() => (on ? apiB.clockOut(sid, s.id) : apiB.clockIn(sid, s.id)), () => { void clocks.reload(); void sheet.reload(); })} />
+                  </Card>
+                );
+              })}
+              {(sheet.data?.byStaff ?? []).length ? <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink, marginTop: 8 }}>{tr('pr.hours14')}</Text> : null}
+              {(sheet.data?.byStaff ?? []).map((r) => <Card key={String(r.staff_id)}><Line label={r.staff_name ?? '-'} value={`${Number(r.hours).toFixed(1)} h · ${money(Number(r.pay), cur)}`} /></Card>)}
             </>
           ) : null}
           {tab === 'runs' ? (
