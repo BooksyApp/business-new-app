@@ -5,6 +5,14 @@
   "scripts": {
     "web:dev": "npm run dev -w apps/web",
     "web:build": "npm run build -w apps/web",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "mobile:start": "npm run start -w apps/mobile",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "icons": "node scripts/build-icons.mjs"
+  },
+  "overrides": {
+    "@types/react": "19.2.4",
+    "@types/react-dom": "19.2.3",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   }
 }
