@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { Linking, RefreshControl, ScrollView, Share, View } from 'react-native';
+import { RefreshControl, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Circ, Group, Header, Hero, ListRow, Screen, SectionTitle } from '@/components/ui';
+import { Btn, Screen } from '@/components/ui';
+import { Avatar, IconBtn, Photo, Pill, SecHead, T, TopBar } from '@/components/kit';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { SUPPORTED, getLocale, setLocale, t as tr, type StringKey } from '@/i18n';
 import { api } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -14,7 +17,7 @@ import { useDockInset } from '@/lib/dock';
 import { money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
-import { font } from '@/theme/tokens';
+import { cardShadow, font } from '@/theme/tokens';
 
 type Row = { k: string; icon: string; title: string; sub?: string };
 
@@ -23,6 +26,8 @@ export default function More() {
   const router = useRouter();
   const { user, salon, salons, signOut, version, badges, demo, exitDemo } = useApp();
   const inset = useDockInset(16);
+  const ins = useSafeAreaInsets();
+  const { width: W } = useWindowDimensions();
   const [out, setOut] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const today = useLoad(() => api.daySheet(salon?.id ?? '', new Date()), [salon?.id, version]);
@@ -33,68 +38,75 @@ export default function More() {
   const go = (k: string) => router.push(`/section/${k}` as never);
   const L = (key: StringKey) => tr(key);
 
-  const groups: { title: string; rows: Row[] }[] = [
-    { title: tr('ux.groupDaily'), rows: [
-      { k: 'sales', icon: 'wallet', title: tr('more.takings'), sub: `${tr('more.expected')} ${money(tot?.expected ?? 0, salon?.currency)} · ${tr('more.collected')} ${money(tot?.already_paid ?? 0, salon?.currency)}` },
-      { k: 'team', icon: 'users', title: L('sections.team'), sub: team || L('sections.teamHint') },
-      { k: 'services', icon: 'scissors', title: L('sections.services'), sub: L('sections.servicesHint') },
-      { k: 'groups', icon: 'users', title: tr('ux.classes'), sub: tr('ux.noClassesBody') },
-      { k: 'views', icon: 'spark', title: L('sections.views'), sub: L('sections.viewsHint') },
-      { k: 'reviews', icon: 'star', title: L('sections.reviews'), sub: L('sections.reviewsHint') },
-      { k: 'messages', icon: 'chat', title: L('sections.messages'), sub: L('sections.messagesHint') },
-    ] },
-    { title: tr('ux.groupMoney'), rows: [
-      { k: 'finance', icon: 'cash', title: L('fn.title') }, { k: 'expenses', icon: 'receipt', title: L('ex.title') }, { k: 'inventory', icon: 'box', title: L('inv.title') }, { k: 'suppliers', icon: 'store', title: tr('ux.suppliers'), sub: tr('ux.stockCount') },
-      { k: 'payroll', icon: 'users', title: L('pr.title') }, { k: 'reports', icon: 'spark', title: L('rp.title'), sub: L('rp.top') }, { k: 'custom', icon: 'paper', title: L('cr.title') },
-    ] },
-    { title: tr('ux.groupGrowth'), rows: [
-      { k: 'marketing', icon: 'send', title: L('mk.title') }, { k: 'promotion', icon: 'spark', title: tr('ux.promo') }, { k: 'offers', icon: 'tag', title: L('x2.offers') }, { k: 'shop', icon: 'bag', title: L('x2.shop') }, { k: 'branches', icon: 'map', title: L('x2.branches') },
-    ] },
-    { title: tr('ux.groupSetup'), rows: [
-      { k: 'profile', icon: 'store', title: L('pf.title') }, { k: 'rota', icon: 'clock', title: L('x2.rota') }, { k: 'roles', icon: 'shield', title: L('rl.title') },
-      { k: 'integrations', icon: 'lock', title: L('ig.title') }, { k: 'settings', icon: 'gear', title: L('sections.settings'), sub: L('sections.settingsHint') },
-    ] },
+  const tiles: [string, string, string][] = [['receipt', tr('v2.till'), 'sales'], ['wallet', L('rp.title'), 'reports'], ['scissors', L('sections.services'), 'services'], ['users', L('sections.team'), 'team'], ['star', L('sections.reviews'), 'reviews'], ['box', L('inv.title'), 'inventory']];
+  const salonRows: Row[] = [
+    { k: 'marketing', icon: 'send', title: L('mk.title') },
+    { k: 'settings', icon: 'clock', title: tr('v2.hoursRow') },
+    { k: 'link', icon: 'share', title: tr('v2.salonLink'), sub: `booqi.az/${(salon as { slug?: string } | null)?.slug ?? ''}` },
   ];
+  const rest: Row[] = [
+    { k: 'groups', icon: 'users', title: tr('ux.classes') }, { k: 'views', icon: 'spark', title: L('sections.views') }, { k: 'messages', icon: 'chat', title: L('sections.messages') },
+    { k: 'finance', icon: 'cash', title: L('fn.title') }, { k: 'expenses', icon: 'receipt', title: L('ex.title') }, { k: 'suppliers', icon: 'store', title: tr('ux.suppliers') },
+    { k: 'payroll', icon: 'users', title: L('pr.title') }, { k: 'custom', icon: 'paper', title: L('cr.title') }, { k: 'promotion', icon: 'spark', title: tr('ux.promo') },
+    { k: 'offers', icon: 'tag', title: L('x2.offers') }, { k: 'shop', icon: 'bag', title: L('x2.shop') }, { k: 'branches', icon: 'map', title: L('x2.branches') },
+    { k: 'profile', icon: 'store', title: L('pf.title') }, { k: 'rota', icon: 'clock', title: L('x2.rota') }, { k: 'roles', icon: 'shield', title: L('rl.title') }, { k: 'integrations', icon: 'lock', title: L('ig.title') },
+  ];
+  const open = (k: string) => (k === 'link' ? void Share.share({ message: `${salon?.name ?? 'booqi'} · https://booqi.az/${(salon as { slug?: string } | null)?.slug ?? ''}` }).catch(() => {}) : go(k));
+  const Menu = ({ rows }: { rows: { key: string; icon: string; title: string; sub?: string; danger?: boolean; on: () => void }[] }) => (
+    <View style={{ marginHorizontal: 20, backgroundColor: t.surface, borderRadius: 20, paddingHorizontal: 16, ...cardShadow }}>
+      {rows.map((r, i) => (
+        <Pressable key={r.key} onPress={r.on} noScale accessibilityRole="button" accessibilityLabel={r.title} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 54, borderTopWidth: i ? 1 : 0, borderTopColor: t.hair }}>
+          <Icon name={r.icon} size={21} color={r.danger ? t.gink : t.ink} />
+          <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.r, fontSize: 15, color: r.danger ? t.gink : t.ink }}>{r.title}</Text>
+          {r.sub ? <Text numberOfLines={1} style={{ maxWidth: '45%', fontFamily: font.r, fontSize: 14, color: t.ink3 }}>{r.sub}</Text> : null}
+          {r.danger ? null : <Icon name="chev" size={16} color={t.ink3} />}
+        </Pressable>
+      ))}
+    </View>
+  );
 
   return (
-    <Screen>
-      <Header title={tr('more.title')} right={<Circ icon="bell" label={tr('tabs.notifications')} badge={badges.pending + badges.waitlist + badges.inbox} onPress={() => router.navigate('/notifications')} />} />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, gap: 14, paddingBottom: inset }} showsVerticalScrollIndicator={false}
+    <Screen style={{ paddingTop: ins.top }}>
+      <TopBar title={tr('v2.tabMore')} right={<IconBtn icon="gear" label={L('sections.settings')} onPress={() => go('settings')} />} />
+      <ScrollView contentContainerStyle={{ paddingBottom: inset }} showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={today.refreshing} onRefresh={() => void today.reload()} tintColor={t.violet} />}>
-        <Hero>
-          <View style={{ padding: 18, gap: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <Avatar name={salon?.name ?? ''} size={72} uri={(salon as { logoUrl?: string } | null)?.logoUrl} />
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={2} style={{ fontFamily: font.x, fontSize: 21, lineHeight: 26, letterSpacing: -0.5, color: t.ink }}>{salon?.name}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted, marginTop: 2 }}>{tr('ux.salonProfile')}{salon?.city ? ` · ${salon.city}` : ''}</Text>
-              </View>
+        <Pressable onPress={() => go('profile')} accessibilityRole="button" accessibilityLabel={salon?.name ?? ''} style={{ marginTop: 6, marginHorizontal: 20, height: 170, borderRadius: 26, overflow: 'hidden' }}>
+          <Photo src={(salon as { coverUrl?: string; logoUrl?: string } | null)?.coverUrl ?? (salon as { logoUrl?: string } | null)?.logoUrl} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }}>
+            <LinearGradient colors={['rgba(20,14,34,0)', 'rgba(20,14,34,.72)']} locations={[0.2, 1]} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }} />
+          </Photo>
+          <View style={{ position: 'absolute', left: 16, right: 16, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Avatar uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} size={52} border="#fff" />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: '#fff' }}>{salon?.name}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 12.5, color: 'rgba(255,255,255,.85)' }}>{[user?.fullName, salon?.myRole === 'OWNER' || user?.role === 'BUSINESS_OWNER' ? tr('v2.owner') : user?.role].filter(Boolean).join(' · ')}</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Btn small label={tr('ux.viewSite')} icon="eye" style={{ flex: 1.4 }} onPress={() => void Linking.openURL('https://getbooqi.tech').catch(() => {})} />
-              <Btn small label={tr('ux.share')} icon="share" variant="secondary" style={{ flex: 0.8 }} onPress={() => void Share.share({ message: salon?.name ?? 'booqi' }).catch(() => {})} />
-            </View>
+            <Pill tone="wh" text={tr('v2.profile')} />
           </View>
-        </Hero>
-        {groups.map((g) => (
-          <View key={g.title} style={{ gap: 8 }}>
-            <SectionTitle title={g.title} />
-            <Group>
-              {g.rows.map((r) => <ListRow key={r.k} icon={r.icon} title={r.title} sub={r.sub} onPress={() => go(r.k)} />)}
-            </Group>
-          </View>
-        ))}
-        <View style={{ gap: 8 }}>
-          <SectionTitle title={tr('ux.groupMore')} />
-          <Group>
-            <ListRow icon="user" title={tr('more.profile')} sub={[user?.fullName, user?.role].filter(Boolean).join(' · ')} onPress={() => go('settings')} />
-            <ListRow icon="globe" title={tr('more.language')} sub={lang} onPress={() => setLangOpen(true)} />
-            {salons.length > 1 ? <ListRow icon="store" title={tr('more.switchSalon')} sub={salon?.name} onPress={() => router.push('/salons')} /> : null}
-            <ListRow icon="help" title={L('x2.support')} onPress={() => go('support')} />
-            {demo ? <ListRow icon="eyeoff" title={tr('v2.demoExit')} sub={tr('v2.demoExitSub')} onPress={exitDemo} /> : null}
-            <ListRow icon="out" danger title={tr('more.signOut')} sub={`${tr('more.version')} ${Constants.expoConfig?.version ?? ''}`} onPress={() => setOut(true)} />
-          </Group>
+        </Pressable>
+        <SecHead title={tr('v2.manage')} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 20 }}>
+          {tiles.map(([i, l, k]) => (
+            <Pressable key={k} onPress={() => go(k)} accessibilityRole="button" accessibilityLabel={l}
+              style={{ width: (W - 40 - 20) / 3, backgroundColor: t.surface, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 12, gap: 14, ...cardShadow }}>
+              <Icon name={i} size={24} color={t.ink} />
+              <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 13.5, color: t.ink }}>{l}</Text>
+            </Pressable>
+          ))}
         </View>
+        <SecHead title={tr('v2.salon')} />
+        <Menu rows={salonRows.map((r) => ({ key: r.k, icon: r.icon, title: r.title, sub: r.sub, on: () => open(r.k) }))} />
+        <SecHead title={tr('v2.allSections')} />
+        <Menu rows={rest.map((r) => ({ key: r.k, icon: r.icon, title: r.title, on: () => go(r.k) }))} />
+        <SecHead title={tr('v2.account')} />
+        <Menu rows={[
+          { key: 'notif', icon: 'bell', title: tr('v2.notifications'), sub: badges.inbox ? String(badges.inbox) : undefined, on: () => router.push('/notifications') },
+          { key: 'lang', icon: 'globe', title: tr('more.language'), sub: lang, on: () => setLangOpen(true) },
+          ...(salons.length > 1 ? [{ key: 'switch', icon: 'store', title: tr('more.switchSalon'), sub: salon?.name, on: () => router.push('/salons') }] : []),
+          { key: 'support', icon: 'help', title: L('x2.support'), on: () => go('support') },
+          ...(demo ? [{ key: 'demo', icon: 'eyeoff', title: tr('v2.demoExit'), sub: tr('v2.demoExitSub'), on: exitDemo }] : []),
+          { key: 'out', icon: 'out', title: tr('more.signOut'), danger: true, on: () => setOut(true) },
+        ]} />
+        <T k="xs" color={t.ink3} style={{ textAlign: 'center', marginTop: 14 }}>{tr('more.version')} {Constants.expoConfig?.version ?? ''}</T>
       </ScrollView>
       <BottomSheet open={out} onClose={() => setOut(false)}>
         <Text style={{ fontFamily: font.x, fontSize: 20, color: t.ink }}>{tr('more.signOutConfirm')}</Text>

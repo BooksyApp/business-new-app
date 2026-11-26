@@ -3,34 +3,35 @@ import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ImportSheet } from '@/components/ImportSheet';
 import { AddClientSheet } from '@/components/AddClientSheet';
-import { Icon } from '@/components/Icon';
-import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Card, Chip, Circ, ErrorState, Header, Pill, Screen, SearchBar, Skeleton, StateView } from '@/components/ui';
+import { ErrorState, Screen, SearchBar, StateView } from '@/components/ui';
+import { Avatar, Chip, ChipRow, EmptyState, IconBtn, ListItem, Skeleton, T, TopBar } from '@/components/kit';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { t as tr } from '@/i18n';
 import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { clientKey, rememberClients } from '@/lib/client-cache';
 import { useDockInset } from '@/lib/dock';
-import { dateLabel, fromIso, money } from '@/lib/format';
+import { fromIso, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-type Seg = 'all' | 'new' | 'regular' | 'lapsed' | 'never';
-const SEGS: { k: Seg; label: 'cl.segAll' | 'cl.segNew' | 'cl.segRegular' | 'cl.segLapsed' | 'cl.segNever' }[] = [
-  { k: 'all', label: 'cl.segAll' }, { k: 'new', label: 'cl.segNew' }, { k: 'regular', label: 'cl.segRegular' }, { k: 'lapsed', label: 'cl.segLapsed' }, { k: 'never', label: 'cl.segNever' },
-];
+type Seg = 'all' | 'vip' | 'new' | 'lapsed' | 'regular' | 'never';
 const visitsOf = (c: ClientWithStats) => c.pastVisits ?? c.totalVisits ?? 0;
 const daysSince = (iso: string) => Math.floor((Date.now() - fromIso(iso).getTime()) / 86400000);
+const tagsOf = (c: ClientWithStats) => (c as { tags?: string[] }).tags;
+const isVip = (c: ClientWithStats) => !!c.vip || !!tagsOf(c)?.includes('VIP');
+const isNew = (c: ClientWithStats) => visitsOf(c) <= 1;
+const isLapsed = (c: ClientWithStats) => !!c.lastVisitDate && daysSince(c.lastVisitDate) >= 60;
 const inSeg = (c: ClientWithStats, s: Seg) =>
-  s === 'all' ? true : s === 'never' ? visitsOf(c) === 0 : s === 'new' ? visitsOf(c) === 1 : s === 'regular' ? visitsOf(c) >= 3
-    : !!c.lastVisitDate && daysSince(c.lastVisitDate) >= 60;
+  s === 'all' ? true : s === 'vip' ? isVip(c) : s === 'new' ? isNew(c) : s === 'lapsed' ? isLapsed(c) : s === 'regular' ? visitsOf(c) >= 3 : visitsOf(c) === 0;
 
-/** Müştərilər (BF48 list, mobile): search, six-segment style filter row, three stats, client rows with the next visit, add-client sheet. */
+/** Müştərilər (artifact "Müştərilər"): like an Instagram follower list. Search, segment chips with counts, photo, one line, last visit. */
 export default function Clients() {
   const { t } = useTheme();
   const router = useRouter();
+  const ins = useSafeAreaInsets();
   const { salon, version } = useApp();
   const inset = useDockInset(16);
   const [q, setQ] = useState('');
@@ -43,56 +44,54 @@ export default function Clients() {
     const s = q.trim().toLowerCase();
     return all.filter((c) => inSeg(c, seg) && (!s || `${c.firstName} ${c.lastName ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`.toLowerCase().includes(s)));
   }, [q, seg, all]);
-  const stats = useMemo(() => {
-    const paying = all.filter((c) => (c.totalSpent ?? 0) > 0);
-    const avg = paying.length ? paying.reduce((n, c) => n + (c.totalSpent ?? 0), 0) / paying.length : null;
-    return { total: all.length, returning: all.filter((c) => visitsOf(c) >= 2).length, avg };
-  }, [all]);
+  const segs: { k: Seg; label: string }[] = [
+    { k: 'all', label: tr('v2.all') }, { k: 'vip', label: tr('v2.vip') }, { k: 'new', label: tr('v2.newTag') }, { k: 'lapsed', label: tr('v2.lost') }, { k: 'regular', label: tr('cl.segRegular') }, { k: 'never', label: tr('cl.segNever') },
+  ];
   const filtered = q.trim() !== '' || seg !== 'all';
+  const empty = !list.loading && !list.error && all.length === 0;
 
   return (
-    <Screen>
-      <Header title={tr('clients.title')} subtitle={all.length ? `${stats.total} ${tr('ux.members')} · ${tr('ux.returningN', { n: stats.returning })}` : undefined}
-        right={<><Circ icon="paper" label={tr('ux.import')} onPress={() => setImporting(true)} /><Circ icon="user-plus" violet label={tr('cl.add')} onPress={() => setAdding(true)} /></>} />
-      <View style={{ paddingHorizontal: 20 }}>
-        <SearchBar value={q} onChangeText={setQ} placeholder={tr('clients.search')} />
+    <Screen style={{ paddingTop: ins.top }}>
+      <TopBar title={tr('v2.clientsTitle')} right={<><IconBtn icon="sliders" label={tr('ux.import')} onPress={() => setImporting(true)} /><IconBtn icon="plus" label={tr('v2.addClient')} onPress={() => setAdding(true)} /></>} />
+      <View style={{ paddingHorizontal: 20, marginTop: 4 }}>
+        <SearchBar value={q} onChangeText={setQ} placeholder={tr('v2.searchClient')} />
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginTop: 14, marginBottom: 14 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
-        {SEGS.map((s) => <Chip key={s.k} label={tr(s.label)} active={seg === s.k} onPress={() => setSeg(s.k)} />)}
-      </ScrollView>
-      {list.error && !list.data ? (
-        <ErrorState error={list.error} onRetry={() => void list.reload()} />
-      ) : list.loading && !list.data ? (
-        <Skeleton rows={6} />
+      {empty ? (
+        <EmptyState photo="demo:p7755235" title={tr('v2.emptyClientsTitle')} body={tr('v2.emptyClientsBody')}
+          action={{ label: tr('v2.addClient'), icon: 'plus', onPress: () => setAdding(true) }} secondary={{ label: tr('ux.import'), icon: 'users', onPress: () => setImporting(true) }} />
       ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(c, i) => clientKey(c) || String(i)}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: inset, gap: 12 }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag" initialNumToRender={12} windowSize={9} removeClippedSubviews
-          refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListEmptyComponent={filtered
-            ? <StateView icon="search" title={tr('cl.noResults')} body={tr('cl.noResultsBody')} actionLabel={tr('cl.clearFilters')} onAction={() => { setQ(''); setSeg('all'); }} />
-            : <StateView icon="users" title={tr('clients.empty')} body={tr('cl.emptyBody')} actionLabel={tr('cl.add')} onAction={() => setAdding(true)} />}
-          renderItem={({ item: c }) => {
-            const name = `${c.firstName} ${c.lastName ?? ''}`.trim() || tr('cl.unnamed');
-            const v = visitsOf(c);
-            const lapsed = !!c.lastVisitDate && daysSince(c.lastVisitDate) >= 60;
-            const line = v === 0 ? tr('ux.firstBooking') : `${tr('ux.lastVisit')}: ${c.lastVisitDate ? (daysSince(c.lastVisitDate) <= 0 ? tr('common.today').toLowerCase() : dateLabel(fromIso(c.lastVisitDate))) : '-'}${c.favouriteService ? ` · ${c.favouriteService}` : ''}`;
-            const tag = c.notes?.trim() ? { text: tr('ux.hasNote'), tone: 'violet' as const } : c.vip ? { text: 'VIP', tone: 'amber' as const } : lapsed ? { text: tr('cl.tagLapsed'), tone: 'amber' as const } : null;
-            return (
-              <Card onPress={() => router.push(`/client/${encodeURIComponent(clientKey(c))}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 92 }}>
-                <Avatar name={name} uri={c.avatarUrl} size={60} />
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{name}</Text>
-                  <Text numberOfLines={2} style={{ fontFamily: font.m, fontSize: 14.5, lineHeight: 20, color: t.muted }}>{line}</Text>
-                </View>
-                {tag ? <Pill text={tag.text} tone={tag.tone} /> : <Icon name="chev" size={20} color={t.ink3} />}
-              </Card>
-            );
-          }}
-        />
+        <>
+          <ChipRow style={{ marginTop: 14, marginBottom: 6 }}>
+            {segs.map((s) => <Chip key={s.k} label={s.label} on={seg === s.k} count={all.length ? all.filter((c) => inSeg(c, s.k)).length : undefined} onPress={() => setSeg(s.k)} />)}
+          </ChipRow>
+          {list.error && !list.data ? (
+            <ErrorState error={list.error} onRetry={() => void list.reload()} />
+          ) : list.loading && !list.data ? (
+            <Skeleton blocks={[{ h: 60 }, { h: 60 }, { h: 60 }, { h: 60 }, { h: 60 }]} />
+          ) : (
+            <FlatList
+              data={rows}
+              keyExtractor={(c, i) => clientKey(c) || String(i)}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: inset }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag" initialNumToRender={14} windowSize={9} removeClippedSubviews
+              refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
+              ListEmptyComponent={filtered ? <StateView icon="search" title={tr('cl.noResults')} body={tr('cl.noResultsBody')} actionLabel={tr('cl.clearFilters')} onAction={() => { setQ(''); setSeg('all'); }} /> : null}
+              renderItem={({ item: c, index }) => {
+                const name = `${c.firstName} ${c.lastName ?? ''}`.trim() || tr('cl.unnamed');
+                const v = visitsOf(c);
+                const tag = isVip(c) ? { l: 'VIP', c: t.vtext } : isLapsed(c) ? { l: tr('v2.lost'), c: t.gink } : tagsOf(c)?.[0] && tagsOf(c)?.[0] !== 'VIP' ? { l: tagsOf(c)![0], c: t.muted } : null;
+                const last = c.lastVisitDate ? (daysSince(c.lastVisitDate) <= 0 ? tr('v2.today') : tr('v2.daysAgo', { n: daysSince(c.lastVisitDate) })) : tr('v2.firstVisit');
+                return (
+                  <ListItem first={index === 0} title={name} onPress={() => router.push(`/client/${encodeURIComponent(clientKey(c))}`)}
+                    lead={<Avatar uri={c.avatarUrl} name={name} size={52} />}
+                    sub={<Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13, color: t.muted }}>{v ? tr('v2.visitsSpent', { n: v, s: money(c.totalSpent ?? 0, salon?.currency) }) : tr('v2.newClientShort')}{tag ? <Text style={{ fontFamily: font.s, color: tag.c }}>{` · ${tag.l}`}</Text> : null}</Text>}
+                    right={<T k="sm" color={t.ink3}>{last}</T>} />
+                );
+              }}
+            />
+          )}
+        </>
       )}
       <ImportSheet open={importing} onClose={() => setImporting(false)} onDone={() => { void list.reload(); }} />
       <AddClientSheet open={adding} onClose={() => setAdding(false)} onCreated={(c) => { setAdding(false); router.push(`/client/${encodeURIComponent(String(c.id))}`); }} />

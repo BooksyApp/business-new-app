@@ -159,7 +159,7 @@ export function Chip({ label, on, onPress, count, style }: { label: string; on?:
 
 /** Horizontal chip row with the 20px gutter. */
 export function ChipRow({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ flexGrow: 0 }, style]} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>{children}</ScrollView>;
+  return <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[{ flexGrow: 0, flexShrink: 0 }, style]} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>{children}</ScrollView>;
 }
 
 /** Photo with cover fit; `src` is an API path, an http URL, "demo:<key>" or a bundled asset. Shows the soft fill while empty. */
