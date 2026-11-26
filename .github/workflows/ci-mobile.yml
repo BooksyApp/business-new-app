@@ -2,7 +2,8 @@ name: CI mobile
 on:
   pull_request:
   push:
-    branches: [feat/mobile-app]
+    branches: [main, feat/mobile-app]
+    paths: ["apps/mobile/**", "packages/**", "package-lock.json", ".github/workflows/ci-mobile.yml"]
 concurrency: { group: "ci-mobile-${{ github.ref }}", cancel-in-progress: true }
 permissions: { contents: read }
 jobs:

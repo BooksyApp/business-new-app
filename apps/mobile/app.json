@@ -28,6 +28,7 @@
       "expo-router",
       "expo-font",
       "expo-status-bar",
+      "expo-secure-store",
       "expo-notifications",
       [
         "expo-splash-screen",
@@ -37,14 +38,25 @@
           "resizeMode": "contain",
           "backgroundColor": "#fbf7f2"
         }
+      ],
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "enablePngCrunchInReleaseBuilds": true,
+            "useLegacyPackaging": false
+          }
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": false
     },
     "extra": {
-      "router": {},
-      "webUrl": "https://new-business.getbooqi.tech/"
+      "router": {}
     }
   }
 }
