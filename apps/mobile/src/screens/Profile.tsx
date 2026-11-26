@@ -24,14 +24,14 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const b = q.data; if (!b) return;
-    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '' });
+    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
     setOnline(b.onlineBookingEnabled ?? true); setLogo(b.logoUrl ?? null);
   }, [q.data]);
   const set = (k: string) => (v: string) => setF((m) => ({ ...m, [k]: v }));
   const int = (k: string) => { const n = Math.round(num(f[k] ?? '')); return Number.isFinite(n) && n >= 0 ? n : undefined; };
   async function save() {
     if (!(f.name ?? '').trim()) { Alert.alert(tr('common.error'), tr('tm.needName')); return; }
-    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), googleReviewUrl: f.review || null };
+    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), googleReviewUrl: f.review || null, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
     setBusy(true);
     try { await apiB.updateBusiness(sid, body); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); Alert.alert(tr('ns.saved')); onBack(); }
     catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
@@ -63,6 +63,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
           <Field label={tr('pf.cancelH')} value={f.cancelH ?? ''} onChangeText={set('cancelH')} keyboardType="number-pad" />
           <Field label={tr('sx.deposit')} value={f.deposit ?? ''} onChangeText={set('deposit')} keyboardType="number-pad" />
           <Field label={tr('pf.reviewUrl')} value={f.review ?? ''} onChangeText={set('review')} keyboardType="url" autoCapitalize="none" />
+          <Field label={tr('x3.brandColor')} value={f.brand ?? ''} onChangeText={set('brand')} autoCapitalize="none" autoCorrect={false} maxLength={7} />
           <Btn label={tr('common.save')} loading={busy} onPress={() => void save()} style={{ marginTop: 8 }} />
         </ScrollView>
       )}

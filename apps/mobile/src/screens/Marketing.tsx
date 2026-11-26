@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, ScrollView, Switch, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
-import { Choice, TabBar, ToggleRow, num } from '@/components/form';
+import { Choice, Line, TabBar, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -10,6 +10,7 @@ import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView
 import { t as tr } from '@/i18n';
 import { apiB, type Automation } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
+import { money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -21,12 +22,20 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? '';
-  const [tab, setTab] = useState<'campaigns' | 'promos' | 'auto'>('campaigns');
+  const [tab, setTab] = useState<'campaigns' | 'promos' | 'auto' | 'members' | 'refs'>('campaigns');
   const camps = useLoad(() => apiB.campaigns(sid), [sid]);
   const promos = useLoad(() => apiB.promos(sid), [sid]);
   const auto = useLoad(() => (tab === 'auto' ? apiB.automation(sid).catch(() => null) : Promise.resolve(null)), [sid, tab]);
   const [au, setAu] = useState<Automation | null>(null);
   useEffect(() => { if (auto.data) setAu(auto.data); }, [auto.data]);
+  const mem = useLoad(() => (tab === 'members' ? apiB.memberships(sid).catch(() => []) : Promise.resolve([])), [sid, tab]);
+  const refs = useLoad(() => (tab === 'refs' ? Promise.all([apiB.refCodes(sid).catch(() => []), apiB.refStats(sid).catch(() => null)]) : Promise.resolve(null)), [sid, tab]);
+  const loy = useLoad(() => (tab === 'members' ? apiB.loyaltySettings(sid).catch(() => null) : Promise.resolve(null)), [sid, tab]);
+  const [lp, setLp] = useState(''); const [lv, setLv] = useState('');
+  useEffect(() => { if (loy.data) { setLp(loy.data.pointsPerUnit != null ? String(loy.data.pointsPerUnit) : ''); setLv(loy.data.visitsForReward != null ? String(loy.data.visitsForReward) : ''); } }, [loy.data]);
+  const tiers = useLoad(() => (tab === 'members' ? apiB.tiers(sid).catch(() => []) : Promise.resolve([])), [sid, tab]);
+  const [tn, setTn] = useState(''); const [tpts, setTpts] = useState(''); const [tb, setTb] = useState('');
+  const [mn, setMn] = useState(''); const [mp, setMp] = useState(''); const [mm, setMm] = useState('1'); const [md, setMd] = useState('0'); const [ms, setMs] = useState('0');
   const [sheet, setSheet] = useState(false);
   const [name, setName] = useState(''); const [channel, setChannel] = useState<'EMAIL' | 'SMS'>('EMAIL'); const [seg, setSeg] = useState<(typeof SEGMENTS)[number]>('ALL_CLIENTS');
   const [subject, setSubject] = useState(''); const [body, setBody] = useState('');
@@ -35,12 +44,54 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const aud = useLoad(() => (sheet && tab === 'campaigns' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel, tab]);
   const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
   const addBtn = <Pressable onPress={() => setSheet(true)} accessibilityRole="button" accessibilityLabel={tr('mk.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
-  const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : auto;
+  const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : tab === 'members' ? mem : tab === 'refs' ? refs : auto;
   return (
     <Screen>
-      <Header title={tr('mk.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
-      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'campaigns', label: tr('mk.campaigns') }, { k: 'promos', label: tr('mk.promos') }, { k: 'auto', label: tr('mk.auto') }]} />
-      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'auto' ? (
+      <Header title={tr('mk.title')} subtitle={salon?.name} onBack={onBack} right={tab === 'campaigns' || tab === 'promos' ? addBtn : undefined} />
+      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'campaigns', label: tr('mk.campaigns') }, { k: 'promos', label: tr('mk.promos') }, { k: 'auto', label: tr('mk.auto') }, { k: 'members', label: tr('x3.memberships') }, { k: 'refs', label: tr('x3.referrals') }]} />
+      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'members' ? (
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}>
+          {(mem.data ?? []).map((m) => (
+            <Card key={String(m.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: m.active ? 1 : 0.6 }}>
+              <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{m.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(m.price, salon?.currency)} / {m.billing_period_months} · -{m.discount_percent}% · {tr('sx.sessions', { n: m.included_sessions })}</Text></View>
+              <Switch value={m.active} onValueChange={(v) => void run(() => apiB.setMembershipActive(sid, m, v), () => void mem.reload())} accessibilityLabel={m.name} trackColor={{ true: t.violet, false: t.fill2 }} />
+            </Card>
+          ))}
+          {(mem.data ?? []).length === 0 ? <StateView icon="crown" title={tr('x3.noMemberships')} /> : null}
+          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 8 }}>{tr('x3.loyalty')}</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flex: 1 }}><Field label={tr('x3.pointsPerUnit')} value={lp} onChangeText={setLp} keyboardType="decimal-pad" /></View>
+            <View style={{ flex: 1 }}><Field label={tr('x3.visitsForReward')} value={lv} onChangeText={setLv} keyboardType="number-pad" /></View>
+          </View>
+          {(tiers.data ?? []).map((x, i) => (
+            <Card key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 }}>
+              <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{x.name} · {x.minPoints} · +{x.bonusPercent}%</Text>
+              <Pressable onPress={() => void run(() => apiB.saveTiers(sid, (tiers.data ?? []).filter((_, j) => j !== i)), () => void tiers.reload())} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
+            </Card>
+          ))}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1.4 }}><Field label={tr('x3.tier')} value={tn} onChangeText={setTn} /></View>
+            <View style={{ flex: 1 }}><Field label={tr('x3.minPoints')} value={tpts} onChangeText={setTpts} keyboardType="number-pad" /></View>
+            <View style={{ flex: 1 }}><Field label="+%" value={tb} onChangeText={setTb} keyboardType="number-pad" /></View>
+          </View>
+          <Btn label={tr('ad.addRule')} variant="secondary" icon="plus" loading={busy} disabled={!tn.trim() || !(num(tpts) >= 0) || !(num(tb) >= 0)} onPress={() => void run(() => apiB.saveTiers(sid, [...(tiers.data ?? []), { name: tn.trim(), minPoints: Math.round(num(tpts)), bonusPercent: Math.round(num(tb)) }]), () => { setTn(''); setTpts(''); setTb(''); void tiers.reload(); })} />
+          <Btn label={tr('common.save')} variant="secondary" loading={busy} onPress={() => void run(() => apiB.saveLoyalty(sid, { pointsPerUnit: lp.trim() ? num(lp) : null, visitsForReward: lv.trim() ? Math.round(num(lv)) : null }), () => void loy.reload())} />
+          <Field label={tr('sx.name')} value={mn} onChangeText={setMn} />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1 }}><Field label={tr('sl.price')} value={mp} onChangeText={setMp} keyboardType="decimal-pad" /></View>
+            <View style={{ flex: 1 }}><Field label={tr('x3.months')} value={mm} onChangeText={setMm} keyboardType="number-pad" /></View>
+            <View style={{ flex: 1 }}><Field label="%" value={md} onChangeText={setMd} keyboardType="number-pad" /></View>
+            <View style={{ flex: 1 }}><Field label={tr('ad.sessionsTotal')} value={ms} onChangeText={setMs} keyboardType="number-pad" /></View>
+          </View>
+          <Btn label={tr('common.save')} loading={busy} disabled={!mn.trim() || !(num(mp) >= 0)} onPress={() => void run(() => apiB.createMembership(sid, { name: mn.trim(), price: num(mp), billingPeriodMonths: Math.max(1, Math.round(num(mm)) || 1), discountPercent: Math.min(100, Math.max(0, Math.round(num(md)) || 0)), includedSessions: Math.max(0, Math.round(num(ms)) || 0) }), () => { setMn(''); setMp(''); void mem.reload(); })} />
+        </ScrollView>
+      ) : tab === 'refs' ? (
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}>
+          {refs.data?.[1] ? <Card><Line label={tr('x3.codes')} value={`${refs.data[1].activeReferralCodes}/${refs.data[1].totalReferralCodes}`} /><Line label={tr('x3.uses')} value={`${refs.data[1].successfulUsages}/${refs.data[1].totalUsages}`} /><Line label={tr('x3.rewards')} value={money(refs.data[1].totalRewardsGiven, salon?.currency)} bold /></Card> : null}
+          {(refs.data?.[0] ?? []).map((c) => <Card key={String(c.id)}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink, letterSpacing: 0.5 }}>{c.code}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{c.status} · {c.currentUses}{c.maxUses ? `/${c.maxUses}` : ''} · {money(c.rewardAmount, salon?.currency)}</Text></Card>)}
+          {(refs.data?.[0] ?? []).length === 0 ? <StateView icon="share" title={tr('x3.noRefs')} /> : null}
+        </ScrollView>
+      ) : tab === 'auto' ? (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
           {au ? (
             <>

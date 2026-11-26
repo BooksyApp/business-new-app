@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import { TabBar } from '@/components/form';
 import { Text } from '@/components/Text';
@@ -17,19 +17,41 @@ export function Integrations({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? '';
-  const [tab, setTab] = useState<'keys' | 'hooks' | 'audit'>('keys');
+  const [tab, setTab] = useState<'keys' | 'hooks' | 'audit' | 'track'>('keys');
   const keys = useLoad(async () => { const r = await apiB.apiKeys(sid).catch(() => []); return (Array.isArray(r) ? r : (r as { keys: ApiKey[] }).keys ?? []) as ApiKey[]; }, [sid]);
   const hooks = useLoad(() => apiB.webhooks(sid).catch(() => ({ webhooks: [], events: [] as string[] })), [sid]);
   const audit = useLoad(() => (tab === 'audit' ? apiB.audit(sid) : Promise.resolve([])), [sid, tab]);
+  const trk = useLoad(() => (tab === 'track' ? apiB.tracking(sid).catch(() => null) : Promise.resolve(null)), [sid, tab]);
+  const [pix, setPix] = useState(''); const [ga, setGa] = useState('');
+  useEffect(() => { const x = trk.data?.tracking; if (x) { setPix(x.metaPixelId ?? ''); setGa(x.gaMeasurementId ?? ''); } }, [trk.data]);
+  const dom = useLoad(() => (tab === 'track' ? apiB.domain(sid).catch(() => null) : Promise.resolve(null)), [sid, tab]);
+  const [dn, setDn] = useState('');
   const [name, setName] = useState(''); const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); after?.(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
-  const q = tab === 'keys' ? keys : tab === 'hooks' ? hooks : audit;
+  const q = tab === 'keys' ? keys : tab === 'hooks' ? hooks : tab === 'track' ? trk : audit;
   return (
     <Screen>
       <Header title={tr('ig.title')} subtitle={salon?.name} onBack={onBack} />
-      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'keys', label: tr('ig.keys') }, { k: 'hooks', label: tr('ig.hooks') }, { k: 'audit', label: tr('ig.audit') }]} />
-      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'keys' ? (
+      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'keys', label: tr('ig.keys') }, { k: 'hooks', label: tr('ig.hooks') }, { k: 'audit', label: tr('ig.audit') }, { k: 'track', label: tr('x3.tracking') }]} />
+      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'track' ? (
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+          <Field label="Meta Pixel ID" value={pix} onChangeText={setPix} autoCapitalize="none" autoCorrect={false} />
+          <Field label="Google Analytics ID (G-XXXX)" value={ga} onChangeText={setGa} autoCapitalize="none" autoCorrect={false} />
+          <Btn label={tr('common.save')} loading={busy} onPress={() => void run(() => apiB.saveTracking(sid, pix.trim(), ga.trim()), () => Alert.alert(tr('ns.saved')))} />
+          {dom.data?.available ? (
+            <View style={{ marginTop: 20, gap: 8 }}>
+              <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 18, color: t.ink }}>{tr('x3.domain')}</Text>
+              <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{tr('x3.domainHint', { t: dom.data.cnameTarget })}</Text>
+              {dom.data.domain ? <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{dom.data.domain} · {dom.data.status ?? ''}</Text> : null}
+              {dom.data.lastError ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink }}>{dom.data.lastError}</Text> : null}
+              <Field label="shop.example.com" value={dn} onChangeText={setDn} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+              <Btn label={tr('common.save')} variant="secondary" loading={busy} disabled={!dn.trim()} onPress={() => void run(() => apiB.setDomain(sid, dn.trim().toLowerCase()), () => { setDn(''); void dom.reload(); })} />
+              {dom.data.domain ? <View style={{ flexDirection: 'row', gap: 10 }}><Btn label={tr('x3.verify')} style={{ flex: 1 }} loading={busy} onPress={() => void run(() => apiB.verifyDomain(sid), () => void dom.reload())} /><Btn label={tr('x3.remove')} variant="danger" style={{ flex: 1 }} loading={busy} onPress={() => void run(() => apiB.removeDomain(sid), () => void dom.reload())} /></View> : null}
+            </View>
+          ) : null}
+        </ScrollView>
+      ) : tab === 'keys' ? (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }} refreshControl={<RefreshControl refreshing={keys.refreshing} onRefresh={() => void keys.reload()} tintColor={t.violet} />}>
           {(keys.data ?? []).map((k) => (
             <Card key={k.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: k.revokedAt ? 0.5 : 1 }}>

@@ -58,7 +58,7 @@ export default function More() {
         <Item icon="globe" title={tr('more.language')} sub={lang} onPress={() => setLangOpen(true)} />
         <Item icon="store" title={salons.length > 1 ? tr('more.switchSalon') : tr('more.salon')} sub={salon?.name} onPress={salons.length > 1 ? () => router.push('/salons') : undefined} />
         <Item icon="spark" title={tr('rp.title')} sub={tr('rp.top')} onPress={() => router.push('/section/reports')} />
-        {([['finance', 'cash', 'fn.title'], ['inventory', 'box', 'inv.title'], ['expenses', 'receipt', 'ex.title'], ['marketing', 'send', 'mk.title'], ['payroll', 'users', 'pr.title'], ['custom', 'paper', 'cr.title'], ['roles', 'shield', 'rl.title'], ['integrations', 'lock', 'ig.title'], ['profile', 'store', 'pf.title']] as const).map(([k, ic, tt]) => (
+        {([['finance', 'cash', 'fn.title'], ['inventory', 'box', 'inv.title'], ['expenses', 'receipt', 'ex.title'], ['marketing', 'send', 'mk.title'], ['payroll', 'users', 'pr.title'], ['custom', 'paper', 'cr.title'], ['roles', 'shield', 'rl.title'], ['integrations', 'lock', 'ig.title'], ['profile', 'store', 'pf.title'], ['offers', 'tag', 'x2.offers'], ['shop', 'bag', 'x2.shop'], ['rota', 'clock', 'x2.rota'], ['branches', 'map', 'x2.branches'], ['support', 'help', 'x2.support']] as const).map(([k, ic, tt]) => (
           <Item key={k} icon={ic} title={tr(tt)} onPress={() => router.push(`/section/${k}`)} />
         ))}
         {MENU.map((m) => (

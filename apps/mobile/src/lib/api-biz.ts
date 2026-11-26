@@ -35,7 +35,46 @@ export interface ReportResult { columns: { key: string; label: string }[]; rows:
 export interface Saved { id: string; name: string }
 export interface BizProfile { id: Id; name: string; description?: string; phone?: string; email?: string; website?: string; address?: string; city?: string; onlineBookingEnabled?: boolean; minBookingNoticeMinutes?: number; maxBookingDaysAhead?: number; cancellationWindowHours?: number; depositPercent?: number; googleReviewUrl?: string | null; logoUrl?: string }
 
+export interface Ticket { ref: string; category: string; subject: string; status: string; lastMessageAt: string }
+export interface Thread { ticket: Ticket; messages: { id: Id; authorType: string; authorName: string | null; body: string; createdAt: string }[] }
+export interface SlotOffer { kind: 'QUIET' | 'LAST_MINUTE'; weekday?: number | null; startTime?: string | null; endTime?: string | null; hoursAhead?: number | null; percent: number }
+export interface BranchRow { id: string; name: string; revenue: number | string | null; bookings: number | null; cancellations: number | null; noShows: number | null; newClients: number | null; averageTicket: number | string | null }
+export interface OnlineSales { giftCardsEnabled: boolean; giftCardMin: number; giftCardMax: number; walletEnabled: boolean; walletMin: number; walletMax: number }
+export interface Rota { weekStart: string; weekEnd: string; staff: { id: Id; name: string; position: string | null; days: { date: string; dayOfWeek: number; state: string; start?: string; end?: string }[] }[] }
+
+export interface Membership { id: Id; name: string; price: number; billing_period_months: number; discount_percent: number; included_sessions: number; active: boolean }
+export interface RefCode { id: Id; code: string; type: string; status: string; rewardAmount: number; currentUses: number; maxUses?: number }
+export interface RefStats { totalReferralCodes: number; activeReferralCodes: number; totalUsages: number; successfulUsages: number; totalRewardsGiven: number }
+
 export const apiB = {
+  memberships: (b: Id) => request<Membership[]>(`${B(b)}/memberships?activeOnly=false`),
+  createMembership: (b: Id, body: { name: string; price: number; billingPeriodMonths: number; discountPercent: number; includedSessions: number }) => request<Membership>(`${B(b)}/memberships`, { method: 'POST', body }),
+  setMembershipActive: (b: Id, m: Membership, active: boolean) => request<Membership>(`${B(b)}/memberships/${m.id}`, { method: 'PUT', body: { name: m.name, price: m.price, billingPeriodMonths: m.billing_period_months, discountPercent: m.discount_percent, includedSessions: m.included_sessions, active } }),
+  refCodes: (b: Id) => request<RefCode[]>(`/referral-codes/business/${b}`),
+  refStats: (b: Id) => request<RefStats>(`/referral-analytics/business/${b}`),
+  tracking: (b: Id) => request<{ tracking: { metaPixelId: string | null; gaMeasurementId: string | null } }>(`${B(b)}/integrations`),
+  saveTracking: (b: Id, metaPixelId: string, gaMeasurementId: string) => request<unknown>(`${B(b)}/integrations/tracking`, { method: 'PUT', body: { metaPixelId, gaMeasurementId } }),
+  tickets: () => request<Ticket[]>('/support/tickets'),
+  ticket: (ref: string) => request<Thread>(`/support/tickets/${encodeURIComponent(ref)}`),
+  createTicket: (body: { category: string; subject: string; message: string }) => request<Ticket>('/support/tickets', { method: 'POST', body }),
+  replyTicket: (ref: string, body: string) => request<Thread>(`/support/tickets/${encodeURIComponent(ref)}/replies`, { method: 'POST', body: { body } }),
+  slotOffers: (b: Id) => request<SlotOffer[]>(`/bookings/business/${b}/slot-discounts`),
+  saveSlotOffers: (b: Id, offers: SlotOffer[]) => request<SlotOffer[]>(`/bookings/business/${b}/slot-discounts`, { method: 'PUT', body: offers }),
+  branches: (from?: string, to?: string) => request<BranchRow[]>(`/analytics/owner/branch-comparison${rng(from, to).replace('from=', 'startDate=').replace('to=', 'endDate=')}`),
+  onlineSales: (b: Id) => request<OnlineSales>(`${B(b)}/online-sales`),
+  saveOnlineSales: (b: Id, body: Partial<OnlineSales>) => request<OnlineSales>(`${B(b)}/online-sales`, { method: 'PUT', body }),
+  setShift: (b: Id, shift: { staffId: Id; date: string; start: string; end: string }) => request<unknown>(`${B(b)}/rota/shifts`, { method: 'PUT', body: shift }),
+  clearShift: (b: Id, staffId: Id, date: string) => request<void>(`${B(b)}/rota/shifts?staffId=${staffId}&date=${date}`, { method: 'DELETE' }),
+  copyWeek: (b: Id, from: string, to: string) => request<{ copied: number }>(`${B(b)}/rota/copy?from=${from}&to=${to}`, { method: 'POST', body: {} }),
+  domain: (b: Id) => request<{ available: boolean; cnameTarget: string; domain: string | null; status?: string; lastError?: string | null }>(`${B(b)}/custom-domain`),
+  setDomain: (b: Id, domain: string) => request<unknown>(`${B(b)}/custom-domain`, { method: 'PUT', body: { domain } }),
+  verifyDomain: (b: Id) => request<{ status?: string }>(`${B(b)}/custom-domain/verify`, { method: 'POST', body: {} }),
+  removeDomain: (b: Id) => request<void>(`${B(b)}/custom-domain`, { method: 'DELETE' }),
+  loyaltySettings: (b: Id) => request<{ pointsPerUnit: number | null; visitsForReward: number | null }>(`${B(b)}/loyalty-settings`),
+  saveLoyalty: (b: Id, body: { pointsPerUnit: number | null; visitsForReward: number | null }) => request<unknown>(`${B(b)}/loyalty-settings`, { method: 'PUT', body }),
+  tiers: (b: Id) => request<{ name: string; minPoints: number; bonusPercent: number }[]>(`${B(b)}/loyalty-tiers`),
+  saveTiers: (b: Id, tiers: { name: string; minPoints: number; bonusPercent: number }[]) => request<unknown>(`${B(b)}/loyalty-tiers`, { method: 'PUT', body: tiers }),
+  rota: (b: Id, weekStart: string) => request<Rota>(`${B(b)}/rota?weekStart=${weekStart}`),
   products: (b: Id) => request<Product[]>(`/products/business/${b}`),
   createProduct: (b: Id, body: ProductInput) => request<Product>(`/products/business/${b}`, { method: 'POST', body }),
   updateProduct: (b: Id, id: Id, body: Partial<ProductInput>) => request<Product>(`/products/${id}/business/${b}`, { method: 'PUT', body }),
