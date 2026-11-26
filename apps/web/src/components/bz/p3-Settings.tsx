@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { t } from "@/i18n";
-import { BzScope, PageHead, cx } from "@/components/bz";
+import { Btn, BzScope, PageHead, cx } from "@/components/bz";
 import { useVisibleSettings } from "@/components/layout/navigation";
 import { useNavigation } from "@/utils/navigationUtils";
 
