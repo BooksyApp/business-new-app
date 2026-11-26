@@ -42,17 +42,17 @@ export function WhatsAppReminders({ businessId }: { businessId: Id }) {
         <MessageCircle size={18} strokeWidth={1.75} />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("reminders.title")}</DialogTitle>
             <DialogDescription>{t("reminders.subtitle")}</DialogDescription>
           </DialogHeader>
-          {failed && <p className="text-sm text-rose-700">{t("reminders.error")}</p>}
-          {!failed && rows === null && <p className="text-sm opacity-70">{t("reminders.loading")}</p>}
-          {rows !== null && rows.length === 0 && <p className="text-sm opacity-70">{t("reminders.empty")}</p>}
-          <ul className="divide-y">
+          {failed && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{t("reminders.error")}</p>}
+          {!failed && rows === null && <p className="rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground">{t("reminders.loading")}</p>}
+          {rows !== null && rows.length === 0 && <p className="rounded-xl bg-muted p-4 text-center text-sm text-muted-foreground">{t("reminders.empty")}</p>}
+          <ul className="space-y-2">
             {rows?.map((r) => (
-              <li key={r.id} className="flex items-center gap-3 py-3">
+              <li key={r.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{r.startTime} · {r.clientName || "—"}</p>
                   <p className="truncate text-sm opacity-70">{r.serviceName}{r.staffName ? ` · ${r.staffName}` : ""}</p>
@@ -67,7 +67,7 @@ export function WhatsAppReminders({ businessId }: { businessId: Id }) {
                 )}
                 {r.waUrl && (
                   <button type="button" onClick={() => mark(r, !r.sentAt)}
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${r.sentAt ? "bg-emerald-100 text-emerald-800" : "bg-gray-100 text-gray-600"}`}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${r.sentAt ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}
                     aria-pressed={!!r.sentAt}>
                     <Check className="h-3.5 w-3.5" aria-hidden />{r.sentAt ? t("reminders.sent") : t("reminders.markSent")}
                   </button>

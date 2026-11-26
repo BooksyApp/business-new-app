@@ -180,7 +180,7 @@ export default function InboxPage() {
           <div className="grid gap-4 md:grid-cols-[320px_minmax(0,1fr)]">
             <Card className="overflow-hidden">
               {loaded && list.length === 0 ? (
-                <p className="p-4 text-sm text-muted-foreground">{t("inbox.empty")}</p>
+                <p className="m-3 rounded-2xl bg-muted p-6 text-center text-sm text-muted-foreground">{t("inbox.empty")}</p>
               ) : null}
               <ul className="divide-y">
                 {list.map((c) => (
@@ -189,12 +189,15 @@ export default function InboxPage() {
                       type="button"
                       onClick={() => setSelected(c.conversationId)}
                       className={cn(
-                        "flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/50",
-                        selected === c.conversationId && "bg-muted",
+                        "flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-muted/50",
+                        selected === c.conversationId && "bg-[rgb(var(--reg-brand-soft))]",
                       )}
                     >
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">{c.customerName || c.customerEmail}</span>
+                      <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-guava text-sm font-bold text-white">
+                        {(c.customerName || c.customerEmail || "?").trim().charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={cn("block truncate", c.unread > 0 ? "font-bold" : "font-medium")}>{c.customerName || c.customerEmail}</span>
                         <span className="block text-xs text-muted-foreground">{when(c.lastMessageAt)}</span>
                       </span>
                       {c.unread > 0 ? (
@@ -214,7 +217,7 @@ export default function InboxPage() {
             <Card>
               <CardContent className="flex flex-col gap-4 p-4">
                 {!selected || !thread ? (
-                  <p className="py-12 text-center text-sm text-muted-foreground">{t("inbox.selectPrompt")}</p>
+                  <p className="mx-auto my-8 max-w-sm rounded-2xl bg-muted px-6 py-12 text-center text-sm text-muted-foreground">{t("inbox.selectPrompt")}</p>
                 ) : (
                   <>
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
@@ -233,7 +236,7 @@ export default function InboxPage() {
                     </div>
 
                     {reporting ? (
-                      <div className="flex flex-col gap-2 rounded-lg border p-3">
+                      <div className="flex flex-col gap-2 rounded-2xl border border-border bg-muted/40 p-3">
                         <Textarea
                           value={reportText}
                           maxLength={500}
@@ -257,8 +260,8 @@ export default function InboxPage() {
                         <div
                           key={m.messageId}
                           className={cn(
-                            "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm",
-                            m.fromSalon ? "ml-auto bg-primary text-primary-foreground" : "bg-muted",
+                            "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm",
+                            m.fromSalon ? "ml-auto rounded-br-md bg-gradient-to-br from-primary to-[#5b3fd6] text-primary-foreground" : "rounded-bl-md bg-muted",
                             m.status === "sending" && "opacity-70",
                             m.status === "failed" && "ring-2 ring-destructive",
                           )}

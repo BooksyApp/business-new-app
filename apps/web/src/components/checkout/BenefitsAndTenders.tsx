@@ -117,7 +117,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
   if (!clientId) {
     return (
       <Card>
-        <CardContent className="p-4 text-sm text-muted-foreground">
+        <CardContent className="rounded-2xl p-6 text-center text-sm text-muted-foreground">
           {t("checkout.pickAClientToUse")}
         </CardContent>
       </Card>
@@ -168,7 +168,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
             return (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-card p-3"
               >
                 <div className="text-sm">
                   <p className="font-medium">{item.name}</p>
@@ -270,7 +270,7 @@ export function BenefitsAndTenders({ businessId, clientId, orderItems, total, on
           </div>
         </div>
 
-        <div className="rounded-md bg-muted p-3 text-sm">
+        <div className="rounded-2xl bg-muted p-4 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("checkout.coveredByBenefits")}</span>
             <span>

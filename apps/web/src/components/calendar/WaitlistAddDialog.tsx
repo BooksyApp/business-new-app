@@ -1,3 +1,4 @@
+import { ASection } from "@/components/biz/a-Section";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -82,11 +83,12 @@ export function WaitlistAddDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle>{tr("waitlistCal.addTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm">
+          <ASection>
           <label className="block font-medium">
             {tr("waitlistCal.addName")}
             <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} />
@@ -112,6 +114,8 @@ export function WaitlistAddDialog({
             {tr("waitlistCal.addEmail")}
             <Input className="mt-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
+          </ASection>
+          <ASection>
           <label className="block font-medium">
             {tr("waitlistCal.addService")}
             <select className={field} value={chosenService} onChange={(e) => setServiceId(e.target.value)}>
@@ -145,7 +149,8 @@ export function WaitlistAddDialog({
               ))}
             </div>
           </div>
-          <Button className="w-full" onClick={save} disabled={busy || !name.trim() || !chosenService}>
+          </ASection>
+          <Button variant="brand" className="w-full rounded-full" onClick={save} disabled={busy || !name.trim() || !chosenService}>
             {tr("waitlistCal.addSave")}
           </Button>
         </div>
