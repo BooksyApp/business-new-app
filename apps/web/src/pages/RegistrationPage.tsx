@@ -8,8 +8,6 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { SalonPreview } from "@/components/auth/SalonPreview";
 import { authLink, authSubtitle, authTitle, brandCta, webUrl } from "@/components/auth/authStyles";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Mail, ArrowLeft, Check, ChevronRight, Sparkles, Scissors, 
