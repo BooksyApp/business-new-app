@@ -1,3 +1,4 @@
+import { P4Error } from "@/components/bz/p4-kit";
 import { Skeleton as KitSkeleton } from "@/components/bz";
 import { useQuery } from "@tanstack/react-query";
 import { Percent, RefreshCw, Table2 } from "lucide-react";
@@ -43,7 +44,7 @@ export default function AnalyticsPage() {
         <div className={pageBody}>
           {q.isError ? (
             <div className="space-y-3">
-              <Empty>{t("reports.loadFailed")}</Empty>
+              <P4Error title={t("reports.loadFailed")} />
               <div className="text-center">
                 <button type="button" className={secondaryBtn} onClick={() => q.refetch()}>
                   <RefreshCw size={16} aria-hidden /> {t("reports.retry")}

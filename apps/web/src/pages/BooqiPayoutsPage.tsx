@@ -1,4 +1,4 @@
-import { P4Loading } from "@/components/bz/p4-kit";
+import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -42,7 +42,7 @@ export default function BooqiPayoutsPage() {
         <PageHeader title={t("bwallet.navTitle")} subtitle={t("bwallet.pendingHint")} />
         <div className={pageBody}>
           {q.isError ? (
-            <Empty>{t("bwallet.loadFailed")}</Empty>
+            <P4Error title={t("bwallet.loadFailed")} />
           ) : !d ? (
             <P4Loading />
           ) : (

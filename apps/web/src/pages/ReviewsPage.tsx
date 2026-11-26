@@ -1,3 +1,5 @@
+import { Chip } from "@/components/bz";
+import { P4Chips, P4Error } from "@/components/bz/p4-kit";
 import { P4Loading } from "@/components/bz/p4-kit";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -91,7 +93,7 @@ export default function ReviewsPage() {
         />
         <div className={pageBody}>
           {reviewsQ.isError ? (
-            <Empty>{t("reviews.v3.loadFailed")}</Empty>
+            <P4Error title={t("reviews.v3.loadFailed")} />
           ) : !reviewsQ.data ? (
             <P4Loading />
           ) : (
@@ -102,36 +104,30 @@ export default function ReviewsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div role="radiogroup" aria-label={t("reviews.v3.byReply")} className="flex gap-1 rounded-full bg-white p-1 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                  {(["", "no", "yes"] as const).map((v) => (
-                    <button
-                      key={v || "all"}
-                      type="button"
-                      role="radio"
-                      aria-checked={replied === v}
-                      onClick={() => setReplied(v)}
-                      className={cn("h-8 rounded-full px-3 text-[13px] font-semibold", replied === v ? "bg-[rgb(var(--reg-ink))] text-white" : "text-[rgb(var(--reg-ink)/0.65)] hover:text-[rgb(var(--reg-ink))]")}
-                    >
-                      {v === "" ? t("reviews.v3.all", { count: all.length }) : v === "no" ? t("reviews.v3.unanswered", { count: unanswered }) : t("reviews.v3.answered")}
-                    </button>
-                  ))}
-                </div>
+                <P4Chips
+                  label={t("reviews.v3.byReply")}
+                  items={[
+                    { key: "" as const, label: t("reviews.v3.all", { count: all.length }) },
+                    { key: "no" as const, label: t("reviews.v3.unanswered", { count: unanswered }) },
+                    { key: "yes" as const, label: t("reviews.v3.answered") },
+                  ]}
+                  value={replied}
+                  onChange={(v) => setReplied(v)}
+                />
                 {staffNames.length > 0 && (
-                  <select aria-label={t("reviews.v3.staff")} className={selectCls} value={staff} onChange={(e) => setStaff(e.target.value)}>
+                  <div className="fld sel"><small>{t("reviews.v3.staff")}</small><select aria-label={t("reviews.v3.staff")} value={staff} onChange={(e) => setStaff(e.target.value)}>
                     <option value="">{t("reviews.v3.allStaff")}</option>
                     {staffNames.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  </select></div>
                 )}
                 {serviceNames.length > 0 && (
-                  <select aria-label={t("reviews.v3.service")} className={selectCls} value={service} onChange={(e) => setService(e.target.value)}>
+                  <div className="fld sel"><small>{t("reviews.v3.service")}</small><select aria-label={t("reviews.v3.service")} value={service} onChange={(e) => setService(e.target.value)}>
                     <option value="">{t("reviews.v3.allServices")}</option>
                     {serviceNames.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  </select></div>
                 )}
                 {stars !== null && (
-                  <button type="button" onClick={() => setStars(null)} className="h-9 rounded-full bg-[rgb(var(--reg-brand-soft))] px-3 text-[13px] font-semibold text-[rgb(var(--reg-brand-strong))]">
-                    {t("reviews.v3.starsFilter", { n: stars })} ×
-                  </button>
+                  <Chip violet onClick={() => setStars(null)}>{t("reviews.v3.starsFilter", { n: stars })} ×</Chip>
                 )}
               </div>
 

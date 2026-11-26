@@ -1,4 +1,4 @@
-import { P4Loading } from "@/components/bz/p4-kit";
+import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -89,7 +89,7 @@ export default function TaxPage() {
         />
         <div className={pageBody}>
           {q.isError ? (
-            <Empty>{t("ledger.loadFailed")}</Empty>
+            <P4Error title={t("ledger.loadFailed")} />
           ) : !d ? (
             <P4Loading />
           ) : n(d.totals.count) === 0 ? (

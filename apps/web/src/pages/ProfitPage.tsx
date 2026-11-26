@@ -1,4 +1,4 @@
-import { P4Loading } from "@/components/bz/p4-kit";
+import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -64,7 +64,7 @@ export default function ProfitPage() {
         <PageHeader title={t("ledger.profitTitle")} subtitle={t("ledger.profitHint")} actions={picker} />
         <div className={pageBody}>
           {q.isError ? (
-            <Empty>{t("ledger.loadFailed")}</Empty>
+            <P4Error title={t("ledger.loadFailed")} />
           ) : !d ? (
             <P4Loading />
           ) : (
