@@ -1,3 +1,4 @@
+import { ASection, APillGroup } from "@/components/biz/a-Section";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -126,7 +127,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl">
         <DialogHeader>
           <DialogTitle>{t("sales.saleRefund.title")}</DialogTitle>
           <DialogDescription>{t("sales.saleRefund.description")}</DialogDescription>
@@ -134,11 +135,11 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border p-3">
+            <div className="rounded-2xl border border-border bg-muted/50 p-3.5">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("sales.saleRefund.paid")}</p>
               <p className="text-lg font-semibold tabular-nums">{formatPrice(sale.total)}</p>
             </div>
-            <div className="rounded-lg border p-3">
+            <div className="rounded-2xl border border-border bg-muted/50 p-3.5">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("sales.saleRefund.refundable")}</p>
               <p className="text-lg font-semibold tabular-nums">{formatPrice(refundable)}</p>
             </div>
@@ -153,14 +154,14 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
 
           {!blocked && (
             <>
-              <div className="flex gap-2">
-                <Button type="button" size="sm" variant={mode === "lines" ? "default" : "outline"} onClick={() => setMode("lines")}>
+              <APillGroup>
+                <Button type="button" size="sm" className="rounded-full" variant={mode === "lines" ? "default" : "ghost"} onClick={() => setMode("lines")}>
                   {t("sales.saleRefund.byItems")}
                 </Button>
-                <Button type="button" size="sm" variant={mode === "amount" ? "default" : "outline"} onClick={() => setMode("amount")}>
+                <Button type="button" size="sm" className="rounded-full" variant={mode === "amount" ? "default" : "ghost"} onClick={() => setMode("amount")}>
                   {t("sales.saleRefund.byAmount")}
                 </Button>
-              </div>
+              </APillGroup>
 
               {mode === "lines" ? (
                 <div className="space-y-2">
@@ -170,7 +171,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
                     pickable.map((item) => {
                       const id = String(item.id);
                       return (
-                        <div key={id} className="flex items-center gap-3 rounded-lg border p-3">
+                        <div key={id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-medium">{item.serviceName}</p>
                             <p className="text-xs text-muted-foreground tabular-nums">
@@ -211,6 +212,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
                 </div>
               )}
 
+              <ASection>
               {!summary?.onlinePayment && (
               <div className="space-y-2">
                 <Label htmlFor="sale-refund-method">{t("sales.saleRefund.method")}</Label>
@@ -254,6 +256,7 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
                   <p className="text-xs text-muted-foreground">{t("sales.saleRefund.reasonRequired")}</p>
                 )}
               </div>
+              </ASection>
             </>
           )}
         </div>
@@ -261,6 +264,8 @@ export function SaleRefundDialog({ open, onOpenChange, sale, onRefunded }: SaleR
         <DialogFooter>
           <Button
             type="button"
+            variant="brand"
+            className="rounded-full"
             disabled={!valid || busy}
             onClick={() => void submit()}
           >
