@@ -183,14 +183,14 @@ export default function CentralPricesPage() {
                 <tbody>
                   {plan.map((r, i) => (
                     <tr key={`${r.targetBusinessId}-${r.serviceId}-${i}`} className="border-t border-[rgb(var(--reg-line)/0.6)]">
-                      <td className="px-3 py-2">{salonName(r.targetBusinessId)}</td>
-                      <td className="px-3 py-2">{r.serviceName}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-3.5">{salonName(r.targetBusinessId)}</td>
+                      <td className="px-3 py-3.5">{r.serviceName}</td>
+                      <td className="px-3 py-3.5">
                         {actionLabel(r)}
                         {r.priceAction === "KEEP_LOCAL" && <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900">{t("cp.keepsLocalPrice")}</span>}
                         {r.categoryToCreate && <span className="ml-2 text-[11px] text-[rgb(var(--reg-muted))]">{t("cp.newCategory")}</span>}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
+                      <td className="px-3 py-3.5 text-right tabular-nums">
                         {r.currentPrice !== null && r.currentPrice !== undefined ? `${formatPrice(r.currentPrice)} → ` : ""}
                         {formatPrice(r.newPrice ?? 0)}
                         {!lock && r.action !== "BLOCKED" && (

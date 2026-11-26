@@ -213,13 +213,13 @@ export default function TimesheetPage() {
                     <tbody>
                       {entries.map((e) => (
                         <tr key={e.id} className="border-t border-[rgb(var(--reg-line)/0.6)]">
-                          <td className="px-4 py-2 font-semibold">{e.staff_name}</td>
-                          <td className="px-4 py-2">{e.work_date}</td>
-                          <td className="px-4 py-2">{hhmm(e.clock_in)}</td>
-                          <td className="px-4 py-2">{e.clock_out ? hhmm(e.clock_out) : <span className="font-semibold text-emerald-700">{t("timesheet.atWork")}</span>}</td>
-                          <td className="px-4 py-2">{e.break_minutes} {t("timesheet.min")}</td>
-                          <td className="px-4 py-2">{e.worked_minutes != null ? `${(e.worked_minutes / 60).toFixed(1)} ${t("timesheet.h")}` : "—"}{e.edited_at ? <span className="ml-1 text-xs text-[rgb(var(--reg-muted))]">({t("timesheet.edited")})</span> : null}</td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="px-4 py-3.5 font-semibold">{e.staff_name}</td>
+                          <td className="px-4 py-3.5">{e.work_date}</td>
+                          <td className="px-4 py-3.5">{hhmm(e.clock_in)}</td>
+                          <td className="px-4 py-3.5">{e.clock_out ? hhmm(e.clock_out) : <span className="font-semibold text-emerald-700">{t("timesheet.atWork")}</span>}</td>
+                          <td className="px-4 py-3.5">{e.break_minutes} {t("timesheet.min")}</td>
+                          <td className="px-4 py-3.5">{e.worked_minutes != null ? `${(e.worked_minutes / 60).toFixed(1)} ${t("timesheet.h")}` : "—"}{e.edited_at ? <span className="ml-1 text-xs text-[rgb(var(--reg-muted))]">({t("timesheet.edited")})</span> : null}</td>
+                          <td className="px-4 py-3.5 text-right">
                             <Button variant="ghost" size="icon" aria-label={t("timesheet.correct")} onClick={() => startEdit(e)}>
                               <Pencil size={15} />
                             </Button>
