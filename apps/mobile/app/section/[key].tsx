@@ -1,6 +1,9 @@
 import React from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Header, Screen, StateView } from '@/components/ui';
+import { Looks } from '@/screens/Looks';
+import { Reports } from '@/screens/Reports';
+import { Reviews } from '@/screens/Reviews';
 import { Messages } from '@/screens/Messages';
 import { Sales } from '@/screens/Sales';
 import { Services } from '@/screens/Services';
@@ -17,6 +20,9 @@ export default function Section() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/more'));
   switch (key) {
     case 'services': return <Services onBack={back} />;
+    case 'views': return <Looks onBack={back} />;
+    case 'reviews': return <Reviews onBack={back} />;
+    case 'reports': return <Reports onBack={back} />;
     case 'team': return <Team onBack={back} />;
     case 'sales': return <Sales onBack={back} />;
     case 'messages': return <Messages onBack={back} />;

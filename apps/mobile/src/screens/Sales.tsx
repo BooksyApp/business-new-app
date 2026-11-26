@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Card, ErrorState, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { BottomSheet } from '@/components/BottomSheet';
+import { NewSale } from '@/screens/NewSale';
+import { apiX } from '@/lib/api-ext';
+import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr, type StringKey } from '@/i18n';
 import { api } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -20,6 +23,11 @@ export function Sales({ onBack }: { onBack: () => void }) {
   const { salon, version } = useApp();
   const [date, setDate] = useState(() => new Date());
   const list = useLoad(() => api.sales(salon?.id ?? '', date), [salon?.id, date.toDateString(), version]);
+  const [adding, setAdding] = useState(false);
+  const [refund, setRefund] = useState<{ id: string | number; total: number } | null>(null);
+  const [amt, setAmt] = useState('');
+  const [why, setWhy] = useState('');
+  const [busy, setBusy] = useState(false);
   const rows = list.data ?? [];
   const total = rows.reduce((n, s) => n + (s.total ?? 0), 0);
   const nav = (icon: string, d: number, label: string) => (
@@ -27,9 +35,19 @@ export function Sales({ onBack }: { onBack: () => void }) {
       <Icon name={icon} size={20} color={t.ink} />
     </Pressable>
   );
+  async function doRefund() {
+    if (!refund) return;
+    const a = Number(amt.replace(',', '.'));
+    if (!Number.isFinite(a) || a <= 0 || a > refund.total) { Alert.alert(tr('common.error'), tr('sl.refundMax', { n: money(refund.total, salon?.currency) })); return; }
+    setBusy(true);
+    try { await apiX.refundSale(String(refund.id), { amount: a, reason: why.trim() || undefined }); setRefund(null); Alert.alert(tr('sl.refunded')); void list.reload(); }
+    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+  }
+  if (adding) return <NewSale onClose={() => setAdding(false)} onDone={() => { setAdding(false); void list.reload(); }} />;
+  const addBtn = <Pressable onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel={tr('sl.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
   return (
     <Screen>
-      <Header title={tr('sections.sales')} subtitle={salon?.name} onBack={onBack} />
+      <Header title={tr('sections.sales')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 10 }}>
         {nav('back', -1, tr('sales.prev'))}
         <Pressable onPress={() => setDate(new Date())} accessibilityRole="button"><Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink, textTransform: 'capitalize' }}>{sameDay(date, new Date()) ? tr('common.today') : dateLabel(date)}</Text></Pressable>
@@ -46,7 +64,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
           ) : null}
           ListEmptyComponent={<StateView icon="wallet" title={tr('sales.empty')} body={tr('sales.emptyBody')} />}
           renderItem={({ item: s }) => (
-            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
+            <Card onPress={() => { setRefund({ id: s.id, total: s.total ?? 0 }); setAmt(String(s.total ?? '')); setWhy(''); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15.5, color: t.ink }}>{s.clientName || tr('sales.walkIn')}</Text>
                 <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{[hhmm(s.saleTime), s.staffName, (s.items ?? []).map((i) => i.name ?? i.itemName).filter(Boolean).join(', ')].filter(Boolean).join(' · ')}</Text>
@@ -58,6 +76,16 @@ export function Sales({ onBack }: { onBack: () => void }) {
             </Card>
           )} />
       )}
+      <BottomSheet open={!!refund} onClose={() => setRefund(null)}>
+        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 4 }}>{tr('sl.refund')}</Text>
+        <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 12 }}>{tr('sl.refundMax', { n: money(refund?.total, salon?.currency) })}</Text>
+        <Field label={tr('sl.refundAmount')} value={amt} onChangeText={setAmt} keyboardType="decimal-pad" />
+        <Field label={tr('sl.refundReason')} value={why} onChangeText={setWhy} />
+        <View style={{ flexDirection: 'row', gap: 10, paddingBottom: 16 }}>
+          <Btn label={tr('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={() => setRefund(null)} />
+          <Btn label={tr('sl.refund')} variant="danger" style={{ flex: 1 }} loading={busy} onPress={() => void doRefund()} />
+        </View>
+      </BottomSheet>
     </Screen>
   );
 }

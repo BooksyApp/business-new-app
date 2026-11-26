@@ -57,6 +57,7 @@ export default function More() {
         <Item icon="user" title={tr('more.profile')} sub={[user?.fullName, user?.role].filter(Boolean).join(' · ')} onPress={() => router.push('/section/settings')} />
         <Item icon="globe" title={tr('more.language')} sub={lang} onPress={() => setLangOpen(true)} />
         <Item icon="store" title={salons.length > 1 ? tr('more.switchSalon') : tr('more.salon')} sub={salon?.name} onPress={salons.length > 1 ? () => router.push('/salons') : undefined} />
+        <Item icon="spark" title={tr('rp.title')} sub={tr('rp.top')} onPress={() => router.push('/section/reports')} />
         {MENU.map((m) => (
           <Item key={m.key} icon={m.icon} title={tr(`sections.${m.key}` as StringKey)} sub={tr(`sections.${m.key}Hint` as StringKey)} onPress={() => router.push(`/section/${m.key}`)} />
         ))}
