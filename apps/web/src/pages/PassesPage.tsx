@@ -2,10 +2,11 @@ import type { Id } from "@/types/id";
 import { useCallback, useEffect, useState } from "react";
 import { BadgePercent, Plus, Ticket } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";

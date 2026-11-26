@@ -1,10 +1,11 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetSecondary } from "@/components/page/booqiStyles";
+import { primaryBtn, sheetSecondary } from "@/components/page/booqiStyles";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/currency";
 import { getCurrentBusinessId } from "@/config/api";
@@ -118,12 +119,12 @@ export default function CentralPricesPage() {
         <PageHeader title={t("cp.title")} subtitle={t("cp.hint")} />
         <div className={pageBody}>
           {services === null || salons === null ? (
-            <div className="h-32 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : salons.length === 0 ? (
             <div className="rounded-[20px] border-2 border-dashed border-[rgb(var(--reg-line))] p-5 text-sm text-[rgb(var(--reg-muted))]">{t("cp.noOtherSalons")}</div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <section className="crd2">
                 <p className="mb-2 font-bold">{t("cp.servicesToPush")}</p>
                 <ul className="space-y-1">
                   {services.map((s) => (
@@ -137,7 +138,7 @@ export default function CentralPricesPage() {
                   ))}
                 </ul>
               </section>
-              <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+              <section className="crd2">
                 <p className="mb-2 font-bold">{t("cp.toSalons")}</p>
                 <ul className="space-y-1">
                   {salons.map((b) => (

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Eye, Megaphone, MousePointerClick, Pause, Play } from "lucide-react";
+import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader, Card, CardContent, CardHeader, CardTitle } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/page/booqi";
+import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { Button } from "@/components/ui/button";
 import { getCurrentBusinessId } from "@/config/api";
 import { salonPath } from "@/lib/salonKey";

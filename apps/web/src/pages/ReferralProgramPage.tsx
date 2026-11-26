@@ -1,11 +1,13 @@
+import { Note, StatusPill } from "@/components/bz";
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useState } from "react";
 import { CheckCircle, Clock, Copy, Gift, RefreshCw, Share2, Store, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
-import { ClientPreview, SectionTitle, StatusChip } from "@/components/page/kit";
+import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { ClientPreview, SectionTitle } from "@/components/page/kit";
 import { money, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -126,17 +128,15 @@ export default function ReferralProgramPage() {
 
         <div className={pageBody}>
           {loading ? (
-            <div className="h-56 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : (
             <>
               {serviceUnavailable && !referralCode && (
-                <div className="flex items-start gap-3 rounded-[20px] bg-amber-50 p-4 ring-1 ring-inset ring-amber-200">
-                  <Gift size={18} className="mt-0.5 shrink-0 text-amber-700" aria-hidden />
-                  <div>
-                    <p className="text-sm font-bold text-amber-900">{t("referralProgram.referralProgrammeComingSoon")}</p>
-                    <p className="mt-0.5 text-sm text-amber-900/80">{t("referralProgram.theReferralServiceIsNot")}</p>
-                  </div>
-                </div>
+                <Note kind="wa" icon={<Gift className="ic" aria-hidden />}>
+                  <b>{t("referralProgram.referralProgrammeComingSoon")}</b>
+                  <br />
+                  {t("referralProgram.theReferralServiceIsNot")}
+                </Note>
               )}
 
               {!serviceUnavailable && !referralCode && (
@@ -222,7 +222,7 @@ export default function ReferralProgramPage() {
                   </section>
 
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    <div className="crd2">
                       <SectionTitle>{t("referralProgram.invitedSalons")}</SectionTitle>
                       <div className="mt-2 grid grid-cols-3 gap-2">
                         <StatCard icon={Store} label={t("referralProgram.signedUp")} value={me.salons.signedUp} tone="violet" />
@@ -230,7 +230,7 @@ export default function ReferralProgramPage() {
                         <StatCard icon={Gift} label={t("referralProgram.freeMonthsEarned")} value={me.salons.freeMonths} tone="amber" />
                       </div>
                     </div>
-                    <div className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    <div className="crd2">
                       <SectionTitle>{t("referralProgram.invitedCustomers")}</SectionTitle>
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <StatCard icon={UserPlus} label={t("referralProgram.signedUp")} value={me.customers.signedUp} tone="violet" />
@@ -254,9 +254,7 @@ export default function ReferralProgramPage() {
                               <p className="truncate text-[15px] font-semibold">{inv.name}</p>
                               <p className="truncate text-sm text-[rgb(var(--reg-muted))]">{formatLocaleDate(new Date(inv.created_at), { day: "numeric", month: "short" })}</p>
                             </div>
-                            <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", inv.type === "SALON" ? "bg-amber-50 text-amber-800" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}>
-                              {inv.type === "SALON" ? t("referralProgram.typeSalon") : t("referralProgram.typeCustomer")}
-                            </span>
+                            <StatusPill kind={inv.type === "SALON" ? "w" : "d"}>{inv.type === "SALON" ? t("referralProgram.typeSalon") : t("referralProgram.typeCustomer")}</StatusPill>
                             <StatusChip status={inv.status === "QUALIFIED" ? "active" : "scheduled"} label={inv.status === "QUALIFIED" ? t("referralProgram.rewarded") : t("referralProgram.waitingForFirstVisit")} />
                           </li>
                         ))}

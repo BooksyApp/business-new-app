@@ -1,10 +1,11 @@
+import { StatusPill } from "@/components/bz";
 import type { Id } from "@/types/id";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Pencil, Timer, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls, money } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { currencySymbol } from "@/lib/currency";
 import { salonDayService, type TimeEntry, type TimesheetRow } from "@/services/salonDayService";
 import { staffService, type Staff } from "@/services/staffService";
 import { t } from "@/i18n";
+import { BooqiScope, EmptyState, PageHeader, StatCard, pageBody } from "@/components/bz/p4-compat";
 
 /** Monday of the week that contains `d`, as yyyy-mm-dd. */
 export function weekStart(d: Date): string {
@@ -144,7 +146,7 @@ export default function TimesheetPage() {
       <BooqiScope>
         <PageHeader title={t("timesheet.title")} subtitle={t("timesheet.subtitle")} />
         <div className={pageBody}>
-          <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+          <section className="crd2">
             <div className="flex flex-wrap items-end gap-3">
               {canManage ? (
                 <Field label={t("timesheet.who")} htmlFor="ts-who">
@@ -169,8 +171,8 @@ export default function TimesheetPage() {
               ) : (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {open.map((o) => (
-                    <li key={o.id} className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                      {o.staff_name} · {t("timesheet.atWorkSince", { value: hhmm(o.clock_in) })}
+                    <li key={o.id}>
+                      <StatusPill kind="c">{o.staff_name} · {t("timesheet.atWorkSince", { value: hhmm(o.clock_in) })}</StatusPill>
                     </li>
                   ))}
                 </ul>
@@ -216,7 +218,7 @@ export default function TimesheetPage() {
                           <td className="px-4 py-3.5 font-semibold">{e.staff_name}</td>
                           <td className="px-4 py-3.5">{e.work_date}</td>
                           <td className="px-4 py-3.5">{hhmm(e.clock_in)}</td>
-                          <td className="px-4 py-3.5">{e.clock_out ? hhmm(e.clock_out) : <span className="font-semibold text-emerald-700">{t("timesheet.atWork")}</span>}</td>
+                          <td className="px-4 py-3.5">{e.clock_out ? hhmm(e.clock_out) : <StatusPill kind="c">{t("timesheet.atWork")}</StatusPill>}</td>
                           <td className="px-4 py-3.5">{e.break_minutes} {t("timesheet.min")}</td>
                           <td className="px-4 py-3.5">{e.worked_minutes != null ? `${(e.worked_minutes / 60).toFixed(1)} ${t("timesheet.h")}` : "—"}{e.edited_at ? <span className="ml-1 text-xs text-[rgb(var(--reg-muted))]">({t("timesheet.edited")})</span> : null}</td>
                           <td className="px-4 py-3.5 text-right">

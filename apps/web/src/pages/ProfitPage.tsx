@@ -1,10 +1,9 @@
+import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
-import { BarRows, Empty, Panel, PanelLink } from "@/components/reports/ReportsKit";
+import { BarRows, PanelLink } from "@/components/reports/ReportsKit";
 import { fmtMoney, loc } from "@/components/reports/reportsFormat";
 import { accountsService, n, type ProfitMonth } from "@/services/accountsService";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -12,6 +11,7 @@ import { useNavigation } from "@/utils/navigationUtils";
 import { formatDate, formatNumber } from "@/i18n/format";
 import { t, type TKey } from "@/i18n";
 import { cn } from "@/lib/utils";
+import { BooqiScope, Empty, PageHeader, Panel, pageBody } from "@/components/bz/p4-compat";
 
 const monthShort = (m: string) => formatDate(loc(), `${m}-15T12:00:00`, { month: "short" });
 const monthLong = (m: string) => formatDate(loc(), `${m}-15T12:00:00`, { month: "long", year: "numeric" });
@@ -64,9 +64,9 @@ export default function ProfitPage() {
         <PageHeader title={t("ledger.profitTitle")} subtitle={t("ledger.profitHint")} actions={picker} />
         <div className={pageBody}>
           {q.isError ? (
-            <Empty>{t("ledger.loadFailed")}</Empty>
+            <P4Error title={t("ledger.loadFailed")} />
           ) : !d ? (
-            <div className="h-[320px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            <P4Loading />
           ) : (
             <>
               <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">

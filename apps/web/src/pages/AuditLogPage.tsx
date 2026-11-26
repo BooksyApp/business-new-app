@@ -1,9 +1,9 @@
+import { Avatar, DataTable, SectionCard, StatusPill } from "@/components/bz";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, History, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
+import { primaryBtn } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { getHubLocale } from "@/lib/hubLocale";
 import { formatDate } from "@/i18n/format";
 import { t } from "@/i18n";
 import { auditLogService, type AuditLogEntry } from "@/services/auditLogService";
+import { BooqiScope, EmptyState, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 const PAGE = 50;
 /** The most rows one CSV export takes; the server caps a page at 500 too. */
@@ -89,7 +90,7 @@ export default function AuditLogPage() {
       <BooqiScope>
         <PageHeader title={t("auditLog.title")} subtitle={t("auditLog.subtitle")} />
         <div className={pageBody}>
-          <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+          <SectionCard title={t("auditLog.search")}>
             <div className="flex flex-wrap items-end gap-3">
               <Field label={t("auditLog.from")} htmlFor="al-from">
                 <input id="al-from" type="date" className={fieldCls} value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -116,7 +117,7 @@ export default function AuditLogPage() {
                 <Download size={16} /> {t("auditLog.exportCsv")}
               </Button>
             </div>
-          </section>
+          </SectionCard>
 
           {rows.length > 0 || offset > 0 ? (
             <div className="flex items-center gap-2">
@@ -135,30 +136,26 @@ export default function AuditLogPage() {
           {rows.length === 0 && !busy ? (
             <EmptyState icon={History} title={t("auditLog.empty")} body={t("auditLog.emptyBody")} />
           ) : (
-            <div className="overflow-x-auto rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead className="text-xs font-semibold text-[rgb(var(--reg-muted))]">
-                  <tr>
-                    <th className="px-4 py-3">{t("auditLog.colTime")}</th>
-                    <th className="px-4 py-3">{t("auditLog.colActor")}</th>
-                    <th className="px-4 py-3">{t("auditLog.colAction")}</th>
-                    <th className="px-4 py-3">{t("auditLog.colEntity")}</th>
-                    <th className="px-4 py-3">{t("auditLog.colStatus")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => (
-                    <tr key={`${r.created_at}-${r.path}-${i}`} className="border-t border-[rgb(var(--reg-line)/0.8)]">
-                      <td className="whitespace-nowrap px-4 py-3">{when(r.created_at)}</td>
-                      <td className="px-4 py-3">{r.actor_name || "—"}</td>
-                      <td className="px-4 py-3">{r.summary || `${r.method} ${r.path}`}</td>
-                      <td className="px-4 py-3">{r.entity_type ? `${r.entity_type}${r.entity_id ? ` ${r.entity_id}` : ""}` : "—"}</td>
-                      <td className="px-4 py-3">{r.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              grid="1.3fr 1.4fr 2.4fr 1.4fr 0.8fr"
+              rows={rows}
+              rowKey={(r) => `${r.created_at}-${r.path}-${rows.indexOf(r)}`}
+              columns={[t("auditLog.colTime"), t("auditLog.colActor"), t("auditLog.colAction"), t("auditLog.colEntity"), t("auditLog.colStatus")]}
+              render={(r) => [
+                when(r.created_at),
+                r.actor_name ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <Avatar initials={r.actor_name.charAt(0).toUpperCase()} size={28} />
+                    {r.actor_name}
+                  </span>
+                ) : (
+                  "—"
+                ),
+                r.summary || `${r.method} ${r.path}`,
+                r.entity_type ? `${r.entity_type}${r.entity_id ? ` ${r.entity_id}` : ""}` : "—",
+                <StatusPill kind={Number(r.status) >= 400 ? "r" : Number(r.status) >= 200 && Number(r.status) < 300 ? "c" : "d"}>{r.status}</StatusPill>,
+              ]}
+            />
           )}
         </div>
       </BooqiScope>

@@ -1,10 +1,9 @@
+import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
-import { BarRows, CohortTable, Delta, Empty, Heatmap, Panel, PeriodPicker, TrendChart } from "@/components/reports/ReportsKit";
+import { BarRows, CohortTable, Delta, Heatmap, TrendChart } from "@/components/reports/ReportsKit";
 import { fmtBy, fmtInt, fmtMoney, fmtPct, fmtPeriod, useReportPeriod, type Unit } from "@/components/reports/reportsFormat";
 import { NoShowImpact } from "@/components/analytics/NoShowImpact";
 import { DiscountImpact } from "@/components/analytics/DiscountImpact";
@@ -15,6 +14,7 @@ import { useBusinessId } from "@/hooks/useBusinessId";
 import { useNavigation } from "@/utils/navigationUtils";
 import { t, type TKey } from "@/i18n";
 import { BRAND_FONT } from "@/components/auth/useBrandFont";
+import { BooqiScope, Empty, PageHeader, Panel, PeriodPicker, pageBody } from "@/components/bz/p4-compat";
 
 /** One report behind a dashboard tile: its headline against the previous period, then the detail. */
 type KpiMetric = { key: KpiKey; unit: Unit; title: TKey; hint: TKey; goodWhen?: "up" | "down" };
@@ -75,7 +75,7 @@ export default function ReportDetailPage() {
           {km === null ? (
             <DiscountImpact businessId={businessId} startDate={start} endDate={end} />
           ) : !d ? (
-            q.isError ? <Empty>{t("reports.loadFailed")}</Empty> : <div className="h-[300px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            q.isError ? <P4Error title={t("reports.loadFailed")} /> : <P4Loading />
           ) : (
             <>
               <Headline d={d} k={km.key} unit={km.unit} goodWhen={km.goodWhen} />

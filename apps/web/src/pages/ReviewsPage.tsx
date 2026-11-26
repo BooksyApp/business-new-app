@@ -1,12 +1,13 @@
+import { Chip } from "@/components/bz";
+import { P4Chips, P4Error } from "@/components/bz/p4-kit";
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, MessageSquare, Star } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { fieldCls } from "@/components/page/kitStyles";
-import { Empty } from "@/components/reports/ReportsKit";
 import { fmtDay, loc } from "@/components/reports/reportsFormat";
 import { reviewService, type Review, type ReviewReport } from "@/services/reviewService";
 import { businessService } from "@/services/businessService";
@@ -16,6 +17,7 @@ import { formatDate, formatNumber } from "@/i18n/format";
 import { cn } from "@/lib/utils";
 import { t, tDynamic } from "@/i18n";
 import type { Id } from "@/types/id";
+import { BooqiScope, Empty, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 /** Stars as one shape filled by the score; the number beside them carries the value. */
 function Stars({ value, size = 14 }: { value: number; size?: number }) {
@@ -91,9 +93,9 @@ export default function ReviewsPage() {
         />
         <div className={pageBody}>
           {reviewsQ.isError ? (
-            <Empty>{t("reviews.v3.loadFailed")}</Empty>
+            <P4Error title={t("reviews.v3.loadFailed")} />
           ) : !reviewsQ.data ? (
-            <div className="h-[220px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] motion-reduce:animate-none" aria-busy="true" />
+            <P4Loading />
           ) : (
             <>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -102,36 +104,30 @@ export default function ReviewsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div role="radiogroup" aria-label={t("reviews.v3.byReply")} className="flex gap-1 rounded-full bg-white p-1 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                  {(["", "no", "yes"] as const).map((v) => (
-                    <button
-                      key={v || "all"}
-                      type="button"
-                      role="radio"
-                      aria-checked={replied === v}
-                      onClick={() => setReplied(v)}
-                      className={cn("h-8 rounded-full px-3 text-[13px] font-semibold", replied === v ? "bg-[rgb(var(--reg-ink))] text-white" : "text-[rgb(var(--reg-ink)/0.65)] hover:text-[rgb(var(--reg-ink))]")}
-                    >
-                      {v === "" ? t("reviews.v3.all", { count: all.length }) : v === "no" ? t("reviews.v3.unanswered", { count: unanswered }) : t("reviews.v3.answered")}
-                    </button>
-                  ))}
-                </div>
+                <P4Chips
+                  label={t("reviews.v3.byReply")}
+                  items={[
+                    { key: "" as const, label: t("reviews.v3.all", { count: all.length }) },
+                    { key: "no" as const, label: t("reviews.v3.unanswered", { count: unanswered }) },
+                    { key: "yes" as const, label: t("reviews.v3.answered") },
+                  ]}
+                  value={replied}
+                  onChange={(v) => setReplied(v)}
+                />
                 {staffNames.length > 0 && (
-                  <select aria-label={t("reviews.v3.staff")} className={selectCls} value={staff} onChange={(e) => setStaff(e.target.value)}>
+                  <div className="fld sel"><small>{t("reviews.v3.staff")}</small><select aria-label={t("reviews.v3.staff")} value={staff} onChange={(e) => setStaff(e.target.value)}>
                     <option value="">{t("reviews.v3.allStaff")}</option>
                     {staffNames.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  </select></div>
                 )}
                 {serviceNames.length > 0 && (
-                  <select aria-label={t("reviews.v3.service")} className={selectCls} value={service} onChange={(e) => setService(e.target.value)}>
+                  <div className="fld sel"><small>{t("reviews.v3.service")}</small><select aria-label={t("reviews.v3.service")} value={service} onChange={(e) => setService(e.target.value)}>
                     <option value="">{t("reviews.v3.allServices")}</option>
                     {serviceNames.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  </select></div>
                 )}
                 {stars !== null && (
-                  <button type="button" onClick={() => setStars(null)} className="h-9 rounded-full bg-[rgb(var(--reg-brand-soft))] px-3 text-[13px] font-semibold text-[rgb(var(--reg-brand-strong))]">
-                    {t("reviews.v3.starsFilter", { n: stars })} ×
-                  </button>
+                  <Chip violet onClick={() => setStars(null)}>{t("reviews.v3.starsFilter", { n: stars })} ×</Chip>
                 )}
               </div>
 
@@ -259,7 +255,7 @@ function ReviewCard({ review: r, businessId, report, onReported, onSaved }: { re
   const staff = staffOf(r);
   const services = servicesOf(r);
   return (
-    <li className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-5">
+    <li className="crd2">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -380,7 +376,7 @@ function GoogleLinkCard({ businessId }: { businessId: Id }) {
     }
   };
   return (
-    <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+    <section className="crd2">
       <h2 className="text-[15px] font-extrabold">{t("reviews.v3.googleTitle")}</h2>
       <p className="mt-1 text-[13px] text-[rgb(var(--reg-muted))]">{t("reviews.v3.googleHint")}</p>
       <label className="sr-only" htmlFor="google-review-url">{t("reviews.v3.googleTitle")}</label>

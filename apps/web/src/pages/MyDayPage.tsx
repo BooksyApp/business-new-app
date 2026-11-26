@@ -3,8 +3,6 @@ import { ChevronLeft, ChevronRight, Clock, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { myStaffRecord } from "@/components/layout/navigation";
-import { BooqiScope, EmptyState, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
 import { money } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -13,6 +11,7 @@ import { appointmentService, type Appointment } from "@/services/appointmentServ
 import { calendarFeedService } from "@/services/calendarFeedService";
 import { salonDayService } from "@/services/salonDayService";
 import { t } from "@/i18n";
+import { BooqiScope, EmptyState, PageHeader, StatCard, pageBody } from "@/components/bz/p4-compat";
 
 const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -164,7 +163,7 @@ export default function MyDayPage() {
               {bookings.map((a) => (
                 <li
                   key={a.id}
-                  className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]"
+                  className="crd2"
                 >
                   <div className="text-2xl font-bold">{a.startTime.slice(0, 5)}</div>
                   <div className="mt-1 font-semibold">{a.clientName ?? "—"}</div>

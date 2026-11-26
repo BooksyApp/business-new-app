@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, Calculator, Download, Pencil, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls, money } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { currencySymbol } from "@/lib/currency";
 import { salonDayService, type PayrollLine, type PayrollRun } from "@/services/salonDayService";
 import { PayrollAdvances } from "@/components/payroll/PayrollAdvances";
 import { t } from "@/i18n";
+import { BooqiScope, EmptyState, PageHeader, StatCard, pageBody } from "@/components/bz/p4-compat";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const monthStart = () => `${today().slice(0, 7)}-01`;
