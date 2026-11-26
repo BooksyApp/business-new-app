@@ -23,7 +23,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Remembered per browser; storage can be blocked (private mode), so never trust it.
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(COLLAPSE_KEY) === "1";
+      const saved = localStorage.getItem(COLLAPSE_KEY);
+      // No saved choice yet: a narrow laptop window starts with the icon rail.
+      return saved === null ? window.innerWidth < 1100 : saved === "1";
     } catch {
       return false;
     }
