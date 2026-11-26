@@ -2,9 +2,9 @@ import { Link, useParams } from "react-router-dom";
 import { KeyRound } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { myAccess } from "@/components/layout/navigation";
-import { BooqiScope, EmptyState, PageHeader } from "@/components/page/booqi";
-import { pageBody, secondaryBtn } from "@/components/page/booqiStyles";
+import { secondaryBtn } from "@/components/page/booqiStyles";
 import { t } from "@/i18n";
+import { BooqiScope, EmptyState, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 const card = "rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]";
 const pre = "overflow-x-auto rounded-xl bg-[rgb(var(--reg-ink))] p-4 text-xs leading-relaxed text-white";

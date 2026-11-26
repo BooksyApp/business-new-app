@@ -1,12 +1,14 @@
+import { Skeleton } from "@/components/bz";
 import type { Id } from "@/types/id";
 import { useEffect, useState } from "react";
 import { CopyPlus, Gift, Minus, Palette, Plus, Search, Stamp, Trophy, Users, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, FilterChips, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, ClientPreview, Field, FilterChips, RowAction, StatusChip } from "@/components/page/kit";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { ActionMenu, ClientPreview, Field, RowAction } from "@/components/page/kit";
 import { fieldCls, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -200,7 +202,7 @@ export default function LoyaltyPage() {
 
           {cards === null ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-busy>
-              {[0, 1].map((i) => <div key={i} className="h-[300px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" />)}
+              {[0, 1].map((i) => <Skeleton key={i} lines={[100, 80, 60]} />)}
             </div>
           ) : list.length === 0 ? (
             <EmptyState

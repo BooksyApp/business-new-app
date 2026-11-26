@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { LifeBuoy, MessageCircle, Search } from "lucide-react";
+import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
 import { fieldCls } from "@/components/page/kitStyles";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
@@ -163,7 +163,7 @@ export default function HelpPage() {
             )}
           </section>
 
-          <section className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+          <section className="crd2">
             <div className="flex items-start gap-3">
               <LifeBuoy className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
               <div className="min-w-0">

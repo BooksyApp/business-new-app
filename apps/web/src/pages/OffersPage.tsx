@@ -1,14 +1,16 @@
+import { P4Loading } from "@/components/bz/p4-kit";
 import { useEffect, useState } from "react";
 import { salonToday } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { useNavigate } from "react-router-dom";
 import { CalendarClock, CalendarRange, Pencil, Percent, Plus, Scissors, Tag, TrendingDown, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, EmptyState, PageHeader, StatCard, StatusChip, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader, StatCard } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, ClientPreview, Field, RowAction, SectionTitle, StatusChip } from "@/components/page/kit";
+import { FormSheet } from "@/components/page/booqi";
+import { primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { ActionMenu, ClientPreview, Field, RowAction, SectionTitle } from "@/components/page/kit";
 import { GUAVA, dateRange, fieldCls, lifecycleOf, money, salonName, type Lifecycle } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
 import { getCurrentBusinessId } from "@/config/api";
@@ -162,7 +164,7 @@ export default function OffersPage() {
           </div>
 
           {rows === null ? (
-            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <P4Loading />
           ) : all.length === 0 ? (
             <EmptyState
               icon={Scissors}

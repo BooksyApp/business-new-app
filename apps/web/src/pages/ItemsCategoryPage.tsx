@@ -1,25 +1,19 @@
-import { idTone } from "@/lib/idTone";
 import type { Id } from "@/types/id";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Archive, ArchiveRestore, ChevronDown, ChevronRight, FolderPlus, Layers, MapPin, Package, Pencil, Plus, Scissors, Search, Sparkles, Trash2, Video } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronDown, FolderPlus, Layers, Package, Pencil, Plus, Scissors, Search, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, Field } from "@/components/page/kit";
-import { fieldCls, money } from "@/components/page/kitStyles";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { AvatarStack, Btn, Chip, ConfirmDialog, Drawer, EmptyState, Field, Note, PageHead, RowItem, Skeleton, Tag, Toolbar } from "@/components/bz";
+import { BzPage } from "@/components/bz/p2-page";
+import { ActionMenu } from "@/components/page/kit";
+import { money } from "@/components/page/kitStyles";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { useCategories } from "@/hooks/useCategories";
 import { useServices } from "@/hooks/useServices";
 import { useStaff } from "@/hooks/useStaff";
 import { currencySymbol } from "@/lib/currency";
-import { cn } from "@/lib/utils";
 import { useNavigation } from "@/utils/navigationUtils";
 import { serviceService, type Service } from "@/services/serviceService";
 import type { Category } from "@/services/categoryService";
@@ -39,7 +33,6 @@ const priceText = (s: Service) => {
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?";
 
-const AVATAR_TONES = ["bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]", "bg-rose-50 text-rose-800", "bg-amber-50 text-amber-900", "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.75)]", "bg-sky-50 text-sky-800"];
 
 type Sel = "all" | "uncategorized" | Id;
 
@@ -221,302 +214,258 @@ export default function ItemsCategoryPage() {
     ...(countIn("uncategorized") ? [{ id: "uncategorized" as Sel, name: t("itemsCategory.notCategorisedName") }] : []),
   ];
 
-  return (
-    <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={t("common.services")}
-          subtitle={
-            services.length
-              ? `${t("itemsCategory.servicesInCategories", { services: services.length, categories: categories.length })}${hiddenCount ? t("itemsCategory.notBookableOnline", { hiddenCount }) : ""}`
-              : t("itemsCategory.whatYouSellHowLong")
-          }
-          actions={
-            <>
-              <Button variant="outline" className={secondaryBtn} onClick={() => openCat("new")}>
-                <FolderPlus size={16} />{" "}{t("itemsCategory.newCategory")}
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className={primaryBtn}>
-                    <Plus size={16} />{" "}{t("itemsCategory.newService")}{" "}<ChevronDown size={15} className="-mr-1 opacity-80" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[200px] rounded-2xl p-1.5">
-                  <DropdownMenuItem className="gap-2 rounded-xl px-3 py-2.5" onSelect={() => navigate(getPath("add-service"))}>
-                    <Sparkles size={16} />{" "}{t("common.service")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 rounded-xl px-3 py-2.5" onSelect={() => navigate(getPath("add-combo-service"))}>
-                    <Layers size={16} />{" "}{t("itemsCategory.comboOfServices")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 rounded-xl px-3 py-2.5" onSelect={() => navigate(getPath("add-addon"))}>
-                    <Package size={16} />{" "}{t("itemsCategory.addOn")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          }
-        />
+  const confirmDialog = confirm2 ? (
+    <ConfirmDialog
+      title={t(confirm2.kind === "archive" ? "itemsCategory.archiveConfirmTitle" : "itemsCategory.deleteConfirmTitle", { name: confirm2.s.name })}
+      body={t(confirm2.kind === "archive" ? "itemsCategory.archiveConfirmBody" : "itemsCategory.deleteConfirmBody")}
+      onClose={() => !confirmBusy && setConfirm2(null)}
+      footer={
+        <>
+          <Btn kind="ol" disabled={confirmBusy} onClick={() => setConfirm2(null)}>{t("itemsCategory.confirmCancel")}</Btn>
+          <Btn kind="dg" disabled={confirmBusy} onClick={() => void runConfirm()} data-testid="service-confirm">
+            {confirm2.kind === "archive" ? t("itemsCategory.archiveAction") : t("itemsCategory.deletePermanently")}
+          </Btn>
+        </>
+      }
+    />
+  ) : null;
 
-        <div className={pageBody}>
-          {(archived.length > 0 || showArchived) && (
-            <div className="mb-3 flex justify-end">
-              <Button variant="outline" className={secondaryBtn} onClick={() => setShowArchived((v) => !v)} aria-pressed={showArchived} data-testid="archived-toggle">
-                <Archive size={15} />{" "}
-                {showArchived ? t("itemsCategory.archivedBack") : t("itemsCategory.archivedFilter", { count: archived.length })}
-              </Button>
-            </div>
-          )}
-          {showArchived ? (
-            <div data-testid="archived-list">
-              <p className="mb-3 px-1 text-sm text-[rgb(var(--reg-muted))]">{t("itemsCategory.archivedHint")}</p>
-              {archived.length === 0 ? (
-                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">{t("itemsCategory.archivedEmpty")}</p>
-              ) : (
-                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                  {archived.map((s, i) => (
-                    <li key={s.id} className={cn("flex items-center gap-3 px-3 py-3 md:px-4", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-x-2">
-                          <span className="truncate text-[15px] font-semibold text-[rgb(var(--reg-ink)/0.7)]">{s.name}</span>
-                          <Tag icon={Archive}>{t("itemsCategory.archivedTag")}</Tag>
-                        </span>
-                        <span className="mt-0.5 block truncate text-sm text-[rgb(var(--reg-muted))]">{formatDuration(s.durationMinutes)} · {priceText(s)}</span>
-                      </span>
-                      <Button variant="outline" size="sm" onClick={() => void restore(s)}>
-                        <ArchiveRestore size={14} /> {t("itemsCategory.restore")}
-                      </Button>
+  const catDrawer = catSheet ? (
+    <Drawer
+      narrow
+      title={catSheet.mode === "edit" ? t("itemsCategory.editCategory") : t("itemsCategory.newCategory")}
+      sub={t("itemsCategory.categoriesGroupYourMenuHere")}
+      onClose={() => setCatSheet(null)}
+      closeIcon={<X className="ic" />}
+      footer={
+        <>
+          <Btn kind="ol" onClick={() => setCatSheet(null)}>{t("common.cancel")}</Btn>
+          <Btn kind="v" disabled={!catName.trim() || catBusy} onClick={() => void saveCat()}>
+            {catBusy ? t("common.saving") : catSheet.mode === "edit" ? t("common.save") : t("itemsCategory.createCategory")}
+          </Btn>
+        </>
+      }
+    >
+      <div className="g1">
+        <Field label={t("common.name")} required>
+          <input id="cat-name" value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("itemsCategory.hair")} maxLength={255} />
+        </Field>
+        <Field label={t("common.descriptionOptional")}>
+          <input id="cat-desc" value={catDesc} onChange={(e) => setCatDesc(e.target.value)} placeholder={t("itemsCategory.cutsColourAndStyling")} />
+        </Field>
+      </div>
+    </Drawer>
+  ) : null;
+
+  const subtitle = services.length
+    ? `${t("itemsCategory.servicesInCategories", { services: services.length, categories: categories.length })}${hiddenCount ? t("itemsCategory.notBookableOnline", { hiddenCount }) : ""}`
+    : t("itemsCategory.whatYouSellHowLong");
+
+  const serviceRow = (s: Service) => {
+    const on = isVisible(s);
+    const people = (s.staffIds ?? []).map((id) => staffById.get(id)).filter(Boolean) as { id: Id; name: string; avatarUrl?: string }[];
+    return (
+      <div key={s.id} className="lr">
+        <span className="sw2" style={{ background: s.color?.startsWith("#") ? s.color : "var(--bz-violet)" }}>{initials(s.name)}</span>
+        <div className="tx" onClick={() => editService(s)} role="button" tabIndex={0} style={{ cursor: "pointer" }}>
+          <b style={on ? undefined : { opacity: 0.6 }}>{s.name}</b>
+          <span>
+            {formatDuration(s.durationMinutes)} · {priceText(s)}
+            {s.priceType === "FROM" ? t("itemsCategory.priceVaries") : ""}
+          </span>
+        </div>
+        {people.length > 0 && (
+          <AvatarStack
+            items={[
+              ...people.slice(0, 3).map((p) =>
+                p.avatarUrl ? <img key={p.id} src={p.avatarUrl} alt="" title={p.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : <span key={p.id} title={p.name}>{initials(p.name)}</span>,
+              ),
+              ...(people.length > 3 ? [`+${people.length - 3}`] : []),
+            ]}
+          />
+        )}
+        {s.serviceType === "COMBO" && <Tag kind="v">{t("common.combo")}</Tag>}
+        {s.mobileService && <Tag kind="v">{t("itemsCategory.atClientS")}</Tag>}
+        {s.virtualAppointment && <Tag kind="v">{t("itemsCategory.online")}</Tag>}
+        <span className="acts">
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--bz-muted)", maxWidth: 150, textAlign: "right", lineHeight: 1.25 }}>
+            {on ? t("itemsCategory.clientsCanBookThisOnline") : t("itemsCategory.hiddenFromOnlineBooking")}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={on}
+            aria-label={t("itemsCategory.bookableOnline", { name: s.name })}
+            className={on ? "tg" : "tg off"}
+            style={{ border: 0, padding: 0 }}
+            onClick={() => void toggleOnline(s, !on)}
+          />
+          <ActionMenu
+            label={t("itemsCategory.serviceActions")}
+            actions={[{ label: t("itemsCategory.archiveAction"), icon: Archive, danger: true, onSelect: () => setConfirm2({ kind: "archive", s }) }]}
+          />
+        </span>
+      </div>
+    );
+  };
+
+  const newMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="btn btn-v s">
+          <Plus className="ic" />
+          {t("itemsCategory.newService")}
+          <ChevronDown className="ic" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[200px] rounded-2xl p-1.5">
+        <DropdownMenuItem className="gap-2 rounded-xl px-3 py-2.5" onSelect={() => navigate(getPath("add-service"))}>
+          <Sparkles size={16} />{" "}{t("common.service")}
+        </DropdownMenuItem>
+        <DropdownMenuItem className="gap-2 rounded-xl px-3 py-2.5" onSelect={() => navigate(getPath("add-combo-service"))}>
+          <Layers size={16} />{" "}{t("itemsCategory.comboOfServices")}
+        </DropdownMenuItem>
+        <DropdownMenuItem className="gap-2 rounded-xl px-3 py-2.5" onSelect={() => navigate(getPath("add-addon"))}>
+          <Package size={16} />{" "}{t("itemsCategory.addOn")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  return (
+    <BzPage
+      overlay={
+        <>
+          {confirmDialog}
+          {catDrawer}
+        </>
+      }
+    >
+      <PageHead
+        title={t("common.services")}
+        sub={subtitle}
+        right={
+          <>
+            <Btn kind="ol" icon={<FolderPlus className="ic" />} onClick={() => openCat("new")}>{t("itemsCategory.newCategory")}</Btn>
+            {newMenu}
+          </>
+        }
+      />
+
+      {showArchived ? (
+        <div data-testid="archived-list">
+          <Toolbar>
+            <Btn kind="ol" icon={<Archive className="ic" />} onClick={() => setShowArchived(false)} aria-pressed data-testid="archived-toggle">{t("itemsCategory.archivedBack")}</Btn>
+          </Toolbar>
+          <Note kind="in">{t("itemsCategory.archivedHint")}</Note>
+          {archived.length === 0 ? (
+            <EmptyState icon={<Archive className="ic" />} title={t("itemsCategory.archivedEmpty")} />
+          ) : (
+            <div className="tbx">
+              {archived.map((s) => (
+                <RowItem
+                  key={s.id}
+                  title={s.name}
+                  sub={`${formatDuration(s.durationMinutes)} · ${priceText(s)}`}
+                  right={
+                    <span className="acts">
+                      <Tag>{t("itemsCategory.archivedTag")}</Tag>
+                      <Btn kind="ol" icon={<ArchiveRestore className="ic" />} onClick={() => void restore(s)}>{t("itemsCategory.restore")}</Btn>
                       <ActionMenu
                         label={t("itemsCategory.serviceActions")}
                         actions={[{ label: t("itemsCategory.deletePermanently"), icon: Trash2, danger: true, onSelect: () => void askDelete(s) }]}
                       />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : loading ? (
-            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
-          ) : services.length === 0 ? (
-            <EmptyState
-              icon={Scissors}
-              title={t("itemsCategory.yourMenuIsEmpty")}
-              body={t("itemsCategory.addWhatYouDoHow")}
-              action={<Button className={primaryBtn} onClick={() => navigate(getPath("add-service"))}><Plus size={16} />{" "}{t("itemsCategory.addYourFirstService")}</Button>}
-            />
-          ) : (
-            <div className="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
-              {/* Categories: a list on desktop, chips on a phone. */}
-              <nav aria-label={t("itemsCategory.categories")} className="hidden lg:block">
-                <ul className="sticky top-[132px] space-y-0.5 rounded-[20px] bg-white p-2 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                  {catOptions.map((o) => {
-                    const on = selected === o.id;
-                    return (
-                      <li key={String(o.id)} className="group relative">
-                        <button
-                          type="button"
-                          aria-current={on ? "true" : undefined}
-                          onClick={() => setSelected(o.id)}
-                          className={cn(
-                            "flex w-full items-center justify-between gap-2 rounded-xl py-2.5 pl-3 text-left text-sm font-semibold transition",
-                            o.cat ? "pr-11" : "pr-3",
-                            on ? "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-ink)/0.8)] hover:bg-[rgb(var(--reg-canvas))]",
-                          )}
-                        >
-                          <span className="truncate">{o.name}</span>
-                          <span className={cn("text-xs tabular-nums", on ? "" : "text-[rgb(var(--reg-muted))]")}>{countIn(o.id)}</span>
-                        </button>
-                        {o.cat && (
-                          <span className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-                            <ActionMenu
-                              label={t("common.moreFor", { name: o.name })}
-                              actions={[
-                                { label: t("itemsCategory.rename"), icon: Pencil, onSelect: () => openCat(o.cat!) },
-                                { label: t("itemsCategory.deleteCategory"), icon: Trash2, danger: true, onSelect: () => void removeCat(o.cat!) },
-                              ]}
-                            />
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </nav>
-
-              <div className="min-w-0 space-y-4">
-                <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] lg:hidden" role="tablist" aria-label={t("itemsCategory.categories")}>
-                  {catOptions.map((o) => {
-                    const on = selected === o.id;
-                    return (
-                      <button
-                        key={String(o.id)}
-                        type="button"
-                        role="tab"
-                        aria-selected={on}
-                        onClick={() => setSelected(o.id)}
-                        className={cn(
-                          "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold",
-                          on ? "bg-[rgb(var(--reg-ink))] text-white" : "bg-white text-[rgb(var(--reg-ink)/0.75)] ring-1 ring-inset ring-[rgb(var(--reg-line))]",
-                        )}
-                      >
-                        {o.name}
-                        <span className={on ? "text-white/70" : "text-[rgb(var(--reg-muted))]"}>{countIn(o.id)}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative min-w-0 flex-1">
-                    <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-                    <input aria-label={t("itemsCategory.searchServices")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("itemsCategory.searchServices")} value={query} onChange={(e) => setQuery(e.target.value)} />
-                  </div>
-                  {typeof selected === "number" && (
-                    <span className="lg:hidden">
-                      <ActionMenu
-                        label={t("itemsCategory.moreForThisCategory")}
-                        actions={[
-                          { label: t("itemsCategory.renameCategory"), icon: Pencil, onSelect: () => { const c = categories.find((x) => x.id === selected); if (c) openCat(c); } },
-                          { label: t("itemsCategory.deleteCategory"), icon: Trash2, danger: true, onSelect: () => { const c = categories.find((x) => x.id === selected); if (c) void removeCat(c); } },
-                        ]}
-                      />
                     </span>
-                  )}
-                </div>
-
-                {filtered.length === 0 ? (
-                  <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                    {query ? t("common.nothingMatches", { query }) : t("itemsCategory.noServicesInThisCategory")}
-                  </p>
-                ) : (
-                  groups.map((g) => (
-                    <section key={g.key}>
-                      {g.title && (
-                        <h2 className="mb-2 flex items-baseline gap-2 px-1 text-sm font-extrabold tracking-[-0.01em]">
-                          {g.title} <span className="text-xs font-semibold text-[rgb(var(--reg-muted))]">{g.items.length}</span>
-                        </h2>
-                      )}
-                      <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                        {g.items.map((s, i) => {
-                          const on = isVisible(s);
-                          const people = (s.staffIds ?? []).map((id) => staffById.get(id)).filter(Boolean) as { id: Id; name: string; avatarUrl?: string }[];
-                          return (
-                            <li key={s.id} className={cn("group flex items-center gap-3 px-3 py-3 md:px-4", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
-                              <span className="h-11 w-1 shrink-0 rounded-full" style={{ backgroundColor: s.color?.startsWith("#") ? s.color : "rgb(var(--reg-brand) / 0.35)" }} aria-hidden />
-                              <button type="button" onClick={() => editService(s)} className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)] rounded-lg">
-                                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                  <span className={cn("truncate text-[15px] font-semibold", !on && "text-[rgb(var(--reg-ink)/0.6)]")}>{s.name}</span>
-                                  {s.serviceType === "COMBO" && <Tag icon={Layers}>{t("common.combo")}</Tag>}
-                                  {s.mobileService && <Tag icon={MapPin}>{t("itemsCategory.atClientS")}</Tag>}
-                                  {s.virtualAppointment && <Tag icon={Video}>{t("itemsCategory.online")}</Tag>}
-                                </span>
-                                <span className="mt-0.5 block truncate text-sm text-[rgb(var(--reg-muted))]">
-                                  {formatDuration(s.durationMinutes)}
-                                  {s.priceType === "FROM" ? t("itemsCategory.priceVaries") : ""}
-                                </span>
-                              </button>
-
-                              {people.length > 0 && (
-                                <span className="hidden -space-x-1.5 sm:flex" aria-label={t("itemsCategory.doneBy", { value: people.map((p) => p.name).join(", ") })} title={people.map((p) => p.name).join(", ")}>
-                                  {people.slice(0, 3).map((p) =>
-                                    p.avatarUrl ? (
-                                      <img key={p.id} src={p.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-white" />
-                                    ) : (
-                                      <span key={p.id} className={cn("flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-bold tracking-tight ring-2 ring-white", AVATAR_TONES[idTone(p.id, AVATAR_TONES.length)])}>
-                                        {initials(p.name)}
-                                      </span>
-                                    ),
-                                  )}
-                                  {people.length > 3 && (
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgb(var(--reg-ink)/0.06)] text-[11px] font-bold ring-2 ring-white">+{people.length - 3}</span>
-                                  )}
-                                </span>
-                              )}
-
-                              <span className="w-[76px] shrink-0 text-right text-[15px] font-bold tabular-nums">{priceText(s)}</span>
-
-                              <label className="flex shrink-0 flex-col items-center gap-0.5" title={on ? t("itemsCategory.clientsCanBookThisOnline") : t("itemsCategory.hiddenFromOnlineBooking")}>
-                                <Switch
-                                  checked={on}
-                                  onCheckedChange={(v) => void toggleOnline(s, v)}
-                                  aria-label={t("itemsCategory.bookableOnline", { name: s.name })}
-                                  className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
-                                />
-                                <span className="text-[10px] font-semibold text-[rgb(var(--reg-muted))]">{t("itemsCategory.online")}</span>
-                              </label>
-                              <ActionMenu
-                                label={t("itemsCategory.serviceActions")}
-                                actions={[
-                                  { label: t("itemsCategory.archiveAction"), icon: Archive, danger: true, onSelect: () => setConfirm2({ kind: "archive", s }) },
-                                ]}
-                              />
-                              <ChevronRight size={18} className="hidden shrink-0 text-[rgb(var(--reg-ink)/0.35)] md:block" aria-hidden />
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </section>
-                  ))
-                )}
-              </div>
+                  }
+                />
+              ))}
             </div>
           )}
         </div>
-
-        <AlertDialog open={!!confirm2} onOpenChange={(o) => !o && !confirmBusy && setConfirm2(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {confirm2 ? t(confirm2.kind === "archive" ? "itemsCategory.archiveConfirmTitle" : "itemsCategory.deleteConfirmTitle", { name: confirm2.s.name }) : ""}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {confirm2 ? t(confirm2.kind === "archive" ? "itemsCategory.archiveConfirmBody" : "itemsCategory.deleteConfirmBody") : ""}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={confirmBusy}>{t("itemsCategory.confirmCancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={confirmBusy}
-                onClick={(e) => { e.preventDefault(); void runConfirm(); }}
-                className="bg-rose-600 text-white hover:bg-rose-700"
-                data-testid="service-confirm"
-              >
-                {confirm2?.kind === "archive" ? t("itemsCategory.archiveAction") : t("itemsCategory.deletePermanently")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <FormSheet
-          open={!!catSheet}
-          onOpenChange={(o) => !o && setCatSheet(null)}
-          title={catSheet?.mode === "edit" ? t("itemsCategory.editCategory") : t("itemsCategory.newCategory")}
-          description={t("itemsCategory.categoriesGroupYourMenuHere")}
-          footer={
-            <>
-              <Button variant="outline" className={sheetSecondary} onClick={() => setCatSheet(null)}>{t("common.cancel")}</Button>
-              <Button className={sheetPrimary} disabled={!catName.trim() || catBusy} onClick={() => void saveCat()}>
-                {catBusy ? t("common.saving") : catSheet?.mode === "edit" ? t("common.save") : t("itemsCategory.createCategory")}
-              </Button>
-            </>
-          }
-        >
-          <Field label={t("common.name")} htmlFor="cat-name">
-            <input id="cat-name" className={fieldCls} value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("itemsCategory.hair")} maxLength={255} />
-          </Field>
-          <Field label={t("common.descriptionOptional")} htmlFor="cat-desc">
-            <input id="cat-desc" className={fieldCls} value={catDesc} onChange={(e) => setCatDesc(e.target.value)} placeholder={t("itemsCategory.cutsColourAndStyling")} />
-          </Field>
-        </FormSheet>
-      </BooqiScope>
-    </AppLayout>
-  );
-}
-
-function Tag({ icon: Icon, children }: { icon: typeof Layers; children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-2 py-0.5 text-[11px] font-bold text-[rgb(var(--reg-ink)/0.7)]">
-      <Icon size={11} /> {children}
-    </span>
+      ) : loading ? (
+        <Skeleton />
+      ) : services.length === 0 ? (
+        <EmptyState
+          icon={<Scissors className="ic" />}
+          title={t("itemsCategory.yourMenuIsEmpty")}
+          text={t("itemsCategory.addWhatYouDoHow")}
+          action={<Btn kind="v" icon={<Plus className="ic" />} onClick={() => navigate(getPath("add-service"))}>{t("itemsCategory.addYourFirstService")}</Btn>}
+        />
+      ) : (
+        <div className="sp2">
+          <div className="rail max-lg:hidden" role="tablist" aria-label={t("itemsCategory.categories")}>
+            <div className="lbl" style={{ padding: "0 14px 8px", fontWeight: 800 }}>{t("itemsCategory.categories")}</div>
+            {catOptions.map((o) => (
+              <span key={String(o.id)} role="tab" aria-selected={selected === o.id} className={selected === o.id ? "on" : ""} onClick={() => setSelected(o.id)}>
+                {o.name}
+                <em>{countIn(o.id)}</em>
+                {o.cat && (
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <ActionMenu
+                      label={t("common.moreFor", { name: o.name })}
+                      actions={[
+                        { label: t("itemsCategory.rename"), icon: Pencil, onSelect: () => openCat(o.cat!) },
+                        { label: t("itemsCategory.deleteCategory"), icon: Trash2, danger: true, onSelect: () => void removeCat(o.cat!) },
+                      ]}
+                    />
+                  </span>
+                )}
+              </span>
+            ))}
+            {(archived.length > 0 || showArchived) && (
+              <span style={{ marginTop: 8 }} onClick={() => setShowArchived(true)} role="button" tabIndex={0} data-testid="archived-toggle">
+                {t("itemsCategory.archivedFilter", { count: archived.length })}
+              </span>
+            )}
+          </div>
+          <div>
+            <div className="lg:hidden" style={{ marginBottom: 12 }}>
+              <div className="row gap8" style={{ flexWrap: "wrap" }} role="tablist" aria-label={t("itemsCategory.categories")}>
+                {catOptions.map((o) => (
+                  <Chip key={String(o.id)} on={selected === o.id} onClick={() => setSelected(o.id)}>
+                    {o.name} {countIn(o.id)}
+                  </Chip>
+                ))}
+                {typeof selected === "number" && (
+                  <ActionMenu
+                    label={t("itemsCategory.moreForThisCategory")}
+                    actions={[
+                      { label: t("itemsCategory.renameCategory"), icon: Pencil, onSelect: () => { const c = categories.find((x) => x.id === selected); if (c) openCat(c); } },
+                      { label: t("itemsCategory.deleteCategory"), icon: Trash2, danger: true, onSelect: () => { const c = categories.find((x) => x.id === selected); if (c) void removeCat(c); } },
+                    ]}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="tbx">
+              <div className="srch" style={{ height: 52, marginBottom: 14, maxWidth: 520 }}>
+                <Search className="ic" aria-hidden />
+                <input
+                  aria-label={t("itemsCategory.searchServices")}
+                  placeholder={t("itemsCategory.searchServices")}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  style={{ border: 0, background: "transparent", outline: 0, font: "inherit", flex: 1, color: "inherit" }}
+                />
+              </div>
+              {filtered.length === 0 ? (
+                <EmptyState icon={<Search className="ic" />} title={query ? t("common.nothingMatches", { query }) : t("itemsCategory.noServicesInThisCategory")} />
+              ) : (
+                groups.map((g) => (
+                  <div key={g.key}>
+                    {g.title && (
+                      <div className="lbl2" style={{ margin: "10px 0 4px" }}>
+                        {g.title} <small>{g.items.length}</small>
+                      </div>
+                    )}
+                    {g.items.map(serviceRow)}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </BzPage>
   );
 }

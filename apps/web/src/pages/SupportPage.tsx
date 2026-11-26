@@ -1,10 +1,11 @@
+import { StatusPill } from "@/components/bz";
 import { useCallback, useEffect, useState } from "react";
 import { LifeBuoy } from "lucide-react";
 import { toast } from "sonner";
+import { BooqiScope, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
+import { primaryBtn } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls } from "@/components/page/kitStyles";
 import { Button } from "@/components/ui/button";
@@ -19,19 +20,12 @@ import {
   type TicketStatus,
 } from "@/services/supportService";
 
-const CHIP: Record<TicketStatus, string> = {
-  NEW: "bg-sky-50 text-sky-800",
-  OPEN: "bg-sky-50 text-sky-800",
-  WAITING_ON_USER: "bg-amber-50 text-amber-800",
-  RESOLVED: "bg-[rgb(var(--reg-success-soft))] text-[rgb(var(--reg-success))]",
-  CLOSED: "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]",
-};
 
 const statusLabel = (s: TicketStatus) => t(`support.status${s}` as "support.statusNEW");
 const categoryLabel = (c: TicketCategory) => t(`support.category${c}` as "support.categoryBOOKING");
 
 function StatusChip({ status }: { status: TicketStatus }) {
-  return <span className={cn("inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", CHIP[status])}>{statusLabel(status)}</span>;
+  return <StatusPill kind={status === "RESOLVED" ? "c" : status === "WAITING_ON_USER" ? "w" : status === "CLOSED" ? "x" : "d"}>{statusLabel(status)}</StatusPill>;
 }
 
 /** Dəstək: an owner or team member writes to Booqi support and follows the answer. */
@@ -121,7 +115,7 @@ function NewRequest({ onCreated }: { onCreated: (t: SupportTicket) => void }) {
   };
 
   return (
-    <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
+    <section className="crd2">
       <div className="mb-5 flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]"><LifeBuoy size={18} /></span>
         <div>
@@ -166,7 +160,7 @@ function Thread({ thread, onReply }: { thread: SupportThread; onReply: (body: st
 
   return (
     <section className="space-y-4">
-      <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+      <div className="crd2">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="font-semibold text-[rgb(var(--reg-muted))]">{ticket.ref}</span>
           <StatusChip status={ticket.status} />
@@ -192,7 +186,7 @@ function Thread({ thread, onReply }: { thread: SupportThread; onReply: (body: st
       {ticket.status === "CLOSED" ? (
         <p className="rounded-2xl bg-[rgb(var(--reg-ink)/0.04)] px-4 py-3 text-sm text-[rgb(var(--reg-muted))]">{t("support.closedNote")}</p>
       ) : (
-        <form className="rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) void submit(); }}>
+        <form className="crd2" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) void submit(); }}>
           <Field label={ticket.status === "RESOLVED" ? t("support.replyResolved") : t("support.reply")} htmlFor="sp-reply">
             <textarea id="sp-reply" rows={4} maxLength={5000} className={cn(fieldCls, "h-auto py-3")} value={text} onChange={(e) => setText(e.target.value)} />
           </Field>

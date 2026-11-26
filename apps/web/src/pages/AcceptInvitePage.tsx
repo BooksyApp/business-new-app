@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, Note, Skeleton } from "@/components/bz";
 import { API_BASE_URL } from "@/config/api";
 import { authService } from "@/services/authService";
 import { startSession } from "@/utils/session";
 import { t } from "@/i18n";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { authTitle, brandCta } from "@/components/auth/authStyles";
+import { authTitle } from "@/components/auth/authStyles";
 
 type Invite = { salonName: string; staffName: string; email: string; accountExists: boolean };
 
@@ -72,27 +71,22 @@ const AcceptInvitePage = () => {
 
   return (
     <AuthShell>
-      <div>
+      <div className="stk">
         <h1 className={authTitle}>{t("acceptInvite.joinYourSalonOnBooqi")}</h1>
         {problem ? (
           <>
-            <p className="mt-3 text-sm text-destructive">{problem}</p>
-            <Link to="/login" className="mt-6 inline-block text-sm font-semibold text-primary">
-              {t("acceptInvite.goToSignIn")}
-            </Link>
+            <Note kind="er">{problem}</Note>
+            <div><Link to="/login" className="btn btn-ol s" style={{ textDecoration: "none" }}>{t("acceptInvite.goToSignIn")}</Link></div>
           </>
         ) : !invite ? (
-          <p className="mt-3 text-sm text-muted-foreground">{t("acceptInvite.checkingYourInvitation")}</p>
+          <Skeleton lines={[70, 50]} />
         ) : (
-          <form onSubmit={submit} className="mt-4 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">{invite.salonName}</strong>{" "}{t("acceptInvite.addedYouToTheirTeam", { staffName: invite.staffName })}{" "}<strong className="text-foreground">{invite.email}</strong>.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="invite-password">
-                {invite.accountExists ? t("acceptInvite.yourBooqiPassword") : t("acceptInvite.chooseAPassword")}
-              </Label>
-              <Input
+          <form onSubmit={submit} className="stk">
+            <Note kind="in">
+              <strong>{invite.salonName}</strong>{" "}{t("acceptInvite.addedYouToTheirTeam", { staffName: invite.staffName })}{" "}<strong>{invite.email}</strong>.
+            </Note>
+            <Field label={invite.accountExists ? t("acceptInvite.yourBooqiPassword") : t("acceptInvite.chooseAPassword")}>
+              <input
                 id="invite-password"
                 type="password"
                 autoComplete={invite.accountExists ? "current-password" : "new-password"}
@@ -100,11 +94,10 @@ const AcceptInvitePage = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-            </div>
+            </Field>
             {!invite.accountExists && (
-              <div className="space-y-2">
-                <Label htmlFor="invite-confirm">{t("acceptInvite.repeatThePassword")}</Label>
-                <Input
+              <Field label={t("acceptInvite.repeatThePassword")}>
+                <input
                   id="invite-confirm"
                   type="password"
                   autoComplete="new-password"
@@ -112,9 +105,9 @@ const AcceptInvitePage = () => {
                   onChange={(e) => setConfirm(e.target.value)}
                   required
                 />
-              </div>
+              </Field>
             )}
-            <button type="submit" className={`${brandCta} w-full`} disabled={busy} aria-busy={busy}>
+            <button type="submit" className="btn btn-v" style={{ width: "100%", justifyContent: "center" }} disabled={busy} aria-busy={busy}>
               {busy ? t("acceptInvite.joining") : t("acceptInvite.joinTheTeam")}
             </button>
           </form>

@@ -6,20 +6,15 @@ import { useMarket } from "@/services/platformService";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { SalonPreview } from "@/components/auth/SalonPreview";
-import { authGhost, authInput, authLink, authSubtitle, authTitle, brandCta, choiceCard, webUrl } from "@/components/auth/authStyles";
+import { authLink, authSubtitle, authTitle, brandCta, webUrl } from "@/components/auth/authStyles";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Mail, ArrowLeft, Check, ChevronRight, Sparkles, Scissors, 
   Heart, Stethoscope, MapPin, X, Plus, Minus, Eye, EyeOff, User, Bell, 
   DollarSign, Building2, Clock, Users, Settings, CheckCircle2
 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
+import { Avatar, Btn, CheckRow, ChipRow, Field, FooterBar, FormGrid, Note, RadioGroup, RowItem, SelectField } from "@/components/bz";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { categoryService, type BusinessCategory } from "@/services/categoryService";
@@ -681,7 +676,6 @@ const RegistrationPage = () => {
   const screenIndex = (key: string) => screens.findIndex((s) => s.key === key) + 1;
   const ownerName = `${formData.firstName} ${formData.lastName}`.trim();
   const openDays = Object.values(formData.businessHours).filter((d) => d.enabled).length;
-  const fieldLabel = "mb-1.5 block text-sm font-semibold text-[rgb(var(--reg-ink))]";
   const optional = <span className="font-normal text-[rgb(var(--reg-muted))]">{tr("registration.optional")}</span>;
 
   const preview = (
@@ -728,26 +722,25 @@ const RegistrationPage = () => {
         mobileBarSpace
         mobileHero={currentStep === 1 ? "signup" : false}
       >
-        {/* Progress: one thin bar and a plain count, so six-plus screens never feel long. */}
+        {/* Progress (BF77): one segment per screen, group + count, plain. */}
         <div className="mb-7">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-[rgb(var(--reg-brand-strong))]">{screen.group}</span>
-            <span className="text-[rgb(var(--reg-muted))]">
-              {tr("registration.of", { currentStep, count: screens.length })}
-            </span>
-          </div>
           <div
-            className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--reg-ink)/0.06)]"
+            style={{ display: "flex", gap: 4 }}
             role="progressbar"
             aria-label={tr("registration.signUpProgress")}
             aria-valuemin={1}
             aria-valuemax={screens.length}
             aria-valuenow={currentStep}
           >
-            <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,rgb(var(--reg-brand)),rgb(var(--reg-mesh-2)))] transition-[width] duration-500 ease-out"
-              style={{ width: `${(currentStep / screens.length) * 100}%` }}
-            />
+            {screens.map((sc, i) => (
+              <i key={sc.key} style={{ flex: 1, height: 5, borderRadius: 9, background: i < currentStep ? "var(--bz-violet)" : "var(--bz-line)" }} />
+            ))}
+          </div>
+          <div className="row sp" style={{ marginTop: 14 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--bz-vtext)", textTransform: "uppercase", letterSpacing: ".06em" }}>{screen.group}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "var(--bz-muted)" }}>
+              {tr("registration.of", { currentStep, count: screens.length })}
+            </span>
           </div>
           {selectedPlan && isFirst && (
             <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-[rgb(var(--reg-brand)/0.1)] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">
@@ -764,26 +757,22 @@ const RegistrationPage = () => {
             {!screen.subtitle && <div className="mb-7" />}
 
             {screen.key === "account" && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="firstName" className={fieldLabel}>{tr("registration.firstName")}</label>
-                    <Input id="firstName" autoComplete="given-name" value={formData.firstName} onChange={(e) => updateFormData("firstName", e.target.value)} className={authInput} />
-                  </div>
-                  <div>
-                    <label htmlFor="lastName" className={fieldLabel}>{tr("registration.lastName")}</label>
-                    <Input id="lastName" autoComplete="family-name" value={formData.lastName} onChange={(e) => updateFormData("lastName", e.target.value)} className={authInput} />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="email" className={fieldLabel}>{tr("registration.emailAddress")}</label>
-                  <Input id="email" type="email" inputMode="email" autoComplete="email" value={formData.email} onChange={(e) => updateFormData("email", e.target.value)} className={authInput} />
-                </div>
-                <div>
-                  <label htmlFor="phone" className={fieldLabel}>{tr("registration.mobileNumber")}</label>
-                  <div className="flex gap-2">
+              <div className="stk">
+                <FormGrid cols={2}>
+                  <Field label={tr("registration.firstName")} required>
+                    <input id="firstName" autoComplete="given-name" value={formData.firstName} onChange={(e) => updateFormData("firstName", e.target.value)} />
+                  </Field>
+                  <Field label={tr("registration.lastName")} required>
+                    <input id="lastName" autoComplete="family-name" value={formData.lastName} onChange={(e) => updateFormData("lastName", e.target.value)} />
+                  </Field>
+                </FormGrid>
+                <Field label={tr("registration.emailAddress")} required>
+                  <input id="email" type="email" inputMode="email" autoComplete="email" value={formData.email} onChange={(e) => updateFormData("email", e.target.value)} />
+                </Field>
+                <FormGrid cols={2}>
+                  <SelectField label={tr("registration.countryCode")}>
                     <Select value={formData.phonePrefix} onValueChange={(v) => { prefixTouched.current = true; updateFormData("phonePrefix", v); }}>
-                      <SelectTrigger aria-label={tr("registration.countryCode")} className={cn(authInput, "w-[104px] shrink-0 px-3")}>
+                      <SelectTrigger aria-label={tr("registration.countryCode")} className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -792,67 +781,69 @@ const RegistrationPage = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input id="phone" type="tel" inputMode="tel" autoComplete="tel-national" value={formData.phone} onChange={(e) => updateFormData("phone", e.target.value)} className={cn(authInput, "min-w-0 flex-1")} />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="password" className={fieldLabel}>{tr("registration.password")}</label>
-                  <div className="relative">
-                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={formData.password} onChange={(e) => updateFormData("password", e.target.value)} className={cn(authInput, "pr-12")} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? tr("registration.hidePassword") : tr("registration.showPassword")} aria-pressed={showPassword} className="absolute inset-y-0 right-1 my-auto flex h-10 w-10 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </SelectField>
+                  <Field label={tr("registration.mobileNumber")} required>
+                    <input id="phone" type="tel" inputMode="tel" autoComplete="tel-national" value={formData.phone} onChange={(e) => updateFormData("phone", e.target.value)} />
+                  </Field>
+                </FormGrid>
+                <Field
+                  label={tr("registration.password")}
+                  required
+                  suffix={
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? tr("registration.hidePassword") : tr("registration.showPassword")} aria-pressed={showPassword} style={{ border: 0, background: "none", padding: 0, cursor: "pointer", color: "inherit" }}>
+                      {showPassword ? <EyeOff className="ic" /> : <Eye className="ic" />}
                     </button>
-                  </div>
-                  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1" aria-live="polite">
-                    {[[hasMinLength, tr("registration.minChars")], [hasLetter, tr("registration.aLetter")], [hasDigit, tr("registration.aNumber")]].map(([ok, label]) => (
-                      <li key={label as string} className={cn("flex items-center gap-1.5 text-sm", ok ? "text-[rgb(22_128_61)]" : "text-[rgb(var(--reg-muted))]")}>
-                        <span className={cn("flex h-4 w-4 items-center justify-center rounded-full border", ok ? "border-[rgb(22_128_61)] bg-[rgb(22_128_61)] text-white" : "border-[rgb(var(--reg-line))]")}>
-                          {ok && <Check className="h-3 w-3" aria-hidden />}
-                        </span>
-                        {label as string}
-                      </li>
-                    ))}
-                  </ul>
+                  }
+                >
+                  <input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={formData.password} onChange={(e) => updateFormData("password", e.target.value)} />
+                </Field>
+                <div className="row gap12" aria-live="polite" style={{ flexWrap: "wrap" }}>
+                  {[[hasMinLength, tr("registration.minChars")], [hasLetter, tr("registration.aLetter")], [hasDigit, tr("registration.aNumber")]].map(([ok, label]) => (
+                    <span key={label as string} className="row gap8" style={{ fontSize: 14, fontWeight: 700, color: ok ? "var(--bz-ok)" : "var(--bz-muted)" }}>
+                      {ok ? <Check className="ic" aria-hidden /> : <span aria-hidden style={{ width: 16, height: 16, borderRadius: 999, border: "1.5px solid var(--bz-line)", display: "inline-block" }} />}
+                      {label as string}
+                    </span>
+                  ))}
                 </div>
-                <div>
-                  <label htmlFor="passwordConfirmation" className={fieldLabel}>{tr("registration.repeatPassword")}</label>
-                  <div className="relative">
-                    <Input
-                      id="passwordConfirmation"
-                      type={showPasswordConfirmation ? "text" : "password"}
-                      autoComplete="new-password"
-                      value={formData.passwordConfirmation}
-                      onChange={(e) => updateFormData("passwordConfirmation", e.target.value)}
-                      aria-invalid={(formData.passwordConfirmation && !passwordsMatch) || undefined}
-                      aria-describedby="pw-match"
-                      className={cn(authInput, "pr-12", formData.passwordConfirmation && !passwordsMatch && "border-red-600 focus:border-red-600 focus:ring-red-600/10 focus-visible:border-red-600 focus-visible:ring-red-600/10")}
-                    />
-                    <button type="button" onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)} aria-label={showPasswordConfirmation ? tr("registration.hidePassword") : tr("registration.showPassword")} aria-pressed={showPasswordConfirmation} className="absolute inset-y-0 right-1 my-auto flex h-10 w-10 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
-                      {showPasswordConfirmation ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                <Field
+                  label={tr("registration.repeatPassword")}
+                  required
+                  error={formData.passwordConfirmation && !passwordsMatch ? tr("registration.passwordsDoNotMatch") : undefined}
+                  suffix={
+                    <button type="button" onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)} aria-label={showPasswordConfirmation ? tr("registration.hidePassword") : tr("registration.showPassword")} aria-pressed={showPasswordConfirmation} style={{ border: 0, background: "none", padding: 0, cursor: "pointer", color: "inherit" }}>
+                      {showPasswordConfirmation ? <EyeOff className="ic" /> : <Eye className="ic" />}
                     </button>
-                  </div>
-                  <p id="pw-match" className="mt-1.5 text-sm" aria-live="polite">
-                    {formData.passwordConfirmation && !passwordsMatch && <span className="text-red-700">{tr("registration.passwordsDoNotMatch")}</span>}
-                  </p>
-                </div>
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="terms" checked={formData.termsAccepted} onCheckedChange={(checked) => updateFormData("termsAccepted", checked)} className="mt-0.5 h-5 w-5 rounded-md border-[rgb(var(--reg-line))] data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
-                    <Label htmlFor="terms" className="cursor-pointer text-sm font-normal leading-relaxed text-[rgb(var(--reg-muted))]">
+                  }
+                >
+                  <input
+                    id="passwordConfirmation"
+                    type={showPasswordConfirmation ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={formData.passwordConfirmation}
+                    onChange={(e) => updateFormData("passwordConfirmation", e.target.value)}
+                    aria-invalid={(formData.passwordConfirmation && !passwordsMatch) || undefined}
+                  />
+                </Field>
+                <CheckRow
+                  checked={!!formData.termsAccepted}
+                  icon={<Check className="ic" />}
+                  onChange={(v) => updateFormData("termsAccepted", v)}
+                  label={
+                    <span onClick={(e) => { if ((e.target as HTMLElement).closest("a")) e.stopPropagation(); }}>
                       {tr("registration.iAgreeToThe")}{" "}
                       <a href={`${webUrl}/legal/terms`} target="_blank" rel="noreferrer" className={authLink}>{tr("registration.terms")}</a>,{" "}
                       <a href={`${webUrl}/legal/salon-terms`} target="_blank" rel="noreferrer" className={authLink}>{tr("registration.termsForSalons")}</a>{" "}{tr("registration.and")}{" "}
                       <a href={`${webUrl}/legal/privacy`} target="_blank" rel="noreferrer" className={authLink}>{tr("registration.privacyPolicy")}</a>
-                    </Label>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Checkbox id="marketing1" checked={formData.marketing1} onCheckedChange={(checked) => updateFormData("marketing1", checked)} className="mt-0.5 h-5 w-5 rounded-md border-[rgb(var(--reg-line))] data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
-                    <Label htmlFor="marketing1" className="cursor-pointer text-sm font-normal leading-relaxed text-[rgb(var(--reg-muted))]">
-                      {tr("registration.sendMeTipsAndNews")}{" "}{optional}
-                    </Label>
-                  </div>
-                </div>
-                <p className="pt-1 text-sm text-[rgb(var(--reg-muted))]">
+                    </span>
+                  }
+                />
+                <CheckRow
+                  checked={!!formData.marketing1}
+                  icon={<Check className="ic" />}
+                  onChange={(v) => updateFormData("marketing1", v)}
+                  label={<>{tr("registration.sendMeTipsAndNews")}{" "}{optional}</>}
+                />
+                <p style={{ margin: 0, fontWeight: 600, fontSize: 15 }}>
                   {tr("registration.alreadyOnBooqi")}{" "}
                   <Link to="/login" className={authLink}>{tr("registration.logIn")}</Link>
                 </p>
@@ -860,113 +851,99 @@ const RegistrationPage = () => {
             )}
 
             {screen.key === "name" && (
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="businessName" className="sr-only">{tr("common.businessName")}</label>
-                  <Input
+              <div className="stk">
+                <Field label={tr("common.businessName")}>
+                  <input
                     id="businessName"
                     autoFocus
                     autoComplete="organization"
                     placeholder={tr("registration.eGLaleBeautyStudio")}
                     value={formData.businessName}
                     onChange={(e) => updateFormData("businessName", e.target.value)}
-                    className={cn(authInput, "h-14 text-lg font-semibold")}
+                    style={{ fontSize: 18 }}
                   />
-                </div>
+                </Field>
                 <details className="group" open={formData.referralCode !== "" || undefined}>
                   <summary className={cn(authLink, "inline-block cursor-pointer list-none text-sm")}>{tr("registration.haveAReferralCode")}</summary>
                   <div className="mt-3">
-                    <label htmlFor="referralCode" className={fieldLabel}>{tr("registration.referralCode")}{" "}{optional}</label>
-                    <Input id="referralCode" value={formData.referralCode} onChange={(e) => updateFormData("referralCode", e.target.value)} className={authInput} />
+                    <Field label={<>{tr("registration.referralCode")}{" "}{optional}</>}>
+                      <input id="referralCode" value={formData.referralCode} onChange={(e) => updateFormData("referralCode", e.target.value)} />
+                    </Field>
                   </div>
                 </details>
               </div>
             )}
 
             {screen.key === "category" && (
-              <div className="space-y-4">
+              <div className="stk">
                 {/* Stores the name, matching the backend list. The tiles used to store their
                     own id, so a salon picking one was filed under a slug the dropdown and the
                     customer app never used. */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                   {featuredCategories.map((cat) => {
                     const Icon = cat.icon;
                     const on = formData.category === cat.name;
                     return (
-                      <button
+                      <div
                         key={cat.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         aria-pressed={on}
+                        className={cn("rd", on && "on")}
+                        style={{ flexDirection: "column", alignItems: "center", textAlign: "center", padding: "18px 10px", minHeight: 96, justifyContent: "center" }}
                         onClick={() => updateFormData("category", cat.name)}
-                        className={cn(choiceCard(on), "min-h-[96px] flex-col items-start justify-between gap-3 p-4")}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateFormData("category", cat.name); } }}
                       >
-                        <Icon className={cn("h-6 w-6", on ? "text-[rgb(var(--reg-brand-strong))]" : "text-[rgb(var(--reg-muted))]")} aria-hidden />
-                        <span className="text-sm leading-tight">{cat.label}</span>
-                      </button>
+                        <Icon className="ic" aria-hidden />
+                        <b>{cat.label}</b>
+                      </div>
                     );
                   })}
                 </div>
-                <Select value={formData.category} onValueChange={(v) => updateFormData("category", v)}>
-                  <SelectTrigger aria-label={tr("registration.otherCategory")} className={authInput}>
-                    <SelectValue placeholder={tr("registration.somethingElsePickFromThe")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* The name, not a slug: the wizard used to store "hair-salons" while the
-                        profile stored "Hair Salon", and the customer app showed both. */}
-                    {otherCategories.map((cat) => (
-                      <SelectItem key={cat.slug} value={cat.name}>{cat.label ?? cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectField label={tr("registration.otherCategory")}>
+                  <Select value={formData.category} onValueChange={(v) => updateFormData("category", v)}>
+                    <SelectTrigger aria-label={tr("registration.otherCategory")} className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
+                      <SelectValue placeholder={tr("registration.somethingElsePickFromThe")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* The name, not a slug: the wizard used to store "hair-salons" while the
+                          profile stored "Hair Salon", and the customer app showed both. */}
+                      {otherCategories.map((cat) => (
+                        <SelectItem key={cat.slug} value={cat.name}>{cat.label ?? cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </SelectField>
               </div>
             )}
 
             {screen.key === "workplace" && (
-              <div className="space-y-3" role="radiogroup" aria-label={tr("registration.whereYouWork")}>
-                {[
-                  { v: "at-my-place", t: tr("registration.atMyPlace"), d: tr("registration.atMyPlaceDesc") },
-                  { v: "at-clients-location", t: tr("registration.atClientPlace"), d: tr("registration.atClientPlaceDesc") },
-                ].map((o) => {
-                  const on = formData.workLocation === o.v;
-                  return (
-                    <button key={o.v} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("workLocation", o.v)} className={cn(choiceCard(on), "py-4")}>
-                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2", on ? "border-[rgb(var(--reg-brand))]" : "border-[rgb(var(--reg-line))]")}>
-                        {on && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
-                      </span>
-                      <span>
-                        <span className="block">{o.t}</span>
-                        <span className="mt-0.5 block text-sm font-normal text-[rgb(var(--reg-muted))]">{o.d}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <RadioGroup
+                value={formData.workLocation}
+                onChange={(v) => updateFormData("workLocation", v)}
+                options={[
+                  { value: "at-my-place", label: tr("registration.atMyPlace"), hint: tr("registration.atMyPlaceDesc") },
+                  { value: "at-clients-location", label: tr("registration.atClientPlace"), hint: tr("registration.atClientPlaceDesc") },
+                ]}
+              />
             )}
 
             {screen.key === "volume" && (
-              <div className="space-y-2.5" role="radiogroup" aria-label={tr("registration.appointmentsAWeek")}>
-                {["Just starting out", "1-4 appointments a week", "5-9 appointments a week", "10-19 appointments a week", "20+ appointments a week"].map((option) => {
-                  const v = option.toLowerCase().replace(/\s+/g, "-");
-                  const on = formData.weeklySchedule === v;
-                  return (
-                    <button key={tOpt("regVolume", option)} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("weeklySchedule", v)} className={choiceCard(on)}>
-                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2", on ? "border-[rgb(var(--reg-brand))]" : "border-[rgb(var(--reg-line))]")}>
-                        {on && <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--reg-brand))]" />}
-                      </span>
-                      {tOpt("regVolume", option)}
-                    </button>
-                  );
-                })}
-              </div>
+              <RadioGroup
+                value={formData.weeklySchedule}
+                onChange={(v) => updateFormData("weeklySchedule", v)}
+                options={["Just starting out", "1-4 appointments a week", "5-9 appointments a week", "10-19 appointments a week", "20+ appointments a week"].map((option) => ({
+                  value: option.toLowerCase().replace(/\s+/g, "-"),
+                  label: tOpt("regVolume", option),
+                }))}
+              />
             )}
 
             {screen.key === "address" && (
-              <div className="space-y-4">
+              <div className="stk">
                 <div>
-                  <label htmlFor="address" className={fieldLabel}>{tr("common.address")}</label>
-                  <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-                    <Input
+                  <Field label={tr("common.address")} suffix={<MapPin className="ic" aria-hidden />}>
+                    <input
                       id="address"
                       autoComplete="off"
                       value={addressSearch}
@@ -982,10 +959,9 @@ const RegistrationPage = () => {
                         }
                       }}
                       placeholder={tr("registration.startTypingYourStreet")}
-                      className={cn(authInput, "pl-11")}
                     />
-                  </div>
-                  {isSearching && <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{tr("registration.searching")}</p>}
+                  </Field>
+                  {isSearching && <p className="hint mt-2">{tr("registration.searching")}</p>}
                   {addressResults.length > 0 && !isSearching && (
                     <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl bg-white shadow-[0_2px_6px_rgb(var(--reg-ink)/0.05),0_18px_40px_-12px_rgb(var(--reg-ink)/0.16)] ring-1 ring-[rgb(var(--reg-ink)/0.06)]">
                       {addressResults.map((addr, index) => {
@@ -1021,20 +997,18 @@ const RegistrationPage = () => {
                 </div>
 
                 {formData.address && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="buildingNumber" className={fieldLabel}>{tr("registration.buildingNo")}</label>
-                      <Input id="buildingNumber" value={formData.buildingNumber} onChange={(e) => updateFormData("buildingNumber", e.target.value)} className={authInput} />
-                    </div>
-                    <div>
-                      <label htmlFor="apartmentNumber" className={fieldLabel}>{tr("registration.flatUnit")}{" "}{optional}</label>
-                      <Input id="apartmentNumber" value={formData.apartmentNumber} onChange={(e) => updateFormData("apartmentNumber", e.target.value)} className={authInput} />
-                    </div>
-                  </div>
+                  <FormGrid cols={2}>
+                    <Field label={tr("registration.buildingNo")}>
+                      <input id="buildingNumber" value={formData.buildingNumber} onChange={(e) => updateFormData("buildingNumber", e.target.value)} />
+                    </Field>
+                    <Field label={<>{tr("registration.flatUnit")}{" "}{optional}</>}>
+                      <input id="apartmentNumber" value={formData.apartmentNumber} onChange={(e) => updateFormData("apartmentNumber", e.target.value)} />
+                    </Field>
+                  </FormGrid>
                 )}
 
                 <div>
-                  <p className={fieldLabel}>{tr("registration.checkThePin")}</p>
+                  <div className="lbl2" style={{ marginBottom: 8 }}>{tr("registration.checkThePin")}</div>
                   <div className="overflow-hidden rounded-2xl ring-1 ring-[rgb(var(--reg-line))]">
                     <AddressMapPicker
                       country={formData.countryCode || null}
@@ -1064,14 +1038,10 @@ const RegistrationPage = () => {
                     />
                   </div>
                   {unsupportedCountry && (
-                    <p role="alert" className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200">
-                      {tr("registration.booqiIsNotOpenIn", { value: formData.country || tr("registration.thisCountry") })}
-                    </p>
+                    <div role="alert" style={{ marginTop: 8 }}><Note kind="er">{tr("registration.booqiIsNotOpenIn", { value: formData.country || tr("registration.thisCountry") })}</Note></div>
                   )}
                   {geocodeUnavailable && (
-                    <p role="status" className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
-                      {tr("registration.addressLookupIsUnavailableRight")}
-                    </p>
+                    <div role="status" style={{ marginTop: 8 }}><Note kind="wa">{tr("registration.addressLookupIsUnavailableRight")}</Note></div>
                   )}
                   <button
                     type="button"
@@ -1093,131 +1063,134 @@ const RegistrationPage = () => {
             )}
 
             {screen.key === "hours" && (
-              <ul className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+              <div className="stk">
                 {daysOfWeek.map((day) => {
                   const dayHours = formData.businessHours[day.key];
                   return (
-                    <li key={day.key} className="flex min-h-[56px] items-center justify-between gap-3 px-4">
-                      <label className="flex cursor-pointer items-center gap-3 text-[15px] font-semibold">
-                        <Switch
-                          checked={dayHours.enabled}
+                    <div key={day.key} className="swr">
+                      <div><b>{day.label}</b></div>
+                      <div className="row gap8">
+                        {dayHours.enabled ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const [start, end] = dayHours.hours.split(" - ");
+                              setTempStartTime(start || "10:00");
+                              setTempEndTime(end || "19:00");
+                              setEditingDay(day.key);
+                            }}
+                            className="chip on"
+                            aria-label={tr("registration.hoursChange", { label: day.label, hours: dayHours.hours })}
+                          >
+                            {dayHours.hours}
+                          </button>
+                        ) : (
+                          <span className="hint">{tr("common.closed")}</span>
+                        )}
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={dayHours.enabled}
                           aria-label={tr("registration.openOn", { label: day.label })}
-                          className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
-                          onCheckedChange={(checked) => {
+                          className={cn("tg", !dayHours.enabled && "off")}
+                          style={{ border: 0, padding: 0 }}
+                          onClick={() => {
                             const newHours = { ...formData.businessHours };
-                            newHours[day.key] = { enabled: checked, hours: checked ? "10:00 - 19:00" : "Closed" };
+                            newHours[day.key] = { enabled: !dayHours.enabled, hours: !dayHours.enabled ? "10:00 - 19:00" : "Closed" };
                             updateFormData("businessHours", newHours);
                           }}
                         />
-                        {day.label}
-                      </label>
-                      {dayHours.enabled ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const [start, end] = dayHours.hours.split(" - ");
-                            setTempStartTime(start || "10:00");
-                            setTempEndTime(end || "19:00");
-                            setEditingDay(day.key);
-                          }}
-                          className="rounded-full bg-[rgb(var(--reg-brand-soft))] px-3 py-1.5 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:bg-[rgb(var(--reg-brand)/0.15)]"
-                          aria-label={tr("registration.hoursChange", { label: day.label, hours: dayHours.hours })}
-                        >
-                          {dayHours.hours}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-[rgb(var(--reg-muted))]">{tr("common.closed")}</span>
-                      )}
-                    </li>
+                      </div>
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             )}
 
             {screen.key === "team" && (
-              <div className="space-y-6">
-                <div>
-                  <p className={fieldLabel}>{tr("registration.teamSize")}{" "}{optional}</p>
-                  <div className="grid grid-cols-2 gap-2.5">
+              <div className="stk">
+                <div className="stk">
+                  <div className="lbl2">{tr("registration.teamSize")}{" "}{optional}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     {["Just me", "2-4 staff members", "5-9 staff members", "More than 10 staff members"].map((option) => {
                       const v = option.toLowerCase().replace(/\s+/g, "-");
                       const on = formData.teamSize === v;
                       return (
-                        <button key={option} type="button" aria-pressed={on} onClick={() => updateFormData("teamSize", on ? "" : v)} className={cn(choiceCard(on), "justify-center text-center text-sm")}>
-                          {tOpt("teamSize", option)}
-                        </button>
+                        <div
+                          key={option}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={on}
+                          className={cn("rd", on && "on")}
+                          style={{ justifyContent: "center", textAlign: "center" }}
+                          onClick={() => updateFormData("teamSize", on ? "" : v)}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateFormData("teamSize", on ? "" : v); } }}
+                        >
+                          <b>{tOpt("teamSize", option)}</b>
+                        </div>
                       );
                     })}
                   </div>
-                  {formData.teamSize === "just-me" && (
-                    <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{tr("registration.justMeAsStaffHint")}</p>
-                  )}
+                  {formData.teamSize === "just-me" && <span className="hint">{tr("registration.justMeAsStaffHint")}</span>}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">{tr("registration.people")}</p>
-                    <button type="button" onClick={() => setIsAddStaffOpen(true)} className={cn(authLink, "inline-flex items-center gap-1 text-sm")}>
-                      <Plus className="h-4 w-4" aria-hidden />{" "}{tr("registration.addPerson")}
+                <div className="stk">
+                  <div className="row sp">
+                    <div className="lbl2">{tr("registration.people")}</div>
+                    <button type="button" onClick={() => setIsAddStaffOpen(true)} className="btn btn-soft s">
+                      <Plus className="ic" aria-hidden />{" "}{tr("registration.addPerson")}
                     </button>
                   </div>
-                  <ul className="mt-2 space-y-2">
-                    <li className="flex items-center gap-3 rounded-2xl bg-[rgb(var(--reg-ink)/0.03)] px-4 py-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-xs font-bold text-[rgb(var(--reg-brand-strong))]">
-                        <User className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span className="text-sm">
-                        <span className="block font-semibold">{ownerName || tr("registration.you")}</span>
-                        <span className="block text-[rgb(var(--reg-muted))]">{tr("registration.owner")}</span>
-                      </span>
-                    </li>
-                    {formData.staffMembers.map((staff) => (
-                      <li key={staff.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
-                        <span className="min-w-0 text-sm">
-                          <span className="block truncate font-semibold">{staff.name}</span>
-                          <span className="block text-[rgb(var(--reg-muted))]">{positionLabel(staff.position) || tr("common.teamMember")}</span>
-                        </span>
-                        <button type="button" aria-label={tr("registration.remove", { name: staff.name })} onClick={() => updateFormData("staffMembers", formData.staffMembers.filter((s) => s.id !== staff.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
-                          <X className="h-4 w-4" aria-hidden />
+                  <RowItem
+                    left={<Avatar initials={(ownerName || tr("registration.you")).slice(0, 1).toUpperCase()} size={36} />}
+                    title={ownerName || tr("registration.you")}
+                    sub={tr("registration.owner")}
+                  />
+                  {formData.staffMembers.map((staff) => (
+                    <RowItem
+                      key={staff.id}
+                      left={<Avatar initials={(staff.name || "?").slice(0, 1).toUpperCase()} size={36} />}
+                      title={staff.name}
+                      sub={positionLabel(staff.position) || tr("common.teamMember")}
+                      right={
+                        <button type="button" aria-label={tr("registration.remove", { name: staff.name })} onClick={() => updateFormData("staffMembers", formData.staffMembers.filter((s) => s.id !== staff.id))} className="circ" style={{ border: 0, cursor: "pointer" }}>
+                          <X className="ic" aria-hidden />
                         </button>
-                      </li>
-                    ))}
-                  </ul>
+                      }
+                    />
+                  ))}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">{tr("common.services")}{" "}{optional}</p>
-                    <button type="button" onClick={() => setIsAddServiceOpen(true)} className={cn(authLink, "inline-flex items-center gap-1 text-sm")}>
-                      <Plus className="h-4 w-4" aria-hidden />{" "}{tr("registration.addService")}
+                <div className="stk">
+                  <div className="row sp">
+                    <div className="lbl2">{tr("common.services")}{" "}{optional}</div>
+                    <button type="button" onClick={() => setIsAddServiceOpen(true)} className="btn btn-soft s">
+                      <Plus className="ic" aria-hidden />{" "}{tr("registration.addService")}
                     </button>
                   </div>
                   {formData.services.length ? (
-                    <ul className="mt-2 space-y-2">
-                      {formData.services.map((svc) => (
-                        <li key={svc.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
-                          <span className="min-w-0 text-sm">
-                            <span className="block truncate font-semibold">{svc.name}</span>
-                            <span className="block text-[rgb(var(--reg-muted))]">{svc.priceType === "From" ? tr("common.from") : ""}{svc.price}</span>
-                          </span>
-                          <button type="button" aria-label={tr("registration.remove", { name: svc.name })} onClick={() => updateFormData("services", formData.services.filter((s) => s.id !== svc.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
-                            <X className="h-4 w-4" aria-hidden />
+                    formData.services.map((svc) => (
+                      <RowItem
+                        key={svc.id}
+                        title={svc.name}
+                        sub={<>{svc.priceType === "From" ? tr("common.from") : ""}{svc.price}</>}
+                        right={
+                          <button type="button" aria-label={tr("registration.remove", { name: svc.name })} onClick={() => updateFormData("services", formData.services.filter((s) => s.id !== svc.id))} className="circ" style={{ border: 0, cursor: "pointer" }}>
+                            <X className="ic" aria-hidden />
                           </button>
-                        </li>
-                      ))}
-                    </ul>
+                        }
+                      />
+                    ))
                   ) : (
-                    <p className="mt-2 rounded-2xl border border-dashed border-[rgb(var(--reg-line))] px-4 py-3 text-sm text-[rgb(var(--reg-muted))]">
-                      {tr("registration.youCanAddYourMenu")}
-                    </p>
+                    <Note kind="in">{tr("registration.youCanAddYourMenu")}</Note>
                   )}
                 </div>
               </div>
             )}
 
             {screen.key === "goals" && (
-              <div className="space-y-6">
-                <div className="flex flex-wrap gap-2">
+              <div className="stk">
+                <ChipRow>
                   {helpOptions.map((option) => {
                     const isSelected = formData.helpOptions.includes(option);
                     const canSelect = isSelected || formData.helpOptions.length < 5;
@@ -1230,69 +1203,54 @@ const RegistrationPage = () => {
                         onClick={() =>
                           updateFormData("helpOptions", isSelected ? formData.helpOptions.filter((o) => o !== option) : [...formData.helpOptions, option])
                         }
-                        className={cn(
-                          "rounded-full border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
-                          isSelected
-                            ? "border-[rgb(var(--reg-brand))] bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"
-                            : "border-[rgb(var(--reg-line))] bg-white hover:border-[rgb(var(--reg-brand)/0.5)]",
-                        )}
+                        className={cn("chip", isSelected && "on")}
+                        style={{ border: 0, cursor: canSelect ? "pointer" : "not-allowed", opacity: canSelect ? 1 : 0.4 }}
                       >
-                        {isSelected && <Check className="-ml-1 mr-1 inline h-4 w-4" aria-hidden />}
+                        {isSelected && <Check className="ic" aria-hidden />}
                         {tOpt("regHelp", option)}
                       </button>
                     );
                   })}
-                </div>
+                </ChipRow>
 
-                <div>
-                  <p className={fieldLabel}>{tr("registration.haveYouUsedAnotherBooking")}</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[["no", tr("common.no")], ["yes", tr("common.yes")]].map(([v, t]) => (
-                      <button key={v} type="button" aria-pressed={formData.hasUsedTools === v} onClick={() => updateFormData("hasUsedTools", v)} className={cn(choiceCard(formData.hasUsedTools === v), "justify-center")}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                  {formData.hasUsedTools === "yes" && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {businessTools.map((tool) => {
-                        const on = formData.previousTools.includes(tool);
-                        return (
-                          <button
-                            key={tool}
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() => updateFormData("previousTools", on ? formData.previousTools.filter((t) => t !== tool) : [...formData.previousTools, tool])}
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-sm transition",
-                              on ? "border-[rgb(var(--reg-brand))] bg-[rgb(var(--reg-brand-soft))] font-semibold text-[rgb(var(--reg-brand-strong))]" : "border-[rgb(var(--reg-line))] bg-white",
-                            )}
-                          >
-                            {tool}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <RadioGroup
+                  title={tr("registration.haveYouUsedAnotherBooking")}
+                  value={formData.hasUsedTools}
+                  onChange={(v) => updateFormData("hasUsedTools", v)}
+                  options={[{ value: "no", label: tr("common.no") }, { value: "yes", label: tr("common.yes") }]}
+                />
+                {formData.hasUsedTools === "yes" && (
+                  <ChipRow>
+                    {businessTools.map((tool) => {
+                      const on = formData.previousTools.includes(tool);
+                      return (
+                        <button
+                          key={tool}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => updateFormData("previousTools", on ? formData.previousTools.filter((t) => t !== tool) : [...formData.previousTools, tool])}
+                          className={cn("chip", on && "on")}
+                          style={{ border: 0, cursor: "pointer" }}
+                        >
+                          {tool}
+                        </button>
+                      );
+                    })}
+                  </ChipRow>
+                )}
               </div>
             )}
 
             {screen.key === "launch" && (
-              <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label={tr("registration.goLiveDate")}>
-                {[["today", tr("common.today")], ["tomorrow", tr("common.tomorrow")], ["3-days", tr("registration.inDays")], ["1-week", tr("registration.inWeek")], ["2-weeks", tr("registration.inWeeks")], ["1-month", tr("registration.inMonth")]].map(([v, t]) => {
-                  const on = formData.profileLiveDate === v;
-                  return (
-                    <button key={v} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("profileLiveDate", v)} className={cn(choiceCard(on), "justify-center py-4")}>
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
+              <RadioGroup
+                value={formData.profileLiveDate}
+                onChange={(v) => updateFormData("profileLiveDate", v)}
+                options={[["today", tr("common.today")], ["tomorrow", tr("common.tomorrow")], ["3-days", tr("registration.inDays")], ["1-week", tr("registration.inWeek")], ["2-weeks", tr("registration.inWeeks")], ["1-month", tr("registration.inMonth")]].map(([value, label]) => ({ value, label }))}
+              />
             )}
 
             {screen.key === "review" && (
-              <dl className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+              <div className="stk">
                 {[
                   { k: "account", label: tr("registration.you"), value: `${ownerName} · ${formData.email}` },
                   { k: "name", label: tr("common.business"), value: [formData.businessName, otherCategories.find((c) => c.name === formData.category)?.label ?? formData.category].filter(Boolean).join(" · ") },
@@ -1304,37 +1262,39 @@ const RegistrationPage = () => {
                     value: tr("registration.teamServicesSummary", { people: formData.staffMembers.length + 1, services: formData.services.length }),
                   },
                 ].map((row) => (
-                  <div key={row.k} className="flex items-start justify-between gap-3 px-4 py-3.5">
-                    <div className="min-w-0">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{row.label}</dt>
-                      <dd className="mt-0.5 break-words text-[15px] font-semibold">{row.value}</dd>
-                    </div>
-                    <button type="button" onClick={() => goTo(screenIndex(row.k))} className={cn(authLink, "shrink-0 py-1 text-sm")} aria-label={tr("registration.edit", { label: row.label })}>
-                      {tr("common.edit")}
-                    </button>
-                  </div>
+                  <RowItem
+                    key={row.k}
+                    title={row.value}
+                    sub={row.label}
+                    right={
+                      <button type="button" onClick={() => goTo(screenIndex(row.k))} className="btn btn-ol s" aria-label={tr("registration.edit", { label: row.label })}>
+                        {tr("common.edit")}
+                      </button>
+                    }
+                  />
                 ))}
-              </dl>
+              </div>
             )}
           </div>
 
-          {/* Back + Continue. Sticky at the bottom of a phone, inline in the card from md up. */}
+          {/* Back (quiet) + Continue (the single gradient primary). Sticky at the bottom of a phone, inline from md up. */}
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[rgb(var(--reg-line)/0.7)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl md:static md:mt-8 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-            <div className="mx-auto flex max-w-[520px] gap-3">
+            <div className="row gap8 mx-auto" style={{ maxWidth: 520 }}>
               {!isFirst && (
-                <button type="button" onClick={() => goTo(currentStep - 1)} className={cn(authGhost, "w-[52px] px-0 md:w-auto md:px-6")} aria-label={tr("registration.back")}>
-                  <ArrowLeft className="h-5 w-5" aria-hidden />
+                <button type="button" onClick={() => goTo(currentStep - 1)} className="btn btn-ol" aria-label={tr("registration.back")}>
+                  <ArrowLeft className="ic" aria-hidden />
                   <span className="hidden md:inline">{tr("registration.back")}</span>
                 </button>
               )}
-              <button type="submit" disabled={!canContinue[screen.key]} aria-busy={isRegistering} className={cn(brandCta, "flex-1")}>
+              <span style={{ flex: 1 }} />
+              <button type="submit" disabled={!canContinue[screen.key]} aria-busy={isRegistering} className="btn btn-v">
                 {isRegistering && <span aria-hidden className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />}
                 {isReview
                   ? isRegistering ? tr("registration.creatingYourSalon") : tr("registration.createMySalon")
                   : screen.key === "team" && !formData.teamSize && !formData.staffMembers.length && !formData.services.length
                     ? tr("registration.skipForNow")
                     : tr("registration.continue")}
-                {!isRegistering && <ChevronRight className="h-4 w-4" aria-hidden />}
+                {!isRegistering && <ChevronRight className="ic" aria-hidden />}
               </button>
             </div>
           </div>
@@ -1348,30 +1308,21 @@ const RegistrationPage = () => {
           <DialogHeader>
             <DialogTitle>{tr("registration.addNewService")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{tr("registration.serviceName")}</Label>
-              <Input
-                value={newService.name}
+          <div className="stk">
+            <Field label={tr("registration.serviceName")}>
+              <input value={newService.name}
                 onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                placeholder={tr("registration.eGHaircut")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("registration.serviceType")}</Label>
-              <Input
-                value={newService.type}
+                placeholder={tr("registration.eGHaircut")} />
+            </Field>
+            <Field label={tr("registration.serviceType")}>
+              <input value={newService.type}
                 onChange={(e) => setNewService({ ...newService, type: e.target.value })}
-                placeholder={tr("registration.eGHairService")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{tr("registration.durationHours")}</Label>
-                <Select value={newService.durationHours} onValueChange={(v) => setNewService({ ...newService, durationHours: v })}>
-                  <SelectTrigger className="border-gray-300">
+                placeholder={tr("registration.eGHairService")} />
+            </Field>
+            <FormGrid cols={2}>
+              <SelectField label={tr("registration.durationHours")}>
+<Select value={newService.durationHours} onValueChange={(v) => setNewService({ ...newService, durationHours: v })}>
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1380,11 +1331,10 @@ const RegistrationPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{tr("registration.durationMinutes")}</Label>
-                <Select value={newService.durationMinutes} onValueChange={(v) => setNewService({ ...newService, durationMinutes: v })}>
-                  <SelectTrigger className="border-gray-300">
+              </SelectField>
+              <SelectField label={tr("registration.durationMinutes")}>
+<Select value={newService.durationMinutes} onValueChange={(v) => setNewService({ ...newService, durationMinutes: v })}>
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1393,22 +1343,17 @@ const RegistrationPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.price")}</Label>
-              <Input
-                type="number"
+              </SelectField>
+            </FormGrid>
+            <Field label={tr("common.price")}>
+              <input type="number"
                 value={newService.price}
                 onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                placeholder="0.00"
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("registration.priceType")}</Label>
-              <Select value={newService.priceType} onValueChange={(v) => setNewService({ ...newService, priceType: v })}>
-                <SelectTrigger className="border-gray-300">
+                placeholder="0.00" />
+            </Field>
+            <SelectField label={tr("registration.priceType")}>
+<Select value={newService.priceType} onValueChange={(v) => setNewService({ ...newService, priceType: v })}>
+                <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1416,13 +1361,11 @@ const RegistrationPage = () => {
                   <SelectItem value="From">{tr("common.from2")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setIsAddServiceOpen(false)} className="flex-1 border-gray-300">
-                {tr("common.cancel")}
-              </Button>
-              <Button onClick={handleAddService} className={cn(brandCta, "flex-1 h-10")}>{tr("registration.addService2")}</Button>
-            </div>
+            </SelectField>
+            <FooterBar>
+              <Btn kind="ol" onClick={() => setIsAddServiceOpen(false)}>{tr("common.cancel")}</Btn>
+              <Btn kind="v" onClick={handleAddService}>{tr("registration.addService2")}</Btn>
+            </FooterBar>
           </div>
         </DialogContent>
       </Dialog>
@@ -1433,31 +1376,22 @@ const RegistrationPage = () => {
           <DialogHeader>
             <DialogTitle>{tr("registration.addStaffMember")}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{tr("common.name")}</Label>
-              <Input
-                value={newStaff.name}
+          <div className="stk">
+            <Field label={tr("common.name")}>
+              <input value={newStaff.name}
                 onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
-                placeholder={tr("registration.fullName")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.email")}</Label>
-              <Input
-                type="email"
+                placeholder={tr("registration.fullName")} />
+            </Field>
+            <Field label={tr("common.email")}>
+              <input type="email"
                 value={newStaff.email}
                 onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })}
-                placeholder={tr("registration.emailExampleCom")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.phone")}</Label>
-              <div className="flex gap-2">
+                placeholder={tr("registration.emailExampleCom")} />
+            </Field>
+            <FormGrid cols={2}>
+              <SelectField label={tr("registration.countryCode")}>
                 <Select value={newStaff.phonePrefix} onValueChange={(v) => setNewStaff({ ...newStaff, phonePrefix: v })}>
-                  <SelectTrigger className="w-28 border-gray-300">
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1466,29 +1400,24 @@ const RegistrationPage = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
+              </SelectField>
+              <Field label={tr("common.phone")}>
+                <input
                   value={newStaff.phone}
                   onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })}
                   placeholder="123 456 789"
-                  className="flex-1 border-gray-300"
                 />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>{tr("common.position")}</Label>
-              <Input
-                value={newStaff.position}
+              </Field>
+            </FormGrid>
+            <Field label={tr("common.position")}>
+              <input value={newStaff.position}
                 onChange={(e) => setNewStaff({ ...newStaff, position: e.target.value })}
-                placeholder={tr("registration.eGStylistTherapist")}
-                className="border-gray-300"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" onClick={() => setIsAddStaffOpen(false)} className="flex-1 border-gray-300">
-                {tr("common.cancel")}
-              </Button>
-              <Button onClick={handleAddStaff} className={cn(brandCta, "flex-1 h-10")}>{tr("registration.addStaff")}</Button>
-            </div>
+                placeholder={tr("registration.eGStylistTherapist")} />
+            </Field>
+            <FooterBar>
+              <Btn kind="ol" onClick={() => setIsAddStaffOpen(false)}>{tr("common.cancel")}</Btn>
+              <Btn kind="v" onClick={handleAddStaff}>{tr("registration.addStaff")}</Btn>
+            </FooterBar>
           </div>
         </DialogContent>
       </Dialog>
@@ -1501,37 +1430,22 @@ const RegistrationPage = () => {
               {tr("common.edit")}{" "}{editingDay && daysOfWeek.find(d => d.key === editingDay)?.label}{" "}{tr("registration.hours")}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{tr("registration.openingTime")}</Label>
-                <Input
-                  type="time"
-                  value={tempStartTime}
-                  onChange={(e) => setTempStartTime(e.target.value)}
-                  className={authInput}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-[rgb(var(--reg-ink))]">{tr("registration.closingTime")}</Label>
-                <Input
-                  type="time"
-                  value={tempEndTime}
-                  onChange={(e) => setTempEndTime(e.target.value)}
-                  className={authInput}
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setEditingDay(null)} 
-                className="flex-1 border-gray-300"
-              >
-                {tr("common.cancel")}
-              </Button>
-              <Button 
-                onClick={() => {
+          <div className="stk">
+            <FormGrid cols={2}>
+              <Field label={tr("registration.openingTime")}>
+              <input type="time"
+                value={tempStartTime}
+                onChange={(e) => setTempStartTime(e.target.value)} />
+            </Field>
+              <Field label={tr("registration.closingTime")}>
+              <input type="time"
+                value={tempEndTime}
+                onChange={(e) => setTempEndTime(e.target.value)} />
+            </Field>
+            </FormGrid>
+            <FooterBar>
+              <Btn kind="ol" onClick={() => setEditingDay(null)}>{tr("common.cancel")}</Btn>
+              <Btn kind="v" onClick={() => {
                   if (editingDay) {
                     const newHours = { ...formData.businessHours };
                     newHours[editingDay] = {
@@ -1541,12 +1455,8 @@ const RegistrationPage = () => {
                     updateFormData("businessHours", newHours);
                     setEditingDay(null);
                   }
-                }} 
-                className={cn(brandCta, "flex-1 h-10")}
-              >
-                {tr("common.save")}
-              </Button>
-            </div>
+                }}>{tr("common.save")}</Btn>
+            </FooterBar>
           </div>
         </DialogContent>
       </Dialog>

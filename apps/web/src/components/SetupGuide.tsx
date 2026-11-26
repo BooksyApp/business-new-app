@@ -5,6 +5,7 @@ import { Check, ChevronRight, X } from "lucide-react";
 
 import { businessService } from "@/services/businessService";
 import { moneyService } from "@/services/moneyService";
+import { Card, RowItem, StatusPill } from "@/components/bz";
 import { t } from "@/i18n";
 
 /**
@@ -66,46 +67,47 @@ export function SetupGuide({ businessId }: { businessId: Id }) {
   if (count === STEPS.length) return null;
 
   return (
-    <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-bold">{t("shareKit.guideTitle")}</h2>
-        <span className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">{t("shareKit.guideDone", { done: count, total: STEPS.length })}</span>
-          <button
-            type="button"
-            aria-label={t("shareKit.guideDismiss")}
-            title={t("shareKit.guideDismiss")}
-            className="rounded-full p-1 text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-canvas))]"
-            onClick={() => {
-              try {
-                localStorage.setItem(dismissKey(businessId), "1");
-              } catch {
-                /* private mode: hidden for this visit only */
-              }
-              setDismissed(true);
-            }}
-          >
-            <X size={16} aria-hidden />
-          </button>
-        </span>
+    <Card title={t("shareKit.guideTitle")} help={t("shareKit.guideBody")}>
+      <div className="row sp">
+        <StatusPill kind="w">{t("shareKit.guideDone", { done: count, total: STEPS.length })}</StatusPill>
+        <button
+          type="button"
+          aria-label={t("shareKit.guideDismiss")}
+          title={t("shareKit.guideDismiss")}
+          className="circ"
+          style={{ border: 0, cursor: "pointer" }}
+          onClick={() => {
+            try {
+              localStorage.setItem(dismissKey(businessId), "1");
+            } catch {
+              /* private mode: hidden for this visit only */
+            }
+            setDismissed(true);
+          }}
+        >
+          <X size={16} aria-hidden />
+        </button>
       </div>
-      <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{t("shareKit.guideBody")}</p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--reg-ink)/0.06)]" role="progressbar" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={count}>
-        <div className="h-full rounded-full bg-[linear-gradient(90deg,rgb(var(--reg-brand)),rgb(var(--reg-brand-strong)))] transition-[width] duration-500" style={{ width: `${(count / STEPS.length) * 100}%` }} />
-      </div>
-      <ol className="mt-4 grid gap-1">
+      <div style={{ display: "flex", gap: 4 }} role="progressbar" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={count}>
         {STEPS.map((s, i) => (
-          <li key={s.key}>
-            <Link to={`/${businessId}/${s.to}`} className="flex min-h-11 items-center gap-3 rounded-xl px-2 py-1.5 text-sm transition hover:bg-[rgb(var(--reg-canvas))]">
-              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${done[i] ? "bg-[rgb(var(--reg-success))] text-white" : "ring-2 ring-inset ring-[rgb(var(--reg-line))] text-[rgb(var(--reg-muted))]"}`}>
-                {done[i] ? <Check size={14} aria-hidden /> : i + 1}
-              </span>
-              <span className={`flex-1 font-semibold ${done[i] ? "text-[rgb(var(--reg-muted))] line-through decoration-1" : ""}`}>{t(s.label)}</span>
-              {!done[i] && <ChevronRight size={16} className="text-[rgb(var(--reg-muted))]" aria-hidden />}
-            </Link>
-          </li>
+          <i key={s.key} style={{ flex: 1, height: 5, borderRadius: 9, background: done[i] ? "var(--bz-violet)" : "var(--bz-line)" }} />
         ))}
-      </ol>
-    </section>
+      </div>
+      <div className="stk">
+        {STEPS.map((s, i) => (
+          <Link key={s.key} to={`/${businessId}/${s.to}`} style={{ color: "inherit", textDecoration: "none" }}>
+            <RowItem
+              left={
+                <span className="circ" style={{ width: 32, height: 32, fontWeight: 800, fontSize: 13, ...(done[i] ? { background: "var(--bz-ok)", color: "#fff" } : { color: "var(--bz-muted)" }) }}>
+                  {done[i] ? <Check size={14} aria-hidden /> : i + 1}
+                </span>
+              }
+              title={<span style={done[i] ? { color: "var(--bz-muted)", textDecoration: "line-through" } : undefined}>{t(s.label)}</span>}
+              right={!done[i] ? <ChevronRight size={16} style={{ color: "var(--bz-ink3)" }} aria-hidden /> : undefined}
+            />
+          </Link>
+        ))}
+      </div>
+    </Card>
   );
 }

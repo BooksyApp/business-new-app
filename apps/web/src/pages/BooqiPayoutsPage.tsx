@@ -1,14 +1,13 @@
+import { P4Loading, P4Error } from "@/components/bz/p4-kit";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
-import { Empty } from "@/components/reports/ReportsKit";
 import { fmtMoney } from "@/components/reports/reportsFormat";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { booqiWalletService } from "@/services/booqiWalletService";
 import { t, type TKey } from "@/i18n";
+import { BooqiScope, Empty, PageHeader, pageBody } from "@/components/bz/p4-compat";
 
 const day = (iso: string) => new Date(/(?:[zZ]|[+-]\d\d:?\d\d)$/.test(iso) ? iso : `${iso}Z`).toLocaleDateString();
 
@@ -43,13 +42,13 @@ export default function BooqiPayoutsPage() {
         <PageHeader title={t("bwallet.navTitle")} subtitle={t("bwallet.pendingHint")} />
         <div className={pageBody}>
           {q.isError ? (
-            <Empty>{t("bwallet.loadFailed")}</Empty>
+            <P4Error title={t("bwallet.loadFailed")} />
           ) : !d ? (
-            <div className="h-[200px] animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy="true" />
+            <P4Loading />
           ) : (
             <>
               {split.data && (
-                <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]" data-testid="revenue-split">
+                <section className="crd2" data-testid="revenue-split">
                   <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{t("bwallet.splitTitle")}</h2>
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.atSalon")}</p><p className="text-[22px] font-extrabold tabular-nums" data-testid="split-salon">{fmtMoney(split.data.atSalon)}</p></div>
@@ -61,7 +60,7 @@ export default function BooqiPayoutsPage() {
               )}
 
               {via && (
-                <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]" data-testid="via-booqi">
+                <section className="crd2" data-testid="via-booqi">
                   <h2 className="text-[13px] font-bold uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">{t("bwallet.sumTitle")}</h2>
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                     <div><p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumGross")}</p><p className="text-[20px] font-extrabold tabular-nums" data-testid="via-gross">{fmtMoney(via.gross)}</p></div>
@@ -73,11 +72,11 @@ export default function BooqiPayoutsPage() {
               )}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]" data-testid="booqi-pending">
+                <div className="crd2" data-testid="booqi-pending">
                   <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumPending")}</p>
                   <p className="mt-1 text-[32px] font-extrabold tabular-nums">{fmtMoney(d.pending)}</p>
                 </div>
-                <div className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                <div className="crd2">
                   <p className="text-[13px] text-[rgb(var(--reg-muted))]">{t("bwallet.sumPaid")}</p>
                   <p className="mt-1 text-[32px] font-extrabold tabular-nums">{fmtMoney(d.paidTotal)}</p>
                 </div>

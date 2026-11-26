@@ -1,31 +1,11 @@
 import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { RouteSheet } from "@/components/page/RouteSheet";
-import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { BzScope, Btn, Card, CheckRow, Drawer, EmptyState, Field, FormGrid, FormSection, Note, Skeleton, Toggle } from "@/components/bz";
 import StaffPage from "./StaffPage";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  X,
-  UserPlus,
-  ChevronRight,
-  Send,
-  Layers,
-  Loader2,
-} from "lucide-react";
+import { X, Check, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { StaffAvatarPicker } from "@/components/media/StaffAvatarPicker";
-import { Switch } from "@/components/ui/switch";
 import { useStaff } from "@/hooks/useStaff";
 import { useServices } from "@/hooks/useServices";
 import { serviceService } from "@/services/serviceService";
@@ -152,186 +132,78 @@ export default function AddStaffPage() {
   const close = () => navigate(getPath("staff"));
 
   return (
-    <RouteSheet
-      backdrop={<StaffPage />}
-      onClose={close}
-      size="lg"
-      title={t("addStaff.newTeamMember")}
-      description={t("addStaff.theyGetTheirOwnCalendar")}
-      footer={
-        <>
-          <Button variant="outline" className={sheetSecondary} onClick={close}>{t("common.cancel")}</Button>
-          <Button className={sheetPrimary} onClick={handleAddAndSendInvite} disabled={!formData.name.trim() || creating}>
-            {creating ? t("common.creating") : willInvite ? t("addStaff.addAndSendInvite") : t("common.addTeamMember")}
-          </Button>
-        </>
-      }
-    >
-            <div className="grid gap-6">
-              {/* Left Panel - Staff Member Details */}
-              <div className="space-y-6">
-                <div className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] space-y-6">
-                  {/* Profile Picture */}
-                  {/* The camera button used to do nothing. */}
-                  <StaffAvatarPicker
-                    value={formData.avatarUrl}
-                    onChange={(url) => setFormData((prev) => ({ ...prev, avatarUrl: url }))}
-                  />
+    <BzScope>
+      <StaffPage />
+      <Drawer
+        title={t("addStaff.newTeamMember")}
+        sub={t("addStaff.theyGetTheirOwnCalendar")}
+        onClose={close}
+        closeIcon={<X className="ic" />}
+        footer={
+          <>
+            <Btn kind="ol" onClick={close}>{t("common.cancel")}</Btn>
+            <Btn kind="v" onClick={handleAddAndSendInvite} disabled={!formData.name.trim() || creating}>
+              {creating ? t("common.creating") : willInvite ? t("addStaff.addAndSendInvite") : t("common.addTeamMember")}
+            </Btn>
+          </>
+        }
+      >
+        <div className="stk">
+          {/* The camera button used to do nothing. */}
+          <StaffAvatarPicker value={formData.avatarUrl} onChange={(url) => setFormData((prev) => ({ ...prev, avatarUrl: url }))} />
 
-                  {/* Name */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name">{t("common.name")}</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder={t("addStaff.enterName")}
-                      autoFocus
-                    />
-                  </div>
+          <Field label={t("common.name")} required>
+            <input id="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} placeholder={t("addStaff.enterName")} autoFocus />
+          </Field>
 
-                  {/* Phone Number */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">{t("addStaff.phoneNumber")}</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
-                      placeholder={t("addStaff.enterPhoneNumber")}
-                    />
-                  </div>
+          <FormGrid cols={2}>
+            <Field label={t("addStaff.phoneNumber")}>
+              <input id="phone" type="tel" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} placeholder={t("addStaff.enterPhoneNumber")} />
+            </Field>
+            <Field label={t("addStaff.eMail")}>
+              <input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} placeholder={t("addStaff.enterEmail")} />
+            </Field>
+          </FormGrid>
 
-                  {/* E-mail */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email">{t("addStaff.eMail")}</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      placeholder={t("addStaff.enterEmail")}
-                    />
-                  </div>
+          <Toggle
+            title={t("addStaff.inviteAndCreateBooqiAccount")}
+            help={t("addStaff.weLlSendThemA")}
+            checked={formData.inviteAndCreateAccount}
+            onChange={(checked) => handleInputChange("inviteAndCreateAccount", checked)}
+          />
 
-                  {/* Invite and create booqi account? */}
-                  <div className="space-y-3 p-4 bg-[rgb(var(--reg-canvas))] rounded-2xl">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="invite-account" className="text-sm font-medium">
-                        {t("addStaff.inviteAndCreateBooqiAccount")}
-                      </Label>
-                      <Switch
-                        id="invite-account"
-                        checked={formData.inviteAndCreateAccount}
-                        onCheckedChange={(checked) =>
-                          handleInputChange("inviteAndCreateAccount", checked)
-                        }
-                      />
-                    </div>
-                    <p className="text-xs text-[rgb(var(--reg-muted))]">
-                      {t("addStaff.weLlSendThemA")}
-                    </p>
-                  </div>
+          {/* Role: one of the salon's roles (Team > Roles). */}
+          <RoleSelect value={formData.permissionLevel} onChange={(v) => handleInputChange("permissionLevel", v)} />
 
-                  {/* Role — one of the salon's roles (Team → Roles). */}
-                  <RoleSelect
-                    value={formData.permissionLevel}
-                    onChange={(v) => handleInputChange("permissionLevel", v)}
-                  />
+          <Field label={t("common.position")}>
+            <input id="position" value={formData.position} onChange={(e) => handleInputChange("position", e.target.value)} placeholder={t("addStaff.enterPosition")} />
+          </Field>
 
-                  {/* Position */}
-                  <div className="space-y-2">
-                    <Label htmlFor="position">{t("common.position")}</Label>
-                    <Input
-                      id="position"
-                      value={formData.position}
-                      onChange={(e) => handleInputChange("position", e.target.value)}
-                      placeholder={t("addStaff.enterPosition")}
-                    />
-                  </div>
+          <FormSection>{t("addStaff.services")}</FormSection>
+          {servicesLoading ? (
+            <Skeleton lines={[90, 70, 80]} />
+          ) : !services || services.length === 0 ? (
+            <EmptyState icon={<Layers className="ic" />} title={t("addStaff.noServicesAvailableCreateServices")} />
+          ) : (
+            services.map((service) => (
+              <CheckRow
+                key={service.id}
+                label={service.name}
+                checked={selectedServiceIds.includes(service.id)}
+                icon={<Check className="ic" />}
+                onChange={() => handleServiceToggle(service.id)}
+                right={`${service.durationMinutes ? formatMinutes(service.durationMinutes) : t("common.nA")} · ${service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : t("common.nA")}`}
+              />
+            ))
+          )}
 
-                </div>
-              </div>
-
-              {/* Right Panel - Services Management */}
-              <div className="space-y-6">
-                <div className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] space-y-6 min-h-[600px] flex flex-col">
-                  {/* Services Tab */}
-                  <div className="border-b border-[rgb(var(--reg-line)/0.8)]">
-                    <button className="px-4 py-3 text-sm font-medium border-b-2 border-gray-900 text-[rgb(var(--reg-ink))]">
-                      {t("addStaff.services")}
-                    </button>
-                  </div>
-
-                  {/* Services List */}
-                  {servicesLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                      <Loader2 className="h-8 w-8 animate-spin text-[rgb(var(--reg-muted)/0.8)] mb-4" />
-                      <p className="text-sm text-[rgb(var(--reg-muted))]">{t("addStaff.loadingServices")}</p>
-                    </div>
-                  ) : !services || services.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                      <div className="mb-4">
-                        <Layers size={64} className="text-gray-300 mx-auto" />
-                      </div>
-                      <p className="text-sm text-[rgb(var(--reg-muted))] mb-6 max-w-xs">
-                        {t("addStaff.noServicesAvailableCreateServices")}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                      {services.map((service) => {
-                        const isSelected = selectedServiceIds.includes(service.id);
-                        return (
-                          <div
-                            key={service.id}
-                            className="flex items-center gap-3 p-3 bg-[rgb(var(--reg-canvas))] rounded-2xl hover:bg-[rgb(var(--reg-ink)/0.05)] transition-colors"
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) => {
-                                handleServiceToggle(service.id);
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                              }}
-                              className="h-5 w-5"
-                            />
-                            <div className="flex-1">
-                              <h4 className="font-medium text-[rgb(var(--reg-ink))]">
-                                {service.name}
-                              </h4>
-                              <div className="flex items-center gap-4 text-sm text-[rgb(var(--reg-muted))] mt-1">
-                                <span>
-                                  {service.durationMinutes
-                                    ? formatMinutes(service.durationMinutes)
-                                    : t("common.nA")}
-                                </span>
-                                <span className="font-semibold text-[rgb(var(--reg-ink))]">
-                                  {service.price ? `${service.price.toFixed(2)} ${currencySymbol()}` : t("common.nA")}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Working Hours */}
-            <div className="mt-6 rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-              <h3 className="text-sm font-semibold text-[rgb(var(--reg-ink))] mb-1">{t("addStaff.workingHours")}</h3>
-              <p className="text-xs text-[rgb(var(--reg-muted))] mb-4">
-                {t("addStaff.clientsCanOnlyBookThis")}
-              </p>
-              <WorkingHoursEditor value={schedule} onChange={setSchedule} />
-            </div>
-    </RouteSheet>
+          <FormSection>{t("addStaff.workingHours")}</FormSection>
+          <Note kind="in">{t("addStaff.clientsCanOnlyBookThis")}</Note>
+          <Card style={{ padding: "6px 18px" }}>
+            <WorkingHoursEditor value={schedule} onChange={setSchedule} />
+          </Card>
+        </div>
+      </Drawer>
+    </BzScope>
   );
 }
-
-
-

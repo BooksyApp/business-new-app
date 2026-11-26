@@ -1,25 +1,19 @@
 import type { Id } from "@/types/id";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CopyPlus, Lock, Pencil, Plus, ShieldCheck, Star, Trash2, Users } from "lucide-react";
+import { CopyPlus, Lock, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, FormSheet, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, Field } from "@/components/page/kit";
-import { fieldCls } from "@/components/page/kitStyles";
-import { Button } from "@/components/ui/button";
+import { Btn, Card, Drawer, Field, Note, PageHead, Skeleton, Tag, Toggle } from "@/components/bz";
+import { BzPage } from "@/components/bz/p2-page";
+import { ActionMenu } from "@/components/page/kit";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { getCurrentBusinessId } from "@/config/api";
 import { cn } from "@/lib/utils";
+import { getCurrentBusinessId } from "@/config/api";
 import { roleService, type BusinessRole, type TeamPermissionInfo } from "@/services/roleService";
 import { t } from "@/i18n";
 
 import { permDescription, permGroup, permLabel, roleDescription, roleName } from "@/lib/roleLabel";
 type Draft = { id?: Id; name: string; description: string; permissions: Set<string>; isDefault: boolean };
-
-const brandSwitch = "data-[state=checked]:bg-[rgb(var(--reg-brand))]";
 
 /**
  * The salon's roles and what each one can do, as one matrix: permissions down the side,
@@ -27,6 +21,8 @@ const brandSwitch = "data-[state=checked]:bg-[rgb(var(--reg-brand))]";
  * refuses everyone else). Owner is built in and fixed; a role somebody still has cannot
  * be deleted.
  */
+const brandSwitch = "data-[state=checked]:bg-[rgb(var(--reg-brand))]";
+
 const RolesPage = () => {
   const businessId = getCurrentBusinessId();
   const [roles, setRoles] = useState<BusinessRole[]>([]);
@@ -178,57 +174,97 @@ const RolesPage = () => {
       />
     );
 
-  return (
-    <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={t("roles.roles")}
-          subtitle={t("roles.whatEachPersonOnYour")}
-          actions={
-            <Button className={primaryBtn} onClick={openNew}>
-              <Plus size={16} />{" "}{t("roles.newRole")}
-            </Button>
-          }
-        />
+  const tg = (on: boolean, onClick: () => void, label: string) => (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} className={on ? "tg" : "tg off"} style={{ border: 0, padding: 0 }} onClick={onClick} />
+  );
 
-        <div className={pageBody}>
-          {loading ? (
-            <div className="h-72 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
-          ) : (
-            <>
-              {/* Role summary cards */}
-              <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {roles.map((r) => (
-                  <li key={r.id} data-testid={`role-${r.name}`} className="flex items-start gap-3 rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                    <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", r.isOwner ? "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]")}>
-                      {r.isOwner ? <Lock size={18} /> : <ShieldCheck size={18} />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex flex-wrap items-center gap-2">
-                        <span className="text-[15px] font-bold">{roleName(r)}</span>
-                        {r.isDefault && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900 ring-1 ring-inset ring-amber-200">
-                            <Star size={10} />{" "}{t("roles.default")}
-                          </span>
-                        )}
-                      </p>
-                      <p className="mt-0.5 line-clamp-2 text-sm text-[rgb(var(--reg-muted))]">
-                        {r.isOwner ? t("roles.everythingIncludingRolesBillingAnd") : roleDescription(r) || (r.permissions.length ? t("roles.ofPermissions", { count: r.permissions.length, count2: catalog.length }) : t("roles.ownCalendarOnly"))}
-                      </p>
-                      <p className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-[rgb(var(--reg-ink)/0.7)]">
-                        <Users size={12} /> {t("roles.memberCount", { count: r.memberCount })}
-                      </p>
+  const drawer = draft ? (
+    <Drawer
+      title={draft.id ? t("roles.edit", { value: draft.name || t("roles.role") }) : t("roles.newRole")}
+      sub={t("roles.everyoneOnTheTeamSees")}
+      onClose={() => setDraft(null)}
+      closeIcon={<X className="ic" />}
+      footer={
+        <>
+          <Btn kind="ol" onClick={() => setDraft(null)}>{t("common.cancel")}</Btn>
+          <Btn kind="v" onClick={save} disabled={saving}>
+            {saving ? t("common.saving") : draft.id ? t("roles.saveRole") : t("roles.createRole")}
+          </Btn>
+        </>
+      }
+    >
+      <div className="g1">
+        <Field label={t("common.name")} required>
+          <input id="role-name" value={draft.name} maxLength={60} placeholder={t("roles.eGReceptionist")} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+        </Field>
+        <Field label={t("common.descriptionOptional")} kind="ta">
+          <textarea id="role-description" rows={2} maxLength={255} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+        </Field>
+        <Toggle title={t("roles.defaultForNewTeamMembers")} help={t("roles.invitedPeopleStartWithThis")} checked={draft.isDefault} onChange={(v) => setDraft({ ...draft, isDefault: v })} />
+        <Note kind="in">{t("roles.everyoneSeesTheirOwnCalendar")}</Note>
+        <div className="mx">
+          {groups.map(([group, items]) => {
+            const allOn = items.every((p) => draft.permissions.has(p.key));
+            return (
+              <div key={group} style={{ display: "contents" }}>
+                <div className="gh">
+                  {permGroup(group)}{" "}
+                  <span className="cp" role="button" tabIndex={0} onClick={() => toggleGroup(items, !allOn)}>
+                    {allOn ? t("roles.clearAll") : t("roles.selectAll")}
+                  </span>
+                </div>
+                {items.map((p) => (
+                  <div key={p.key} className="pr">
+                    {tg(draft.permissions.has(p.key), () => toggleDraft(p.key), permLabel(p))}
+                    <div className="tx">
+                      <b>{permLabel(p)}</b>
+                      <span>{permDescription(p)}</span>
                     </div>
-                    {roleMenu(r)}
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Drawer>
+  ) : null;
 
-              <p className="text-sm text-[rgb(var(--reg-muted))]">
-                {t("roles.everyoneSeesTheirOwnCalendar")}
-              </p>
-
-              {/* Desktop: the matrix */}
+  return (
+    <BzPage overlay={drawer}>
+      <PageHead
+        title={t("roles.roles")}
+        sub={t("roles.whatEachPersonOnYour")}
+        right={<Btn kind="v" icon={<Plus className="ic" />} onClick={openNew}>{t("roles.newRole")}</Btn>}
+      />
+      {loading ? (
+        <Skeleton />
+      ) : (
+        <div className="tbx">
+          {roles.map((r) => (
+            <div key={r.id} className="lr" data-testid={`role-${r.name}`}>
+              <span className="mn" style={{ background: "var(--bz-vsoft)", color: "var(--bz-vtext)" }}>
+                {r.isOwner ? <Lock className="ic" /> : <ShieldCheck className="ic" />}
+              </span>
+              <div className="tx">
+                <b>{roleName(r)}</b>
+                <span>
+                  {r.isOwner ? t("roles.everythingIncludingRolesBillingAnd") : roleDescription(r) || (r.permissions.length ? t("roles.ofPermissions", { count: r.permissions.length, count2: catalog.length }) : t("roles.ownCalendarOnly"))}
+                </span>
+              </div>
+              {r.isDefault && <Tag kind="v">{t("roles.default")}</Tag>}
+              {!r.isOwner && <Tag>{t("roles.ofPermissions", { count: r.permissions.length, count2: catalog.length })}</Tag>}
+              <Tag>{t("roles.memberCount", { count: r.memberCount })}</Tag>
+              <span className="acts">{roleMenu(r)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {!loading && (
+        <Card style={{ marginTop: 16 }}>
+          <div className="space-y-3">
+            <p className="text-sm text-[rgb(var(--reg-muted))]">{t("roles.everyoneSeesTheirOwnCalendar")}</p>
+            {/* Desktop: the matrix */}
               <div className="hidden overflow-x-auto rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:block">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
@@ -299,68 +335,10 @@ const RolesPage = () => {
                     </section>
                   ))}
               </div>
-            </>
-          )}
-        </div>
-
-        <FormSheet
-          open={!!draft}
-          onOpenChange={(o) => !o && setDraft(null)}
-          title={draft?.id ? t("roles.edit", { value: draft.name || t("roles.role") }) : t("roles.newRole")}
-          description={t("roles.everyoneOnTheTeamSees")}
-          footer={
-            <>
-              <Button variant="outline" className={sheetSecondary} onClick={() => setDraft(null)}>{t("common.cancel")}</Button>
-              <Button className={sheetPrimary} onClick={save} disabled={saving}>
-                {saving ? t("common.saving") : draft?.id ? t("roles.saveRole") : t("roles.createRole")}
-              </Button>
-            </>
-          }
-        >
-          {draft && (
-            <>
-              <Field label={t("common.name")} htmlFor="role-name">
-                <input id="role-name" className={fieldCls} value={draft.name} maxLength={60} placeholder={t("roles.eGReceptionist")} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-              </Field>
-              <Field label={t("common.descriptionOptional")} htmlFor="role-description">
-                <Textarea id="role-description" rows={2} maxLength={255} className="rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base" value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
-              </Field>
-              <label htmlFor="role-default" className="flex items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                <span>
-                  <span className="block text-sm font-semibold">{t("roles.defaultForNewTeamMembers")}</span>
-                  <span className="block text-xs text-[rgb(var(--reg-muted))]">{t("roles.invitedPeopleStartWithThis")}</span>
-                </span>
-                <Switch id="role-default" checked={draft.isDefault} onCheckedChange={(v) => setDraft({ ...draft, isDefault: v })} className={brandSwitch} />
-              </label>
-              {groups.map(([group, items]) => {
-                const allOn = items.every((p) => draft.permissions.has(p.key));
-                return (
-                  <section key={group} className="overflow-hidden rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                    <div className="flex items-center justify-between bg-[rgb(var(--reg-canvas)/0.6)] px-4 py-2.5">
-                      <h3 className="text-sm font-extrabold">{permGroup(group)}</h3>
-                      <button type="button" className="text-xs font-bold text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => toggleGroup(items, !allOn)}>
-                        {allOn ? t("roles.clearAll") : t("roles.selectAll")}
-                      </button>
-                    </div>
-                    <ul>
-                      {items.map((p) => (
-                        <li key={p.key} className="flex items-center gap-3 border-t border-[rgb(var(--reg-line)/0.5)] px-4 py-3">
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold">{permLabel(p)}</span>
-                            <span className="block text-xs text-[rgb(var(--reg-muted))]">{permDescription(p)}</span>
-                          </span>
-                          <Switch checked={draft.permissions.has(p.key)} onCheckedChange={() => toggleDraft(p.key)} aria-label={permLabel(p)} className={brandSwitch} />
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </>
-          )}
-        </FormSheet>
-      </BooqiScope>
-    </AppLayout>
+          </div>
+        </Card>
+      )}
+    </BzPage>
   );
 };
 
