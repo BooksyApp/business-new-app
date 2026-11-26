@@ -12,7 +12,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <AuthShell mobileHero={false} aside={<></>}>
+    <AuthShell>
       <p className="text-6xl font-extrabold tracking-[-0.04em] text-[rgb(var(--reg-brand))]">404</p>
       <h1 className={authTitle}>{t("notFound.oopsPageNotFound")}</h1>
       <p className={authSubtitle}>{location.pathname}</p>
