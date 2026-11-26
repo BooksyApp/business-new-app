@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNavigation } from "@/utils/navigationUtils";
-import { Package, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, FormSheet, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ActionMenu, ClientPreview, Field, RowAction, Segmented } from "@/components/page/kit";
-import { fieldCls, money } from "@/components/page/kitStyles";
-import { Button } from "@/components/ui/button";
+import { Btn, Drawer, EmptyState, Field, FormGrid, PageHead, SelectField, Skeleton } from "@/components/bz";
+import { BzPage } from "@/components/bz/p2-page";
+import { money } from "@/components/page/kitStyles";
 import { useAddons } from "@/hooks/useAddons";
 import { currencySymbol } from "@/lib/currency";
-import { cn } from "@/lib/utils";
 import type { Addon } from "@/services/addonService";
 import { t } from "@/i18n";
 
@@ -87,113 +83,112 @@ export default function AddonsPage({ startNew = false }: { startNew?: boolean } 
 
   const shown = addons.filter((a) => `${a.name} ${a.description ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
 
+  const priceHint = form.priceType === "FROM" ? t("addons.variesByClient") : undefined;
+  const footer = (
+    <>
+      {sheet?.mode === "new" ? (
+        <Btn kind="soft" disabled={!valid || busy} onClick={() => void save(true)}>{t("common.saveAddNext")}</Btn>
+      ) : (
+        <Btn kind="ol" onClick={closeSheet}>{t("common.cancel")}</Btn>
+      )}
+      <Btn kind="v" disabled={!valid || busy} onClick={() => void save()}>
+        {busy ? t("common.saving") : sheet?.mode === "edit" ? t("common.save") : t("addons.createAddOn")}
+      </Btn>
+    </>
+  );
+
   return (
-    <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={t("addons.addOns")}
-          subtitle={t("addons.extrasYouAddOnTop")}
-          actions={
-            <Button className={primaryBtn} onClick={() => open()}>
-              <Plus size={16} />{" "}{t("addons.newAddOn")}
-            </Button>
-          }
-        />
-
-        <div className={pageBody}>
-          {loading ? (
-            <div className="h-48 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
-          ) : addons.length === 0 ? (
-            <EmptyState
-              icon={Package}
-              title={t("addons.noAddOnsYet")}
-              body={t("addons.aMaskAfterTheWash")}
-              action={<Button className={primaryBtn} onClick={() => open()}><Plus size={16} />{" "}{t("addons.newAddOn")}</Button>}
-            />
-          ) : (
-            <>
-              <div className="relative max-w-md">
-                <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-                <input aria-label={t("addons.searchAddOns")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("addons.searchAddOns")} value={query} onChange={(e) => setQuery(e.target.value)} />
-              </div>
-              {shown.length === 0 ? (
-                <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">{t("common.nothingMatches", { query })}</p>
-              ) : (
-                <ul className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                  {shown.map((a, i) => (
-                    <li key={a.id} className={cn("flex items-center gap-3 px-4 py-3.5 md:px-5", i > 0 && "border-t border-[rgb(var(--reg-line)/0.6)]")}>
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]">
-                        <Package size={18} strokeWidth={1.9} />
-                      </span>
-                      <button type="button" onClick={() => open(a)} className="min-w-0 flex-1 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand)/0.5)]">
-                        <span className="block truncate text-[15px] font-semibold">{a.name}</span>
-                        <span className="block truncate text-sm text-[rgb(var(--reg-muted))]">{a.description || t("addons.noDescription")}</span>
-                      </button>
-                      <span className="shrink-0 text-[15px] font-bold tabular-nums">+{priceOf(a)}</span>
-                      <span className="hidden sm:block">
-                        <RowAction tone="ink" icon={Pencil} onClick={() => open(a)}>{t("common.edit")}</RowAction>
-                      </span>
-                      <ActionMenu
-                        label={t("common.moreFor", { name: a.name })}
-                        actions={[
-                          { label: t("common.edit"), icon: Pencil, onSelect: () => open(a) },
-                          { label: t("common.delete"), icon: Trash2, danger: true, onSelect: () => void remove(a) },
-                        ]}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </div>
-
-        <FormSheet
-          open={!!sheet}
-          onOpenChange={(o) => !o && closeSheet()}
-          title={sheet?.mode === "edit" ? t("addons.editAddOn") : t("addons.newAddOn")}
-          description={t("addons.addedToAServiceWhen")}
-          footer={
-            <>
-              {sheet?.mode === "new" ? (
-                <Button variant="outline" className={sheetSecondary} disabled={!valid || busy} onClick={() => void save(true)}>{t("common.saveAddNext")}</Button>
-              ) : (
-                <Button variant="outline" className={sheetSecondary} onClick={closeSheet}>{t("common.cancel")}</Button>
-              )}
-              <Button className={sheetPrimary} disabled={!valid || busy} onClick={() => void save()}>
-                {busy ? t("common.saving") : sheet?.mode === "edit" ? t("common.save") : t("addons.createAddOn")}
-              </Button>
-            </>
-          }
-        >
-          <ClientPreview who={t("addons.preview")} where={t("addons.onTheBillAtThe")}>
-            <div className="rounded-2xl bg-white p-4 text-sm">
-              <div className="flex justify-between"><span className="font-semibold">{t("addons.womenSCutBlowDry")}</span><span className="tabular-nums">{money(45, currencySymbol())}</span></div>
-              <div className="mt-1.5 flex justify-between text-[rgb(var(--reg-ink)/0.8)]">
-                <span className="truncate pl-3">+ {form.name.trim() || t("addons.yourAddOn")}</span>
-                <span className="shrink-0 tabular-nums">{priceOf({ price: form.price, priceType: form.priceType })}</span>
+    <BzPage
+      overlay={
+        sheet ? (
+          <Drawer
+            narrow
+            title={sheet.mode === "edit" ? t("addons.editAddOn") : t("addons.newAddOn")}
+            sub={t("addons.addedToAServiceWhen")}
+            onClose={closeSheet}
+            closeIcon={<X className="ic" />}
+            footer={footer}
+          >
+            <div className="g1">
+              <Field label={t("common.name")} required>
+                <input id="ad-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("addons.deepConditioningMask")} />
+              </Field>
+              <Field label={t("common.descriptionOptional")}>
+                <input id="ad-desc" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("addons.minutesAfterTheWash")} />
+              </Field>
+              <FormGrid cols={2}>
+                <SelectField label={t("common.priceType")} hint={priceHint}>
+                  <select value={form.priceType} onChange={(e) => setForm({ ...form, priceType: e.target.value as PriceType })}>
+                    <option value="FIXED">{t("common.fixed")}</option>
+                    <option value="FROM">{t("common.from2")}</option>
+                  </select>
+                </SelectField>
+                <Field label={t("common.price")} suffix={currencySymbol()}>
+                  <input id="ad-price" type="number" inputMode="decimal" min={0} step="0.01" aria-label={t("common.amount", { value: currencySymbol() })} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="12" />
+                </Field>
+              </FormGrid>
+              <div className="prv">
+                <small>{t("addons.preview")} · {t("addons.onTheBillAtThe")}</small>
+                <div className="l">
+                  <b>{form.name.trim() || t("addons.yourAddOn")}</b>
+                  <b>{priceOf({ price: form.price, priceType: form.priceType })}</b>
+                </div>
               </div>
             </div>
-          </ClientPreview>
-          <Field label={t("common.name")} htmlFor="ad-name">
-            <input id="ad-name" className={fieldCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t("addons.deepConditioningMask")} />
-          </Field>
-          <Field label={t("common.descriptionOptional")} htmlFor="ad-desc">
-            <input id="ad-desc" className={fieldCls} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder={t("addons.minutesAfterTheWash")} />
-          </Field>
-          <Field label={t("common.price")}>
-            <Segmented<PriceType>
-              label={t("common.priceType")}
-              value={form.priceType}
-              onChange={(priceType) => setForm({ ...form, priceType })}
-              options={[{ value: "FIXED", label: t("common.fixed") }, { value: "FROM", label: t("common.from2"), hint: t("addons.variesByClient") }]}
+          </Drawer>
+        ) : undefined
+      }
+    >
+      <PageHead
+        title={t("addons.addOns")}
+        sub={t("addons.extrasYouAddOnTop")}
+        right={<Btn kind="v" icon={<Plus className="ic" />} onClick={() => open()}>{t("addons.newAddOn")}</Btn>}
+      />
+      {loading ? (
+        <Skeleton />
+      ) : addons.length === 0 ? (
+        <EmptyState
+          icon={<Package className="ic" />}
+          title={t("addons.noAddOnsYet")}
+          text={t("addons.aMaskAfterTheWash")}
+          action={<Btn kind="v" icon={<Plus className="ic" />} onClick={() => open()}>{t("addons.newAddOn")}</Btn>}
+        />
+      ) : (
+        <>
+          <div className="srch" style={{ height: 52, marginBottom: 14, maxWidth: 520 }}>
+            <Search className="ic" aria-hidden />
+            <input
+              aria-label={t("addons.searchAddOns")}
+              placeholder={t("addons.searchAddOns")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ border: 0, background: "transparent", outline: 0, font: "inherit", flex: 1, color: "inherit" }}
             />
-          </Field>
-          <Field label={t("common.amount", { value: currencySymbol() })} htmlFor="ad-price">
-            <input id="ad-price" type="number" inputMode="decimal" min={0} step="0.01" className={fieldCls} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="12" />
-          </Field>
-        </FormSheet>
-      </BooqiScope>
-    </AppLayout>
+          </div>
+          {shown.length === 0 ? (
+            <EmptyState icon={<Search className="ic" />} title={t("common.nothingMatches", { query })} />
+          ) : (
+            <div className="tbx">
+              {shown.map((a) => (
+                <div key={a.id} className="lr">
+                  <span className="mn" style={{ background: "var(--bz-vsoft)", color: "var(--bz-vtext)" }}>
+                    <Package className="ic" />
+                  </span>
+                  <div className="tx" onClick={() => open(a)} role="button" tabIndex={0}>
+                    <b>{a.name}</b>
+                    <span>{a.description || t("addons.noDescription")}</span>
+                  </div>
+                  <b>+{priceOf(a)}</b>
+                  <span className="acts">
+                    <Btn kind="ol" icon={<Pencil className="ic" />} onClick={() => open(a)} aria-label={t("common.moreFor", { name: a.name })}>{t("common.edit")}</Btn>
+                    <Btn kind="dg" icon={<Trash2 className="ic" />} onClick={() => void remove(a)}>{t("common.delete")}</Btn>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </BzPage>
   );
 }
