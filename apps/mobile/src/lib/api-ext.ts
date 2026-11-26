@@ -29,11 +29,11 @@ export interface Review {
   id: Id; rating: number; comment: string | null; createdAt: string; authorName: string | null; reply: string | null; repliedAt: string | null;
   serviceName?: string | null; staffName?: string | null;
 }
-export interface SaleItemBody { serviceId?: Id; serviceName: string; serviceType: string; quantity: number; unitPrice: number }
+export interface SaleItemBody { serviceId?: Id; productId?: Id; serviceName: string; serviceType: string; quantity: number; unitPrice: number }
 export interface SaleBody {
   businessId: Id; staffId?: Id; clientId?: Id; clientName?: string; items: (SaleItemBody & { coveredBy?: 'MEMBERSHIP' | 'PACKAGE'; appointmentId?: string })[]; discountAmount?: number; tipAmount?: number;
   paymentMethod: 'CASH' | 'CARD_TERMINAL' | 'SPLIT' | 'GIFT_CARD' | 'MEMBERSHIP' | 'PACKAGE'; paymentAmount: number; giftCardCode?: string; notes?: string;
-  splitCashAmount?: number; splitCardAmount?: number; appointmentId?: string; promoCode?: string; idempotencyKey?: string;
+  splitCashAmount?: number; splitCardAmount?: number; payments?: { method: 'CASH' | 'CARD_TERMINAL' | 'GIFT_CARD'; amount: number; giftCardCode?: string }[]; appointmentId?: string; promoCode?: string; idempotencyKey?: string;
 }
 export interface SaleRefund { saleId: Id; refundable?: number; remaining?: number; refunds?: unknown[] }
 export interface Dashboard {
@@ -63,6 +63,8 @@ const q = (o: Record<string, string>) => new URLSearchParams(o).toString();
 
 export const apiX = {
   // client tags and custom fields (ClientTagController)
+  /** GET /api/clients/{id}/export: everything held about the client (GDPR data export). */
+  exportClient: (id: Id) => request<unknown>(`/clients/${id}/export`),
   clientTags: (b: Id) => request<ClientTag[]>(`${BZ(b)}/client-tags`),
   createClientTag: (b: Id, name: string) => request<ClientTag>(`${BZ(b)}/client-tags`, { method: 'POST', body: { name } }),
   clientCrm: (b: Id, c: Id) => request<{ tags: ClientTag[]; blocked: boolean; blockReason: string | null }>(`${BZ(b)}/clients/${c}/crm`),
@@ -118,8 +120,8 @@ export const apiX = {
   // settings
   hours: (b: Id) => request<HoursRow[]>(`/business-hours/business/${b}`),
   saveHours: (b: Id, rows: { dayOfWeek: string; enabled: boolean; startTime: string; endTime: string }[]) => request<HoursRow[]>(`/business-hours/business/${b}`, { method: 'PUT', body: rows }),
-  hoursExceptions: (b: Id) => request<{ id: Id; startDate: string; endDate: string; closed: boolean; notes: string | null }[]>(`/business-hours-exceptions/business/${b}`),
-  addHoursException: (b: Id, startDate: string, endDate: string, notes: string) => request<unknown>('/business-hours-exceptions', { method: 'POST', body: { businessId: b, startDate, endDate, closed: true, openTime: null, closeTime: null, notes: notes || null } }),
+  hoursExceptions: (b: Id) => request<{ id: Id; startDate: string; endDate: string; closed: boolean; openTime?: string | null; closeTime?: string | null; notes: string | null }[]>(`/business-hours-exceptions/business/${b}`),
+  addHoursException: (b: Id, startDate: string, endDate: string, notes: string, hours?: { open: string; close: string }) => request<unknown>('/business-hours-exceptions', { method: 'POST', body: { businessId: b, startDate, endDate, closed: !hours, openTime: hours?.open ?? null, closeTime: hours?.close ?? null, notes: notes || null } }),
   removeHoursException: (b: Id, id: Id) => request<void>(`/business-hours-exceptions/${id}?businessId=${b}`, { method: 'DELETE' }),
   hubEvents: (b: Id) => request<{ unread: number; events: { id: string; type: string; at: string; who?: string | null; what?: string | null; date?: string | null; time?: string | null; rating?: number | null; unread: boolean }[] }>(`/businesses/${b}/hub-events`),
   readHubEvents: (b: Id) => request<{ unread: number }>(`/businesses/${b}/hub-events/read`, { method: 'POST', body: {} }),

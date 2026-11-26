@@ -294,3 +294,34 @@ export function FeedSheet({ staffId, name, open, onClose }: { staffId: string; n
     </BottomSheet>
   );
 }
+
+/** Salon photo gallery shown on the public page: add from the library, remove. */
+export function GallerySheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTheme();
+  const { salon } = useApp();
+  const sid = salon?.id ?? '';
+  const q = useLoad(() => (open ? apiH.salonPhotos(sid) : Promise.resolve([])), [sid, open]);
+  const [busy, setBusy] = useState(false);
+  async function add() {
+    setBusy(true);
+    try { const up = await pickAndUpload('BUSINESS_PHOTO'); if (up) { await apiH.addSalonPhoto(sid, up.id); await q.reload(); } }
+    catch (e) { toast((e as Error).message === 'permission' ? tr('ad.permission') : (e as Error).message, 'error'); } finally { setBusy(false); }
+  }
+  return (
+    <BottomSheet open={open} onClose={onClose}>
+      <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tr('hx.galTitle')}</Text>
+      <ScrollView style={{ maxHeight: 420 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {(q.data ?? []).map((p) => (
+            <View key={String(p.id)} style={{ width: '31%', aspectRatio: 1 }}>
+              {photoUrl(p.url) ? <Image source={{ uri: photoUrl(p.url)! }} style={{ width: '100%', height: '100%', borderRadius: 12, backgroundColor: t.fill }} /> : <View style={{ flex: 1, borderRadius: 12, backgroundColor: t.fill }} />}
+              <Pressable onPress={() => void apiH.deleteSalonPhoto(sid, p.id).then(() => q.reload()).catch(err)} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} style={{ position: 'absolute', top: 4, right: 4, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(20,14,34,.6)', alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={16} color="#fff" /></Pressable>
+            </View>
+          ))}
+        </View>
+        {(q.data ?? []).length === 0 && !q.loading ? <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, paddingVertical: 12 }}>{tr('hx.galEmpty')}</Text> : null}
+      </ScrollView>
+      <Btn label={tr('hx.portAdd')} icon="img" loading={busy} style={{ marginTop: 12, marginBottom: 14 }} onPress={() => void add()} />
+    </BottomSheet>
+  );
+}

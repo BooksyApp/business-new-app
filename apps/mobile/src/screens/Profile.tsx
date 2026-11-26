@@ -10,6 +10,7 @@ import { Btn, ErrorState, Field, Header, HeroCard, Screen, Section, Skeleton, St
 import { t as tr } from '@/i18n';
 import { apiB, type BizProfile } from '@/lib/api-biz';
 import { apiO } from '@/lib/api-onboard';
+import { GallerySheet } from '@/screens/HubExtras';
 import { getLocale } from '@/i18n';
 import { Choice, MultiChoice, SectionTitle } from '@/components/form';
 import { useApp } from '@/lib/app';
@@ -28,6 +29,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [online, setOnline] = useState(true);
   const [logo, setLogo] = useState<string | null>(null);
   const [cover, setCover] = useState<string | null>(null);
+  const [gal, setGal] = useState(false);
   const [pay, setPay] = useState<string[]>(['CASH', 'CARD']);
   const [assign, setAssign] = useState('FAIR_EARNINGS');
   const [parallel, setParallel] = useState(false);
@@ -35,7 +37,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const b = q.data; if (!b) return;
-    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', category: b.category ?? '', building: (b as { buildingNumber?: string }).buildingNumber ?? '', apartment: (b as { apartmentNumber?: string }).apartmentNumber ?? '', hsNote: (b as { healthSafetyNote?: string }).healthSafetyNote ?? '', tax: b.taxRate != null ? String(b.taxRate) : '', lateFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : '', footer: b.receiptFooter ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
+    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', category: b.category ?? '', building: (b as { buildingNumber?: string }).buildingNumber ?? '', zip: (b as { zipCode?: string }).zipCode ?? '', state: (b as { state?: string }).state ?? '', country: b.country ?? '', apartment: (b as { apartmentNumber?: string }).apartmentNumber ?? '', hsNote: (b as { healthSafetyNote?: string }).healthSafetyNote ?? '', tax: b.taxRate != null ? String(b.taxRate) : '', lateFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : '', footer: b.receiptFooter ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
     setOnline(b.onlineBookingEnabled ?? true); setLogo(b.logoUrl ?? null); setCover(b.coverImageUrl ?? null);
     setAssign((b as { staffAssignmentMode?: string }).staffAssignmentMode ?? 'FAIR_EARNINGS'); setParallel(!!(b as { allowParallelServices?: boolean }).allowParallelServices);
     setPay((b.acceptedPaymentMethods ?? 'CASH,CARD').split(',').map((x) => x.trim()).filter(Boolean));
@@ -44,7 +46,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const int = (k: string) => { const n = Math.round(num(f[k] ?? '')); return Number.isFinite(n) && n >= 0 ? n : undefined; };
   async function save() {
     if (!(f.name ?? '').trim()) { toast(tr('tm.needName'), 'error'); return; }
-    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: f.building || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
+    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: f.building || undefined, zipCode: f.zip || undefined, state: f.state || undefined, country: f.country || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
     setBusy(true);
     try { await apiB.updateBusiness(sid, body); if ((f.review ?? '') !== (q.data?.googleReviewUrl ?? '')) await apiB.setReviewLink(sid, f.review ? f.review : null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); onBack(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
@@ -64,6 +66,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 12 }}>
           <HeroCard photo={logo ?? null} title={f.name || salon?.name || ''} sub={[f.city, f.address].filter(Boolean).join(' · ')}>
             <Btn small label={tr('ux.changePhoto')} variant="secondary" icon="img" onPress={() => void pickLogo()} />
+            <Btn small label={tr('hx.galTitle')} variant="secondary" icon="img" onPress={() => setGal(true)} />
             <Btn small label={cover ? tr('pa.changeCover') : tr('pa.addCover')} variant="secondary" icon="img" onPress={() => void pickCover()} />
           </HeroCard>
           <Section title={tr('ux.secBasics')}>
@@ -81,6 +84,11 @@ export function Profile({ onBack }: { onBack: () => void }) {
           <Section title={tr('ux.secAddress')}>
             <Field label={tr('set.address')} value={f.address ?? ''} onChangeText={set('address')} />
             <Field label="City" value={f.city ?? ''} onChangeText={set('city')} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}><Field label={tr('pa.zip')} value={f.zip ?? ''} onChangeText={set('zip')} /></View>
+              <View style={{ flex: 1 }}><Field label={tr('pa.state')} value={f.state ?? ''} onChangeText={set('state')} /></View>
+            </View>
+            <Field label={tr('pa.country')} value={f.country ?? ''} onChangeText={set('country')} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}><Field label={tr('pa.building')} value={f.building ?? ''} onChangeText={set('building')} /></View>
               <View style={{ flex: 1 }}><Field label={tr('pa.apartment')} value={f.apartment ?? ''} onChangeText={set('apartment')} /></View>
@@ -121,6 +129,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
           </Section>
         </ScrollView>
       )}
+      <GallerySheet open={gal} onClose={() => setGal(false)} />
       {q.data ? <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save()} /> : null}
     </Screen>
   );

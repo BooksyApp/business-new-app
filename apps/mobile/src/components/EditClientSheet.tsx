@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { toast } from '@/lib/toast';
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Choice, MultiChoice, SectionTitle, ToggleRow } from '@/components/form';
@@ -75,6 +75,7 @@ export function EditClientSheet({ client, open, onClose, onSaved }: { client: Cl
         if (f.type === 'SELECT') return <View key={k}><Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 4 }}>{f.name}</Text><Choice value={vals[k] ?? ''} onChange={(v) => setVals((m) => ({ ...m, [k]: v }))} options={[{ value: '', label: '-' }, ...(f.options ?? []).map((o) => ({ value: o, label: o }))]} /></View>;
         return <Field key={k} label={f.name} value={vals[k] ?? ''} onChangeText={(v) => setVals((m) => ({ ...m, [k]: v }))} keyboardType={f.type === 'NUMBER' ? 'decimal-pad' : f.type === 'DATE' ? 'numbers-and-punctuation' : 'default'} placeholder={f.type === 'DATE' ? 'YYYY-MM-DD' : undefined} />;
       })}
+      <Btn label={tr('hx.export')} variant="secondary" icon="share" onPress={() => void apiX.exportClient(client.id).then((d) => Share.share({ message: JSON.stringify(d, null, 2) })).catch((e: Error) => toast(e.message, 'error'))} style={{ marginTop: 8 }} />
       </ScrollView>
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, paddingBottom: 16 }}>
         <Btn label={tr('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={onClose} />

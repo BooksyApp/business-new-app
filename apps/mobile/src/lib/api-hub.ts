@@ -12,7 +12,12 @@ export interface CardHolder { id: Id; client_id: Id; client_name: string; email:
 export interface PlanMonth { month: string; plan: number; actual: number }
 export type NotifTexts = Record<'CONFIRMATION' | 'REMINDER' | 'CANCELLATION', Record<'az' | 'en' | 'ru', string>>;
 
+export interface SalonPhoto { id: Id; url: string }
 export const apiH = {
+  salonPhotos: (b: Id) => request<SalonPhoto[]>(`${B(b)}/photos`),
+  addSalonPhoto: (b: Id, upload: string) => request<SalonPhoto>(`${B(b)}/photos`, { method: 'POST', body: { upload } }),
+  deleteSalonPhoto: (b: Id, id: Id) => request<void>(`${B(b)}/photos/${id}`, { method: 'DELETE' }),
+  exportClient: (id: Id) => request<unknown>(`/clients/${id}/export`),
   resourceTypes: (b: Id) => request<ResourceType[]>(`/resource-types/business/${b}`),
   addResourceType: (b: Id, name: string, quantity: number) => request<ResourceType>(`/resource-types/business/${b}`, { method: 'POST', body: { businessId: b, name, quantity } }),
   deleteResourceType: (b: Id, id: Id) => request<void>(`/resource-types/business/${b}/${id}`, { method: 'DELETE' }),

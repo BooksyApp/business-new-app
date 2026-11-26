@@ -1,6 +1,7 @@
 /** Strings for fields and actions added in the hub-parity pass (PARITY-HUB.md). AZ is the native source. */
 export const parEn = {
   hx: {
+    galTitle: 'Salon photos', galEmpty: 'No photos yet. Photos appear on your public page.', export: 'Export client data',
     resTitle: 'Resources',
     resSub: 'Rooms, chairs and equipment a service needs',
     resEmpty: 'No resources yet',
@@ -90,6 +91,7 @@ export const parEn = {
     exSpecial: 'Special hours',
   },
   pa: {
+    zip: 'Postal code', state: 'Region', country: 'Country',
     svcType: 'Service type', typeStandard: 'Single visit', typePackage: 'Package', typeCourse: 'Course', svcColor: 'Calendar colour',
     questions: 'Questions at booking', questionsHint: 'Up to 10. The client answers while booking; you see the answers on the booking.', question: 'Question', required: 'Required', addQuestion: 'Add a question',
     procDuring: 'Client waits during the service (min)', procAfter: 'Extra waiting after (min)', travelFee: 'Travel fee', area: 'Service area', virtual: 'Online (video) appointment',
@@ -101,6 +103,7 @@ export const parEn = {
 };
 export const parAz = {
   hx: {
+    galTitle: 'Salon şəkilləri', galEmpty: 'Hələ şəkil yoxdur. Şəkillər açıq səhifəndə görünür.', export: 'Müştəri məlumatını ixrac et',
     resTitle: 'Resurslar',
     resSub: 'Xidmətin tələb etdiyi otaq, kreslo və avadanlıq',
     resEmpty: 'Hələ resurs yoxdur',
@@ -190,6 +193,7 @@ export const parAz = {
     exSpecial: 'Xüsusi saatlar',
   },
   pa: {
+    zip: 'Poçt indeksi', state: 'Region', country: 'Ölkə',
     svcType: 'Xidmət növü', typeStandard: 'Tək görüş', typePackage: 'Paket', typeCourse: 'Kurs', svcColor: 'Təqvim rəngi',
     questions: 'Rezerv zamanı suallar', questionsHint: 'Ən çox 10. Müştəri rezerv edərkən cavab verir, cavabları rezervdə görürsən.', question: 'Sual', required: 'Məcburi', addQuestion: 'Sual əlavə et',
     procDuring: 'Müştəri xidmət zamanı gözləyir (dəq)', procAfter: 'Sonra əlavə gözləmə (dəq)', travelFee: 'Yol haqqı', area: 'Xidmət zonası', virtual: 'Onlayn (video) görüş',
@@ -201,6 +205,7 @@ export const parAz = {
 };
 export const parRu = {
   hx: {
+    galTitle: 'Фото салона', galEmpty: 'Фото пока нет. Они появятся на публичной странице.', export: 'Экспорт данных клиента',
     resTitle: 'Ресурсы',
     resSub: 'Комнаты, кресла и оборудование для услуг',
     resEmpty: 'Ресурсов пока нет',
@@ -290,6 +295,7 @@ export const parRu = {
     exSpecial: 'Особые часы',
   },
   pa: {
+    zip: 'Индекс', state: 'Регион', country: 'Страна',
     svcType: 'Тип услуги', typeStandard: 'Разовый визит', typePackage: 'Пакет', typeCourse: 'Курс', svcColor: 'Цвет в календаре',
     questions: 'Вопросы при записи', questionsHint: 'До 10. Клиент отвечает при записи, ответы видны в записи.', question: 'Вопрос', required: 'Обязательный', addQuestion: 'Добавить вопрос',
     procDuring: 'Клиент ждёт во время услуги (мин)', procAfter: 'Дополнительное ожидание после (мин)', travelFee: 'Плата за выезд', area: 'Зона обслуживания', virtual: 'Онлайн (видео) приём',

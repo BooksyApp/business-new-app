@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, ScrollView, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Choice, num } from '@/components/form';
+import { Choice, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -18,7 +18,8 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-type Line = { key: number; serviceId?: string | number; name: string; price: number; qty: number };
+type Line = { key: number; serviceId?: string | number; productId?: string | number; name: string; price: number; qty: number };
+type Tender = { key: number; method: 'CASH' | 'CARD_TERMINAL' | 'GIFT_CARD'; amount: string; code: string };
 const METHODS = ['CASH', 'CARD_TERMINAL', 'SPLIT', 'GIFT_CARD', 'MEMBERSHIP', 'PACKAGE'] as const;
 
 /** Till: pick services (or a custom item), staff, discount, tip, payment method (cash, card, gift card ...) and record the sale. */
@@ -29,6 +30,9 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
   const cur = salon?.currency;
   const svc = useLoad(() => api.services(sid), [sid]);
   const staff = useLoad(() => api.staff(sid), [sid]);
+  const prods = useLoad(() => apiB.products(sid).catch(() => []), [sid]);
+  const [multi, setMulti] = useState(false);
+  const [tenders, setTenders] = useState<Tender[]>([{ key: 1, method: 'CASH', amount: '', code: '' }]);
   const quick = useLoad(() => apiB.quickSale(sid).catch(() => []), [sid]);
   const [lines, setLines] = useState<Line[]>([]);
   const [master, setMaster] = useState('');
@@ -62,15 +66,21 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
   async function submit() {
     if (!lines.length) { toast(tr('sl.needItem'), 'error'); return; }
     if (method === 'GIFT_CARD' && !gift.trim()) { toast(tr('sl.needGift'), 'error'); return; }
+    const paid = tenders.reduce((n, x) => n + (num(x.amount) || 0), 0);
+    if (multi) {
+      if (Math.abs(paid - total) > 0.009) { toast(tr('hx.tenderOver'), 'error'); return; }
+      if (tenders.some((x) => x.method === 'GIFT_CARD' && !x.code.trim() && (num(x.amount) || 0) > 0)) { toast(tr('sl.needGift'), 'error'); return; }
+    }
     const card = Math.min(total, Math.max(0, num(splitCard) || 0));
     if (method === 'SPLIT' && (card <= 0 || card >= total)) { toast(tr('ob.needSplit'), 'error'); return; }
     const cover = method === 'MEMBERSHIP' || method === 'PACKAGE' ? method : undefined;
     const body: SaleBody = {
       businessId: sid, staffId: master || undefined, clientId: appt?.clientId, clientName: clientName.trim() || undefined,
-      items: lines.map((l, i) => ({ serviceId: l.serviceId != null ? String(l.serviceId) : undefined, serviceName: l.name, serviceType: l.serviceId != null ? 'SERVICE' : 'OTHER', quantity: l.qty, unitPrice: l.price, coveredBy: cover, appointmentId: i === 0 ? appt?.id : undefined })),
+      items: lines.map((l, i) => ({ serviceId: l.serviceId != null ? String(l.serviceId) : undefined, productId: l.productId != null ? String(l.productId) : undefined, serviceName: l.name, serviceType: l.productId != null ? 'PRODUCT' : l.serviceId != null ? 'SERVICE' : 'OTHER', quantity: l.qty, unitPrice: l.price, coveredBy: cover, appointmentId: i === 0 ? appt?.id : undefined })),
       discountAmount: disc || undefined, tipAmount: tipN || undefined, paymentMethod: method, paymentAmount: total,
       giftCardCode: method === 'GIFT_CARD' ? gift.trim().toUpperCase() : undefined,
       splitCashAmount: method === 'SPLIT' ? Math.round((total - card) * 100) / 100 : undefined, splitCardAmount: method === 'SPLIT' ? card : undefined,
+      payments: multi ? tenders.filter((x) => (num(x.amount) || 0) > 0).map((x) => ({ method: x.method, amount: num(x.amount) || 0, ...(x.method === 'GIFT_CARD' ? { giftCardCode: x.code.trim().toUpperCase() } : {}) })) : undefined,
       appointmentId: appt?.id, idempotencyKey: `${sid}-${appt?.id ?? 'walkin'}-${total}-${Date.now()}`,
     };
     setBusy(true);
@@ -126,8 +136,27 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {[0, 5, 10, 15].map((p) => <KChip key={p} label={p ? `${p}%` : tr('v3.none')} on={pct === p && (p === 0 ? !tip : true)} onPress={() => setTipPct(p)} style={{ flex: 1, justifyContent: 'center' }} />)}
         </View>
+        {(prods.data ?? []).filter((p) => p.isActive !== false).length ? (<>
+          <T k="h2" style={{ marginTop: 22, marginBottom: 10 }}>{tr('hx.products')}</T>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
+            {(prods.data ?? []).filter((p) => p.isActive !== false).map((p) => <KChip key={`p${p.id}`} label={`${p.name} · ${money(p.price, cur)}`} onPress={() => add({ productId: p.id, name: p.name, price: p.price ?? 0, qty: 1 })} />)}
+          </ScrollView>
+        </>) : null}
         <T k="h2" style={{ marginTop: 22, marginBottom: 10 }}>{tr('sl.method')}</T>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <ToggleRow label={tr('hx.tenders')} value={multi} onChange={(v) => { setMulti(v); if (v) setTenders([{ key: 1, method: 'CASH', amount: String(total || ''), code: '' }]); }} />
+        {multi ? (<View style={{ gap: 6, marginBottom: 6 }}>
+          {tenders.map((x) => (
+            <KCard key={x.key} style={{ padding: 12, gap: 6 }}>
+              <Choice value={x.method} onChange={(m) => setTenders((a) => a.map((y) => (y.key === x.key ? { ...y, method: m } : y)))} options={[{ value: 'CASH' as const, label: tr('sales.m.CASH') }, { value: 'CARD_TERMINAL' as const, label: tr('sales.m.CARD_TERMINAL') }, { value: 'GIFT_CARD' as const, label: tr('sales.m.GIFT_CARD') }]} />
+              <Field label={`${tr('hx.tenderAmount')} (${cur ?? 'AZN'})`} value={x.amount} onChangeText={(v) => setTenders((a) => a.map((y) => (y.key === x.key ? { ...y, amount: v } : y)))} keyboardType="decimal-pad" />
+              {x.method === 'GIFT_CARD' ? <Field label={tr('sl.giftCode')} value={x.code} onChangeText={(v) => setTenders((a) => a.map((y) => (y.key === x.key ? { ...y, code: v } : y)))} autoCapitalize="characters" autoCorrect={false} /> : null}
+              {tenders.length > 1 ? <KButton kind="ghost" size="sm" icon="trash" label={tr('lk.delete')} onPress={() => setTenders((a) => a.filter((y) => y.key !== x.key))} /> : null}
+            </KCard>
+          ))}
+          <T k="xs" color={t.muted}>{tr('hx.tenderLeft', { n: money(Math.max(0, total - tenders.reduce((n, x) => n + (num(x.amount) || 0), 0)), cur) })}</T>
+          <KButton kind="fl" size="sm" icon="plus" label={tr('hx.tenderAdd')} onPress={() => setTenders((a) => [...a, { key: Date.now(), method: 'CARD_TERMINAL', amount: '', code: '' }])} />
+        </View>) : null}
+        {!multi ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {METHODS.map((m) => (
             <Pressable key={m} onPress={() => setMethod(m)} accessibilityRole="button" accessibilityState={{ selected: method === m }} noScale
               style={{ width: '31.5%', flexGrow: 1, height: 78, borderRadius: 18, backgroundColor: t.surface, borderWidth: method === m ? 2 : 1, borderColor: method === m ? t.ink : t.hair, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -135,9 +164,9 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
               <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12.5, color: t.ink }}>{tr(`sales.m.${m}` as 'sales.m.CASH')}</Text>
             </Pressable>
           ))}
-        </View>
-        {method === 'SPLIT' ? <View style={{ marginTop: 12 }}><Field label={`${tr('sales.m.CARD_TERMINAL')} (${cur ?? 'AZN'})`} value={splitCard} onChangeText={setSplitCard} keyboardType="decimal-pad" /><T k="xs" color={t.muted}>{`${tr('sales.m.CASH')}: ${money(Math.max(0, total - (num(splitCard) || 0)), cur)}`}</T></View> : null}
-        {method === 'GIFT_CARD' ? <View style={{ marginTop: 12 }}><Field label={tr('sl.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" autoCorrect={false} /></View> : null}
+        </View> : null}
+        {!multi && method === 'SPLIT' ? <View style={{ marginTop: 12 }}><Field label={`${tr('sales.m.CARD_TERMINAL')} (${cur ?? 'AZN'})`} value={splitCard} onChangeText={setSplitCard} keyboardType="decimal-pad" /><T k="xs" color={t.muted}>{`${tr('sales.m.CASH')}: ${money(Math.max(0, total - (num(splitCard) || 0)), cur)}`}</T></View> : null}
+        {!multi && method === 'GIFT_CARD' ? <View style={{ marginTop: 12 }}><Field label={tr('sl.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" autoCorrect={false} /></View> : null}
         <KButton kind="ghost" size="sm" icon={more ? 'chevu' : 'chevd'} label={tr('v3.more')} onPress={() => setMore((v) => !v)} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
         {more ? (
           <View style={{ marginTop: 4 }}>

@@ -45,6 +45,7 @@ export default function Register() {
   const [pw, setPw] = useState('');
   const [terms, setTerms] = useState(false);
   const [marketing, setMarketing] = useState(false);
+  const [ref, setRef] = useState('');
   // 2 salon
   const [bizName, setBizName] = useState('');
   const [cats, setCats] = useState<BizCategory[]>([]);
@@ -81,7 +82,7 @@ export default function Register() {
   async function submit(noService?: boolean) {
     setBusy(true); setError('');
     try {
-      const auth = await apiO.register({ firstName: first.trim(), lastName: last.trim(), email: email.trim(), password: pw, phone: phone.trim(), businessName: bizName.trim(), marketingOptIn: marketing });
+      const auth = await apiO.register({ firstName: first.trim(), lastName: last.trim(), email: email.trim(), password: pw, phone: phone.trim(), businessName: bizName.trim(), marketingOptIn: marketing, referralCode: ref.trim() || undefined });
       await saveSession(auth); // every call below is authenticated
       const bid = auth.businessId;
       if (bid == null) throw new Error(tr('ob.noBusiness'));
@@ -141,6 +142,7 @@ export default function Register() {
             <Field icon="phone" placeholder={`${tr('create.phone')} (${tr('ob.optional')})`} accessibilityLabel={tr('create.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
             <Field ref={pwRef} icon="lock" placeholder={tr('v2.password')} accessibilityLabel={tr('v2.password')} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete="new-password" textContentType="newPassword" />
             <T k="xs" color={pw.length > 0 && pw.length < 8 ? t.gink : t.ink3} style={{ marginLeft: 4 }}>{tr('ob.pwHint')}</T>
+            <Field icon="gift" placeholder={`${tr('ob.referral')} (${tr('ob.optional')})`} accessibilityLabel={tr('ob.referral')} value={ref} onChangeText={setRef} autoCapitalize="characters" autoCorrect={false} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 }}>
               <Toggle on={terms} onChange={setTerms} label={tr('ob.terms')} />
               <Text style={{ flex: 1, fontFamily: font.m, fontSize: 13, lineHeight: 18, color: t.ink }}>

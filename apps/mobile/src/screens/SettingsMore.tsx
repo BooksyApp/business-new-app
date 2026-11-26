@@ -30,11 +30,13 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
   const [rows, setRows] = useState<Record<string, { on: boolean; from: string; to: string }>>({});
   const ex = useLoad(() => apiX.hoursExceptions(sid).catch(() => []), [sid]);
   const [xf, setXf] = useState(''); const [xt, setXt] = useState(''); const [xn, setXn] = useState('');
+  const [xs, setXs] = useState(false); const [xo, setXo] = useState('10:00'); const [xc, setXc] = useState('16:00');
   const [busy, setBusy] = useState(false);
   async function addEx() {
     const re = /^\d{4}-\d{2}-\d{2}$/;
     if (!re.test(xf) || !re.test(xt || xf) || (xt || xf) < xf) { toast(tr('hr.badDate'), 'error'); return; }
-    try { await apiX.addHoursException(sid, xf, xt || xf, xn.trim()); setXf(''); setXt(''); setXn(''); bump(); await ex.reload(); } catch (e) { toast((e as Error).message, 'error'); }
+    if (xs && (!ok(xo) || !ok(xc) || xc <= xo)) { toast(tr('hr.badTime'), 'error'); return; }
+    try { await apiX.addHoursException(sid, xf, xt || xf, xn.trim(), xs ? { open: xo, close: xc } : undefined); setXf(''); setXt(''); setXn(''); bump(); await ex.reload(); } catch (e) { toast((e as Error).message, 'error'); }
   }
   useEffect(() => {
     if (!q.data) return;
@@ -78,7 +80,7 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
             {(ex.data ?? []).map((x) => (
               <Card key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
                 <View style={{ width: 44, height: 44, borderRadius: 15, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="cal" size={22} color={t.gink} /></View>
-                <Text style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.ink }}>{dateLabel(fromIso(x.startDate))}{x.endDate !== x.startDate ? ` - ${dateLabel(fromIso(x.endDate))}` : ''}{x.notes ? ` · ${x.notes}` : ''}</Text>
+                <Text style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.ink }}>{dateLabel(fromIso(x.startDate))}{x.endDate !== x.startDate ? ` - ${dateLabel(fromIso(x.endDate))}` : ''}{!x.closed && x.openTime ? ` · ${hm(x.openTime)}-${hm(x.closeTime ?? '')}` : ''}{x.notes ? ` · ${x.notes}` : ''}</Text>
                 <Pressable onPress={() => void apiX.removeHoursException(sid, x.id).then(() => { bump(); return ex.reload(); }).catch((e: Error) => toast(e.message, 'error'))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={22} color={t.gink} /></Pressable>
               </Card>
             ))}
@@ -88,6 +90,11 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
                 <View style={{ flex: 1 }}><Field label={tr('hr.to')} value={xt} onChangeText={setXt} keyboardType="numbers-and-punctuation" maxLength={10} /></View>
               </View>
               <Field label={tr('hr.note')} value={xn} onChangeText={setXn} />
+              <ToggleRow label={tr('hx.exSpecial')} value={xs} onChange={setXs} />
+              {xs ? (<View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}><Field label={tr('hx.exOpenFrom')} value={xo} onChangeText={setXo} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                <View style={{ flex: 1 }}><Field label={tr('hx.exOpenTo')} value={xc} onChangeText={setXc} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+              </View>) : null}
               <Btn label={tr('hr.addException')} variant="secondary" icon="plus" disabled={!xf} onPress={() => void addEx()} />
             </Card>
           </Section>

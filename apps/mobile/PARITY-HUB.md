@@ -11,7 +11,7 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | Registration step 1 | first name, last name | text, req (owner) | `POST /auth/register/business` `firstName,lastName` | done new | app/register.tsx |
 | | email, password (min 8), phone | email req, text req, text opt | `email,password,phone` | done new | register.tsx |
 | | terms + marketing opt-in | bool req / bool | `consent{acceptTerms,termsVersion,marketingOptIn,source}` | done new | register.tsx, lib/config.ts TERMS_VERSION |
-| | referral code | text opt | `referralCode` | partial (API supported, no input field) | lib/api-onboard.ts |
+| | referral code | text opt | `referralCode` | done new | register.tsx |
 | Registration step 2 | business name, category (backend list), address, city, phone | text req / enum req / text opt | `PUT /businesses/{id}` `name,category,address,city,country,phone` | done new (street+city as two fields; geocoder search, lat/lon, building/apartment on sign-up are web only) | register.tsx |
 | Registration step 3 | weekly hours | 7x{enabled,start,end} | `PUT /business-hours/business/{id}` array | done new | register.tsx |
 | Registration step 4 | team size, first services, staff list | enum, list, list | `POST /services/business/{id}`, `POST /staff/business/{id}`, `PUT /services/assignments/...` | partial new (one first service, solo owner auto-added as specialist like hub LR-03; team added later from Komanda; weeklySchedule/workLocation/profileLiveDate/helpOptions/previousTools survey fields are hub analytics only) | register.tsx |
@@ -36,8 +36,8 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | category | enum | `category` | done new | Profile.tsx:44 |
 | address, city | text | `address,city` | done | Profile.tsx |
 | buildingNumber, apartmentNumber | text | same | done new | Profile.tsx |
-| zipCode, state, country | text | same | missing (country sent on sign-up only) | |
-| latitude, longitude, map pin | number | `latitude,longitude` | missing (geocoder is web) | |
+| zipCode, state, country | text | same | done new | Profile.tsx |
+| latitude, longitude, map pin | number | `latitude,longitude` | web (address search + map pin need the hub geocoder and a map widget; needs a decision on a map SDK) | |
 | onlineBookingEnabled | bool | same | done | Profile.tsx |
 | minBookingNoticeMinutes, maxBookingDaysAhead | int | same | done | Profile.tsx |
 | cancellationWindowHours, lateCancellationFee | int / money | same | done new (fee) | Profile.tsx |
@@ -49,10 +49,10 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | brandColor, receiptFooter | hex / text | same | done (footer new) | Profile.tsx |
 | staffAssignmentMode, allowParallelServices, healthSafetyNote | enum / bool / text | same | done new (healthSafety checkbox list is web) | Profile.tsx |
 | Business hours | 7 days | `PUT /business-hours/business/{id}` | done | SettingsMore.tsx:25 |
-| Hours exceptions | closed range + note | `/business-hours-exceptions` | partial (closed days only; special open/close times missing) | SettingsMore.tsx |
-| Photos gallery | upload/delete | `/businesses/{id}/photos` | partial (add; reorder/delete in web) | Looks.tsx |
+| Hours exceptions | range + note, closed or special open/close | `/business-hours-exceptions` | done new (special hours) | SettingsMore.tsx |
+| Photos gallery | upload/delete | `/businesses/{id}/photos` | done new (reorder is not in the API) | HubExtras.tsx GallerySheet |
 | Locations / branches | list, add | `/businesses/{id}/branches` | done | More2.tsx:144 |
-| Notification texts | per event | `/businesses/{id}/settings/notification-texts` | missing | |
+| Notification texts | 3 kinds x az/en/ru, 500 chars | `/businesses/{id}/settings/notification-texts` | done new | HubExtras.tsx NotifTextsEditor |
 | Notification settings | email toggles, reminder hours, sender, reply-to | `/businesses/{id}/notification-settings` | done | SettingsMore.tsx:105 |
 
 ## 3. Services
@@ -76,9 +76,9 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | isClass + maxParticipants | bool/int | same | done | Services.tsx:50 |
 | peak pricing rules | weekday,time,percent | `/bookings/business/{id}/services/{s}/peak-pricing` | done | Services.tsx |
 | availableFrom / availableTo | date | same | done new | Services.tsx |
-| resourceTypeId (rooms, chairs) | id | `/resource-types` | missing (needs resource type CRUD) | |
-| staffOverrides (per-staff price/duration) | list | `staffOverrides[]` | missing | |
-| imageUrl | url | `imageUrl` | missing | |
+| resourceTypeId (rooms, chairs) + resource CRUD | id | `/resource-types` | done new | HubExtras.tsx ResourceTypes, Services.tsx |
+| staffOverrides (per-specialist price/duration) | list | `staffOverrides[]` | done new | Services.tsx (Usta tab) |
+| imageUrl | url | `imageUrl` | n/a (web does not use it, backend has no service upload purpose) | |
 | combo services (steps) | list | `PUT /services/{id}/package` | done | Combos.tsx |
 | categories CRUD, archive/restore | | `/categories`, `/services/.../archived` | done | Services.tsx |
 | add-ons, packages, quick-sale | | `/addons`, `/packages`, `/quick-sale` | done | ServiceExtras.tsx |
@@ -97,9 +97,9 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | time off (one-off, recurring) | | `/time-off` | done | Team.tsx, BlockTimeSheet.tsx |
 | commission rules, targets, payroll, timesheet, rota | | `/commission-rules`, `/staff-targets`, `/payroll`, `/timesheets`, `/rota` | done | Payroll.tsx, More2.tsx:205 |
 | roles editor | name, permissions | `/businesses/{id}/roles` | done | Roles.tsx |
-| portfolio photos | upload | `/businesses/{id}/staff/{s}/portfolio` | missing | |
-| chair rent | amount, payments | `/staff/business/{b}/{s}/chair-rent` | missing | |
-| calendar feed (ICS token) | | `/calendar/staff/{s}/token` | missing | |
+| portfolio photos (add, caption, remove, order) | upload | `/businesses/{id}/staff/{s}/portfolio` | done new | HubExtras.tsx PortfolioSheet |
+| chair rent (terms, ledger, mark paid) | amount, payments | `/staff/business/{b}/{s}/chair-rent` | done new | HubExtras.tsx ChairRentSheet |
+| calendar feed (ICS token, regenerate) | | `/calendar/staff/{s}/token` | done new | HubExtras.tsx FeedSheet |
 
 ## 5. Clients
 
@@ -116,8 +116,8 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | balance, loyalty, packages | `/clients/{id}/balance`, `/packages/client/{id}` | done | client/[id].tsx, ClientPackages.tsx |
 | CSV import | `/clients/business/{b}/import[/preview]` | done | ImportSheet.tsx |
 | delete | `DELETE /clients/{id}` | done | client/[id].tsx |
-| birthday | not in update DTO | missing (backend has no field on update) | |
-| export (GDPR) | `GET /clients/{id}/export` | missing | |
+| birthday | not in `ClientUpdateRequest` or `ClientCreateRequest`; the web only shows it from imports | n/a (web does not edit it either) | |
+| export (GDPR) | `GET /clients/{id}/export` | done new (shared as JSON) | EditClientSheet.tsx |
 
 ## 6. Calendar and booking form
 
@@ -141,13 +141,13 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 | Hub item | Endpoint | Mobile |
 |---|---|---|
 | Take payment (cash, card, split, gift card by code, membership/package cover per line, tip, discount, appointment link, idempotency) | `POST /payment-confirmation` | done new (mobile used `POST /sales`, which ignores gift card codes and never settles the booking or books commission) |
-| Multi-tender `payments[]`, PREPAID credit, promo code | same | missing (single method + split) |
-| Product lines and stock decrement | `items[].productId` | missing in till (services and custom lines only) |
+| Multi-tender `payments[]` (cash, card, gift card by code) | same | done new (PREPAID credit and promo code come from online bookings and are applied by the server) |
+| Product lines and stock decrement | `items[].productId`, `serviceType PRODUCT` | done new (server prices the line and takes it off the shelf) |
 | Sales list by day, refund | `GET /sales/business/{b}`, `POST /sales/{id}/refunds` | done (Sales.tsx) |
 | Invoices, cash drawer, tips report, pay-out | `/businesses/{b}/invoices|cash-drawer|tips` | done (Finance.tsx, Sales.tsx) |
-| Gift cards sell/lookup, memberships, loyalty settings | `/gift-cards`, `/memberships`, `/loyalty-settings` | done; loyalty-card stamps missing |
+| Gift cards sell/lookup, memberships, loyalty settings, loyalty cards (create, holders, stamp, end) | `/gift-cards`, `/memberships`, `/loyalty-settings`, `/loyalty-cards` | done (cards new: HubExtras.tsx LoyaltyCards) |
 | Expenses, P&L, tax, reports, custom reports | | done |
-| Revenue plan | `/revenue-plan` | missing |
+| Revenue plan (target per month vs actual) | `/revenue-plan` | done new (HubExtras.tsx RevenuePlan) |
 
 ## 8. Marketing, reviews, inventory, other
 
@@ -167,4 +167,4 @@ Status: **done** (field/action works against the real API), **partial** (works, 
 
 ## Parity count
 
-Counted from the tables above (rows with a status; "partial" counts half): see the script note at the end of the final report.
+117 rows with a status (excluding 2 web-only and 2 not-applicable): 112 done, 4 partial, 1 missing = **97.4%** (partial counts half). Open: billing checkout and online card payments stay web (Stripe off in MVP, store policy), owner account deletion needs a backend decision, online shop orders are list-only, the booking form has no walk-in email or colour field. Web-only: map pin / geocoder, help center.
