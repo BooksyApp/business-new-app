@@ -1,5 +1,6 @@
 /** English strings; the shape every other locale is checked against. */
 import { uxEn } from './ux';
+import { v2En } from './v2';
 import { extraEn } from './extra';
 import { moreEn } from './more';
 import { bizEn } from './biz';
@@ -220,6 +221,7 @@ export const en = {
   ...moreEn,
   ...bizEn,
   ...uxEn,
+  ...v2En,
 };
 
 export type Strings = typeof en;

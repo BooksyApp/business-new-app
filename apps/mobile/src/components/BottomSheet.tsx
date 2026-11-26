@@ -8,11 +8,12 @@ import { useTheme } from '@/theme/ThemeContext';
 
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
 
+/** v2 Sheet (artifact .sheet): 30 radius, 38x5 grabber, near-white surface, scrim .38. */
 /**
  * One draggable bottom sheet for the whole app. Height follows the content unless `snaps` (visible heights in px, or 0-1 fractions of the
  * window) are given: then the sheet springs between them and dismisses when dragged below the lowest. Backdrop fades with the drag.
  */
-export function BottomSheet({ open, onClose, children, snaps, radius = 32, contentStyle, handle = true }: {
+export function BottomSheet({ open, onClose, children, snaps, radius = 30, contentStyle, handle = true }: {
   open: boolean; onClose: () => void; children: React.ReactNode; snaps?: number[]; radius?: number; contentStyle?: StyleProp<ViewStyle>; handle?: boolean;
 }) {
   const { t } = useTheme(); const { height: H } = useWindowDimensions();
@@ -60,13 +61,13 @@ export function BottomSheet({ open, onClose, children, snaps, radius = 32, conte
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,14,36,.5)' }, dim]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,14,34,.38)' }, dim]}>
           <RNPressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel={tr('common.close')} />
         </Animated.View>
         <GestureDetector gesture={pan}>
           <Animated.View onLayout={(e) => setCh(e.nativeEvent.layout.height)}
-            style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.canvas, borderTopLeftRadius: radius, borderTopRightRadius: radius, paddingTop: 12, paddingHorizontal: 20, boxShadow: '0 -10px 40px rgba(20,14,36,.25)' } as any, pts ? { height: sheetH + 0 } : null, contentStyle, sheet]}>
-            {handle && <Animated.View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: t.line, alignSelf: 'center', marginBottom: 16 }} />}
+            style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: t.dark ? t.surface : 'rgba(255,255,255,.97)', borderTopLeftRadius: radius, borderTopRightRadius: radius, paddingTop: 10, paddingHorizontal: 20, paddingBottom: 24, boxShadow: '0 -20px 50px -20px rgba(29,23,48,.35)' } as any, pts ? { height: sheetH + 0 } : null, contentStyle, sheet]}>
+            {handle && <Animated.View style={{ width: 38, height: 5, borderRadius: 3, backgroundColor: t.dark ? 'rgba(255,255,255,.2)' : 'rgba(29,23,48,.18)', alignSelf: 'center', marginBottom: 14 }} />}
             {children}
           </Animated.View>
         </GestureDetector>

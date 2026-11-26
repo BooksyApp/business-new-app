@@ -9,6 +9,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ApiError } from '@/lib/api';
 import { API_BASE } from '@/lib/config';
+import { photoSource } from '@/lib/photo';
 import { useOnline } from '@/lib/net';
 import { initials } from '@/lib/format';
 import { t as tr } from '@/i18n';
@@ -56,7 +57,7 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 48, gap: 8 }}>
           <BackCircle onPress={onBack} />
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.x, fontSize: 15, color: t.ink, lineHeight: 18 }}>{title}</Text>
+            <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: t.ink, lineHeight: 20 }}>{title}</Text>
             {subtitle ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12, color: t.muted, lineHeight: 15 }}>{subtitle}</Text> : null}
           </View>
           <View style={{ minWidth: 40, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>{right}</View>
@@ -67,8 +68,8 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
   return (
     <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <View style={{ flex: 1 }}>
-        <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.x, fontSize: 34, letterSpacing: -1, color: t.ink }}>{title}</Text>
-        {subtitle ? <Text numberOfLines={2} style={{ fontFamily: font.s, fontSize: 14, color: t.muted, marginTop: 2 }}>{subtitle}</Text> : null}
+        <Text accessibilityRole="header" numberOfLines={1} style={{ fontFamily: font.b, fontSize: 26, lineHeight: 32, letterSpacing: -0.65, color: t.ink }}>{title}</Text>
+        {subtitle ? <Text numberOfLines={2} style={{ fontFamily: font.r, fontSize: 12.5, color: t.muted, marginTop: 1 }}>{subtitle}</Text> : null}
       </View>
       {right ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>{right}</View> : null}
     </View>
@@ -80,8 +81,8 @@ export function SectionTitle({ title, action, onAction }: { title: string; actio
   const { t } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: 8, marginBottom: 2 }}>
-      <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink }}>{title}</Text>
-      {action && onAction ? <Pressable onPress={onAction} hitSlop={10} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 15, color: t.vtext }}>{action}</Text></Pressable> : null}
+      <Text accessibilityRole="header" style={{ fontFamily: font.b, fontSize: 16, letterSpacing: -0.16, color: t.ink }}>{title}</Text>
+      {action && onAction ? <Pressable onPress={onAction} hitSlop={10} accessibilityRole="button"><Text style={{ fontFamily: font.s, fontSize: 13, color: t.vtext }}>{action}</Text></Pressable> : null}
     </View>
   );
 }
@@ -90,13 +91,13 @@ export function SectionTitle({ title, action, onAction }: { title: string; actio
 export function SearchBar({ value, onChangeText, placeholder, onAction, actionIcon = 'sliders', actionLabel }: { value: string; onChangeText: (v: string) => void; placeholder: string; onAction?: () => void; actionIcon?: string; actionLabel?: string }) {
   const { t } = useTheme();
   return (
-    <View style={[{ flexDirection: 'row', alignItems: 'center', height: 56, borderRadius: 28, backgroundColor: t.surface, paddingLeft: 18, paddingRight: 6, gap: 10 }, cardShadow]}>
-      <Icon name="search" size={22} color={t.muted} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', height: 44, borderRadius: 14, backgroundColor: t.fill, paddingLeft: 14, paddingRight: 4, gap: 10 }}>
+      <Icon name="search" size={18} color={t.ink3} />
       <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={t.ink3} accessibilityLabel={placeholder} autoCorrect={false} returnKeyType="search"
-        style={{ flex: 1, height: 56, fontFamily: font.m, fontSize: 16, color: t.ink, outlineStyle: 'none' } as any} />
+        style={{ flex: 1, height: 44, fontFamily: font.r, fontSize: 15, color: t.ink, outlineStyle: 'none' } as any} />
       {onAction ? (
-        <Pressable onPress={onAction} accessibilityRole="button" accessibilityLabel={actionLabel ?? tr('common.search')} style={[{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }, ctaShadow]}>
-          <Icon name={actionIcon} size={20} color="#fff" />
+        <Pressable onPress={onAction} accessibilityRole="button" accessibilityLabel={actionLabel ?? tr('common.search')} style={{ width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={actionIcon} size={20} color={t.ink} />
         </Pressable>
       ) : null}
     </View>
@@ -108,8 +109,8 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
   const { t } = useTheme();
   return (
     <Pressable onPress={() => onChange(!on)} haptic accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: on }} noScale hitSlop={8}
-      style={{ width: 52, height: 32, borderRadius: 16, backgroundColor: on ? t.violet : t.fill2, justifyContent: 'center' }}>
-      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: '#fff', marginLeft: on ? 23 : 3, boxShadow: '0 2px 6px rgba(29,23,48,.28)' } as any} />
+      style={{ width: 46, height: 28, borderRadius: 14, backgroundColor: on ? t.violet : '#e4ddd3', justifyContent: 'center' }}>
+      <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', marginLeft: on ? 21 : 3, boxShadow: '0 2px 6px rgba(29,23,48,.28)' } as any} />
     </Pressable>
   );
 }
@@ -119,9 +120,9 @@ export function Group({ children, style }: { children: React.ReactNode; style?: 
   const { t } = useTheme();
   const kids = React.Children.toArray(children).filter(Boolean);
   return (
-    <View style={[{ backgroundColor: t.surface, borderRadius: 26, paddingHorizontal: 16, paddingVertical: 4, ...cardShadow }, style]}>
+    <View style={[{ backgroundColor: t.surface, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 0, ...cardShadow }, style]}>
       {kids.map((k, i) => (
-        <View key={i} style={i > 0 ? { borderTopWidth: 1, borderTopColor: t.line + '99' } : null}>{k}</View>
+        <View key={i} style={i > 0 ? { borderTopWidth: 1, borderTopColor: t.hair } : null}>{k}</View>
       ))}
     </View>
   );
@@ -131,13 +132,13 @@ export function Group({ children, style }: { children: React.ReactNode; style?: 
 export function ListRow({ icon, title, sub, onPress, right, danger, photo }: { icon?: string; title: string; sub?: string; onPress?: () => void; right?: React.ReactNode; danger?: boolean; photo?: React.ReactNode }) {
   const { t } = useTheme();
   const body = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 12 }}>
-      {photo ?? (icon ? <View style={{ width: 44, height: 44, borderRadius: 15, backgroundColor: danger ? t.gsoft : t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={22} color={danger ? t.gink : t.vtext} /></View> : null)}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 54, paddingVertical: 9 }}>
+      {photo ?? (icon ? <Icon name={icon} size={21} color={danger ? t.gink : t.ink} /> : null)}
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16.5, letterSpacing: -0.2, color: danger ? t.gink : t.ink }}>{title}</Text>
-        {sub ? <Text numberOfLines={2} style={{ fontFamily: font.m, fontSize: 14, lineHeight: 19, color: t.muted, marginTop: 1 }}>{sub}</Text> : null}
+        <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 15, color: danger ? t.gink : t.ink }}>{title}</Text>
+        {sub ? <Text numberOfLines={2} style={{ fontFamily: font.r, fontSize: 13, lineHeight: 18, color: t.muted, marginTop: 1 }}>{sub}</Text> : null}
       </View>
-      {right ?? (onPress && !danger ? <Icon name="chev" size={20} color={t.ink3} /> : null)}
+      {right ?? (onPress && !danger ? <Icon name="chev" size={16} color={t.ink3} /> : null)}
     </View>
   );
   return onPress ? <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={title} noScale>{body}</Pressable> : body;
@@ -147,7 +148,7 @@ export function ListRow({ icon, title, sub, onPress, right, danger, photo }: { i
 export function Hero({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const { t } = useTheme();
   return (
-    <View style={[{ borderRadius: 30, overflow: 'hidden', backgroundColor: t.surface, ...cardShadow }, style]}>
+    <View style={[{ borderRadius: 26, overflow: 'hidden', backgroundColor: t.surface, ...cardShadow }, style]}>
       <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, experimental_backgroundImage: mesh, opacity: t.dark ? 0.35 : 0.9 } as any} />
       {children}
     </View>
@@ -156,7 +157,7 @@ export function Hero({ children, style }: { children: React.ReactNode; style?: S
 
 export function Card({ children, style, onPress }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const { t } = useTheme();
-  const base: ViewStyle = { backgroundColor: t.surface, borderRadius: 26, padding: 16, ...cardShadow };
+  const base: ViewStyle = { backgroundColor: t.surface, borderRadius: 22, padding: 16, ...cardShadow };
   return onPress ? <Pressable onPress={onPress} accessibilityRole="button" style={[base, style]}>{children}</Pressable> : <View style={[base, style]}>{children}</View>;
 }
 
@@ -168,15 +169,15 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, ic
   const fg = variant === 'primary' ? '#fff' : variant === 'danger' ? t.gink : t.ink;
   const inner = (
     <>
-      {loading ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={20} color={fg} /> : null}
-      <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: small ? 15 : 16.5, color: fg, flexShrink: 1 }}>{label}</Text>
+      {loading ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={18} color={fg} /> : null}
+      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: small ? 13.5 : 15, color: fg, flexShrink: 1 }}>{label}</Text>
     </>
   );
-  const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: small ? 50 : 56, borderRadius: 28, paddingHorizontal: small ? 14 : 20 };
+  const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: small ? 40 : 48, borderRadius: small ? 20 : 24, paddingHorizontal: small ? 14 : 20 };
   return (
     <Pressable onPress={onPress} disabled={off} haptic accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!off, busy: !!loading }} style={[{ opacity: off && !loading ? 0.5 : 1 }, style]}>
       {variant === 'primary' ? (
-        <LinearGradient colors={[...gradCta]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[row, ctaShadow]}>{inner}</LinearGradient>
+        <View style={[row, { backgroundColor: t.violet }, ctaShadow]}>{inner}</View>
       ) : (
         <View style={[row, { backgroundColor: variant === 'danger' ? t.gsoft : t.fill }]}>{inner}</View>
       )}
@@ -189,8 +190,8 @@ export const Field = React.forwardRef<TextInput, TextInputProps & { label?: stri
   const { t } = useTheme();
   const [focus, setFocus] = React.useState(false);
   return (
-    <View style={{ marginBottom: 14, minHeight: 64, borderRadius: 20, backgroundColor: t.surface, paddingHorizontal: 16, paddingTop: label ? 10 : 0, borderWidth: focus ? 1.5 : 1, borderColor: focus ? t.violet : t.line, justifyContent: 'center' }}>
-      {label ? <Text style={{ fontFamily: font.s, fontSize: 13, color: focus ? t.vtext : t.muted }}>{label}</Text> : null}
+    <View style={{ marginBottom: 12, minHeight: 54, borderRadius: 16, backgroundColor: t.surface, paddingHorizontal: 16, paddingTop: label ? 8 : 0, borderWidth: focus ? 1.5 : 1, borderColor: focus ? t.violet : t.line, justifyContent: 'center' }}>
+      {label ? <Text style={{ fontFamily: font.r, fontSize: 11.5, color: focus ? t.vtext : t.ink3 }}>{label}</Text> : null}
       <TextInput
         ref={ref}
         placeholderTextColor={t.ink3}
@@ -198,25 +199,25 @@ export const Field = React.forwardRef<TextInput, TextInputProps & { label?: stri
         onFocus={(e) => { setFocus(true); onFocus?.(e); }}
         onBlur={(e) => { setFocus(false); onBlur?.(e); }}
         {...rest}
-        style={[{ minHeight: label ? 34 : 56, paddingVertical: 2, fontFamily: font.m, fontSize: 17, color: t.ink, outlineStyle: 'none' } as any, style]}
+        style={[{ minHeight: label ? 30 : 52, paddingVertical: 2, fontFamily: font.s, fontSize: 15, color: t.ink, outlineStyle: 'none' } as any, style]}
       />
     </View>
   );
 });
 
 /** Photo URLs from the API are origin-relative ("/api/public/uploads/..."). */
-export const photoUrl = (u?: string | null) => (u ? (/^https?:/i.test(u) ? u : `${API_BASE}${u.startsWith('/') ? '' : '/'}${u}`) : null);
+export const photoUrl = (u?: string | null) => { const s = photoSource(u); return s && typeof s === 'object' && 'uri' in s ? (s.uri ?? null) : null; };
 
 /** Photo (when the URL loads) or initials, in a violet-to-pink ring (staff / client avatar). */
 export function Avatar({ name, size = 44, uri }: { name: string; size?: number; uri?: string | null }) {
   const { t } = useTheme();
   const [failed, setFailed] = React.useState(false);
-  const src = failed ? null : photoUrl(uri);
+  const src = failed ? null : photoSource(uri);
   return (
     <LinearGradient colors={[...gradRing]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}>
       <View style={{ width: size - 4, height: size - 4, borderRadius: (size - 4) / 2, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {src ? (
-          <Image source={{ uri: src }} accessibilityIgnoresInvertColors onError={() => setFailed(true)} style={{ width: size - 4, height: size - 4 }} />
+          <Image source={src} accessibilityIgnoresInvertColors onError={() => setFailed(true)} style={{ width: size - 4, height: size - 4 }} />
         ) : (
           <Text style={{ fontFamily: font.b, fontSize: Math.round(size * 0.34), color: t.vtext }}>{initials(name)}</Text>
         )}
@@ -243,8 +244,8 @@ export function Pill({ text, tone = 'violet' }: { text: string; tone?: 'violet' 
   const { t } = useTheme();
   const c = { violet: [t.vsoft, t.vtext], ok: [t.oksoft, t.ok], guava: [t.gsoft, t.gink], muted: [t.fill, t.muted], amber: t.dark ? ['#342a1d', '#f0c27a'] : ['#fbecd6', '#8a5200'] }[tone];
   return (
-    <View style={{ alignSelf: 'flex-start', height: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: c[0], justifyContent: 'center' }}>
-      <Text style={{ fontFamily: font.b, fontSize: 13, color: c[1] }}>{text}</Text>
+    <View style={{ alignSelf: 'flex-start', height: 24, paddingHorizontal: 9, borderRadius: 12, backgroundColor: c[0], justifyContent: 'center' }}>
+      <Text style={{ fontFamily: font.s, fontSize: 12, color: c[1] }}>{text}</Text>
     </View>
   );
 }
@@ -276,7 +277,7 @@ export function StateView({ icon, title, body, actionLabel, onAction, secondary 
   const { t } = useTheme();
   return (
     <View accessibilityLiveRegion="polite" style={{ alignItems: 'center', paddingHorizontal: 36, paddingTop: 56, paddingBottom: 24, gap: 10 }}>
-      <View style={{ width: 148, height: 148, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+      <View style={{ width: 148, height: 148, alignItems: 'center', justifyContent: 'center', marginBottom: 12, transform: [{ scale: 0.7 }] }}>
         <View style={{ position: 'absolute', width: 148, height: 148, borderRadius: 74, backgroundColor: t.vsoft, opacity: 0.7 }} />
         <View style={{ position: 'absolute', left: 6, top: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: t.blush, opacity: 0.8 }} />
         <View style={{ position: 'absolute', right: 10, bottom: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: t.lilac }} />
@@ -284,8 +285,8 @@ export function StateView({ icon, title, body, actionLabel, onAction, secondary 
           <Icon name={icon} size={46} color={t.vtext} />
         </LinearGradient>
       </View>
-      <Text style={{ fontFamily: font.x, fontSize: 24, lineHeight: 30, color: t.ink, textAlign: 'center', letterSpacing: -0.6 }}>{title}</Text>
-      {body ? <Text style={{ fontFamily: font.m, fontSize: 16, lineHeight: 23, color: t.muted, textAlign: 'center' }}>{body}</Text> : null}
+      <Text style={{ fontFamily: font.b, fontSize: 19, lineHeight: 24, color: t.ink, textAlign: 'center', letterSpacing: -0.4 }}>{title}</Text>
+      {body ? <Text style={{ fontFamily: font.r, fontSize: 14, lineHeight: 20, color: t.muted, textAlign: 'center' }}>{body}</Text> : null}
       {actionLabel && onAction ? <View style={{ marginTop: 14, alignSelf: 'stretch' }}><Btn label={actionLabel} variant={secondary ? 'secondary' : 'primary'} onPress={onAction} /></View> : null}
     </View>
   );
@@ -304,10 +305,10 @@ export function Chip({ label, active, onPress, icon, avatar, soft }: { label: st
   const fg = active ? (soft ? t.vtext : t.canvas) : t.ink;
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!active }}
-      style={{ height: 44, paddingHorizontal: 18, borderRadius: 22, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: active ? (soft ? t.vsoft : t.ink) : t.surface, borderWidth: active ? (soft ? 1.5 : 0) : 1, borderColor: active && soft ? t.violet : t.line }}>
+      style={{ height: 36, paddingHorizontal: 15, borderRadius: 18, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: active ? (soft ? t.vsoft : t.ink) : t.surface, borderWidth: active ? (soft ? 1.5 : 0) : 1, borderColor: active && soft ? t.violet : t.hair }}>
       {avatar}
       {icon ? <Icon name={icon} size={18} color={active ? (soft ? t.vtext : t.canvas) : t.muted} /> : null}
-      <Text style={{ fontFamily: active ? font.b : font.s, fontSize: 15, color: fg }}>{label}</Text>
+      <Text style={{ fontFamily: font.s, fontSize: 13.5, color: fg }}>{label}</Text>
     </Pressable>
   );
 }
@@ -317,9 +318,9 @@ const THUMB: [string, string][] = [['#e6deff', '#ffe0e7'], ['#ffe4ea', '#ffd9a1'
 export function ServiceThumb({ name, cat, uri, size = 88 }: { name: string; cat?: string; uri?: string | null; size?: number }) {
   const { t } = useTheme();
   const h = [...(cat || name)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % THUMB.length;
-  const src = photoUrl(uri);
+  const src = photoSource(uri);
   const icon = cat === 'box' ? 'box' : /dırnaq|nail|ногт/i.test(cat ?? '') ? 'spark' : /saç|hair|волос/i.test(cat ?? '') ? 'scissors' : /üz|face|лиц|qaş|brow/i.test(cat ?? '') ? 'heart' : 'spark';
-  return src ? <Image source={{ uri: src }} accessibilityIgnoresInvertColors style={{ width: size, height: size, borderRadius: size * 0.24 }} /> : (
+  return src ? <Image source={src} accessibilityIgnoresInvertColors style={{ width: size, height: size, borderRadius: size * 0.24 }} /> : (
     <LinearGradient colors={[...THUMB[h]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size * 0.24, alignItems: 'center', justifyContent: 'center' }}>
       <Icon name={icon} size={size * 0.4} color={t.dark ? t.vtext : '#5b3fd6'} />
     </LinearGradient>
@@ -399,9 +400,9 @@ export function StatCard({ label, value, hint, tone = 'muted', style }: { label:
   const { t } = useTheme();
   const c = tone === 'ok' ? [t.oksoft, t.ok] : tone === 'guava' ? [t.gsoft, t.gink] : [t.fill, t.muted];
   return (
-    <View style={[{ flex: 1, backgroundColor: t.surface, borderRadius: 24, padding: 16, gap: 4, ...cardShadow }, style]}>
-      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, color: t.muted }}>{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.8, color: t.ink }}>{value}</Text>
+    <View style={[{ flex: 1, backgroundColor: t.surface, borderRadius: 20, padding: 13, gap: 2, ...cardShadow }, style]}>
+      <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 12, color: t.muted }}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.b, fontSize: 20, letterSpacing: -0.4, color: t.ink }}>{value}</Text>
       {hint ? <View style={{ alignSelf: 'flex-start', height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: c[0], justifyContent: 'center' }}><Text style={{ fontFamily: font.b, fontSize: 13, color: c[1] }}>{hint}</Text></View> : null}
     </View>
   );
@@ -413,8 +414,8 @@ export function Section({ title, hint, children }: { title: string; hint?: strin
   return (
     <View style={{ gap: 10 }}>
       <View style={{ paddingHorizontal: 4, marginTop: 10 }}>
-        <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink }}>{title}</Text>
-        {hint ? <Text style={{ fontFamily: font.m, fontSize: 14, lineHeight: 20, color: t.muted, marginTop: 2 }}>{hint}</Text> : null}
+        <Text accessibilityRole="header" style={{ fontFamily: font.b, fontSize: 16, letterSpacing: -0.16, color: t.ink }}>{title}</Text>
+        {hint ? <Text style={{ fontFamily: font.r, fontSize: 13, lineHeight: 20, color: t.muted, marginTop: 2 }}>{hint}</Text> : null}
       </View>
       {children}
     </View>

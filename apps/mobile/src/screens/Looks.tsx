@@ -1,3 +1,4 @@
+import { photoSource } from '@/lib/photo';
 import { useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, FlatList, Image, RefreshControl, View } from 'react-native';
@@ -56,7 +57,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
           ListEmptyComponent={<StateView icon="img" title={tr('lk.empty')} />}
           renderItem={({ item: x }) => (
             <View style={{ flex: 1, borderRadius: 18, overflow: 'hidden', backgroundColor: t.surface }}>
-              {photoUrl(x.url) ? <Image source={{ uri: photoUrl(x.url) ?? undefined }} style={{ width: '100%', aspectRatio: 0.85, backgroundColor: t.fill }} accessibilityLabel={x.cap || undefined} /> : <View style={{ width: '100%', aspectRatio: 0.85, overflow: 'hidden' }}><ServiceThumb name={x.cap || 'look'} cat={x.cap} size={400} /></View>}
+              {photoSource(x.url) ? <Image source={photoSource(x.url)!} style={{ width: '100%', aspectRatio: 0.85, backgroundColor: t.fill }} accessibilityLabel={x.cap || undefined} /> : <View style={{ width: '100%', aspectRatio: 0.85, overflow: 'hidden' }}><ServiceThumb name={x.cap || 'look'} cat={x.cap} size={400} /></View>}
               <View style={{ padding: 8, gap: 4 }}>
                 {x.cap ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13, color: t.ink }}>{x.cap}</Text> : null}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

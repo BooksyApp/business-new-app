@@ -6,8 +6,9 @@ import { Text } from '@/components/Text';
 import { subscribeToast, type ToastMsg } from '@/lib/toast';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { font } from '@/theme/tokens';
+import { dockTop } from '@/lib/dock';
 
-/** Top pill toast: slides in, stays 2.6 s, slides out. Success = ink, error = guava. */
+/** v2 toast (artifact .toast): ink pill above the dock, green check; error = guava. Stays 2.6 s. */
 export function ToastHost() {
   const ins = useSafeAreaInsets();
   const [m, setM] = useState<ToastMsg | null>(null);
@@ -26,10 +27,10 @@ export function ToastHost() {
   if (!m) return null;
   const err = m.kind === 'error';
   return (
-    <Animated.View pointerEvents="none" accessibilityLiveRegion="polite" style={{ position: 'absolute', top: ins.top + 6, left: 16, right: 16, zIndex: 200, alignItems: 'center', opacity: y, transform: [{ translateY: y.interpolate({ inputRange: [0, 1], outputRange: [-24, 0] }) }] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, maxWidth: 520, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 26, backgroundColor: err ? '#e83e63' : '#1d1730', boxShadow: '0 14px 30px -10px rgba(29,23,48,.5)' } as any}>
-        <Icon name={err ? 'info' : 'check'} size={20} color="#fff" />
-        <Text style={{ flexShrink: 1, fontFamily: font.b, fontSize: 15, lineHeight: 20, color: '#fff' }}>{m.text}</Text>
+    <Animated.View pointerEvents="none" accessibilityLiveRegion="polite" style={{ position: 'absolute', bottom: dockTop(ins.bottom) + 16, left: 16, right: 16, zIndex: 200, alignItems: 'center', opacity: y, transform: [{ translateY: y.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 42, maxWidth: 520, paddingHorizontal: 16, paddingVertical: 11, borderRadius: 16, backgroundColor: err ? '#e83e63' : '#1d1730', boxShadow: '0 14px 30px -10px rgba(29,23,48,.5)' } as any}>
+        <Icon name={err ? 'info' : 'check'} filled={!err} size={17} color={err ? '#fff' : '#7fd8a4'} />
+        <Text style={{ flexShrink: 1, fontFamily: font.s, fontSize: 13.5, lineHeight: 18, color: '#fff' }}>{m.text}</Text>
       </View>
     </Animated.View>
   );
