@@ -54,11 +54,21 @@ export interface Look { id: Id; photoUrl: string; title?: string | null; service
 export interface Story { id: Id; url: string; caption?: string | null; viewCount: number; expiresAt: string }
 export interface ConsentForm { id: Id; name?: string; title?: string; isActive?: boolean }
 export interface SubStatus { plan?: string; status?: string; trialEndsAt?: string | null; currentPeriodEnd?: string | null }
-export interface ClientBody { firstName?: string; lastName?: string; phone?: string; email?: string; notes?: string; allowMarketingEmails?: boolean; allowSmsNotifications?: boolean }
+export interface ClientBody { firstName?: string; lastName?: string; phone?: string; email?: string; notes?: string; allowMarketingEmails?: boolean; allowSmsNotifications?: boolean; patchTestDate?: string; vip?: boolean }
+export interface ClientTag { id: Id; name: string; colour?: string | null }
+export interface ClientField { id: Id; name: string; type: 'TEXT' | 'NUMBER' | 'DATE' | 'SELECT'; options?: string[] | null; value?: string | null }
 
+const BZ = (b: Id) => `/businesses/${b}`;
 const q = (o: Record<string, string>) => new URLSearchParams(o).toString();
 
 export const apiX = {
+  // client tags and custom fields (ClientTagController)
+  clientTags: (b: Id) => request<ClientTag[]>(`${BZ(b)}/client-tags`),
+  createClientTag: (b: Id, name: string) => request<ClientTag>(`${BZ(b)}/client-tags`, { method: 'POST', body: { name } }),
+  clientCrm: (b: Id, c: Id) => request<{ tags: ClientTag[]; blocked: boolean; blockReason: string | null }>(`${BZ(b)}/clients/${c}/crm`),
+  setClientTags: (b: Id, c: Id, tagIds: Id[]) => request<unknown>(`${BZ(b)}/clients/${c}/tags`, { method: 'PUT', body: { tagIds } }),
+  clientFields: (b: Id, c: Id) => request<ClientField[]>(`${BZ(b)}/clients/${c}/fields`),
+  setClientFields: (b: Id, c: Id, values: Record<string, string>) => request<unknown>(`${BZ(b)}/clients/${c}/fields`, { method: 'PUT', body: { values } }),
   // categories
   categories: (b: Id) => request<Category[]>(`/categories/business/${b}`),
   createCategory: (b: Id, body: { name: string; description?: string; color?: string }) => request<Category>(`/categories/business/${b}`, { method: 'POST', body }),

@@ -25,6 +25,8 @@ import { Settings } from '@/screens/Settings';
 import { HoursEditor } from '@/screens/SettingsMore';
 import { Team } from '@/screens/Team';
 import { t as tr, type StringKey } from '@/i18n';
+import { canOpen } from '@/lib/access';
+import { useApp } from '@/lib/app';
 
 /** Sections of "Daha çox". Services, team, sales, messages and settings are real screens; looks and reviews stay a clean "coming soon" (no fake data). */
 const ICONS: Record<string, string> = { views: 'spark', services: 'scissors', team: 'users', reviews: 'star', messages: 'chat', settings: 'gear', sales: 'wallet' };
@@ -33,6 +35,8 @@ export default function Section() {
   const { key } = useLocalSearchParams<{ key: string }>();
   const router = useRouter();
   const back = () => (router.canGoBack() ? router.back() : router.replace('/more'));
+  const { salon } = useApp();
+  if (!canOpen(salon, String(key))) return <Screen><Header title={tr('ob.noAccessTitle')} onBack={back} /><StateView icon="shield" title={tr('ob.noAccessTitle')} body={tr('ob.noAccessBody')} /></Screen>;
   switch (key) {
     case 'services': return <Services onBack={back} />;
     case 'groups': return <Groups onBack={back} />;

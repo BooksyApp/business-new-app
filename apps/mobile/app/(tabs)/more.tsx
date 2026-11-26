@@ -1,3 +1,5 @@
+import { canOpen } from '@/lib/access';
+import { salonShareLink } from '@/lib/config';
 import React, { useState } from 'react';
 import { RefreshControl, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
@@ -42,7 +44,7 @@ export default function More() {
   const salonRows: Row[] = [
     { k: 'marketing', icon: 'send', title: L('mk.title') },
     { k: 'settings', icon: 'clock', title: tr('v2.hoursRow') },
-    { k: 'link', icon: 'share', title: tr('v2.salonLink'), sub: `booqi.az/${(salon as { slug?: string } | null)?.slug ?? ''}` },
+    { k: 'link', icon: 'share', title: tr('v2.salonLink'), sub: salonShareLink(salon).replace(/^https?:\/\//, '').replace(/\?.*$/, '') },
   ];
   const rest: Row[] = [
     { k: 'groups', icon: 'users', title: tr('ux.classes') }, { k: 'views', icon: 'spark', title: L('sections.views') }, { k: 'messages', icon: 'chat', title: L('sections.messages') },
@@ -51,7 +53,7 @@ export default function More() {
     { k: 'offers', icon: 'tag', title: L('x2.offers') }, { k: 'shop', icon: 'bag', title: L('x2.shop') }, { k: 'branches', icon: 'map', title: L('x2.branches') },
     { k: 'profile', icon: 'store', title: L('pf.title') }, { k: 'rota', icon: 'clock', title: L('x2.rota') }, { k: 'roles', icon: 'shield', title: L('rl.title') }, { k: 'integrations', icon: 'lock', title: L('ig.title') },
   ];
-  const open = (k: string) => (k === 'link' ? void Share.share({ message: `${salon?.name ?? 'booqi'} · https://booqi.az/${(salon as { slug?: string } | null)?.slug ?? ''}` }).catch(() => {}) : go(k));
+  const open = (k: string) => (k === 'link' ? void Share.share({ message: `${salon?.name ?? 'booqi'} · ${salonShareLink(salon)}` }).catch(() => {}) : go(k));
   const Menu = ({ rows }: { rows: { key: string; icon: string; title: string; sub?: string; danger?: boolean; on: () => void }[] }) => (
     <View style={{ marginHorizontal: 20, backgroundColor: t.surface, borderRadius: 20, paddingHorizontal: 16, ...cardShadow }}>
       {rows.map((r, i) => (
@@ -85,7 +87,7 @@ export default function More() {
         </Pressable>
         <SecHead title={tr('v2.manage')} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 20 }}>
-          {tiles.map(([i, l, k]) => (
+          {tiles.filter(([, , k]) => canOpen(salon, k)).map(([i, l, k]) => (
             <Pressable key={k} onPress={() => go(k)} accessibilityRole="button" accessibilityLabel={l}
               style={{ width: (W - 40 - 20) / 3, backgroundColor: t.surface, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 12, gap: 14, ...cardShadow }}>
               <Icon name={i} size={24} color={t.ink} />
@@ -94,9 +96,9 @@ export default function More() {
           ))}
         </View>
         <SecHead title={tr('v2.salon')} />
-        <Menu rows={salonRows.map((r) => ({ key: r.k, icon: r.icon, title: r.title, sub: r.sub, on: () => open(r.k) }))} />
+        <Menu rows={salonRows.filter((r) => canOpen(salon, r.k === 'settings' ? 'hours' : r.k)).map((r) => ({ key: r.k, icon: r.icon, title: r.title, sub: r.sub, on: () => open(r.k) }))} />
         <SecHead title={tr('v2.allSections')} />
-        <Menu rows={rest.map((r) => ({ key: r.k, icon: r.icon, title: r.title, on: () => go(r.k) }))} />
+        <Menu rows={rest.filter((r) => canOpen(salon, r.k)).map((r) => ({ key: r.k, icon: r.icon, title: r.title, on: () => go(r.k) }))} />
         <SecHead title={tr('v2.account')} />
         <Menu rows={[
           { key: 'notif', icon: 'bell', title: tr('v2.notifications'), sub: badges.inbox ? String(badges.inbox) : undefined, on: () => router.push('/notifications') },

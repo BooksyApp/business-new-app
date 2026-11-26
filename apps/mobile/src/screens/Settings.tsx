@@ -6,10 +6,12 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Screen } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
-import { BackBar, Button as KButton, Card as KCard, KV, ListItem as KListItem, T, Title } from '@/components/kit';
+import { BackBar, Field as KField, Button as KButton, Card as KCard, KV, ListItem as KListItem, T, Title } from '@/components/kit';
 import { useRouter } from 'expo-router';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { useApp } from '@/lib/app';
+import { apiO } from '@/lib/api-onboard';
+import { toast } from '@/lib/toast';
 import { HoursEditor, NotifEditor, PushPrefsEditor, SubscriptionCard } from '@/screens/SettingsMore';
 import { enablePush } from '@/lib/push';
 import { useTheme } from '@/theme/ThemeContext';
@@ -22,7 +24,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const { user, salon, signOut } = useApp();
   const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'pp'>('main');
   const [push, setPush] = useState<'idle' | 'on' | 'failed'>('idle');
-  const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'sub'>(null);
+  const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'sub' | 'pw' | 'del'>(null);
+  const [curPw, setCurPw] = useState(''); const [newPw, setNewPw] = useState(''); const [pwBusy, setPwBusy] = useState(false);
   if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
   if (sub === 'notif') return <NotifEditor onBack={() => setSub('main')} />;
   if (sub === 'pp') return <PushPrefsEditor onBack={() => setSub('main')} />;
@@ -46,7 +49,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
         </KCard>
         {head(tr('set.salon'))}
         <KCard style={{ paddingHorizontal: 18 }}>
-          <KListItem first title={tr('v3.salonInfo')} sub={salon?.name} lead={lead('store')} right={chev} onPress={() => setSheet('salon')} />
+          <KListItem first title={tr('v3.salonInfo')} sub={salon?.name} lead={lead('store')} right={chev} onPress={() => router.push('/section/profile')} />
           <KListItem title={tr('hr.title')} lead={lead('clock')} right={chev} onPress={() => setSub('hours')} />
           <KListItem title={tr('sub.title')} lead={lead('crown')} right={chev} onPress={() => setSheet('sub')} />
         </KCard>
@@ -54,6 +57,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
         <KCard style={{ paddingHorizontal: 18 }}>
           <KListItem first title={tr('more.language')} lead={lead('globe')} right={val(langName)} onPress={() => setSheet('lang')} />
           <KListItem title={tr('set.theme')} lead={lead('moon')} right={val(themeName)} onPress={() => setSheet('theme')} />
+          <KListItem title={tr('ob.pwChange')} lead={lead('lock')} right={chev} onPress={() => setSheet('pw')} />
+          <KListItem title={tr('ob.delTitle')} lead={lead('trash', true)} right={chev} onPress={() => setSheet('del')} />
           <KListItem title={tr('v3.support')} lead={lead('help')} right={chev} onPress={() => router.push('/section/support')} />
         </KCard>
         <KCard style={{ paddingHorizontal: 18, marginTop: 14 }}>
@@ -61,6 +66,18 @@ export function Settings({ onBack }: { onBack: () => void }) {
         </KCard>
         <T k="xs" color={t.ink3} style={{ textAlign: 'center', marginTop: 18 }}>{user?.fullName ? `${user.fullName} · ` : ''}{tr('more.version')} {Constants.expoConfig?.version}</T>
       </ScrollView>
+      <BottomSheet open={sheet === 'pw'} onClose={() => setSheet(null)}>
+        <T k="h1" style={{ marginBottom: 10 }}>{tr('ob.pwChange')}</T>
+        <KField icon="lock" placeholder={tr('ob.pwCurrent')} accessibilityLabel={tr('ob.pwCurrent')} value={curPw} onChangeText={setCurPw} secureTextEntry autoCapitalize="none" style={{ marginBottom: 10 }} boxStyle={{ marginBottom: 10 }} />
+        <KField icon="lock" placeholder={tr('ob.newPw')} accessibilityLabel={tr('ob.newPw')} value={newPw} onChangeText={setNewPw} secureTextEntry autoCapitalize="none" textContentType="newPassword" />
+        <T k="xs" color={t.ink3} style={{ marginTop: 6, marginLeft: 4 }}>{tr('ob.pwHint')}</T>
+        <KButton label={tr('common.save')} loading={pwBusy} disabled={!curPw || newPw.length < 8} style={{ marginTop: 14 }} onPress={() => { setPwBusy(true); void apiO.changePassword(curPw, newPw).then(() => { toast(tr('ob.pwChanged'), 'success'); setCurPw(''); setNewPw(''); setSheet(null); }).catch((e: Error) => toast(e.message, 'error')).finally(() => setPwBusy(false)); }} />
+      </BottomSheet>
+      <BottomSheet open={sheet === 'del'} onClose={() => setSheet(null)}>
+        <T k="h1" style={{ marginBottom: 6 }}>{tr('ob.delTitle')}</T>
+        <T k="body" color={t.muted}>{tr('ob.delBody')}</T>
+        <KButton label={tr('ob.delAction')} icon="send" style={{ marginTop: 14 }} onPress={() => { setSheet(null); router.push('/section/support'); }} />
+      </BottomSheet>
       <BottomSheet open={sheet === 'lang'} onClose={() => setSheet(null)}>
         <T k="h1" style={{ marginBottom: 6 }}>{tr('more.language')}</T>
         {SUPPORTED.map((l, i) => <KListItem key={l.code} first={i === 0} title={l.endonym} right={getLocale() === l.code ? <Icon name="check" size={20} color={t.vtext} /> : undefined} onPress={() => { void setLocale(l.code); setSheet(null); }} />)}
