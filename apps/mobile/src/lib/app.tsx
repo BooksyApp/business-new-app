@@ -5,6 +5,7 @@ import { loadLocale } from '@/i18n';
 import { apiB } from '@/lib/api-biz';
 import { useOnline } from '@/lib/net';
 import { registerIfGranted, unregisterPush } from '@/lib/push';
+import { enterDemo as startDemo, exitDemo as stopDemo, isDemo } from '@/demo';
 
 type Status = 'boot' | 'offline' | 'out' | 'in';
 type AppState = {
@@ -21,6 +22,10 @@ type AppState = {
   signedIn: (u: AuthResponse, salons: Business[]) => Promise<void>;
   chooseSalon: (b: Business) => void;
   signOut: () => void;
+  /** Demo mode: a sample salon served locally, nothing saved (src/demo). */
+  demo: boolean;
+  enterDemo: () => void;
+  exitDemo: () => void;
 };
 const Ctx = createContext<AppState | null>(null);
 export function useApp(): AppState {
@@ -37,8 +42,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [version, setVersion] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [badges, setBadges] = useState({ pending: 0, waitlist: 0, inbox: 0 });
+  const [demo, setDemo] = useState(false);
 
-  const out = useCallback(() => { setUser(null); setSalons([]); setSalon(null); setStatus('out'); }, []);
+  const out = useCallback(() => { if (isDemo()) { stopDemo(); setDemo(false); } setUser(null); setSalons([]); setSalon(null); setStatus('out'); }, []);
+  const demoIn = useCallback(() => {
+    const d = startDemo();
+    const b = d.biz as unknown as Business;
+    setDemo(true); setUser(d.user as unknown as AuthResponse); setSalons([b]); setSalon(b); setVersion((v) => v + 1); setStatus('in');
+  }, []);
 
   useEffect(() => {
     setSignedOutHandler(out);
@@ -51,6 +62,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const guard = setTimeout(() => { if (alive) setStatus((c) => (c === 'boot' ? 'out' : c)); }, 6000);
     (async () => {
       try { await loadLocale(); } catch { /* default locale */ }
+      // Dev visual QA (EXPO_PUBLIC_MOCK=1) boots straight into the demo salon.
+      if (__DEV__ && (globalThis as { __BOOQI_AUTODEMO__?: boolean }).__BOOQI_AUTODEMO__) { if (alive) demoIn(); return; }
       let s: Awaited<ReturnType<typeof loadSession>>;
       try { s = await loadSession(); } catch { if (alive) setStatus('out'); return; }
       if (!s.user) { if (alive) setStatus('out'); return; }
@@ -103,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [status]);
 
   // A device that already granted notification permission keeps its push token fresh without asking again.
-  useEffect(() => { if (status === 'in' && salon) void registerIfGranted(); }, [status, salon?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (status === 'in' && salon && !isDemo()) void registerIfGranted(); }, [status, salon?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo<AppState>(() => ({
     status, user, salon, salons, version, badges,
@@ -113,8 +126,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await saveSession(u);
       setUser(u); setSalons(list); setSalon(list.length === 1 ? list[0] : null); setStatus('in');
     },
-    chooseSalon: (b) => { setSalon(b); void saveSalon(b.id); setVersion((v) => v + 1); },
-    signOut: () => { void unregisterPush().finally(() => { void api.logout().catch(() => undefined); void clearSession(); }); out(); },
-  }), [status, user, salon, salons, version, badges, out]);
+    chooseSalon: (b) => { setSalon(b); if (!isDemo()) void saveSalon(b.id); setVersion((v) => v + 1); },
+    signOut: () => { if (isDemo()) { out(); return; } void unregisterPush().finally(() => { void api.logout().catch(() => undefined); void clearSession(); }); out(); },
+    demo, enterDemo: demoIn, exitDemo: out,
+  }), [status, user, salon, salons, version, badges, out, demo, demoIn]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

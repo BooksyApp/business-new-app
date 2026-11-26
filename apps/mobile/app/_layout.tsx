@@ -14,7 +14,11 @@ import { subscribeLocale, t as tr } from '@/i18n';
 import { AppProvider, useApp } from '@/lib/app';
 import { ThemeProvider, useTheme } from '@/theme/ThemeContext';
 
-// DEV-only fixture layer for visual QA (never in release: __DEV__ is false there).
+import { installDemoFetch } from '@/demo';
+
+// Demo mode ("Demo-ya bax") answers API calls locally while it is on; a pass-through otherwise. Works in release builds.
+installDemoFetch();
+// DEV-only visual QA: boots into the demo salon with the clock pinned (never in release: __DEV__ is false there).
 if (__DEV__ && process.env.EXPO_PUBLIC_MOCK === '1') { try { require('@/dev/mock').install(); } catch (e) { console.error('mock install failed', e); } }
 installGlobalHandler();
 try { SplashScreen.preventAutoHideAsync().catch(() => {}); } catch { /* ignore */ }

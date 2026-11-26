@@ -13,6 +13,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { t as tr } from '@/i18n';
 import { useSafeAreaInsets } from '@/lib/insets';
+import { useApp } from '@/lib/app';
 import { initials } from '@/lib/format';
 import { photoSource } from '@/lib/photo';
 import { useTheme } from '@/theme/ThemeContext';
@@ -57,11 +58,13 @@ export function IconBtn({ icon, onPress, label, dot, circle, color, badge }: { i
 /** Tab-level top bar (`.tb`): 22/700 title (optional chevron = switcher), sub line, actions right. */
 export function TopBar({ title, onTitle, sub, right, extra }: { title: string; onTitle?: () => void; sub?: string; right?: React.ReactNode; extra?: React.ReactNode }) {
   const { t } = useTheme();
+  const { demo } = useApp();
   const ttl = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       <T k="bar" lines={1} accessibilityRole="header" style={{ flexShrink: 1 }}>{title}</T>
       {onTitle ? <Icon name="chevd" size={16} color={t.muted} /> : null}
       {extra}
+      {demo ? <View style={{ marginLeft: 4 }}><DemoPill /></View> : null}
     </View>
   );
   return (
@@ -304,7 +307,7 @@ export const Field = React.forwardRef<TextInput, TextInputProps & { icon?: strin
     <View style={[{ height: 54, borderRadius: 16, backgroundColor: t.surface, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10, borderWidth: focus ? 1.5 : 1, borderColor: focus ? t.violet : t.hair }, boxStyle]}>
       {icon ? <Icon name={icon} size={19} color={t.muted} /> : null}
       <TextInput ref={ref} placeholderTextColor={t.ink3} onFocus={(e) => { setFocus(true); onFocus?.(e); }} onBlur={(e) => { setFocus(false); onBlur?.(e); }}
-        style={[{ flex: 1, height: 52, fontFamily: font.s, fontSize: 15, color: t.ink, outlineStyle: 'none' } as unknown as TextStyle, style]} {...rest} />
+        style={[{ flex: 1, height: 52, fontFamily: font.m, fontSize: 15, color: t.ink, outlineStyle: 'none' } as unknown as TextStyle, style]} {...rest} />
       {right}
     </View>
   );

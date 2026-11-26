@@ -1,29 +1,35 @@
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from '@/lib/insets';
+import React, { useRef, useState } from 'react';
+import { KeyboardAvoidingView, Linking, Platform, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
-import { Btn, Field } from '@/components/ui';
+import { Button, Field, Pill, T } from '@/components/kit';
+import { BizPill } from '@/components/Opening';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Wordmark } from '@/components/Wordmark';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { api, saveSession, ApiError } from '@/lib/api';
 import { useApp } from '@/lib/app';
+import { API_BASE } from '@/lib/config';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { useTheme } from '@/theme/ThemeContext';
-import { font, mesh, wordmarkOnDark } from '@/theme/tokens';
+import { font, wordmarkOnDark } from '@/theme/tokens';
 
-/** Sign-in per design BF13 / BF79-3: wordmark, title, e-mail or phone, password, error line, disabled Google row, language switch. */
+const AURA = 'radial-gradient(55% 32% at 12% 8%, rgba(216,204,255,.55), rgba(216,204,255,0) 70%), radial-gradient(50% 28% at 95% 30%, rgba(255,194,207,.45), rgba(255,194,207,0) 70%)';
+
+/** Giriş (artifact "Giriş"): no photo. Wordmark, BİZNES ÜÇÜN pill, one line, two fields, Daxil ol, "Demo-ya bax" as the second way in. */
 export default function Login() {
   const { t } = useTheme();
   const ins = useSafeAreaInsets();
-  const { signedIn } = useApp();
+  const { signedIn, enterDemo } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [show, setShow] = useState(false);
-  const pw = React.useRef<any>(null);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const pw = useRef<any>(null);
 
   async function submit() {
     setBusy(true);
@@ -45,36 +51,55 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 360, experimental_backgroundImage: mesh, opacity: t.dark ? 0.25 : 1 } as any} />
-      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: ins.top + 40, paddingBottom: ins.bottom + 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <Wordmark height={34} color={t.dark ? wordmarkOnDark : undefined} />
-        <Text style={{ fontFamily: font.x, fontSize: 34, lineHeight: 40, letterSpacing: -1, color: t.ink, marginTop: 40 }}>{tr('login.title')}</Text>
-        <Text style={{ fontFamily: font.m, fontSize: 17, lineHeight: 24, color: t.muted, marginTop: 10, marginBottom: 32 }}>{tr('login.subtitle')}</Text>
-        <Field label={tr('login.email')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="username" textContentType="username" keyboardType="email-address" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => pw.current?.focus()} blurOnSubmit={false} />
-        <View>
-          <Field ref={pw} label={tr('login.password')} value={password} onChangeText={setPassword} secureTextEntry={!show} autoComplete="password" textContentType="password" autoCapitalize="none" returnKeyType="go" onSubmitEditing={() => { if (email && password && !busy) void submit(); }} style={{ paddingRight: 44 }} />
-          <Pressable onPress={() => setShow((v) => !v)} accessibilityRole="button" accessibilityLabel={show ? tr('login.hidePassword') : tr('login.showPassword')} hitSlop={8} style={{ position: 'absolute', right: 10, bottom: 12, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name={show ? 'eyeoff' : 'eye'} size={22} color={t.muted} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, experimental_backgroundImage: AURA, opacity: t.dark ? 0.3 : 1 } as object} />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: ins.top + 94, paddingBottom: ins.bottom + 24, flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={{ alignItems: 'center' }}>
+          <Wordmark height={72} color={t.dark ? wordmarkOnDark : undefined} />
+          <BizPill style={{ marginTop: 16 }} />
+          <T k="body" color={t.muted} style={{ fontSize: 15, marginTop: 18 }}>{tr('v2.tagline')}</T>
+        </View>
+        <View style={{ gap: 10, marginTop: 44 }}>
+          <Field icon="mail" placeholder={tr('v2.emailOrPhone')} accessibilityLabel={tr('v2.emailOrPhone')} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="username" textContentType="username"
+            keyboardType="email-address" autoCorrect={false} returnKeyType="next" onSubmitEditing={() => pw.current?.focus()} blurOnSubmit={false} />
+          <Field ref={pw} icon="lock" placeholder={tr('v2.password')} accessibilityLabel={tr('v2.password')} value={password} onChangeText={setPassword} secureTextEntry={!show} autoComplete="password" textContentType="password"
+            autoCapitalize="none" returnKeyType="go" onSubmitEditing={() => { if (email && password && !busy) void submit(); }}
+            right={<Pressable onPress={() => setShow((v) => !v)} accessibilityRole="button" accessibilityLabel={show ? tr('login.hidePassword') : tr('login.showPassword')} hitSlop={10} style={{ width: 32, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name={show ? 'eyeoff' : 'eye'} size={19} color={t.muted} /></Pressable>} />
+          {error ? (
+            <View accessibilityRole="alert" style={{ backgroundColor: t.gsoft, borderRadius: 16, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+              <Icon name="info" size={18} color={t.gink} />
+              <Text style={{ flex: 1, fontFamily: font.s, fontSize: 13.5, lineHeight: 19, color: t.gink }}>{error}</Text>
+            </View>
+          ) : null}
+          <Button label={tr('v2.signIn')} onPress={() => void submit()} loading={busy} disabled={!email || !password} style={{ marginTop: 4 }} />
+          <Button label={tr('v2.demoTry')} icon="eye" kind="ol" onPress={() => setDemoOpen(true)} />
+          <Pressable onPress={() => void Linking.openURL(API_BASE).catch(() => {})} accessibilityRole="link" style={{ alignSelf: 'center', marginTop: 6, minHeight: 32, justifyContent: 'center' }}>
+            <Text style={{ fontFamily: font.r, fontSize: 11.5, color: t.ink3 }}>{tr('v2.noSalon')} <Text style={{ fontFamily: font.b, color: t.vtext }}>{tr('v2.signUp')}</Text></Text>
           </Pressable>
         </View>
-        {error ? (
-          <View accessibilityRole="alert" style={{ backgroundColor: t.gsoft, borderRadius: 18, padding: 14, marginBottom: 16, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-            <Icon name="info" size={20} color={t.gink} />
-            <Text style={{ flex: 1, fontFamily: font.s, fontSize: 15, lineHeight: 21, color: t.gink }}>{error}</Text>
-          </View>
-        ) : null}
-        <Btn label={tr('login.signIn')} onPress={() => void submit()} loading={busy} disabled={!email || !password} />
-        <View accessible accessibilityRole="button" accessibilityState={{ disabled: true }} style={{ marginTop: 14, height: 56, borderRadius: 28, borderWidth: 1, borderColor: t.line, alignItems: 'center', justifyContent: 'center', opacity: 0.55 }}>
-          <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted }}>{tr('login.google')}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22, marginTop: 28 }}>
+        <View style={{ flex: 1 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22, marginTop: 24 }}>
           {SUPPORTED.map((l) => (
             <Pressable key={l.code} onPress={() => void setLocale(l.code)} hitSlop={10} accessibilityRole="button" accessibilityLabel={l.endonym} accessibilityState={{ selected: getLocale() === l.code }}>
-              <Text style={{ fontFamily: getLocale() === l.code ? font.b : font.m, fontSize: 15, color: getLocale() === l.code ? t.vtext : t.muted }}>{l.code.toUpperCase()}</Text>
+              <Text style={{ fontFamily: getLocale() === l.code ? font.b : font.r, fontSize: 13, color: getLocale() === l.code ? t.vtext : t.ink3 }}>{l.code.toUpperCase()}</Text>
             </Pressable>
           ))}
         </View>
       </ScrollView>
+      <BottomSheet open={demoOpen} onClose={() => setDemoOpen(false)}>
+        <View style={{ paddingBottom: Math.max(ins.bottom, 12) }}>
+          <Pill text={tr('v2.demoPill')} tone="v" />
+          <T k="h1" style={{ fontSize: 24, marginTop: 12, marginBottom: 6 }}>{tr('v2.demoTitle')}</T>
+          <T k="body" color={t.muted} style={{ marginBottom: 16 }}>{tr('v2.demoBody')}</T>
+          {([['cal', 'v2.demoF1'], ['spark', 'v2.demoF2'], ['receipt', 'v2.demoF3']] as const).map(([i, k], n) => (
+            <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: n ? 1 : 0, borderTopColor: t.hair }}>
+              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name={i} size={19} color={t.ink} /></View>
+              <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{tr(k)}</Text>
+            </View>
+          ))}
+          <Button label={tr('v2.demoTry')} onPress={() => { setDemoOpen(false); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); enterDemo(); }} style={{ marginTop: 14 }} />
+          <Button label={tr('v2.close')} kind="ghost" onPress={() => setDemoOpen(false)} style={{ marginTop: 8 }} />
+        </View>
+      </BottomSheet>
     </KeyboardAvoidingView>
   );
 }

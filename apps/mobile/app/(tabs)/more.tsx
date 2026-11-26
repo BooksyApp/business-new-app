@@ -21,7 +21,7 @@ type Row = { k: string; icon: string; title: string; sub?: string };
 export default function More() {
   const { t } = useTheme();
   const router = useRouter();
-  const { user, salon, salons, signOut, version, badges } = useApp();
+  const { user, salon, salons, signOut, version, badges, demo, exitDemo } = useApp();
   const inset = useDockInset(16);
   const [out, setOut] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -91,6 +91,7 @@ export default function More() {
             <ListRow icon="globe" title={tr('more.language')} sub={lang} onPress={() => setLangOpen(true)} />
             {salons.length > 1 ? <ListRow icon="store" title={tr('more.switchSalon')} sub={salon?.name} onPress={() => router.push('/salons')} /> : null}
             <ListRow icon="help" title={L('x2.support')} onPress={() => go('support')} />
+            {demo ? <ListRow icon="eyeoff" title={tr('v2.demoExit')} sub={tr('v2.demoExitSub')} onPress={exitDemo} /> : null}
             <ListRow icon="out" danger title={tr('more.signOut')} sub={`${tr('more.version')} ${Constants.expoConfig?.version ?? ''}`} onPress={() => setOut(true)} />
           </Group>
         </View>
