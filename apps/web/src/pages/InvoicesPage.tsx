@@ -82,7 +82,7 @@ export default function InvoicesPage() {
             grid="1.4fr 1.2fr 1.6fr 1fr 1fr"
             rows={rows}
             rowKey={(r) => String(r.id)}
-            onRowClick={setOpen}
+            onRowClick={(r) => setOpen(r)}
             columns={[t("ledger.document"), t("ledger.date"), t("ledger.client"), t("ledger.status"), t("ledger.total")]}
             render={(r) => [
               r.invoiceNumber ? (
