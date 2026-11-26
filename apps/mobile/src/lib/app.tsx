@@ -44,9 +44,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    // Boot never hangs: after 6s without an answer we fall back to the login screen.
+    const guard = setTimeout(() => { if (alive) setStatus((c) => (c === 'boot' ? 'out' : c)); }, 6000);
     (async () => {
-      await loadLocale();
-      const s = await loadSession();
+      try { await loadLocale(); } catch { /* default locale */ }
+      let s: Awaited<ReturnType<typeof loadSession>>;
+      try { s = await loadSession(); } catch { if (alive) setStatus('out'); return; }
       if (!s.user) { if (alive) setStatus('out'); return; }
       try {
         const list = await api.salonsForUser(s.user);
@@ -59,8 +62,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Offline keeps the tokens (retry); anything else (401 already cleared them) goes to login.
         setStatus(e instanceof ApiError && e.status === 0 ? 'offline' : 'out');
       }
-    })();
-    return () => { alive = false; };
+    })().catch(() => { if (alive) setStatus((c) => (c === 'boot' ? 'out' : c)); });
+    return () => { alive = false; clearTimeout(guard); };
   }, [attempt]);
 
   // Tab badges follow the salon and every mutation; failures keep the previous numbers.

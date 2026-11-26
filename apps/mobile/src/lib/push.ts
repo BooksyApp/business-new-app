@@ -1,9 +1,15 @@
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { api } from '@/lib/api';
 
+/** Lazy: a broken/missing native push module must never crash app start (import time). */
+export function loadNotifications(): typeof import('expo-notifications') | null {
+  try { return require('expo-notifications'); } catch { return null; }
+}
+
 async function register(): Promise<boolean> {
+  const Notifications = loadNotifications();
+  if (!Notifications) return false;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', { name: 'Bookings', importance: Notifications.AndroidImportance.DEFAULT });
   }
@@ -17,6 +23,8 @@ async function register(): Promise<boolean> {
 export async function enablePush(): Promise<boolean> {
   if (Constants.appOwnership === 'expo') return false;
   try {
+    const Notifications = loadNotifications();
+    if (!Notifications) return false;
     const existing = await Notifications.getPermissionsAsync();
     let granted = existing.granted;
     if (!granted && existing.canAskAgain) granted = (await Notifications.requestPermissionsAsync()).granted;
@@ -31,6 +39,8 @@ export async function enablePush(): Promise<boolean> {
 export async function registerIfGranted(): Promise<void> {
   if (Constants.appOwnership === 'expo') return;
   try {
+    const Notifications = loadNotifications();
+    if (!Notifications) return;
     const p = await Notifications.getPermissionsAsync();
     if (p.granted) await register();
   } catch {

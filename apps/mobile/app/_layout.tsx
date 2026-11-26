@@ -1,19 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
 import { OfflineBanner, Screen, Skeleton, StateView } from '@/components/ui';
-import { routeOf } from '@/lib/push';
+import { loadNotifications, routeOf } from '@/lib/push';
+import { CrashScreen, installGlobalHandler, RootErrorBoundary } from '@/lib/crash';
 import { subscribeLocale, t as tr } from '@/i18n';
 import { AppProvider, useApp } from '@/lib/app';
 import { ThemeProvider, useTheme } from '@/theme/ThemeContext';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
-Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }) });
+installGlobalHandler();
+try { SplashScreen.preventAutoHideAsync().catch(() => {}); } catch { /* ignore */ }
+// Hard cap: the splash never outlives 4s, whatever fonts / session / network do.
+setTimeout(() => { try { SplashScreen.hideAsync().catch(() => {}); } catch { /* ignore */ } }, 4000);
+try {
+  loadNotifications()?.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: false }) });
+} catch { /* push is optional */ }
+
+/** expo-router renders this for errors thrown inside any route. */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return <CrashScreen error={error} onRetry={() => { void retry(); }} />;
+}
 
 function Shell() {
   const { t } = useTheme();
@@ -22,10 +32,14 @@ function Shell() {
   // A tapped push notification opens its booking (or the alerts tab) once the user is signed in.
   useEffect(() => {
     if (status !== 'in') return;
-    const go = (r: Notifications.NotificationResponse | null) => { if (r) router.push(routeOf(r.notification.request.content.data) as never); };
-    go(Notifications.getLastNotificationResponse());
-    const sub = Notifications.addNotificationResponseReceivedListener(go);
-    return () => sub.remove();
+    const N = loadNotifications();
+    if (!N) return;
+    try {
+      const go = (r: { notification: { request: { content: { data: unknown } } } } | null) => { if (r) router.push(routeOf(r.notification.request.content.data) as never); };
+      go(N.getLastNotificationResponse());
+      const sub = N.addNotificationResponseReceivedListener(go);
+      return () => sub.remove();
+    } catch { return; }
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (status !== 'boot') SplashScreen.hideAsync().catch(() => {}); }, [status]);
   if (status === 'boot') return <Screen><Skeleton rows={6} /></Screen>;
@@ -53,11 +67,15 @@ function Shell() {
 }
 
 export default function Root() {
-  const [ok] = useFonts({ PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold });
+  const [loaded, fontError] = useFonts({ PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold });
   const [locale, setLocale] = useState(0);
   useEffect(() => subscribeLocale(() => setLocale((n) => n + 1)), []);
-  if (!ok) return null;
+  // Fonts failing or taking >3s must not hold the app hostage: fall back to system fonts.
+  const [fontWait, setFontWait] = useState(true);
+  useEffect(() => { const id = setTimeout(() => setFontWait(false), 3000); return () => clearTimeout(id); }, []);
+  if (!loaded && !fontError && fontWait) return null;
   return (
+    <RootErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
@@ -68,5 +86,6 @@ export default function Root() {
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </RootErrorBoundary>
   );
 }
