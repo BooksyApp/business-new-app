@@ -1,0 +1,61 @@
+# Deploy the new business UI (apps/web) to STAGING only: https://new-business.getbooqi.tech
+# The SSH key is a forced-command key (server script /opt/booqi-staging/ci-newhub.sh): it can only
+# receive a tar of dist/ or run "rollback". See README-deploy.md.
+name: Deploy staging (new-business)
+run-name: ${{ inputs.rollback && 'Rollback new-business staging' || format('Deploy new-business staging {0}', github.sha) }}
+on:
+  workflow_dispatch:
+    inputs:
+      rollback: { description: "Roll back to the previous release instead of deploying", type: boolean, default: false }
+  push:
+    branches: [main, feat/new-ui]
+    paths: ["apps/web/**", ".github/workflows/deploy-staging.yml"]
+concurrency: { group: deploy-staging-newhub, cancel-in-progress: false }
+permissions: { contents: read }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      URL: https://new-business.getbooqi.tech/
+    steps:
+      - name: Install SSH key
+        env:
+          KEY: ${{ secrets.STAGING_SSH_KEY }}
+          KNOWN: ${{ secrets.STAGING_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/ci; chmod 600 ~/.ssh/ci
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+      - name: Roll back
+        if: inputs.rollback
+        env: { HOST: "${{ secrets.STAGING_HOST }}" }
+        run: |
+          ssh -i ~/.ssh/ci -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "deploy@$HOST" rollback
+      - uses: actions/checkout@v4
+        if: ${{ !inputs.rollback }}
+      - uses: actions/setup-node@v4
+        if: ${{ !inputs.rollback }}
+        with: { node-version: 20, cache: npm }
+      - name: Install
+        if: ${{ !inputs.rollback }}
+        run: npm ci
+      - name: Build apps/web (same-origin /api, base /)
+        if: ${{ !inputs.rollback }}
+        env: { NODE_ENV: production }
+        run: npm run build -w apps/web
+      - name: Publish dist (tar over forced-command SSH)
+        if: ${{ !inputs.rollback }}
+        env: { HOST: "${{ secrets.STAGING_HOST }}" }
+        run: |
+          test -s apps/web/dist/index.html
+          tar -C apps/web/dist -cf - . | ssh -i ~/.ssh/ci -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "deploy@$HOST"
+      - name: Verify
+        run: |
+          sleep 3
+          code=$(curl -s -o /dev/null -L -w '%{http_code}' --max-time 30 "$URL"); echo "GET $URL -> $code"
+          [ "$code" = 200 ]
+          echo "- ${{ inputs.rollback && 'Rollback' || 'Deploy' }} to new-business.getbooqi.tech verified (200)" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove key
+        if: always()
+        run: rm -f ~/.ssh/ci
