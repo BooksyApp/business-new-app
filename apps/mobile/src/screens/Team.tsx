@@ -6,7 +6,7 @@ import { Choice, MultiChoice, SectionTitle, ToggleRow } from '@/components/form'
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, Circ, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type StaffBody, type StaffFull } from '@/lib/api-ext';
@@ -125,7 +125,7 @@ export function Team({ onBack }: { onBack: () => void }) {
   const list = useLoad(() => apiX.staffFull(salon?.id ?? ''), [salon?.id]);
   const [sel, setSel] = useState<StaffFull | null | 'new'>(null);
   if (sel) return <Editor staff={sel === 'new' ? null : sel} onClose={() => setSel(null)} onSaved={() => { setSel(null); void list.reload(); }} />;
-  const addBtn = <Pressable onPress={() => setSel('new')} accessibilityRole="button" accessibilityLabel={tr('tm.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="user-plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Circ icon="user-plus" violet label={tr('tm.add')} onPress={() => setSel('new')} />;
   return (
     <Screen>
       <Header title={tr('sections.team')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
@@ -134,14 +134,16 @@ export function Team({ onBack }: { onBack: () => void }) {
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="users" title={tr('team.empty')} actionLabel={tr('tm.add')} onAction={() => setSel('new')} />}
           renderItem={({ item: s }) => (
-            <Card onPress={() => setSel(s)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, opacity: s.isActive === false ? 0.6 : 1 }}>
-              <Avatar name={s.name} uri={s.avatarUrl} size={52} />
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{s.name}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{s.position || s.role || ''}</Text>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 92, opacity: s.isActive === false ? 0.6 : 1 }}>
+              <Pressable onPress={() => setSel(s)} accessibilityRole="button" accessibilityLabel={s.name} noScale style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Avatar name={s.name} uri={s.avatarUrl} size={60} />
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{s.name}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{s.position || s.role || ''}</Text>
+                {s.isActive === false ? <Pill text={tr('team.inactive')} tone="muted" /> : s.role ? <Pill text={s.role} tone="violet" /> : null}
               </View>
-              {s.phone ? <Pressable onPress={() => void Linking.openURL(`tel:${s.phone!.replace(/\s+/g, '')}`).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('common.call')}><Icon name="phone" size={22} color={t.vtext} /></Pressable> : null}
-              {s.isActive === false ? <Pill text={tr('team.inactive')} tone="muted" /> : s.role ? <Pill text={s.role} tone="violet" /> : null}
+              </Pressable>
+              {s.phone ? <Pressable onPress={() => void Linking.openURL(`tel:${s.phone!.replace(/\s+/g, '')}`).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('common.call')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="phone" size={22} color={t.vtext} /></Pressable> : null}
             </Card>
           )} />
       )}

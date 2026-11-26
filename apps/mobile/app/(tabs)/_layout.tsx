@@ -4,7 +4,7 @@ import { Platform, Pressable as RNPressable, StyleSheet, View } from 'react-nati
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
 import { t as tr } from '@/i18n';

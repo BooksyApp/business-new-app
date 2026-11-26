@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -11,6 +11,7 @@ import { t as tr } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import { api, ApiError, toDay, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
 import { useApp } from '@/lib/app';
+import { recallClient } from '@/lib/client-cache';
 import { addDays, dateLabel, fromIso, fromMin, hhmm, money, monthLabel, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -113,9 +114,9 @@ export default function NewBooking() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: t.canvas }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flex: 1, paddingTop: ins.top, paddingHorizontal: 16 }}>
         <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="back" size={22} color={t.ink} /></Pressable>
+          <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="back" size={22} color={t.ink} /></Pressable>
           <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink }}>{tr('create.title')}</Text>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('common.close')} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="x" size={22} color={t.ink} /></Pressable>
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('common.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}><Icon name="x" size={22} color={t.ink} /></Pressable>
         </View>
         <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
           {STEPS.map((_, i) => <View key={i} style={{ flex: 1, height: 4, borderRadius: 4, backgroundColor: i <= step ? t.violet : t.fill2 }} />)}
@@ -175,14 +176,14 @@ export default function NewBooking() {
   );
 }
 
-function Row({ name, sub, on, onPress }: { name: string; sub?: string; on: boolean; onPress: () => void }) {
+function Row({ name, sub, on, onPress, uri }: { name: string; sub?: string; on: boolean; onPress: () => void; uri?: string | null }) {
   const { t } = useTheme();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 22, backgroundColor: t.surface, borderWidth: on ? 2 : 0, borderColor: t.violet, ...cardShadow }}>
-      <Avatar name={name} size={44} />
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 84, borderRadius: 26, backgroundColor: t.surface, borderWidth: on ? 2 : 0, borderColor: t.violet, ...cardShadow }}>
+      <Avatar name={name} size={56} uri={uri} />
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{name}</Text>
+        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{name}</Text>
         {sub ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{sub}</Text> : null}
       </View>
       {on ? <Icon name="check" size={22} color={t.vtext} /> : null}
@@ -243,7 +244,7 @@ function ClientStep({ sid, sel, onPick }: { sid: string; sel: Pick | null; onPic
         <FlatList data={rows} keyExtractor={(c, i) => String(c.id ?? i)} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 10, paddingBottom: 140 }}
           renderItem={({ item: c }) => {
             const name = `${c.firstName} ${c.lastName ?? ''}`.trim();
-            return <Row name={name} sub={c.phone ?? undefined} on={sel?.id === c.id} onPress={() => onPick({ id: c.id, name })} />;
+            return <Row uri={(recallClient(String(c.id)) as { avatarUrl?: string | null } | undefined)?.avatarUrl} name={name} sub={c.phone ?? undefined} on={sel?.id === c.id} onPress={() => onPick({ id: c.id, name })} />;
           }} />
       )}
     </View>
@@ -279,7 +280,7 @@ function TimeStep({ sid, service, picked, master, date, time, setMaster, setDate
       {staff.error ? <ErrorState error={staff.error} onRetry={() => void staff.reload()} /> : staff.loading ? <Skeleton rows={1} height={72} /> : masters.length === 0 ? (
         <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted }}>{tr('create.noMasters')}</Text>
       ) : (
-        <View style={{ gap: 10 }}>{masters.map((m) => <Row key={m.id} name={m.name} sub={`${picked.map((x) => x.name).join(' + ')} · ${picked.reduce((n, x) => n + (x.durationMinutes ?? 30), 0)} ${tr('common.min')}`} on={master?.id === m.id} onPress={() => setMaster(m)} />)}</View>
+        <View style={{ gap: 10 }}>{masters.map((m) => <Row key={m.id} uri={m.avatarUrl} name={m.name} sub={`${picked.map((x) => x.name).join(' + ')} · ${picked.reduce((n, x) => n + (x.durationMinutes ?? 30), 0)} ${tr('common.min')}`} on={master?.id === m.id} onPress={() => setMaster(m)} />)}</View>
       )}
       {master ? (
         <>

@@ -3,42 +3,19 @@ import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BookingSheet } from '@/components/BookingSheet';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
-import { DayStrip, Timeline, WeekView } from '@/components/calendar';
+import { Agenda, DayStrip, Timeline, WeekView } from '@/components/calendar';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { ErrorState, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Chip, Circ, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { rememberClients } from '@/lib/client-cache';
-import { addDays, monthLabel, sameDay, startOfWeek, toMin } from '@/lib/format';
+import { addDays, dayMonth, sameDay, startOfWeek, toMin, weekdayLong } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
-import { circShadow, ctaShadow, font } from '@/theme/tokens';
-
-/** Round 42 px icon button (`.circ`). */
-function Circ({ icon, onPress, label, violet }: { icon: string; onPress: () => void; label: string; violet?: boolean }) {
-  const { t } = useTheme();
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: violet ? t.violet : t.surface }, violet ? ctaShadow : circShadow]}>
-      <Icon name={icon} size={22} color={violet ? '#fff' : t.ink} />
-    </Pressable>
-  );
-}
-
-/** `.chip`: 38 tall, pill, 14/600; `on` = ink fill, `vo` = soft violet with a 1.5 violet ring. */
-function Chip38({ label, on, vo, icon, onPress }: { label: string; on?: boolean; vo?: boolean; icon?: string; onPress?: () => void }) {
-  const { t } = useTheme();
-  const fg = on ? t.canvas : vo ? t.vtext : t.ink;
-  return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: !!(on || vo) }}
-      style={{ height: 38, paddingHorizontal: 15, borderRadius: 19, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: on ? t.ink : vo ? t.vsoft : t.surface, borderWidth: on ? 0 : vo ? 1.5 : 1, borderColor: vo ? t.violet : t.line }}>
-      {icon ? <Icon name={icon} size={18} color={fg} /> : null}
-      <Text style={{ fontFamily: font.s, fontSize: 14, color: fg }}>{label}</Text>
-    </Pressable>
-  );
-}
+import { font } from '@/theme/tokens';
 
 export default function Calendar() {
   const { t } = useTheme();
@@ -47,7 +24,6 @@ export default function Calendar() {
   const [date, setDate] = useState(() => new Date());
   const [open, setOpen] = useState<Appointment | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
-  const [chips, setChips] = useState(true);
   const [mode, setMode] = useState<'day' | 'week'>('day');
   const [blockOpen, setBlockOpen] = useState(false);
   const [block, setBlock] = useState<TimeOff | null>(null);
@@ -78,37 +54,37 @@ export default function Calendar() {
   }, [day.data]);
 
   const err = (staff.error || day.error) as Error | null;
-  const month = monthLabel(date);
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: 16 }}>
-        <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ fontFamily: font.x, fontSize: 32, lineHeight: 35, letterSpacing: -0.96, color: t.ink }}>{tr('calendar.title')}</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Circ icon="sliders" label={tr('calendar.allTeam')} onPress={() => setChips((v) => !v)} />
-            <Circ icon="clock-alert" label={tr('block.new')} onPress={() => { setBlock(null); setBlockOpen(true); }} />
-            <Circ icon="plus" violet label={tr('calendar.newAppointment')} onPress={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, marginBottom: 14 }}>
-          <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted, textTransform: 'capitalize' }}>{month}</Text>
-          <View style={{ flexDirection: 'row', gap: 18, alignItems: 'center' }}>
-            {!sameDay(date, new Date()) ? <Pressable onPress={() => setDate(new Date())} hitSlop={10} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('common.today')}</Text></Pressable> : null}
-            <Pressable onPress={() => setDate(addDays(date, -7))} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('calendar.prevWeek')}><Icon name="back" size={20} color={t.muted} /></Pressable>
-            <Pressable onPress={() => setDate(addDays(date, 7))} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('calendar.nextWeek')}><Icon name="chev" size={20} color={t.muted} /></Pressable>
-          </View>
-        </View>
+      <Header title={tr('calendar.title')}
+        right={<>
+          <Circ icon="clock-alert" label={tr('block.new')} onPress={() => { setBlock(null); setBlockOpen(true); }} />
+          <Circ icon="plus" violet label={tr('calendar.newAppointment')} onPress={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
+        </>}
+        subtitle={`${weekdayLong(date)}, ${dayMonth(date)}${day.data && mode === 'day' ? ` · ${(day.data ?? []).filter((a) => a.status !== 'CANCELLED').length} ${tr('calendar.bookingsWord')}` : ''}`} />
+      <View style={{ paddingHorizontal: 20 }}>
         <DayStrip date={date} onChange={setDate} />
-        {chips ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14, flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>
-            <Chip38 label={tr('calendar.day')} on={mode === 'day'} onPress={() => setMode('day')} />
-            <Chip38 label={tr('calendar.week')} on={mode === 'week'} onPress={() => setMode('week')} />
-            <Chip38 label={tr('calendar.allTeam')} icon="users" vo={!focus} onPress={() => setFocus(null)} />
-            {all.map((m) => <Chip38 key={m.id} label={m.name} vo={focus === String(m.id)} onPress={() => setFocus(focus === String(m.id) ? null : String(m.id))} />)}
-          </ScrollView>
-        ) : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
+          <View style={{ flexDirection: 'row', backgroundColor: t.fill, borderRadius: 24, padding: 4 }}>
+            {(['day', 'week'] as const).map((m) => (
+              <Pressable key={m} onPress={() => setMode(m)} accessibilityRole="button" accessibilityState={{ selected: mode === m }} noScale
+                style={{ height: 40, paddingHorizontal: 22, borderRadius: 20, justifyContent: 'center', backgroundColor: mode === m ? t.surface : 'transparent', ...(mode === m ? { boxShadow: '0 4px 12px -6px rgba(29,23,48,.4)' } : null) } as any}>
+                <Text style={{ fontFamily: mode === m ? font.b : font.s, fontSize: 15, color: mode === m ? t.ink : t.muted }}>{tr(m === 'day' ? 'calendar.day' : 'calendar.week')}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+            {!sameDay(date, new Date()) ? <Pressable onPress={() => setDate(new Date())} hitSlop={10} accessibilityRole="button" style={{ height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: t.vsoft, justifyContent: 'center', marginRight: 4 }}><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('common.today')}</Text></Pressable> : null}
+            <Pressable onPress={() => setDate(addDays(date, mode === 'week' ? -7 : -1))} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('calendar.prevWeek')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="back" size={22} color={t.muted} /></Pressable>
+            <Pressable onPress={() => setDate(addDays(date, mode === 'week' ? 7 : 1))} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('calendar.nextWeek')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="chev" size={22} color={t.muted} /></Pressable>
+          </View>
+        </View>
       </View>
+      {focus ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6, flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+        <Chip label={tr('calendar.allTeam')} icon="users" active={!focus} onPress={() => setFocus(null)} />
+        {all.map((m) => <Chip key={m.id} label={m.name} active={focus === String(m.id)} avatar={<Avatar name={m.name} size={28} uri={m.avatarUrl} />} onPress={() => setFocus(focus === String(m.id) ? null : String(m.id))} />)}
+      </ScrollView> : null}
       <View style={{ flex: 1, marginTop: 12 }}>
         {err ? (
           <ErrorState error={err} onRetry={() => { void staff.reload(); void day.reload(); }} />
@@ -116,12 +92,18 @@ export default function Calendar() {
           <Skeleton rows={5} height={80} />
         ) : masters.length === 0 ? (
           <StateView icon="users" title={tr('calendar.empty')} body={tr('sections.teamHint')} />
+        ) : mode === 'day' && !focus && !day.loading && (day.data ?? []).filter((a) => a.status !== 'CANCELLED').length === 0 && (off.data ?? []).length === 0 ? (
+          <StateView icon="cal" title={tr('ux.emptyToday')} body={tr('ux.emptyBookingsBody')} actionLabel={tr('calendar.newAppointment')} onAction={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
         ) : mode === 'week' ? (
           <WeekView date={date} appts={weekAppts} startHour={startHour} endHour={endHour} refreshing={day.refreshing}
             onRefresh={() => void day.reload()} onOpen={setOpen} onPickDay={(d) => { setDate(d); setMode('day'); }} />
+        ) : focus ? (
+          <Agenda date={date} appts={weekAppts} blocks={(off.data ?? []).filter((b) => String(b.staffId) === focus)} refreshing={day.refreshing}
+            onRefresh={() => { void day.reload(); void off.reload(); }} onOpen={setOpen} onBlock={(b) => { setBlock(b); setBlockOpen(true); }}
+            empty={<StateView icon="cal" title={tr('calendar.freeDay')} body={tr('calendar.freeDayBody')} />} />
         ) : (
           <Timeline date={date} masters={masters} appts={day.data ?? []} blocks={off.data ?? []} startHour={startHour} endHour={endHour}
-            refreshing={day.refreshing} onRefresh={() => { void day.reload(); void off.reload(); }} onOpen={setOpen} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} />
+            refreshing={day.refreshing} onRefresh={() => { void day.reload(); void off.reload(); }} onOpen={setOpen} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} onPickMaster={(m) => setFocus(String(m.id))} />
         )}
       </View>
       <BookingSheet appt={open} onClose={() => setOpen(null)} />

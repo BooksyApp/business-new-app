@@ -1,4 +1,5 @@
 import type { Strings } from './en';
+import { uxRu } from './ux';
 import { extraRu } from './extra';
 import { moreRu } from './more';
 import { bizRu } from './biz';
@@ -40,6 +41,9 @@ export const ru: DeepPartial<Strings> = {
     pickSalonHint: 'Ваш аккаунт управляет несколькими салонами.',
   },
   calendar: {
+    freeDayBody: 'Записи появятся здесь. Можно добавить запись самому.',
+    freeDay: 'Свободный день',
+    bookingsWord: 'записей',
     week: 'Неделя',
     title: 'Календарь',
     empty: 'Нет записей',
@@ -166,4 +170,5 @@ export const ru: DeepPartial<Strings> = {
   ...extraRu,
   ...moreRu,
   ...bizRu,
+  ...uxRu,
 };

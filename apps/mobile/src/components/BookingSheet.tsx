@@ -9,6 +9,7 @@ import { Text } from '@/components/Text';
 import { t as tr } from '@/i18n';
 import { api, ApiError, toDay, type Appointment } from '@/lib/api';
 import { useApp } from '@/lib/app';
+import { recallClient } from '@/lib/client-cache';
 import { addDays, dateLabel, digits, fromIso, fromMin, hhmm, money, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -76,9 +77,9 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
                 <Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>№ {String(a.id).slice(0, 6).toUpperCase()}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 }}>
-                <Avatar name={a.clientName ?? ''} size={56} />
+                <Avatar name={a.clientName ?? ''} size={64} uri={a.clientId != null ? (recallClient(String(a.clientId)) as { avatarUrl?: string | null } | undefined)?.avatarUrl : null} />
                 <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 24, letterSpacing: -0.48, color: t.ink }}>{a.clientName || '-'}</Text>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.6, color: t.ink }}>{a.clientName || '-'}</Text>
                   <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{a.clientPhone || dateLabel(fromIso(a.appointmentDate))}</Text>
                 </View>
               </View>

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, RefreshControl, ScrollView, Switch, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Choice, Line, TabBar, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiB, type Automation } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
@@ -43,7 +43,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   const aud = useLoad(() => (sheet && tab === 'campaigns' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel, tab]);
   const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
-  const addBtn = <Pressable onPress={() => setSheet(true)} accessibilityRole="button" accessibilityLabel={tr('mk.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Pressable onPress={() => setSheet(true)} accessibilityRole="button" accessibilityLabel={tr('mk.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
   const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : tab === 'members' ? mem : tab === 'refs' ? refs : auto;
   return (
     <Screen>
@@ -54,7 +54,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
           {(mem.data ?? []).map((m) => (
             <Card key={String(m.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: m.active ? 1 : 0.6 }}>
               <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{m.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(m.price, salon?.currency)} / {m.billing_period_months} · -{m.discount_percent}% · {tr('sx.sessions', { n: m.included_sessions })}</Text></View>
-              <Switch value={m.active} onValueChange={(v) => void run(() => apiB.setMembershipActive(sid, m, v), () => void mem.reload())} accessibilityLabel={m.name} trackColor={{ true: t.violet, false: t.fill2 }} />
+              <Toggle on={m.active} onChange={(v) => void run(() => apiB.setMembershipActive(sid, m, v), () => void mem.reload())} label={m.name} />
             </Card>
           ))}
           {(mem.data ?? []).length === 0 ? <StateView icon="crown" title={tr('x3.noMemberships')} /> : null}

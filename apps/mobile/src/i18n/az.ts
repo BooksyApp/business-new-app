@@ -1,4 +1,5 @@
 import type { Strings } from './en';
+import { uxAz } from './ux';
 import { extraAz } from './extra';
 import { moreAz } from './more';
 import { bizAz } from './biz';
@@ -45,9 +46,12 @@ export const az: DeepPartial<Strings> = {
     pickSalonHint: 'Hesabınız bir neçə salonu idarə edir.',
   },
   calendar: {
+    freeDayBody: 'Rezerv yazılanda burada görünəcək. İstəsəniz özünüz əlavə edin.',
+    freeDay: 'Bu gün boşdur',
+    bookingsWord: 'rezerv',
     week: 'Həftə',
     day: 'Gün',
-    allTeam: 'Hamısı',
+    allTeam: 'Komanda',
     prevWeek: 'Əvvəlki həftə',
     nextWeek: 'Növbəti həftə',
     title: 'Təqvim',
@@ -230,4 +234,5 @@ export const az: DeepPartial<Strings> = {
   ...extraAz,
   ...moreAz,
   ...bizAz,
+  ...uxAz,
 };

@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, Header, Row, Screen } from '@/components/ui';
+import { Btn, Card, Group, Header, ListRow, Row, Screen, SectionTitle } from '@/components/ui';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { useApp } from '@/lib/app';
 import { HoursEditor, NotifEditor, PushPrefsEditor, SubscriptionCard } from '@/screens/SettingsMore';
@@ -18,14 +18,14 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const { user, salon, signOut } = useApp();
   const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'pp'>('main');
   const [push, setPush] = useState<'idle' | 'on' | 'failed'>('idle');
-  const h = (s: string) => <Text style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 8 }}>{s}</Text>;
+  const h = (s: string) => <SectionTitle title={s} />;
   if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
   if (sub === 'notif') return <NotifEditor onBack={() => setSub('main')} />;
   if (sub === 'pp') return <PushPrefsEditor onBack={() => setSub('main')} />;
   return (
     <Screen>
       <Header title={tr('sections.settings')} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, gap: 12, paddingBottom: 56 }} showsVerticalScrollIndicator={false}>
         {h(tr('set.salon'))}
         <Card style={{ paddingVertical: 8 }}>
           <Row label={tr('set.name')} value={salon?.name} />
@@ -33,16 +33,12 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <Row label={tr('create.phone')} value={salon?.phone} />
           <Row label={tr('set.currency')} value={salon?.currency} />
         </Card>
-        <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('set.webHint')}</Text>
-        <Card onPress={() => setSub('hours')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Icon name="clock" size={22} color={t.vtext} /><Text style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{tr('hr.title')}</Text><Icon name="chev" size={18} color={t.ink3} />
-        </Card>
-        <Card onPress={() => setSub('pp')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Icon name="bell" size={22} color={t.vtext} /><Text style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{tr('pp.title')}</Text><Icon name="chev" size={18} color={t.ink3} />
-        </Card>
-        <Card onPress={() => setSub('notif')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Icon name="bell" size={22} color={t.vtext} /><Text style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{tr('ns.title')}</Text><Icon name="chev" size={18} color={t.ink3} />
-        </Card>
+        <Text style={{ fontFamily: font.m, fontSize: 14, lineHeight: 20, color: t.muted }}>{tr('set.webHint')}</Text>
+        <Group>
+          <ListRow icon="clock" title={tr('hr.title')} onPress={() => setSub('hours')} />
+          <ListRow icon="bell" title={tr('pp.title')} onPress={() => setSub('pp')} />
+          <ListRow icon="mail" title={tr('ns.title')} onPress={() => setSub('notif')} />
+        </Group>
         {h(tr('sub.title'))}
         <SubscriptionCard />
         {h(tr('more.language'))}

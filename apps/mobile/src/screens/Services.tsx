@@ -5,7 +5,7 @@ import { Choice, MultiChoice, SectionTitle, ToggleRow, num } from '@/components/
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, Chip, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Card, Chip, Circ, ErrorState, Field, Header, Pill, Screen, ServiceThumb, Skeleton, StateView, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB, type PeakRule } from '@/lib/api-biz';
@@ -239,11 +239,11 @@ export function Services({ onBack }: { onBack: () => void }) {
       </Screen>
     );
   }
-  const addBtn = <Pressable onPress={() => { setEdit(null); setView('edit'); }} accessibilityRole="button" accessibilityLabel={tr('sx.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Circ icon="plus" violet label={tr('sx.add')} onPress={() => { setEdit(null); setView('edit'); }} />;
   return (
     <Screen>
       <Header title={tr('sections.services')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginBottom: 14 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
         <Chip label={tr('cl.segAll')} active={filter === ''} onPress={() => setFilter('')} />
         {(cats.data ?? []).map((c) => <Chip key={c.id} label={c.name} active={filter === String(c.id)} onPress={() => setFilter(String(c.id))} />)}
         <Chip label={tr('sx.categories')} icon="edit" onPress={() => setView('cats')} />
@@ -252,20 +252,28 @@ export function Services({ onBack }: { onBack: () => void }) {
         <Chip label={tr('sx.archived')} icon="box" onPress={() => setView('archived')} />
       </ScrollView>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={6} /> : (
-        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => { void list.reload(); void cats.reload(); }} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="scissors" title={tr('create.noServices')} actionLabel={tr('sx.add')} onAction={() => { setEdit(null); setView('edit'); }} />}
           renderItem={({ item: s }) => {
             const on = local[s.id] ?? s.isActive;
+            const isQuick = (quick.data ?? []).some((q) => String(q.serviceId) === String(s.id));
+            const toggleQuick = () => { const ids = (quick.data ?? []).map((q) => String(q.serviceId)); const next = ids.includes(String(s.id)) ? ids.filter((x) => x !== String(s.id)) : [...ids, String(s.id)]; void apiB.setQuickSale(sid, next).then(() => quick.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); };
             return (
-              <Card onPress={() => { setEdit(s); setView('edit'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, opacity: on ? 1 : 0.65 }}>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{s.name}</Text>
-                  <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{[s.categoryName, s.durationMinutes ? `${s.durationMinutes} ${tr('common.min')}` : null, money(s.price, salon?.currency)].filter(Boolean).join(' · ')}</Text>
-                  {s.isVisible === false ? <Pill text={tr('sx.tabOnline')} tone="muted" /> : null}
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, opacity: on ? 1 : 0.7 }}>
+                <Pressable onPress={() => { setEdit(s); setView('edit'); }} accessibilityRole="button" accessibilityLabel={s.name} noScale style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <ServiceThumb name={s.name} cat={s.categoryName} uri={(s as { imageUrl?: string }).imageUrl} />
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text numberOfLines={2} style={{ fontFamily: font.x, fontSize: 17.5, lineHeight: 22, letterSpacing: -0.3, color: t.ink }}>{s.name}</Text>
+                    <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{[s.categoryName, s.durationMinutes ? `${s.durationMinutes} ${tr('common.min')}` : null].filter(Boolean).join(' · ')}</Text>
+                    <Text style={{ fontFamily: font.x, fontSize: 16.5, color: t.ink }}>{money(s.price, salon?.currency)}</Text>
+                    {s.isVisible === false ? <Pill text={tr('sx.tabOnline')} tone="muted" /> : null}
+                  </View>
+                </Pressable>
+                <View style={{ alignItems: 'center', gap: 12 }}>
+                  <Toggle on={on} onChange={(v) => void toggle(s, v)} label={s.name} />
+                  <Pressable onPress={toggleQuick} accessibilityRole="button" accessibilityLabel={tr('sl.quick')} accessibilityState={{ selected: isQuick }} hitSlop={10}><Icon name="star" size={24} color={isQuick ? '#f5a524' : t.ink3} filled={isQuick} /></Pressable>
                 </View>
-                <Pressable onPress={() => { const ids = (quick.data ?? []).map((q) => String(q.serviceId)); const next = ids.includes(String(s.id)) ? ids.filter((x) => x !== String(s.id)) : [...ids, String(s.id)]; void apiB.setQuickSale(sid, next).then(() => quick.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); }} accessibilityRole="button" accessibilityLabel={tr('sl.quick')} accessibilityState={{ selected: (quick.data ?? []).some((q) => String(q.serviceId) === String(s.id)) }}><Icon name="star" size={22} color={(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id)) ? '#f5a524' : t.ink3} filled={(quick.data ?? []).some((q) => String(q.serviceId) === String(s.id))} /></Pressable>
-                <Switch value={on} onValueChange={(v) => void toggle(s, v)} accessibilityLabel={s.name} trackColor={{ true: t.violet, false: t.fill2 }} />
               </Card>
             );
           }} />

@@ -5,7 +5,7 @@ import { AddClientSheet } from '@/components/AddClientSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Card, Chip, ErrorState, Field, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Card, Chip, Circ, ErrorState, Header, Pill, Screen, SearchBar, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -14,7 +14,7 @@ import { useDockInset } from '@/lib/dock';
 import { dateLabel, fromIso, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
-import { ctaShadow, font } from '@/theme/tokens';
+import { font } from '@/theme/tokens';
 
 type Seg = 'all' | 'new' | 'regular' | 'lapsed' | 'never';
 const SEGS: { k: Seg; label: 'cl.segAll' | 'cl.segNew' | 'cl.segRegular' | 'cl.segLapsed' | 'cl.segNever' }[] = [
@@ -48,28 +48,14 @@ export default function Clients() {
   }, [all]);
   const filtered = q.trim() !== '' || seg !== 'all';
 
-  const stat = (label: string, value: string) => (
-    <Card style={{ flex: 1, padding: 12, borderRadius: 18 }}>
-      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12.5, color: t.muted }}>{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.x, fontSize: 19, color: t.ink, marginTop: 2 }}>{value}</Text>
-    </Card>
-  );
-
   return (
     <Screen>
-      <View style={{ paddingHorizontal: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 32, letterSpacing: -0.96, color: t.ink }}>{tr('clients.title')}</Text>
-        </View>
-        <Pressable onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel={tr('cl.add')} haptic
-          style={[{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }, ctaShadow]}>
-          <Icon name="user-plus" size={22} color="#fff" />
-        </Pressable>
+      <Header title={tr('clients.title')} subtitle={all.length ? `${stats.total} ${tr('ux.members')} · ${tr('ux.returningN', { n: stats.returning })}` : undefined}
+        right={<Circ icon="user-plus" violet label={tr('cl.add')} onPress={() => setAdding(true)} />} />
+      <View style={{ paddingHorizontal: 20 }}>
+        <SearchBar value={q} onChangeText={setQ} placeholder={tr('clients.search')} />
       </View>
-      <View style={{ paddingHorizontal: 18 }}>
-        <Field placeholder={tr('clients.search')} value={q} onChangeText={setQ} autoCorrect={false} returnKeyType="search" clearButtonMode="while-editing" accessibilityLabel={tr('clients.search')} />
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginTop: 12, marginBottom: 12 }} contentContainerStyle={{ paddingHorizontal: 18, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginTop: 14, marginBottom: 14 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
         {SEGS.map((s) => <Chip key={s.k} label={tr(s.label)} active={seg === s.k} onPress={() => setSeg(s.k)} />)}
       </ScrollView>
       {list.error && !list.data ? (
@@ -80,43 +66,27 @@ export default function Clients() {
         <FlatList
           data={rows}
           keyExtractor={(c, i) => clientKey(c) || String(i)}
-          contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: inset, gap: 10 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: inset, gap: 12 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag" initialNumToRender={12} windowSize={9} removeClippedSubviews
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListHeaderComponent={all.length ? (
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>
-              {stat(tr('cl.statClients'), String(stats.total))}
-              {stat(tr('cl.statReturning'), String(stats.returning))}
-              {stat(tr('cl.statAvg'), stats.avg == null ? '—' : money(stats.avg, salon?.currency))}
-            </View>
-          ) : null}
           ListEmptyComponent={filtered
             ? <StateView icon="search" title={tr('cl.noResults')} body={tr('cl.noResultsBody')} actionLabel={tr('cl.clearFilters')} onAction={() => { setQ(''); setSeg('all'); }} />
             : <StateView icon="users" title={tr('clients.empty')} body={tr('cl.emptyBody')} actionLabel={tr('cl.add')} onAction={() => setAdding(true)} />}
           renderItem={({ item: c }) => {
             const name = `${c.firstName} ${c.lastName ?? ''}`.trim() || tr('cl.unnamed');
             const v = visitsOf(c);
-            const tag = v === 0 ? null : v === 1 ? { text: tr('cl.tagNew'), tone: 'violet' as const } : v >= 3 ? { text: tr('cl.tagRegular'), tone: 'ok' as const } : null;
             const lapsed = !!c.lastVisitDate && daysSince(c.lastVisitDate) >= 60;
+            const line = v === 0 ? tr('ux.firstBooking') : `${tr('ux.lastVisit')}: ${c.lastVisitDate ? (daysSince(c.lastVisitDate) <= 0 ? tr('common.today').toLowerCase() : dateLabel(fromIso(c.lastVisitDate))) : '-'}${c.favouriteService ? ` · ${c.favouriteService}` : ''}`;
+            const tag = c.notes?.trim() ? { text: tr('ux.hasNote'), tone: 'violet' as const } : c.vip ? { text: 'VIP', tone: 'amber' as const } : lapsed ? { text: tr('cl.tagLapsed'), tone: 'amber' as const } : null;
             return (
-              <Card onPress={() => router.push(`/client/${encodeURIComponent(clientKey(c))}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 }}>
-                <Avatar name={name} uri={c.avatarUrl} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15.5, color: t.ink }}>{name}</Text>
-                  <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{c.phone || c.email || tr('cl.noContact')}</Text>
-                  {c.nextVisitDate ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Icon name="cal" size={14} color={t.vtext} />
-                      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12.5, color: t.vtext }}>{dateLabel(fromIso(c.nextVisitDate))}{c.nextVisitTime ? ` · ${c.nextVisitTime.slice(0, 5)}` : ''}</Text>
-                    </View>
-                  ) : null}
+              <Card onPress={() => router.push(`/client/${encodeURIComponent(clientKey(c))}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 92 }}>
+                <Avatar name={name} uri={c.avatarUrl} size={60} />
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{name}</Text>
+                  <Text numberOfLines={2} style={{ fontFamily: font.m, fontSize: 14.5, lineHeight: 20, color: t.muted }}>{line}</Text>
                 </View>
-                <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                  {tag ? <Pill text={tag.text} tone={tag.tone} /> : lapsed ? <Pill text={tr('cl.tagLapsed')} tone="amber" /> : null}
-                  <Text style={{ fontFamily: font.b, fontSize: 13, color: t.ink }}>{tr('cl.visitsN', { n: v })}</Text>
-                  <Text style={{ fontFamily: font.m, fontSize: 12, color: t.muted }}>{money(c.totalSpent, salon?.currency)}</Text>
-                </View>
+                {tag ? <Pill text={tag.text} tone={tag.tone} /> : <Icon name="chev" size={20} color={t.ink3} />}
               </Card>
             );
           }}

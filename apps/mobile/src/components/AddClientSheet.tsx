@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, Switch, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Text } from '@/components/Text';
-import { Btn, Field } from '@/components/ui';
+import { Btn, Field, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, type Client } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -46,7 +46,7 @@ export function AddClientSheet({ open, onClose, onCreated }: { open: boolean; on
   const toggle = (label: string, v: boolean, set: (b: boolean) => void) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 6 }}>
       <Text style={{ flex: 1, fontFamily: font.m, fontSize: 14.5, color: t.ink }}>{label}</Text>
-      <Switch value={v} onValueChange={set} accessibilityLabel={label} trackColor={{ true: t.violet, false: t.fill2 }} />
+      <Toggle on={v} onChange={set} label={label} />
     </View>
   );
 

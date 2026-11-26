@@ -1,4 +1,5 @@
 /** English strings; the shape every other locale is checked against. */
+import { uxEn } from './ux';
 import { extraEn } from './extra';
 import { moreEn } from './more';
 import { bizEn } from './biz';
@@ -38,6 +39,9 @@ export const en = {
     pickSalonHint: 'Your account manages several salons.',
   },
   calendar: {
+    freeDayBody: 'Bookings will appear here. You can also add one yourself.',
+    freeDay: 'Nothing booked',
+    bookingsWord: 'bookings',
     week: 'Week',
     day: 'Day',
     allTeam: 'Everyone',
@@ -215,6 +219,7 @@ export const en = {
   ...extraEn,
   ...moreEn,
   ...bizEn,
+  ...uxEn,
 };
 
 export type Strings = typeof en;

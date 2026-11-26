@@ -1,4 +1,12 @@
-import { intlLocale } from '@/i18n';
+import { getLocale, intlLocale } from '@/i18n';
+
+// Azerbaijani names are fixed tables: Intl 'az' data is missing on some runtimes (it printed "M11" / "Mon"), and the product is AZ-first.
+const AZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+const AZ_MONTHS_S = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avq', 'sen', 'okt', 'noy', 'dek'];
+const AZ_DAYS_S = ['B.', 'B.e', 'Ç.a', 'Çər', 'C.a', 'Cümə', 'Şnb']; // getDay(): Sun first
+const AZ_DAYS_L = ['Bazar', 'Bazar ertəsi', 'Çərşənbə axşamı', 'Çərşənbə', 'Cümə axşamı', 'Cümə', 'Şənbə'];
+const az = () => getLocale() === 'az';
+export const weekdayLong = (d: Date) => (az() ? AZ_DAYS_L[d.getDay()] : new Intl.DateTimeFormat(intlLocale(), { weekday: 'long' }).format(d));
 
 /** "09:00:00" -> "09:00". */
 export const hhmm = (s: string | undefined | null) => (s ?? '').slice(0, 5);
@@ -30,20 +38,22 @@ export const fromIso = (s: string) => {
 };
 
 export const dateLabel = (d: Date) =>
-  new Intl.DateTimeFormat(intlLocale(), {
+  az() ? `${d.getDate()} ${AZ_MONTHS_S[d.getMonth()]}` : new Intl.DateTimeFormat(intlLocale(), {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
   }).format(d);
 
 export const monthLabel = (d: Date) =>
-  new Intl.DateTimeFormat(intlLocale(), { month: 'long', year: 'numeric' }).format(d);
+  az() ? `${AZ_MONTHS[d.getMonth()]} ${d.getFullYear()}` : new Intl.DateTimeFormat(intlLocale(), { month: 'long', year: 'numeric' }).format(d);
+export const dayMonth = (d: Date) => (az() ? `${d.getDate()} ${AZ_MONTHS[d.getMonth()].toLowerCase()}` : new Intl.DateTimeFormat(intlLocale(), { day: 'numeric', month: 'long' }).format(d));
 
 export const weekdayShort = (d: Date) =>
-  new Intl.DateTimeFormat(intlLocale(), { weekday: 'short' }).format(d);
+  az() ? AZ_DAYS_S[d.getDay()] : new Intl.DateTimeFormat(intlLocale(), { weekday: 'short' }).format(d);
 
 export function money(n: number | null | undefined, currency = 'AZN') {
   if (n == null) return '—';
+  if (az() && currency === 'AZN') return `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n).replace(/,/g, ' ')} ₼`;
   try {
     return new Intl.NumberFormat(intlLocale(), {
       style: 'currency',

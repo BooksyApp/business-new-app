@@ -38,7 +38,7 @@ export function Inventory({ onBack }: { onBack: () => void }) {
     } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
   }
   const del = () => { if (edit && edit !== 'new') Alert.alert(tr('inv.confirmDelete'), edit.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteProduct(sid, edit.id).then(() => { setEdit(null); return list.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); } }]); };
-  const addBtn = <Pressable onPress={() => open('new')} accessibilityRole="button" accessibilityLabel={tr('inv.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Pressable onPress={() => open('new')} accessibilityRole="button" accessibilityLabel={tr('inv.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
   return (
     <Screen>
       <Header title={tr('inv.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />

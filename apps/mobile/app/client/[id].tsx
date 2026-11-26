@@ -9,7 +9,7 @@ import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
 import { ToggleRow, num } from '@/components/form';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Card, ErrorState, Field, Header, Pill, Row, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, ErrorState, Field, Header, Hero, Pill, Row, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, type Client, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -73,14 +73,14 @@ export default function ClientCard() {
 
   return (
     <Screen>
-      <Header title={name || tr('clients.title')} onBack={() => router.back()} right={client ? <Pressable onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel={tr('cx.edit')} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="edit" size={20} color={t.ink} /></Pressable> : undefined} />
+      <Header title={name || tr('clients.title')} onBack={() => router.back()} right={client ? <Pressable onPress={() => setEditing(true)} accessibilityRole="button" accessibilityLabel={tr('cx.edit')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="edit" size={20} color={t.ink} /></Pressable> : undefined} />
       {loaded.error ? <ErrorState error={loaded.error} onRetry={() => void loaded.reload()} /> : !client && !loaded.loading ? <StateView icon="users" title={tr('state.errorTitle')} actionLabel={tr('state.retry')} onAction={() => void loaded.reload()} /> : !client ? <Skeleton rows={3} height={90} /> : (
-        <ScrollView contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 60 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, gap: 14, paddingBottom: 60 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={loaded.refreshing || rec.refreshing} onRefresh={() => void refresh()} tintColor={t.violet} />}>
-          <Card>
-            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', marginBottom: 14 }}>
-              <Avatar name={name} size={64} uri={stats.avatarUrl} />
-              <View style={{ flex: 1, gap: 2 }}>
+          <Hero><View style={{ padding: 18 }}>
+            <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+              <Avatar name={name} size={84} uri={stats.avatarUrl} />
+              <View style={{ flex: 1, gap: 3 }}>
                 {client.phone ? <Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{client.phone}</Text> : null}
                 {client.email ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{client.email}</Text> : null}
                 {!client.phone && !client.email ? <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{tr('cl.noContact')}</Text> : null}
@@ -91,12 +91,12 @@ export default function ClientCard() {
               </View>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              {client.phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`tel:${(client.phone ?? '').replace(/\s+/g, '')}`).catch(() => {})} /> : null}
-              {client.phone ? <Btn label={tr('common.whatsapp')} icon="chat" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`https://wa.me/${digits(client.phone)}`).catch(() => {})} /> : null}
+              {client.phone ? <Btn small label={tr('common.call')} icon="phone" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`tel:${(client.phone ?? '').replace(/\s+/g, '')}`).catch(() => {})} /> : null}
+              {client.phone ? <Btn small label={tr('common.whatsapp')} icon="chat" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`https://wa.me/${digits(client.phone)}`).catch(() => {})} /> : null}
             </View>
             <Btn label={tr('cl.newBooking')} icon="plus" style={{ marginTop: 10 }}
               onPress={() => router.push({ pathname: '/booking/new', params: { clientId: String(client.id), clientName: name } })} />
-          </Card>
+          </View></Hero>
           <Card style={{ paddingVertical: 8 }}>
             <Row label={tr('clients.visits')} value={String(visits)} />
             <Row label={tr('clients.spent')} value={money(stats.totalSpent, salon?.currency)} />

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, RefreshControl, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -11,6 +11,7 @@ import { api, type InboxSummary } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { dateLabel, hhmm } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
+import { findClient } from '@/lib/client-cache';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
@@ -30,11 +31,11 @@ export function Messages({ onBack }: { onBack: () => void }) {
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="chat" title={tr('msg.empty')} body={tr('msg.emptyBody')} />}
           renderItem={({ item: c }) => (
-            <Card onPress={() => setOpen(c)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
-              <Avatar name={c.customerName} />
+            <Card onPress={() => setOpen(c)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 84 }}>
+              <Avatar name={c.customerName} size={56} uri={(findClient(c.customerName, null) as { avatarUrl?: string | null } | undefined)?.avatarUrl} />
               <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={{ fontFamily: c.unread ? font.x : font.b, fontSize: 15.5, color: t.ink }}>{c.customerName}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{c.lastMessageAt ? dateLabel(new Date(c.lastMessageAt)) : ''}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: c.unread ? font.x : font.b, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{c.customerName}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{c.lastMessageAt ? dateLabel(new Date(c.lastMessageAt)) : ''}</Text>
               </View>
               {c.unread ? <View accessibilityLabel={tr('msg.unread', { n: c.unread })} style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: t.guava, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: font.x, fontSize: 12, color: '#fff' }}>{c.unread}</Text></View> : null}
             </Card>

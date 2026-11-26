@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, Switch, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MultiChoice, ToggleRow } from '@/components/form';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Row, Screen, Skeleton } from '@/components/ui';
+import { Btn, Card, Chip, ErrorState, Field, Header, Row, Screen, Skeleton } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
@@ -164,32 +164,26 @@ export function PushPrefsEditor({ onBack }: { onBack: () => void }) {
       Alert.alert(tr('ns.saved')); onBack();
     } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
   }
-  const cell = (ch: 'push' | 'inbox' | 'email', k: string) => <Switch value={!off[ch].includes(k)} onValueChange={() => flip(ch, k)} accessibilityLabel={`${tr(`pp.t.${k}` as 'pp.t.NO_SHOW')} ${tr(`pp.${ch}Col` as 'pp.pushCol')}`} trackColor={{ true: t.violet, false: t.fill2 }} />;
+  const chip = (ch: 'push' | 'inbox' | 'email', k: string) => <Chip key={ch} soft label={tr(`pp.${ch}Col` as 'pp.pushCol')} icon={!off[ch].includes(k) ? 'check' : undefined} active={!off[ch].includes(k)} onPress={() => flip(ch, k)} />;
   return (
     <Screen>
       <Header title={tr('pp.title')} subtitle={tr('pp.hint')} onBack={onBack} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : !q.data ? <Skeleton rows={6} height={52} /> : (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
-          <Card style={{ paddingVertical: 6 }}>
-            <View style={{ flexDirection: 'row', paddingVertical: 6 }}>
-              <View style={{ flex: 1 }} />
-              {(['pushCol', 'inboxCol', 'emailCol'] as const).map((c) => <Text key={c} style={{ width: 66, textAlign: 'center', fontFamily: font.b, fontSize: 12, color: t.muted }}>{tr(`pp.${c}` as 'pp.pushCol')}</Text>)}
-            </View>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
+          <View style={{ gap: 12 }}>
             {PTYPES.map((k) => (
-              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}>
-                <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{tr(`pp.t.${k}` as 'pp.t.NO_SHOW')}</Text>
-                <View style={{ width: 66, alignItems: 'center' }}>{cell('push', k)}</View>
-                <View style={{ width: 66, alignItems: 'center' }}>{cell('inbox', k)}</View>
-                <View style={{ width: 66, alignItems: 'center' }}>{k.startsWith('BOOKING') ? cell('email', k) : null}</View>
-              </View>
+              <Card key={k} style={{ gap: 12 }}>
+                <Text style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.3, color: t.ink }}>{tr(`pp.t.${k}` as 'pp.t.NO_SHOW')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{chip('push', k)}{chip('inbox', k)}{k.startsWith('BOOKING') ? chip('email', k) : null}</View>
+              </Card>
             ))}
-          </Card>
-          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 18, marginBottom: 6 }}>{tr('pp.quiet')}</Text>
+          </View>
+          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink, marginTop: 22, marginBottom: 8 }}>{tr('pp.quiet')}</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <View style={{ flex: 1 }}><Field label={tr('pp.from')} value={qs} onChangeText={setQs} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
             <View style={{ flex: 1 }}><Field label={tr('pp.to')} value={qe} onChangeText={setQe} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
           </View>
-          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginBottom: 6 }}>{tr('pp.staff')}</Text>
+          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink, marginBottom: 8 }}>{tr('pp.staff')}</Text>
           <MultiChoice value={ids} onChange={setIds} options={(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => ({ value: String(s.id), label: s.name }))} />
           {ids.length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginTop: -6, marginBottom: 10 }}>{tr('pp.staffAll')}</Text> : null}
           <Field label={tr('pp.stock')} value={stock} onChangeText={setStock} keyboardType="number-pad" />

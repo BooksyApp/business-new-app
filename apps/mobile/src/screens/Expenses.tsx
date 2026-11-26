@@ -40,7 +40,7 @@ export function Expenses({ onBack }: { onBack: () => void }) {
     catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
   }
   const nav = (icon: string, d: number, l: string) => <Pressable onPress={() => setM(new Date(m.getFullYear(), m.getMonth() + d, 1))} hitSlop={10} accessibilityRole="button" accessibilityLabel={l} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={20} color={t.ink} /></Pressable>;
-  const addBtn = <Pressable onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel={tr('ex.add')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Pressable onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel={tr('ex.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
   return (
     <Screen>
       <Header title={tr('ex.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />

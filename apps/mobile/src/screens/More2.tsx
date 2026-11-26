@@ -55,7 +55,7 @@ export function Support({ onBack }: { onBack: () => void }) {
       )}
     </Screen>
   );
-  const addBtn = <Pressable onPress={() => setView('new')} accessibilityRole="button" accessibilityLabel={tr('x2.newTicket')} haptic style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+  const addBtn = <Pressable onPress={() => setView('new')} accessibilityRole="button" accessibilityLabel={tr('x2.newTicket')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
   return (
     <Screen>
       <Header title={tr('x2.support')} onBack={onBack} right={addBtn} />

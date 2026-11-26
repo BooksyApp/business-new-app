@@ -21,13 +21,13 @@ export default function Salons() {
       {salons.length === 0 ? (
         <StateView icon="store" title={tr('login.pickSalon')} body={tr('clients.empty')} />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 18, gap: 10 }}>
+        <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
           {salons.map((b) => (
-            <Card key={b.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); chooseSalon(b); router.replace('/calendar'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14 }}>
-              <Avatar name={b.name} size={48} />
+            <Card key={b.id} onPress={() => { Haptics.selectionAsync().catch(() => {}); chooseSalon(b); router.replace('/calendar'); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 88 }}>
+              <Avatar name={b.name} size={60} uri={(b as { logoUrl?: string }).logoUrl} />
               <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16.5, color: t.ink }}>{b.name}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{[b.city, b.address].filter(Boolean).join(' · ')}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: t.ink }}>{b.name}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{[b.city, b.address].filter(Boolean).join(' · ')}</Text>
               </View>
               {salon?.id === b.id ? <Icon name="check" size={22} color={t.vtext} /> : <Icon name="chev" size={20} color={t.ink3} />}
             </Card>

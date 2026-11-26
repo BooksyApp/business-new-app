@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, Switch, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Chip, Field } from '@/components/ui';
+import { Btn, Chip, Field, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -90,7 +90,7 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
       </ScrollView>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
         <Text style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{tr('block.fullDay')}</Text>
-        <Switch value={full} onValueChange={setFull} accessibilityLabel={tr('block.fullDay')} trackColor={{ true: t.violet, false: t.fill2 }} />
+        <Toggle on={full} onChange={setFull} label={tr('block.fullDay')} />
       </View>
       {full ? null : (
         <View style={{ flexDirection: 'row', gap: 12, marginVertical: 8 }}>

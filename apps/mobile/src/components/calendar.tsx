@@ -77,9 +77,9 @@ export function DayStrip({ date, onChange }: { date: Date; onChange: (d: Date) =
         const sel = sameDay(d, date);
         return (
           <Pressable key={d.toISOString()} onPress={() => onChange(d)} accessibilityRole="button" accessibilityState={{ selected: sel }}
-            style={[{ flex: 1, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: sel ? t.violet : 'transparent' }, sel ? ctaShadow : null]}>
-            <Text style={{ fontFamily: font.s, fontSize: 14, color: sel ? 'rgba(255,255,255,.85)' : t.muted, textTransform: 'capitalize' }}>{weekdayShort(d).replace('.', '')}</Text>
-            <Text style={{ fontFamily: font.x, fontSize: 19, color: sel ? '#fff' : t.ink }}>{d.getDate()}</Text>
+            style={[{ flex: 1, height: 66, borderRadius: 22, alignItems: 'center', justifyContent: 'center', gap: 2, backgroundColor: sel ? t.violet : 'transparent' }, sel ? ctaShadow : null]}>
+            <Text style={{ fontFamily: font.s, fontSize: 14, color: sel ? 'rgba(255,255,255,.85)' : t.muted }}>{weekdayShort(d)}</Text>
+            <Text style={{ fontFamily: font.x, fontSize: 20, color: sel ? '#fff' : t.ink }}>{d.getDate()}</Text>
           </Pressable>
         );
       })}
@@ -112,9 +112,9 @@ function Tile({ a, top, height, left, width, onOpen }: { a: Appointment; top: nu
 }
 
 /** Day timeline `.lt` (BF02 390): sticky master header (`.colh`: ring avatar 36 + name 16/800), hour labels in a 48 px gutter, lines from x=58, now line with the guava dot and time pill. */
-export function Timeline({ date, masters, appts, blocks = [], startHour, endHour, refreshing, onRefresh, onOpen, onBlock }: {
+export function Timeline({ date, masters, appts, blocks = [], startHour, endHour, refreshing, onRefresh, onOpen, onBlock, onPickMaster }: {
   date: Date; masters: Staff[]; appts: Appointment[]; blocks?: TimeOff[]; startHour: number; endHour: number;
-  refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void;
+  refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void; onPickMaster?: (m: Staff) => void;
 }) {
   const { t } = useTheme();
   const { width } = useWindowDimensions();
@@ -143,14 +143,14 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
   return (
     <ScrollView ref={body} onContentSizeChange={settle} stickyHeaderIndices={[0]} contentContainerStyle={{ paddingBottom: inset }} showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.violet} />}>
-      <View style={{ flexDirection: 'row', backgroundColor: t.canvas, height: 56, paddingLeft: 16 }}>
+      <View style={{ flexDirection: 'row', backgroundColor: t.canvas, height: 60, paddingLeft: 16 }}>
         <View style={{ width: GUTTER }} />
         <ScrollView ref={head} horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false}>
           {masters.map((m) => (
-            <View key={m.id} style={{ width: colW, marginRight: COL_GAP, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Avatar name={m.name} size={36} />
+            <Pressable key={m.id} onPress={() => onPickMaster?.(m)} disabled={!onPickMaster || m.id === '__none'} accessibilityRole="button" accessibilityLabel={m.name} noScale style={{ width: colW, marginRight: COL_GAP, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Avatar name={m.name} size={40} uri={m.avatarUrl} />
               <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: 16, color: t.ink }}>{m.name}</Text>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       </View>
@@ -197,6 +197,60 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
           </View>
         ) : null}
       </View>
+    </ScrollView>
+  );
+}
+
+
+/** Single-master day (BF40 "Yığcam"): time column on the left, one full-width tile per booking, "now" marker, breathing room between plates. */
+export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen, onBlock, empty }: {
+  date: Date; appts: Appointment[]; blocks?: TimeOff[]; refreshing: boolean; onRefresh: () => void; onOpen: (a: Appointment) => void; onBlock?: (b: TimeOff) => void; empty?: React.ReactNode;
+}) {
+  const { t } = useTheme();
+  const inset = useDockInset(24);
+  const list = useMemo(() => [...appts].filter((a) => a.status !== 'CANCELLED').sort((a, b) => toMin(a.startTime) - toMin(b.startTime)), [appts]);
+  const now = new Date(); const nowMin = now.getHours() * 60 + now.getMinutes();
+  const isToday = sameDay(date, now);
+  const nextIdx = isToday ? list.findIndex((a) => toMin(a.endTime) > nowMin) : -1;
+  return (
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: inset, gap: 12 }} showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.violet} />}>
+      {list.length === 0 && blocks.length === 0 ? empty : null}
+      {list.map((a, i) => {
+        const [bg, fg] = (t.dark ? TILE_D : TILE_L)[hash(String(a.serviceId ?? a.serviceName)) % 4];
+        const noShow = a.status === 'NO_SHOW';
+        const bar = stripe(a.status, t.violet, t.ok);
+        const mk = markersOf(a).slice(0, 4);
+        return (
+          <View key={a.id}>
+            {i === nextIdx ? (
+              <View pointerEvents="none" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <View style={{ backgroundColor: t.guava, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}><Text style={{ fontFamily: font.x, fontSize: 13, color: '#fff' }}>{hhmm(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)}</Text></View>
+                <View style={{ flex: 1, height: 2, backgroundColor: t.guava, opacity: 0.8 }} />
+              </View>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: 14 }}>
+              <View style={{ width: 52, paddingTop: 16 }}>
+                <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{hhmm(a.startTime)}</Text>
+                <Text style={{ fontFamily: font.m, fontSize: 13, color: t.ink3, marginTop: 1 }}>{Math.max(5, toMin(a.endTime) - toMin(a.startTime))} {tr('common.min')}</Text>
+              </View>
+              <Pressable onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${hhmm(a.startTime)} ${a.clientName ?? ''} ${a.serviceName ?? ''}`} noScale
+                style={{ flex: 1, minHeight: 84, borderRadius: 22, backgroundColor: noShow ? t.gsoft : bg, overflow: 'hidden', paddingVertical: 14, paddingRight: 16, paddingLeft: 22, opacity: a.status === 'COMPLETED' ? 0.78 : 1, boxShadow: '0 8px 20px -14px rgba(29,23,48,.35)' } as any}>
+                {bar ? <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, backgroundColor: bar }} /> : null}
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: noShow ? t.gink : fg, textDecorationLine: noShow ? 'line-through' : 'none' }}>{a.clientName || '-'}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 15, color: fg, opacity: 0.85, marginTop: 2 }}>{a.serviceName ?? ''} · {hhmm(a.startTime)} – {hhmm(a.endTime)}</Text>
+                {mk.length ? <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>{mk.map((m) => <Icon key={m.key} name={m.icon} size={18} color={m.key === 'late' ? t.guava : fg} />)}</View> : null}
+              </Pressable>
+            </View>
+          </View>
+        );
+      })}
+      {blocks.map((b) => (
+        <Pressable key={`b-${b.id}`} onPress={() => onBlock?.(b)} noScale accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed', borderColor: t.ink3, paddingHorizontal: 16, marginLeft: 66, backgroundColor: t.fill }}>
+          <Icon name="lock" size={18} color={t.muted} />
+          <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.muted }}>{b.reason || tr('block.title')}{b.startTime ? ` · ${hhmm(b.startTime)} – ${hhmm(b.endTime)}` : ''}</Text>
+        </Pressable>
+      ))}
     </ScrollView>
   );
 }
