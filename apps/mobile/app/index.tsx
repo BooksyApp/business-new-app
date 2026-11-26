@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
-import { WebView, type WebViewNavigation } from 'react-native-webview';
+import { WebView as RNWebView, type WebViewNavigation } from 'react-native-webview';
+
+// react-native-webview 14 typings clash with RN 0.86 JSX typings; keep the runtime component, loosen props.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const WebView: any = RNWebView;
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const VIOLET = '#6f52ed';
@@ -25,7 +29,8 @@ const PLATFORM = Platform.OS === 'ios' ? 'ios' : 'android';
 const INJECT = `window.__BOOQI_APP__ = ${JSON.stringify(PLATFORM)}; true;`;
 
 export default function Shell() {
-  const ref = useRef<WebView>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ref = useRef<any>(null);
   const canGoBack = useRef(false);
   const [offline, setOffline] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,7 +59,7 @@ export default function Shell() {
 
   return (
     <View style={styles.root}>
-      <StatusBar style="dark" backgroundColor={CREAM} />
+      <StatusBar style="dark" />
       <SafeAreaView style={styles.root} edges={['top', 'left', 'right']}>
         <WebView
           ref={ref}
@@ -63,7 +68,7 @@ export default function Shell() {
           containerStyle={styles.root}
           injectedJavaScriptBeforeContentLoaded={INJECT}
           onNavigationStateChange={onNav}
-          onShouldStartLoadWithRequest={(req) => {
+          onShouldStartLoadWithRequest={(req: { url: string }) => {
             if (isInternal(req.url)) return true;
             Linking.openURL(req.url).catch(() => {});
             return false;
@@ -72,7 +77,7 @@ export default function Shell() {
           onLoadEnd={() => setLoading(false)}
           onLoad={() => setOffline(false)}
           onError={() => setOffline(true)}
-          onHttpError={(e) => { if (e.nativeEvent.statusCode >= 500) setOffline(true); }}
+          onHttpError={(e: { nativeEvent: { statusCode: number } }) => { if (e.nativeEvent.statusCode >= 500) setOffline(true); }}
           pullToRefreshEnabled={false}
           bounces={false}
           overScrollMode="never"
