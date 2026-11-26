@@ -34,7 +34,7 @@ export const v2En = {
     emptyClientsTitle: 'Your client list is empty', emptyClientsBody: 'Clients land here after every booking. You can add them by hand too.', addClient: 'Add client',
     manage: 'Manage', salon: 'Salon', account: 'Account', allSections: 'All sections', profile: 'Profile', owner: 'Owner',
     notifications: 'Notifications', allRead: 'All caught up', allReadBody: 'New bookings, reviews and alerts appear here.', notifSettings: 'Notification settings',
-    hello: 'Hello, {{n}}', whichSalon: 'Which salon?', lastOpened: 'Last opened',
+    hello: 'Hello, {{n}}', daysAgo: '{{n}} days ago', min: 'min', fullForm: 'Package, group class or several services: full form', firstName: 'Name and surname', whichSalon: 'Which salon?', lastOpened: 'Last opened',
   },
 };
 export const v2Az: typeof v2En = {
@@ -72,7 +72,7 @@ export const v2Az: typeof v2En = {
     emptyClientsTitle: 'Müştəri siyahınız boşdur', emptyClientsBody: 'Hər rezervdən sonra müştəri bura avtomatik düşür. İndi əl ilə də əlavə edə bilərsiniz.', addClient: 'Müştəri əlavə et',
     manage: 'İdarə', salon: 'Salon', account: 'Hesab', allSections: 'Bütün bölmələr', profile: 'Profil', owner: 'Sahibkar',
     notifications: 'Bildirişlər', allRead: 'Hamısı oxunub', allReadBody: 'Yeni rezerv, rəy və ya xəbərdarlıq gələndə burada görəcəksiniz.', notifSettings: 'Bildiriş ayarları',
-    hello: 'Salam, {{n}}', whichSalon: 'Hansı salon?', lastOpened: 'Son açılan',
+    hello: 'Salam, {{n}}', daysAgo: '{{n}} gün əvvəl', min: 'dəq', fullForm: 'Paket, qrup dərsi və ya bir neçə xidmət: ətraflı forma', firstName: 'Ad və soyad', whichSalon: 'Hansı salon?', lastOpened: 'Son açılan',
   },
 };
 export const v2Ru: typeof v2En = { v2: { ...v2En.v2,

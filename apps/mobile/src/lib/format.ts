@@ -74,3 +74,7 @@ export const initials = (name: string | undefined | null) =>
     .join('') || '?';
 
 export const digits = (s: string | undefined | null) => (s ?? '').replace(/[^\d]/g, '');
+
+/** Week-strip letters of the v2 calendar (AZ: B.e Ç.a Ç C.a C Ş B). */
+const AZ_DAYS_MINI = ['B', 'B.e', 'Ç.a', 'Ç', 'C.a', 'C', 'Ş'];
+export const weekdayMini = (d: Date) => (az() ? AZ_DAYS_MINI[d.getDay()] : new Intl.DateTimeFormat(intlLocale(), { weekday: 'narrow' }).format(d));

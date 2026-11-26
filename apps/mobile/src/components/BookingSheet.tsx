@@ -171,7 +171,7 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
   );
 }
 
-function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () => void; onDone: () => void }) {
+export function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () => void; onDone: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const days = React.useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(new Date(), i)), []);
@@ -228,7 +228,7 @@ function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () => void;
 }
 
 /** Per-booking WhatsApp reminder: the server-built message (from the salon's template), who gets it, send via wa.me, mark as sent. */
-function WaReminder({ a, onBack }: { a: Appointment; onBack: () => void }) {
+export function WaReminder({ a, onBack }: { a: Appointment; onBack: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? '';

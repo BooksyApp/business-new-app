@@ -1,142 +1,298 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { BookingRow } from '@/components/BookingRow';
-import { BottomSheet } from '@/components/BottomSheet';
-import { BookingSheet } from '@/components/BookingSheet';
+import React, { useEffect, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
-import { Agenda, DayStrip, MonthView, StaffRail, Timeline, WeekView } from '@/components/calendar';
-import { TodayHome } from '@/components/TodayHome';
+import { BottomSheet } from '@/components/BottomSheet';
+import { Timeline, WeekView } from '@/components/calendar';
 import { Icon } from '@/components/Icon';
+import { Avatar, Button, EmptyState, IconBtn, ListItem, LoadRing, Pill, Segmented, Skeleton, T, TopBar } from '@/components/kit';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Circ, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { ErrorState, Screen } from '@/components/ui';
 import { t as tr } from '@/i18n';
-import { api, toDay, type Appointment, type Staff, type TimeOff } from '@/lib/api';
+import { api, toDay, type Appointment, type ClientWithStats, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { rememberClients } from '@/lib/client-cache';
-import { addDays, dayMonth, monthLabel, sameDay, startOfWeek, toMin, weekdayLong } from '@/lib/format';
+import { firstName, live, nowMin, staffLoad } from '@/lib/day';
+import { useDockInset } from '@/lib/dock';
+import { addDays, dayMonth, hhmm, monthLabel, sameDay, startOfWeek, toMin, weekdayLong, weekdayMini } from '@/lib/format';
+import { useSafeAreaInsets } from '@/lib/insets';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
-import { font } from '@/theme/tokens';
+import { evTint, font } from '@/theme/tokens';
 
+type Mode = 'day' | 'month';
+type Layout = 'summary' | 'grid' | 'week';
+
+/**
+ * Təqvim (artifact "Təqvim"): Gün / Ay. Day = staff rail + week strip, then either the team summary (one row per
+ * specialist with a load ring) or one specialist's single-column day with the now line. Month = dots + a day sheet.
+ * The dense multi-column grid and the week view stay one tap away in the "..." sheet (progressive disclosure).
+ */
 export default function Calendar() {
   const { t } = useTheme();
   const router = useRouter();
-  const { salon, version } = useApp();
+  const params = useLocalSearchParams<{ staff?: string }>();
+  const ins = useSafeAreaInsets();
+  const inset = useDockInset(20);
+  const { salon, version, bump } = useApp();
+  const sid = salon?.id ?? '';
   const [date, setDate] = useState(() => new Date());
-  const [open, setOpen] = useState<Appointment | null>(null);
+  const [mode, setMode] = useState<Mode>('day');
+  const [layout, setLayout] = useState<Layout>('summary');
   const [focus, setFocus] = useState<string | null>(null);
-  const [mode, setMode] = useState<'today' | 'day' | 'week' | 'month'>('today');
   const [dense, setDense] = useState(false);
-  const [monthDay, setMonthDay] = useState<Date | null>(null);
+  const [menu, setMenu] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [block, setBlock] = useState<TimeOff | null>(null);
+  useEffect(() => { if (params.staff) { setFocus(String(params.staff)); setMode('day'); setLayout('summary'); } }, [params.staff]);
 
-  const sid = salon?.id ?? '';
-  const staff = useLoad<Staff[]>(() => api.staff(sid), [sid]);
   const weekStart = startOfWeek(date);
   const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-  const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  const day = useLoad(() => (mode === 'month' ? api.appointments(sid, startOfWeek(monthStart), addDays(startOfWeek(monthStart), 41)) : mode === 'week' ? api.appointments(sid, weekStart, addDays(weekStart, 6)) : api.appointments(sid, date)), [sid, mode, mode === 'month' ? `${date.getFullYear()}-${date.getMonth()}` : mode === 'week' ? weekStart.toDateString() : date.toDateString(), version]);
-  // Client stats feed the VIP / new / returning tile markers; failure just means no such markers.
-  const clientsQ = useLoad(async () => { const r = await api.clientsWithStats(sid).catch(() => []); rememberClients(r); return r.length; }, [sid, version]);
+  const gridStart = startOfWeek(monthStart);
+  const staff = useLoad<Staff[]>(() => api.staff(sid), [sid, version]);
+  const q = useLoad(() => (mode === 'month' ? api.appointments(sid, gridStart, addDays(gridStart, 41)) : api.appointments(sid, weekStart, addDays(weekStart, 6))),
+    [sid, mode, mode === 'month' ? `${date.getFullYear()}-${date.getMonth()}` : weekStart.toDateString(), version]);
   const off = useLoad<TimeOff[]>(() => (mode === 'day' ? api.timeOffOn(sid, date).catch(() => []) : Promise.resolve([])), [sid, mode, date.toDateString(), version]);
+  const clients = useLoad(async () => { const r = await api.clientsWithStats(sid).catch(() => [] as ClientWithStats[]); rememberClients(r); return r; }, [sid, version]);
+  const avatarOf = useMemo(() => new Map((clients.data ?? []).map((c) => [String(c.id), c.avatarUrl ?? null])), [clients.data]);
 
-  const all = useMemo(() => {
-    const list = (staff.data ?? []).filter((s) => s.isActive !== false);
-    const known = new Set(list.map((s) => String(s.id)));
-    const orphan = (day.data ?? []).some((a) => !known.has(String(a.staffId)));
-    return orphan ? [...list, { id: '__none', name: tr('calendar.unassigned') } as Staff] : list;
-  }, [staff.data, day.data]);
-  const masters = focus ? all.filter((m) => String(m.id) === focus) : all;
-  const weekAppts = useMemo(() => (focus ? (day.data ?? []).filter((a) => String(a.staffId) === focus) : day.data ?? []), [day.data, focus]);
-
-  // Visible hour range from data, never less than 9-19.
-  const { startHour, endHour } = useMemo(() => {
-    const a = day.data ?? [];
-    const lo = Math.min(9, ...a.map((x) => Math.floor(toMin(x.startTime) / 60)));
-    const hi = Math.max(19, ...a.map((x) => Math.ceil(toMin(x.endTime) / 60)));
-    return { startHour: lo, endHour: Math.min(24, hi + 1) };
-  }, [day.data]);
-
-  const err = (staff.error || day.error) as Error | null;
-  const isDay = mode === 'day';
-  const step = (dir: 1 | -1) => setDate(mode === 'month' ? new Date(date.getFullYear(), date.getMonth() + dir, 1) : addDays(date, dir * (mode === 'week' ? 7 : 1)));
-  const hourPx = dense ? 76 : 104;
-  const blockSheets = (<>
-      <BookingSheet appt={open} onClose={() => setOpen(null)} />
-      <BlockTimeSheet open={blockOpen} date={date} masters={all} preset={focus} existing={block} onClose={() => setBlockOpen(false)} onDone={() => { setBlockOpen(false); void off.reload(); }} />
-    </>);
-  if (mode === 'today') return <Screen><TodayHome onOpen={setOpen} onBlock={() => { setBlock(null); setBlockOpen(true); }} onCalendar={() => setMode('day')} />{blockSheets}</Screen>;
+  const team = useMemo(() => (staff.data ?? []).filter((s) => s.isActive !== false), [staff.data]);
+  const all = q.data ?? [];
+  const dayKey = toDay(date);
+  const dayList = useMemo(() => all.filter((a) => a.appointmentDate.slice(0, 10) === dayKey && live(a)).sort((a, b) => toMin(a.startTime) - toMin(b.startTime)), [all, dayKey]);
+  const focused = team.find((s) => String(s.id) === focus) ?? null;
+  const newBooking = (d = date) => router.push({ pathname: '/booking/new', params: { date: toDay(d), ...(focus ? { staff: focus } : {}) } });
+  const open = (a: Appointment) => router.push(`/booking/${a.id}`);
+  const err = (staff.error || q.error) as Error | null;
+  const loading = (staff.loading && !staff.data) || (q.loading && !q.data);
 
   return (
-    <Screen>
-      <Header title={tr('calendar.title')}
+    <Screen style={{ paddingTop: ins.top }}>
+      <TopBar title={tr('calendar.title')} sub={`${weekdayLong(date)}, ${dayMonth(date)}`}
         right={<>
-          <Circ icon="sliders" label={`${tr('ux.comfy')} / ${tr('ux.compact')}`} onPress={() => setDense((v) => !v)} />
-          <Circ icon="clock-alert" label={tr('block.new')} onPress={() => { setBlock(null); setBlockOpen(true); }} />
-          <Circ icon="plus" violet label={tr('calendar.newAppointment')} onPress={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
-        </>}
-        subtitle={mode === 'month' ? monthLabel(date) : `${weekdayLong(date)}, ${dayMonth(date)}${day.data && isDay ? ` · ${(day.data ?? []).filter((a) => a.status !== 'CANCELLED').length} ${tr('calendar.bookingsWord')}` : ''}`} />
-      <View style={{ paddingHorizontal: 20 }}>
-        {mode === 'month' ? null : <DayStrip date={date} onChange={setDate} />}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-          <View style={{ flexDirection: 'row', backgroundColor: t.fill, borderRadius: 24, padding: 4 }}>
-            {(['today', 'day', 'week', 'month'] as const).map((m) => (
-              <Pressable key={m} onPress={() => setMode(m)} accessibilityRole="button" accessibilityState={{ selected: mode === m }} noScale
-                style={{ height: 40, paddingHorizontal: 15, borderRadius: 20, justifyContent: 'center', backgroundColor: mode === m ? t.surface : 'transparent', ...(mode === m ? { boxShadow: '0 4px 12px -6px rgba(29,23,48,.4)' } : null) } as any}>
-                <Text style={{ fontFamily: mode === m ? font.b : font.s, fontSize: 15, color: mode === m ? t.ink : t.muted }}>{tr(m === 'today' ? 'ux.todayTitle' : m === 'day' ? 'calendar.day' : m === 'week' ? 'calendar.week' : 'ux.month')}</Text>
-              </Pressable>
-            ))}
+          <IconBtn icon="search" label={tr('ux.bookingsTitle')} onPress={() => router.push('/bookings')} />
+          <IconBtn icon="plus" label={tr('v2.newBooking')} onPress={() => newBooking()} />
+          <IconBtn icon="dots" label={tr('v2.tabMore')} onPress={() => setMenu(true)} />
+        </>} />
+      <View style={{ paddingHorizontal: 20, marginTop: 4, marginBottom: 12 }}>
+        <Segmented items={[{ k: 'day', label: tr('v2.day') }, { k: 'month', label: tr('v2.month') }]} value={mode} onChange={(m) => { setMode(m); setLayout('summary'); }} />
+      </View>
+
+      {err ? <ErrorState error={err} onRetry={() => { void staff.reload(); void q.reload(); }} /> : mode === 'month' ? (
+        <Month date={date} appts={all} loading={loading} avatarOf={avatarOf}
+          onMonth={(d) => setDate(d)} onPick={(d) => setDate(d)} onOpenDay={(d) => { setDate(d); setMode('day'); }} onOpen={open} onNew={newBooking} />
+      ) : (
+        <ScrollView contentContainerStyle={{ paddingBottom: inset }} showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={q.refreshing} onRefresh={() => { void q.reload(); void off.reload(); }} tintColor={t.violet} />}>
+          {/* staff rail */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20, paddingTop: 2, paddingBottom: 4 }}>
+            <Pro label={tr('v2.all')} on={!focus} onPress={() => setFocus(null)} />
+            {team.map((s) => <Pro key={String(s.id)} label={firstName(s.name)} uri={s.avatarUrl} name={s.name} on={focus === String(s.id)} onPress={() => setFocus(String(s.id))} />)}
+          </ScrollView>
+          {/* week strip */}
+          <View style={{ flexDirection: 'row', paddingHorizontal: 14, marginTop: 12, marginBottom: 4 }}>
+            {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map((d) => {
+              const on = sameDay(d, date);
+              const has = all.some((a) => a.appointmentDate.slice(0, 10) === toDay(d) && live(a) && (!focus || String(a.staffId) === focus));
+              return (
+                <Pressable key={d.toDateString()} onPress={() => setDate(d)} noScale accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`${weekdayLong(d)}, ${dayMonth(d)}`}
+                  style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 6 }}>
+                  <Text style={{ fontFamily: font.s, fontSize: 11.5, color: t.ink3 }}>{weekdayMini(d)}</Text>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? (t.dark ? '#f5f2fa' : '#1d1730') : 'transparent' }}>
+                    <Text style={{ fontFamily: font.b, fontSize: 16, color: on ? (t.dark ? '#1d1730' : '#fff') : t.ink }}>{d.getDate()}</Text>
+                  </View>
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: t.violet, opacity: has ? 0.7 : 0 }} />
+                </Pressable>
+              );
+            })}
           </View>
-          <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
-            {!sameDay(date, new Date()) ? <Pressable onPress={() => setDate(new Date())} hitSlop={10} accessibilityRole="button" style={{ height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: t.vsoft, justifyContent: 'center', marginRight: 4 }}><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('common.today')}</Text></Pressable> : null}
-            <Pressable onPress={() => step(-1)} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('calendar.prevWeek')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="back" size={22} color={t.muted} /></Pressable>
-            <Pressable onPress={() => step(1)} hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('calendar.nextWeek')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="chev" size={22} color={t.muted} /></Pressable>
-          </View>
+
+          {loading ? <Skeleton blocks={[{ h: 64 }, { h: 64 }, { h: 64 }, { h: 64 }]} /> : layout === 'grid' && !focus ? (
+            <View style={{ height: 640, marginTop: 8 }}>
+              <Timeline date={date} masters={team} appts={dayList} blocks={off.data ?? []} startHour={9} endHour={21} refreshing={false} onRefresh={() => void q.reload()}
+                onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} onPickMaster={(m) => { setFocus(String(m.id)); setLayout('summary'); }} hourPx={dense ? 76 : 104} />
+            </View>
+          ) : layout === 'week' ? (
+            <View style={{ height: 640, marginTop: 8 }}>
+              <WeekView date={date} appts={focus ? all.filter((a) => String(a.staffId) === focus) : all} startHour={9} endHour={21} refreshing={false} onRefresh={() => void q.reload()}
+                onOpen={open} onPickDay={(d) => { setDate(d); setLayout('summary'); }} />
+            </View>
+          ) : dayList.length === 0 && !(focus && (off.data ?? []).some((b) => String(b.staffId) === focus)) ? (
+            <EmptyState photo="demo:p7518700" artHeight={170} style={{ marginTop: 14 }} title={tr('v2.dayEmptyTitle')} body={tr('v2.dayEmptyBody')} action={{ label: tr('v2.addBooking'), icon: 'plus', onPress: () => newBooking() }} />
+          ) : focused ? (
+            <DayColumn tint={Math.max(0, team.findIndex((s) => String(s.id) === focus))} date={date} list={dayList.filter((a) => String(a.staffId) === focus)} blocks={(off.data ?? []).filter((b) => String(b.staffId) === focus)} hourPx={dense ? 46 : 62}
+              avatarOf={avatarOf} onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} />
+          ) : (
+            <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
+              {team.map((s, i) => {
+                const { load, hours } = staffLoad(dayList, s);
+                const n = dayList.find((a) => String(a.staffId) === String(s.id) && a.status !== 'COMPLETED' && (!sameDay(date, new Date()) || toMin(a.endTime) > nowMin()));
+                return (
+                  <ListItem key={String(s.id)} first={i === 0} title={firstName(s.name)} onPress={() => setFocus(String(s.id))}
+                    lead={<LoadRing value={load} size={56}><Avatar uri={s.avatarUrl} name={s.name} size={46} /></LoadRing>}
+                    sub={n ? tr('v2.nextAt', { t: hhmm(n.startTime), n: firstName(n.clientName) }) : tr('v2.freeToday')}
+                    right={<View style={{ alignItems: 'flex-end' }}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{Math.round(load * 100)}%</Text><T k="sm" color={t.ink3}>{tr('v2.hours', { a: hours, b: 8 })}</T></View>} />
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      <BottomSheet open={menu} onClose={() => setMenu(false)}>
+        <View style={{ paddingBottom: 12 }}>
+          <T k="h2" style={{ fontSize: 18, marginBottom: 12 }}>{tr('calendar.title')}</T>
+          <Segmented items={[{ k: 'comfy', label: tr('v2.comfy') }, { k: 'compact', label: tr('v2.compact') }]} value={dense ? 'compact' : 'comfy'} onChange={(k) => setDense(k === 'compact')} />
+          {([
+            ['users', tr('calendar.day') + ' · ' + tr('v2.all'), () => { setMode('day'); setFocus(null); setLayout('grid'); }],
+            ['cal', tr('calendar.week'), () => { setMode('day'); setLayout('week'); }],
+            ['lock', tr('v2.block'), () => { setBlock(null); setBlockOpen(true); }],
+            ['search', tr('ux.bookingsTitle'), () => router.push('/bookings')],
+          ] as const).map(([i, l, go], k) => (
+            <Pressable key={l} onPress={() => { setMenu(false); go(); }} accessibilityRole="button" noScale
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 54, borderTopWidth: k ? 1 : 0, borderTopColor: t.hair, marginTop: k ? 0 : 10 }}>
+              <Icon name={i} size={21} color={t.ink} /><Text style={{ flex: 1, fontFamily: font.r, fontSize: 15, color: t.ink }}>{l}</Text><Icon name="chev" size={16} color={t.ink3} />
+            </Pressable>
+          ))}
+        </View>
+      </BottomSheet>
+      <BlockTimeSheet open={blockOpen} date={date} masters={team} preset={focus} existing={block} onClose={() => setBlockOpen(false)} onDone={() => { setBlockOpen(false); void off.reload(); bump(); }} />
+    </Screen>
+  );
+}
+
+/** Staff picker bubble (`.pro`, 58): violet ring when selected. */
+function Pro({ label, uri, name, on, onPress }: { label: string; uri?: string | null; name?: string; on: boolean; onPress: () => void }) {
+  const { t } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={label} style={{ width: 58, alignItems: 'center' }}>
+      <View style={{ width: 58, height: 58, borderRadius: 29, borderWidth: 3, borderColor: on ? t.violet : 'transparent', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: name ? t.fill : t.fill }}>
+        {name ? <Avatar uri={uri} name={name} size={on ? 52 : 58} /> : <Icon name="users" size={22} color={t.muted} />}
+      </View>
+      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12, color: t.ink, marginTop: 6 }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** One specialist's day (`.tl`): hour lines every hourPx, events as tinted cards, pending = white with guava outline, now line. */
+const TINT = [0, 3, 1, 4, 2]; // artifact order: Aysel c1, Nigar c4, Lalə c2, Kamran c5, Rəna c3
+function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint }: {
+  tint: number; date: Date; list: Appointment[]; blocks: TimeOff[]; hourPx: number; avatarOf: Map<string, string | null>; onOpen: (a: Appointment) => void; onBlock: (b: TimeOff) => void;
+}) {
+  const { t } = useTheme();
+  const lo = Math.min(9, ...list.map((a) => Math.floor(toMin(a.startTime) / 60)));
+  const hi = Math.max(20, ...list.map((a) => Math.ceil(toMin(a.endTime) / 60)));
+  const y = (m: number) => ((m - lo * 60) / 60) * hourPx;
+  const isToday = sameDay(date, new Date());
+  const n = nowMin();
+  return (
+    <View style={{ marginTop: 8, marginRight: 20, paddingLeft: 64, height: (hi - lo) * hourPx + 20 }}>
+      {Array.from({ length: hi - lo }, (_, i) => (
+        <View key={i} style={{ height: hourPx, borderTopWidth: 1, borderTopColor: t.hair }}>
+          <Text style={{ position: 'absolute', left: -50, top: -9, fontFamily: font.r, fontSize: 11.5, color: t.ink3, fontVariant: ['tabular-nums'] }}>{String(lo + i).padStart(2, '0')}:00</Text>
+        </View>
+      ))}
+      {blocks.map((b) => {
+        const s = b.isFullDay ? lo * 60 : toMin(b.startTime ?? '00:00'); const e = b.isFullDay ? hi * 60 : toMin(b.endTime ?? '00:00');
+        return (
+          <Pressable key={String(b.id)} onPress={() => onBlock(b)} accessibilityRole="button" accessibilityLabel={b.reason ?? tr('v2.block')}
+            style={{ position: 'absolute', left: 66, right: 0, top: y(s) + 2, height: Math.max(30, y(e) - y(s) - 4), borderRadius: 16, backgroundColor: t.fill, paddingHorizontal: 12, justifyContent: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="lock" size={15} color={t.muted} /><T k="sm" color={t.muted}>{b.reason || tr('v2.block')}</T></View>
+          </Pressable>
+        );
+      })}
+      {list.map((a) => {
+        const top = y(toMin(a.startTime)); const h = Math.max(44, y(toMin(a.endTime)) - top - 4);
+        const pend = a.status === 'PENDING'; const done = a.status === 'COMPLETED';
+        return (
+          <Pressable key={a.id} onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${a.clientName}, ${hhmm(a.startTime)}`}
+            style={{ position: 'absolute', left: 66, right: 0, top: top + 2, height: h, borderRadius: 16, paddingVertical: 9, paddingHorizontal: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start', overflow: 'hidden', opacity: done ? 0.55 : 1,
+              backgroundColor: pend ? t.surface : evTint[TINT[tint % TINT.length]], borderWidth: pend ? 1.5 : 0, borderColor: 'rgba(232,62,99,.35)' }}>
+            <Avatar uri={a.clientId != null ? avatarOf.get(String(a.clientId)) : null} name={a.clientName} size={30} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, lineHeight: 17.5, color: '#1d1730' }}>{a.clientName}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 12, color: '#6b6158' }}>{hhmm(a.startTime)}–{hhmm(a.endTime)} · {a.serviceName}</Text>
+            </View>
+            {pend ? <Pill tone="g" text={tr('status.PENDING')} /> : null}
+          </Pressable>
+        );
+      })}
+      {isToday && n >= lo * 60 && n <= hi * 60 ? (
+        <View pointerEvents="none" style={{ position: 'absolute', left: 58, right: 0, top: y(n), height: 2, backgroundColor: t.guava, zIndex: 3 }}>
+          <View style={{ position: 'absolute', left: -5, top: -4, width: 10, height: 10, borderRadius: 5, backgroundColor: t.guava }} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Ay (`.mon`): 6-week grid with up to 3 dots (violet booking, guava pending, green done), and a resting day sheet. */
+function Month({ date, appts, loading, avatarOf, onMonth, onPick, onOpenDay, onOpen, onNew }: {
+  date: Date; appts: Appointment[]; loading: boolean; avatarOf: Map<string, string | null>; onMonth: (d: Date) => void; onPick: (d: Date) => void; onOpenDay: (d: Date) => void; onOpen: (a: Appointment) => void; onNew: (d: Date) => void;
+}) {
+  const { t } = useTheme();
+  const pb = useDockInset(8);
+  const start = startOfWeek(new Date(date.getFullYear(), date.getMonth(), 1));
+  const today = new Date();
+  const byDay = useMemo(() => {
+    const m = new Map<string, Appointment[]>();
+    for (const a of appts) if (live(a)) { const k = a.appointmentDate.slice(0, 10); m.set(k, [...(m.get(k) ?? []), a]); }
+    return m;
+  }, [appts]);
+  const sel = (byDay.get(toDay(date)) ?? []).slice().sort((a, b) => toMin(a.startTime) - toMin(b.startTime));
+  const isToday = sameDay(date, today);
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 14, marginBottom: 6 }}>
+        <T k="h2">{monthLabel(date)}</T>
+        <View style={{ flexDirection: 'row' }}>
+          <IconBtn icon="back" label={tr('calendar.prevWeek')} onPress={() => onMonth(new Date(date.getFullYear(), date.getMonth() - 1, 1))} />
+          <IconBtn icon="chev" label={tr('calendar.nextWeek')} onPress={() => onMonth(new Date(date.getFullYear(), date.getMonth() + 1, 1))} />
         </View>
       </View>
-      {mode === 'day' || mode === 'week' ? <View style={{ marginTop: 12 }}><StaffRail masters={all} focus={focus} onPick={setFocus} /></View> : null}
-      <View style={{ flex: 1, marginTop: 12 }}>
-        {err ? (
-          <ErrorState error={err} onRetry={() => { void staff.reload(); void day.reload(); }} />
-        ) : staff.loading || (day.loading && !day.data) ? (
-          <Skeleton rows={5} height={80} />
-        ) : masters.length === 0 ? (
-          <StateView icon="users" title={tr('calendar.empty')} body={tr('sections.teamHint')} />
-        ) : isDay && !focus && !day.loading && (day.data ?? []).filter((a) => a.status !== 'CANCELLED').length === 0 && (off.data ?? []).length === 0 ? (
-          <StateView icon="cal" title={tr('ux.emptyToday')} body={tr('ux.emptyBookingsBody')} actionLabel={tr('calendar.newAppointment')} onAction={() => router.push({ pathname: '/booking/new', params: { date: toDay(date) } })} />
-        ) : mode === 'month' ? (
-          <MonthView date={date} appts={day.data ?? []} refreshing={day.refreshing} onRefresh={() => void day.reload()} onPickDay={(d) => { setDate(d); setMonthDay(d); }} />
-        ) : mode === 'week' ? (
-          <WeekView date={date} appts={weekAppts} startHour={startHour} endHour={endHour} refreshing={day.refreshing}
-            onRefresh={() => void day.reload()} onOpen={setOpen} onPickDay={(d) => { setDate(d); setMode('day'); }} />
-        ) : focus ? (
-          <Agenda date={date} appts={weekAppts} blocks={(off.data ?? []).filter((b) => String(b.staffId) === focus)} refreshing={day.refreshing}
-            onRefresh={() => { void day.reload(); void off.reload(); }} onOpen={setOpen} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} compact={dense}
-            empty={<StateView icon="cal" title={tr('calendar.freeDay')} body={tr('calendar.freeDayBody')} />} />
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14 }}>
+        {Array.from({ length: 7 }, (_, i) => addDays(start, i)).map((d) => (
+          <Text key={`h${d.getDay()}`} style={{ width: `${100 / 7}%`, textAlign: 'center', fontFamily: font.s, fontSize: 11.5, color: t.ink3, paddingVertical: 6 }}>{weekdayMini(d)}</Text>
+        ))}
+        {Array.from({ length: 42 }, (_, i) => addDays(start, i)).map((d) => {
+          const out = d.getMonth() !== date.getMonth(); const on = !out && sameDay(d, date); const tdy = !out && sameDay(d, today) && !on;
+          const list = out ? [] : byDay.get(toDay(d)) ?? [];
+          const dots = [list.some((a) => a.status === 'CONFIRMED') && t.violet, list.filter((a) => a.status === 'CONFIRMED').length > 2 && t.violet, list.some((a) => a.status === 'PENDING') && t.guava, list.some((a) => a.status === 'COMPLETED') && t.ok].filter(Boolean).slice(0, 3) as string[];
+          return (
+            <Pressable key={d.toDateString()} disabled={out} onPress={() => (on ? onOpenDay(d) : onPick(d))} noScale accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={`${dayMonth(d)}${list.length ? `, ${list.length}` : ''}`}
+              style={{ width: `${100 / 7}%`, height: 44, alignItems: 'center', paddingTop: 6, gap: 4 }}>
+              <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? (t.dark ? '#f5f2fa' : '#1d1730') : 'transparent', borderWidth: tdy ? 1.5 : 0, borderColor: t.violet }}>
+                <Text style={{ fontFamily: font.s, fontSize: 14.5, color: on ? (t.dark ? '#1d1730' : '#fff') : out ? t.faint : t.ink }}>{d.getDate()}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 2, height: 4 }}>{dots.map((c, k) => <View key={k} style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: c }} />)}</View>
+            </Pressable>
+          );
+        })}
+      </View>
+      {/* resting day sheet */}
+      <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 8, paddingHorizontal: 20, paddingBottom: pb, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: t.dark ? t.surface : 'rgba(255,255,255,.96)', boxShadow: '0 -20px 50px -20px rgba(29,23,48,.35)' } as object}>
+        <View style={{ width: 38, height: 5, borderRadius: 3, backgroundColor: 'rgba(29,23,48,.18)', alignSelf: 'center', marginBottom: 14 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <T k="h2">{dayMonth(date)}{isToday ? ` · ${tr('v2.todayDot')}` : ''}</T>
+          {sel.length ? <T k="sm" color={t.muted}>{tr('ux.nBookings', { n: sel.length })}</T> : null}
+        </View>
+        {loading ? <View style={{ height: 100 }} /> : sel.length ? (
+          <View style={{ paddingTop: 6 }}>
+            {sel.slice(0, 2).map((a, i) => (
+              <ListItem key={a.id} first={i === 0} title={a.clientName ?? ''} onPress={() => onOpen(a)}
+                lead={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ width: 46, fontFamily: font.b, fontSize: 14, color: t.ink }}>{hhmm(a.startTime)}</Text><Avatar uri={a.clientId != null ? avatarOf.get(String(a.clientId)) : null} name={a.clientName} size={40} /></View>}
+                sub={`${a.serviceName} · ${firstName(a.staffName)}`} right={a.status === 'PENDING' ? <Pill tone="g" text={tr('status.PENDING')} /> : null} />
+            ))}
+            {sel.length > 2 ? <Pressable onPress={() => onOpenDay(date)} accessibilityRole="button" style={{ paddingTop: 4, minHeight: 32, justifyContent: 'center' }}><Text style={{ fontFamily: font.s, fontSize: 12.5, color: t.vtext }}>{tr('v2.nMore', { n: sel.length - 2 })}</Text></Pressable> : null}
+          </View>
         ) : (
-          <Timeline date={date} masters={masters} appts={day.data ?? []} blocks={off.data ?? []} startHour={startHour} endHour={endHour}
-            refreshing={day.refreshing} onRefresh={() => { void day.reload(); void off.reload(); }} onOpen={setOpen} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} onPickMaster={(m) => setFocus(String(m.id))} hourPx={hourPx} />
+          <View style={{ alignItems: 'flex-start' }}>
+            <T k="sm" color={t.muted} style={{ marginTop: 8, marginBottom: 10 }}>{tr('v2.dayFree')}</T>
+            <Button label={tr('v2.booking')} icon="plus" size="sm" onPress={() => onNew(date)} />
+          </View>
         )}
       </View>
-      {blockSheets}
-      <BottomSheet open={!!monthDay} onClose={() => setMonthDay(null)}>
-        {monthDay ? (
-          <View style={{ paddingBottom: 18, gap: 12 }}>
-            <View><Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, color: t.ink }}>{weekdayLong(monthDay)}</Text><Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{dayMonth(monthDay)} · {tr('ux.nBookings', { n: (day.data ?? []).filter((a) => a.status !== 'CANCELLED' && a.appointmentDate.slice(0, 10) === toDay(monthDay)).length })}</Text></View>
-            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-              {(day.data ?? []).filter((a) => a.status !== 'CANCELLED' && a.appointmentDate.slice(0, 10) === toDay(monthDay)).sort((a, b) => toMin(a.startTime) - toMin(b.startTime)).map((a) => <BookingRow key={a.id} a={a} staff={staff.data ?? []} onPress={() => { setMonthDay(null); setOpen(a); }} />)}
-              {(day.data ?? []).filter((a) => a.status !== 'CANCELLED' && a.appointmentDate.slice(0, 10) === toDay(monthDay)).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted, textAlign: 'center', paddingVertical: 18 }}>{tr('ux.emptyToday')}</Text> : null}
-            </ScrollView>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Btn label={tr('ux.openDay')} variant="secondary" style={{ flex: 1 }} onPress={() => { setMonthDay(null); setMode('day'); }} />
-              <Btn label={tr('calendar.newAppointment')} icon="plus" style={{ flex: 1.2 }} onPress={() => { const d = monthDay; setMonthDay(null); router.push({ pathname: '/booking/new', params: { date: toDay(d) } }); }} />
-            </View>
-          </View>
-        ) : null}
-      </BottomSheet>
-    </Screen>
+    </View>
   );
 }

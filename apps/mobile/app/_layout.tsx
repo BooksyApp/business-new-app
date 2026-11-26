@@ -68,6 +68,7 @@ function Shell() {
           <Stack.Screen name="notifications" />
           <Stack.Screen name="client/[id]" />
           <Stack.Screen name="booking/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="booking/classic" />
           <Stack.Screen name="section/[key]" />
           <Stack.Screen name="booking/[id]" />
         </Stack.Protected>
