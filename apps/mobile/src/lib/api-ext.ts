@@ -28,8 +28,9 @@ export interface Review {
 }
 export interface SaleItemBody { serviceId?: Id; serviceName: string; serviceType: string; quantity: number; unitPrice: number }
 export interface SaleBody {
-  businessId: Id; staffId?: Id; clientId?: Id; clientName?: string; items: SaleItemBody[]; discountAmount?: number; tipAmount?: number;
-  paymentMethod: 'CASH' | 'CARD_TERMINAL' | 'GIFT_CARD' | 'MEMBERSHIP' | 'PACKAGE'; paymentAmount: number; giftCardCode?: string; notes?: string;
+  businessId: Id; staffId?: Id; clientId?: Id; clientName?: string; items: (SaleItemBody & { coveredBy?: 'MEMBERSHIP' | 'PACKAGE'; appointmentId?: string })[]; discountAmount?: number; tipAmount?: number;
+  paymentMethod: 'CASH' | 'CARD_TERMINAL' | 'SPLIT' | 'GIFT_CARD' | 'MEMBERSHIP' | 'PACKAGE'; paymentAmount: number; giftCardCode?: string; notes?: string;
+  splitCashAmount?: number; splitCardAmount?: number; appointmentId?: string; promoCode?: string; idempotencyKey?: string;
 }
 export interface SaleRefund { saleId: Id; refundable?: number; remaining?: number; refunds?: unknown[] }
 export interface Dashboard {
@@ -87,7 +88,8 @@ export const apiX = {
   consentForms: (b: Id) => request<ConsentForm[]>(`/consent-forms/business/${b}`),
   clientConsents: (id: Id) => request<{ id: Id; formName?: string; signedAt?: string; createdAt?: string }[]>(`/clients/${id}/consent-submissions`),
   // sales
-  createSale: (body: SaleBody) => request<{ id: Id; total: number }>('/sales', { method: 'POST', body }),
+  /** POST /api/payment-confirmation: what the hub till calls (spends the gift card, covers lines by membership / package, settles the booking, books commissions). POST /sales does none of that. */
+  confirmPayment: (body: SaleBody) => request<{ saleId: Id; totalAmount: number; appointmentUpdated: boolean }>('/payment-confirmation', { method: 'POST', body }),
   refundSummary: (id: Id) => request<SaleRefund>(`/sales/${id}/refunds`),
   refundSale: (id: Id, body: { amount: number; reason?: string }) => request<unknown>(`/sales/${id}/refunds`, { method: 'POST', body }),
   salesRange: (b: Id, from: Date, to: Date) => request<{ total: number; tipAmount?: number; paymentMethod: string }[]>(`/sales/business/${b}?${q({ startDate: toDay(from), endDate: toDay(to) })}`),

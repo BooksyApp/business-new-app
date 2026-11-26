@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { EmptyState, ListItem as KListItem, Pill as KPill, T } from '@/components/kit';
 import React, { useState } from 'react';
 import { toast } from '@/lib/toast';
@@ -25,7 +26,8 @@ export function Sales({ onBack }: { onBack: () => void }) {
   const { salon, version } = useApp();
   const [date, setDate] = useState(() => new Date());
   const list = useLoad(() => api.sales(salon?.id ?? '', date), [salon?.id, date.toDateString(), version]);
-  const [adding, setAdding] = useState(false);
+  const { appt } = useLocalSearchParams<{ appt?: string }>();
+  const [adding, setAdding] = useState(typeof appt === 'string' && !!appt);
   const [refund, setRefund] = useState<{ id: string | number; total: number } | null>(null);
   const [amt, setAmt] = useState('');
   const [why, setWhy] = useState('');
@@ -45,7 +47,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
     try { await apiX.refundSale(String(refund.id), { amount: a, reason: why.trim() || undefined }); setRefund(null); toast(tr('sl.refunded'), 'success'); void list.reload(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
-  if (adding) return <NewSale onClose={() => setAdding(false)} onDone={() => { setAdding(false); void list.reload(); }} />;
+  if (adding) return <NewSale apptId={typeof appt === 'string' ? appt : undefined} onClose={() => setAdding(false)} onDone={() => { setAdding(false); void list.reload(); }} />;
   const addBtn = <Circ icon="plus" violet label={tr('sl.add')} onPress={() => setAdding(true)} />;
   return (
     <Screen>

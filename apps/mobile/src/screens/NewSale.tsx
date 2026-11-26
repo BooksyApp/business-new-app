@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, ScrollView, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -19,10 +19,10 @@ import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
 type Line = { key: number; serviceId?: string | number; name: string; price: number; qty: number };
-const METHODS = ['CASH', 'CARD_TERMINAL', 'GIFT_CARD', 'MEMBERSHIP', 'PACKAGE'] as const;
+const METHODS = ['CASH', 'CARD_TERMINAL', 'SPLIT', 'GIFT_CARD', 'MEMBERSHIP', 'PACKAGE'] as const;
 
 /** Till: pick services (or a custom item), staff, discount, tip, payment method (cash, card, gift card ...) and record the sale. */
-export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDone: () => void; apptId?: string }) {
   const { t } = useTheme();
   const { salon, bump } = useApp();
   const sid = salon?.id ?? '';
@@ -40,6 +40,18 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
   const [cName, setCName] = useState('');
   const [cPrice, setCPrice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [splitCard, setSplitCard] = useState('');
+  // Checkout of a booking: the till opens with its service, master and client and settles it (appointmentId), as the hub does.
+  const [appt, setAppt] = useState<{ id: string; clientId?: string } | null>(null);
+  useEffect(() => {
+    if (!apptId) return;
+    void api.appointment(apptId).then((a) => {
+      setAppt({ id: String(a.id), clientId: a.clientId != null ? String(a.clientId) : undefined });
+      setLines([{ key: 1, serviceId: a.serviceId, name: a.serviceName ?? '', price: a.price ?? 0, qty: 1 }]);
+      if (a.staffId != null) setMaster(String(a.staffId));
+      if (a.clientName) setClientName(a.clientName);
+    }).catch(() => undefined);
+  }, [apptId]);
   const sub = lines.reduce((n, l) => n + l.price * l.qty, 0);
   const disc = Math.min(sub, Math.max(0, num(discount) || 0));
   const tipN = Math.max(0, num(tip) || 0);
@@ -50,15 +62,20 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
   async function submit() {
     if (!lines.length) { toast(tr('sl.needItem'), 'error'); return; }
     if (method === 'GIFT_CARD' && !gift.trim()) { toast(tr('sl.needGift'), 'error'); return; }
+    const card = Math.min(total, Math.max(0, num(splitCard) || 0));
+    if (method === 'SPLIT' && (card <= 0 || card >= total)) { toast(tr('ob.needSplit'), 'error'); return; }
+    const cover = method === 'MEMBERSHIP' || method === 'PACKAGE' ? method : undefined;
     const body: SaleBody = {
-      businessId: sid, staffId: master || undefined, clientName: clientName.trim() || undefined,
-      items: lines.map((l) => ({ serviceId: l.serviceId != null ? String(l.serviceId) : undefined, serviceName: l.name, serviceType: l.serviceId != null ? 'SERVICE' : 'OTHER', quantity: l.qty, unitPrice: l.price })),
+      businessId: sid, staffId: master || undefined, clientId: appt?.clientId, clientName: clientName.trim() || undefined,
+      items: lines.map((l, i) => ({ serviceId: l.serviceId != null ? String(l.serviceId) : undefined, serviceName: l.name, serviceType: l.serviceId != null ? 'SERVICE' : 'OTHER', quantity: l.qty, unitPrice: l.price, coveredBy: cover, appointmentId: i === 0 ? appt?.id : undefined })),
       discountAmount: disc || undefined, tipAmount: tipN || undefined, paymentMethod: method, paymentAmount: total,
-      giftCardCode: method === 'GIFT_CARD' ? gift.trim() : undefined,
+      giftCardCode: method === 'GIFT_CARD' ? gift.trim().toUpperCase() : undefined,
+      splitCashAmount: method === 'SPLIT' ? Math.round((total - card) * 100) / 100 : undefined, splitCardAmount: method === 'SPLIT' ? card : undefined,
+      appointmentId: appt?.id, idempotencyKey: `${sid}-${appt?.id ?? 'walkin'}-${total}-${Date.now()}`,
     };
     setBusy(true);
     try {
-      await apiX.createSale(body);
+      await apiX.confirmPayment(body);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); Alert.alert(tr('sl.done'), money(total, cur)); onDone();
     } catch (e) {
@@ -69,7 +86,7 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
   const [more, setMore] = useState(false);
   const [pct, setPct] = useState(0);
   const setTipPct = (p: number) => { setPct(p); setTip(p ? String(Math.round(sub * p) / 100) : ''); };
-  const ICON: Record<string, string> = { CASH: 'cash', CARD_TERMINAL: 'card', GIFT_CARD: 'gift', MEMBERSHIP: 'crown', PACKAGE: 'box' };
+  const ICON: Record<string, string> = { CASH: 'cash', CARD_TERMINAL: 'card', SPLIT: 'wallet', GIFT_CARD: 'gift', MEMBERSHIP: 'crown', PACKAGE: 'box' };
   return (
     <Screen>
       <BackBar label={tr('v2.back')} onBack={onClose} right={<KPill icon="receipt" text={tr('v3.saleNo')} />} />
@@ -119,6 +136,7 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
             </Pressable>
           ))}
         </View>
+        {method === 'SPLIT' ? <View style={{ marginTop: 12 }}><Field label={`${tr('sales.m.CARD_TERMINAL')} (${cur ?? 'AZN'})`} value={splitCard} onChangeText={setSplitCard} keyboardType="decimal-pad" /><T k="xs" color={t.muted}>{`${tr('sales.m.CASH')}: ${money(Math.max(0, total - (num(splitCard) || 0)), cur)}`}</T></View> : null}
         {method === 'GIFT_CARD' ? <View style={{ marginTop: 12 }}><Field label={tr('sl.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" autoCorrect={false} /></View> : null}
         <KButton kind="ghost" size="sm" icon={more ? 'chevu' : 'chevd'} label={tr('v3.more')} onPress={() => setMore((v) => !v)} style={{ alignSelf: 'flex-start', marginTop: 10 }} />
         {more ? (

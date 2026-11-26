@@ -132,7 +132,7 @@ export default function BookingDetail() {
         </>) : a.status === 'COMPLETED' ? (
           <Button kind="dk" icon="receipt" label={tr('v2.receipt')} style={{ flex: 1 }} onPress={() => router.push('/section/sales')} />
         ) : open ? (<>
-          <Button kind="ol" label={tr('v2.till')} style={{ flex: 1 }} onPress={() => router.push('/section/sales')} />
+          <Button kind="ol" label={tr('v2.till')} style={{ flex: 1 }} onPress={() => router.push({ pathname: '/section/sales', params: a.paymentStatus === 'PAID' ? {} : { appt: String(a.id) } })} />
           {arrived
             ? <Button icon="check" label={tr('v2.stDone')} style={{ flex: 2 }} loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} />
             : <Button icon="check" label={tr('v2.arrived')} style={{ flex: 2 }} loading={busy} onPress={arrive} />}
