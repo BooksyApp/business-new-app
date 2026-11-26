@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Card, ErrorState, Field, Header, Pill, Row, Screen, Skeleton } from '@/components/ui';
+import { Avatar, Btn, Card, ErrorState, Field, Header, Pill, Row, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, type Client, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -56,7 +56,7 @@ export default function ClientCard() {
   return (
     <Screen>
       <Header title={name || tr('clients.title')} onBack={() => router.back()} />
-      {loaded.error ? <ErrorState error={loaded.error} onRetry={() => void loaded.reload()} /> : !client ? <Skeleton rows={3} height={90} /> : (
+      {loaded.error ? <ErrorState error={loaded.error} onRetry={() => void loaded.reload()} /> : !client && !loaded.loading ? <StateView icon="users" title={tr('state.errorTitle')} actionLabel={tr('state.retry')} onAction={() => void loaded.reload()} /> : !client ? <Skeleton rows={3} height={90} /> : (
         <ScrollView contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: 60 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={loaded.refreshing || rec.refreshing} onRefresh={() => void refresh()} tintColor={t.violet} />}>
           <Card>
@@ -73,8 +73,8 @@ export default function ClientCard() {
               </View>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              {client.phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`tel:${client.phone}`)} /> : null}
-              {client.phone ? <Btn label={tr('common.whatsapp')} icon="chat" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`https://wa.me/${digits(client.phone)}`)} /> : null}
+              {client.phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`tel:${(client.phone ?? '').replace(/\s+/g, '')}`).catch(() => {})} /> : null}
+              {client.phone ? <Btn label={tr('common.whatsapp')} icon="chat" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`https://wa.me/${digits(client.phone)}`).catch(() => {})} /> : null}
             </View>
             <Btn label={tr('cl.newBooking')} icon="plus" style={{ marginTop: 10 }}
               onPress={() => router.push({ pathname: '/booking/new', params: { clientId: String(client.id), clientName: name } })} />

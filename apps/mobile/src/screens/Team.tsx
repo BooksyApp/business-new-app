@@ -20,7 +20,7 @@ export function Team({ onBack }: { onBack: () => void }) {
     <Screen>
       <Header title={tr('sections.team')} subtitle={salon?.name} onBack={onBack} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="users" title={tr('team.empty')} />}
           renderItem={({ item: s }) => (

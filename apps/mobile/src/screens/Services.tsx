@@ -45,7 +45,7 @@ export function Services({ onBack }: { onBack: () => void }) {
     if (!edit) return;
     const p = Number(price.replace(',', '.'));
     const d = Math.round(Number(dur));
-    if (!Number.isFinite(p) || p < 0 || !Number.isFinite(d) || d <= 0) { Alert.alert(tr('common.error'), tr('svc.invalid')); return; }
+    if (!Number.isFinite(p) || p < 0 || !Number.isFinite(d) || d <= 0 || d > 720 || p > 100000) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); Alert.alert(tr('common.error'), tr('svc.invalid')); return; }
     setBusy(true);
     try {
       await api.updateService(sid, edit.id, { price: p, durationMinutes: d });
@@ -64,7 +64,7 @@ export function Services({ onBack }: { onBack: () => void }) {
     <Screen>
       <Header title={tr('sections.services')} subtitle={salon?.name} onBack={onBack} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={6} /> : (
-        <FlatList data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="scissors" title={tr('create.noServices')} />}
           renderItem={({ item: s }) => {

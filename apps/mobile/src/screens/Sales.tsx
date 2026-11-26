@@ -36,7 +36,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
         {nav('chev', 1, tr('sales.next'))}
       </View>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={rows.length ? (
             <Card style={{ backgroundColor: t.vsoft, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -26,7 +26,7 @@ export function Messages({ onBack }: { onBack: () => void }) {
     <Screen>
       <Header title={tr('sections.messages')} subtitle={salon?.name} onBack={onBack} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(c) => c.conversationId} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(c) => c.conversationId} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="chat" title={tr('msg.empty')} body={tr('msg.emptyBody')} />}
           renderItem={({ item: c }) => (
