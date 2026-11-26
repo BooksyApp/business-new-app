@@ -9,6 +9,9 @@ import { Text } from '@/components/Text';
 import { Btn, ErrorState, Field, Header, HeroCard, Screen, Section, Skeleton, StickyCta, photoUrl } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiB, type BizProfile } from '@/lib/api-biz';
+import { apiO } from '@/lib/api-onboard';
+import { getLocale } from '@/i18n';
+import { Choice, MultiChoice, SectionTitle } from '@/components/form';
 import { useApp } from '@/lib/app';
 import { pickAndUpload } from '@/lib/pick';
 import { useLoad } from '@/lib/useLoad';
@@ -24,23 +27,31 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [f, setF] = useState<Record<string, string>>({});
   const [online, setOnline] = useState(true);
   const [logo, setLogo] = useState<string | null>(null);
+  const [cover, setCover] = useState<string | null>(null);
+  const [pay, setPay] = useState<string[]>(['CASH', 'CARD']);
+  const cats = useLoad(() => apiO.categories(getLocale()).catch(() => []), []);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     const b = q.data; if (!b) return;
-    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
-    setOnline(b.onlineBookingEnabled ?? true); setLogo(b.logoUrl ?? null);
+    setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', category: b.category ?? '', building: (b as { buildingNumber?: string }).buildingNumber ?? '', apartment: (b as { apartmentNumber?: string }).apartmentNumber ?? '', tax: b.taxRate != null ? String(b.taxRate) : '', lateFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : '', footer: b.receiptFooter ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
+    setOnline(b.onlineBookingEnabled ?? true); setLogo(b.logoUrl ?? null); setCover(b.coverImageUrl ?? null);
+    setPay((b.acceptedPaymentMethods ?? 'CASH,CARD').split(',').map((x) => x.trim()).filter(Boolean));
   }, [q.data]);
   const set = (k: string) => (v: string) => setF((m) => ({ ...m, [k]: v }));
   const int = (k: string) => { const n = Math.round(num(f[k] ?? '')); return Number.isFinite(n) && n >= 0 ? n : undefined; };
   async function save() {
     if (!(f.name ?? '').trim()) { toast(tr('tm.needName'), 'error'); return; }
-    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), googleReviewUrl: f.review || null, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
+    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), buildingNumber: f.building || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
     setBusy(true);
-    try { await apiB.updateBusiness(sid, body); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); onBack(); }
+    try { await apiB.updateBusiness(sid, body); if ((f.review ?? '') !== (q.data?.googleReviewUrl ?? '')) await apiB.setReviewLink(sid, f.review ? f.review : null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); onBack(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   async function pickLogo() {
     try { const up = await pickAndUpload('BUSINESS_LOGO'); if (up) { await apiB.updateBusiness(sid, { logoUrl: up.url }); setLogo(up.url); bump(); } }
+    catch (e) { toast((e as Error).message, 'error'); }
+  }
+  async function pickCover() {
+    try { const up = await pickAndUpload('BUSINESS_COVER'); if (up) { await apiB.updateBusiness(sid, { coverImageUrl: up.url }); setCover(up.url); bump(); } }
     catch (e) { toast((e as Error).message, 'error'); }
   }
   return (
@@ -50,10 +61,14 @@ export function Profile({ onBack }: { onBack: () => void }) {
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 12 }}>
           <HeroCard photo={logo ?? null} title={f.name || salon?.name || ''} sub={[f.city, f.address].filter(Boolean).join(' · ')}>
             <Btn small label={tr('ux.changePhoto')} variant="secondary" icon="img" onPress={() => void pickLogo()} />
+            <Btn small label={cover ? tr('pa.changeCover') : tr('pa.addCover')} variant="secondary" icon="img" onPress={() => void pickCover()} />
           </HeroCard>
           <Section title={tr('ux.secBasics')}>
             <Field label={tr('sx.name')} value={f.name ?? ''} onChangeText={set('name')} />
             <Field label={tr('sx.description')} value={f.description ?? ''} onChangeText={set('description')} multiline style={{ minHeight: 84, paddingTop: 6, textAlignVertical: 'top' }} />
+          </Section>
+          <Section title={tr('pa.secCategory')}>
+            <Choice value={f.category ?? ''} onChange={(v) => set('category')(v)} options={(cats.data ?? []).map((c) => ({ value: c.name, label: c.label }))} />
           </Section>
           <Section title={tr('ux.secContact')}>
             <Field label={tr('create.phone')} value={f.phone ?? ''} onChangeText={set('phone')} keyboardType="phone-pad" />
@@ -63,6 +78,10 @@ export function Profile({ onBack }: { onBack: () => void }) {
           <Section title={tr('ux.secAddress')}>
             <Field label={tr('set.address')} value={f.address ?? ''} onChangeText={set('address')} />
             <Field label="City" value={f.city ?? ''} onChangeText={set('city')} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}><Field label={tr('pa.building')} value={f.building ?? ''} onChangeText={set('building')} /></View>
+              <View style={{ flex: 1 }}><Field label={tr('pa.apartment')} value={f.apartment ?? ''} onChangeText={set('apartment')} /></View>
+            </View>
           </Section>
           <Section title={tr('ux.secOnline')}>
             <ToggleRow label={tr('pf.online')} value={online} onChange={setOnline} />
@@ -74,7 +93,14 @@ export function Profile({ onBack }: { onBack: () => void }) {
               <View style={{ flex: 1 }}><Field label={tr('pf.cancelH')} value={f.cancelH ?? ''} onChangeText={set('cancelH')} keyboardType="number-pad" /></View>
               <View style={{ flex: 1 }}><Field label={tr('sx.deposit')} value={f.deposit ?? ''} onChangeText={set('deposit')} keyboardType="number-pad" /></View>
             </View>
+            <Field label={tr('pa.lateFee')} value={f.lateFee ?? ''} onChangeText={set('lateFee')} keyboardType="decimal-pad" />
+            <SectionTitle>{tr('pa.payMethods')}</SectionTitle>
+            <MultiChoice value={pay} onChange={setPay} options={[{ value: 'CASH', label: tr('sales.m.CASH') }, { value: 'CARD', label: tr('sales.m.CARD_TERMINAL') }, { value: 'ONLINE', label: tr('pa.payOnline') }]} />
             <Field label={tr('pf.reviewUrl')} value={f.review ?? ''} onChangeText={set('review')} keyboardType="url" autoCapitalize="none" />
+          </Section>
+          <Section title={tr('pa.secReceipts')}>
+            <Field label={tr('pa.tax')} value={f.tax ?? ''} onChangeText={set('tax')} keyboardType="decimal-pad" />
+            <Field label={tr('pa.footer')} value={f.footer ?? ''} onChangeText={set('footer')} multiline maxLength={2000} style={{ minHeight: 70, paddingTop: 6, textAlignVertical: 'top' }} />
           </Section>
           <Section title={tr('ux.secBrand')}>
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 2 }}>

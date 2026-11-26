@@ -10,11 +10,14 @@ export interface ServiceFull {
   paddingBefore?: number; paddingAfter?: number; bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null;
   messageToClient?: string | null;
   isClass?: boolean; maxParticipants?: number | null;
+  serviceType?: string | null; color?: string | null; virtualAppointment?: boolean; processingDuring?: number; processingAfter?: number;
+  travelFee?: number | null; serviceArea?: string | null; questions?: { text: string; required?: boolean }[];
 }
 export interface ServiceBody {
   categoryId?: Id | null; name?: string; description?: string; durationMinutes?: number; price?: number; priceType?: 'FIXED' | 'FROM' | 'RANGE';
   staffIds?: Id[]; isVisible?: boolean; isActive?: boolean; depositPercent?: number | null; paddingBefore?: number; paddingAfter?: number;
   bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null; messageToClient?: string | null; isClass?: boolean; maxParticipants?: number | null;
+  serviceType?: string; color?: string; virtualAppointment?: boolean; processingDuring?: number; processingAfter?: number; travelFee?: number | null; serviceArea?: string | null; questions?: { text: string; required?: boolean }[];
 }
 export interface StaffBody { avatarUrl?: string; name?: string; email?: string; phone?: string; position?: string; serviceIds?: Id[]; isActive?: boolean; schedule?: Record<string, string[]>; inviteAndCreateAccount?: boolean }
 export interface StaffFull {
@@ -77,6 +80,8 @@ export const apiX = {
   staffServiceIds: (b: Id, s: Id) => request<Id[]>(`/services/assignments/business/${b}/staff/${s}`),
   setStaffServiceIds: (b: Id, s: Id, serviceIds: Id[]) => request<Id[]>(`/services/assignments/business/${b}/staff/${s}`, { method: 'PUT', body: { serviceIds } }),
   inviteStaff: (id: Id) => request<void>(`/staff/${id}/invite`, { method: 'POST', body: {} }),
+  /** PUT /api/staff/{id}/role {roleId}: one of the salon's roles (what the hub does). The {role} tier form still works for OWNER / MANAGER / STAFF. */
+  setStaffRoleId: (id: Id, roleId: Id) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { roleId } }),
   setStaffRole: (id: Id, role: string) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { role } }),
   timeOffForStaff: (b: Id, s: Id) => request<{ id: Id; startDate: string; endDate: string; isFullDay: boolean; reason?: string | null; isApproved?: boolean }[]>(`/time-off/staff/${s}`),
   // waitlist

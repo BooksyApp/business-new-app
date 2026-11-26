@@ -50,6 +50,14 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [isClass, setIsClass] = useState(service?.isClass ?? false);
   const [maxP, setMaxP] = useState(service?.maxParticipants != null ? String(service.maxParticipants) : '8');
   const [msg, setMsg] = useState(service?.messageToClient ?? '');
+  const [stype, setStype] = useState(['standard', 'package', 'course'].includes(service?.serviceType ?? '') ? (service?.serviceType as string) : 'standard');
+  const [color, setColor] = useState(service?.color ?? '#6f52ed');
+  const [virtual, setVirtual] = useState(service?.virtualAppointment ?? false);
+  const [procD, setProcD] = useState(String(service?.processingDuring ?? 0));
+  const [procA, setProcA] = useState(String(service?.processingAfter ?? 0));
+  const [travel, setTravel] = useState(service?.travelFee != null ? String(service.travelFee) : '');
+  const [area, setArea] = useState(service?.serviceArea ?? '');
+  const [qs, setQs] = useState<{ text: string; required: boolean }[]>((service?.questions ?? []).map((q) => ({ text: q.text, required: !!q.required })));
   const [busy, setBusy] = useState(false);
   const peak = useLoad(() => (service ? apiB.peak(sid, service.id).catch(() => [] as PeakRule[]) : Promise.resolve([] as PeakRule[])), [service?.id]);
   const [rules, setRules] = useState<PeakRule[] | null>(null);
@@ -72,6 +80,10 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
       mobileService: mobile, messageToClient: msg.trim() || null, depositPercent: dep ?? (service ? -1 : undefined),
       taxRate: taxRate.trim() === '' ? null : num(taxRate),
       isClass, maxParticipants: isClass ? Math.max(1, Math.round(num(maxP)) || 1) : undefined,
+      serviceType: stype, color: /^#[0-9A-Fa-f]{6}$/.test(color) ? color : undefined, virtualAppointment: virtual,
+      processingDuring: Math.max(0, Math.round(num(procD)) || 0), processingAfter: Math.max(0, Math.round(num(procA)) || 0),
+      travelFee: mobile && travel.trim() !== '' ? Math.max(0, num(travel) || 0) : undefined, serviceArea: mobile ? area.trim() || undefined : undefined,
+      questions: qs.filter((q) => q.text.trim()).slice(0, 10).map((q) => ({ text: q.text.trim().slice(0, 300), required: q.required })),
     };
     setBusy(true);
     try {
@@ -107,6 +119,16 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
             <SectionTitle>{tr('sx.category')}</SectionTitle>
             <Choice value={cat} onChange={setCat} options={[{ value: '', label: tr('sx.noCategory') }, ...cats.map((c) => ({ value: String(c.id), label: c.name }))]} />
             <Field label={`${tr('svc.duration')} (${tr('common.min')})`} value={dur} onChangeText={setDur} keyboardType="number-pad" />
+            <SectionTitle>{tr('pa.svcType')}</SectionTitle>
+            <Choice value={stype} onChange={setStype} options={[{ value: 'standard', label: tr('pa.typeStandard') }, { value: 'package', label: tr('pa.typePackage') }, { value: 'course', label: tr('pa.typeCourse') }]} />
+            <SectionTitle>{tr('pa.svcColor')}</SectionTitle>
+            <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+              {['#6f52ed', '#e83e63', '#1d1730', '#12704b', '#d99a1e', '#2a7de1', '#3b82f6', '#f97316'].map((c) => (
+                <Pressable key={c} onPress={() => setColor(c)} accessibilityRole="button" accessibilityLabel={c} accessibilityState={{ selected: color.toLowerCase() === c }} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c, alignItems: 'center', justifyContent: 'center', borderWidth: color.toLowerCase() === c ? 3 : 0, borderColor: t.surface }}>
+                  {color.toLowerCase() === c ? <Icon name="check" size={18} color="#fff" /> : null}
+                </Pressable>
+              ))}
+            </View>
           </>
         ) : null}
         {tab === 'price' ? (
@@ -147,6 +169,18 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
           <>
             <ToggleRow label={tr('sx.visible')} hint={tr('sx.visibleHint')} value={visible} onChange={setVisible} />
             <Field label={tr('sx.clientMessage')} value={msg} onChangeText={setMsg} multiline style={{ minHeight: 84, paddingTop: 14, textAlignVertical: 'top' }} />
+            <SectionTitle>{tr('pa.questions')}</SectionTitle>
+            <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('pa.questionsHint')}</Text>
+            {qs.map((q, i) => (
+              <View key={i} style={{ marginBottom: 6 }}>
+                <Field label={`${tr('pa.question')} ${i + 1}`} value={q.text} onChangeText={(v) => setQs((a) => a.map((x, j) => (j === i ? { ...x, text: v } : x)))} maxLength={300} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1 }}><ToggleRow label={tr('pa.required')} value={q.required} onChange={(v) => setQs((a) => a.map((x, j) => (j === i ? { ...x, required: v } : x)))} /></View>
+                  <Pressable onPress={() => setQs((a) => a.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={20} color={t.gink} /></Pressable>
+                </View>
+              </View>
+            ))}
+            {qs.length < 10 ? <Btn label={tr('pa.addQuestion')} variant="secondary" icon="plus" onPress={() => setQs((a) => [...a, { text: '', required: false }])} /> : null}
           </>
         ) : null}
         {tab === 'settings' ? (
@@ -155,7 +189,14 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
             <Field label={tr('sx.padAfter')} value={padA} onChangeText={setPadA} keyboardType="number-pad" />
             <Field label={tr('sx.interval')} value={interval} onChangeText={setInterval_} keyboardType="number-pad" />
             <Field label={tr('sx.parallel')} value={parallel} onChangeText={setParallel} keyboardType="number-pad" />
+            <Field label={tr('pa.procDuring')} value={procD} onChangeText={setProcD} keyboardType="number-pad" />
+            <Field label={tr('pa.procAfter')} value={procA} onChangeText={setProcA} keyboardType="number-pad" />
             <ToggleRow label={tr('sx.mobile')} value={mobile} onChange={setMobile} />
+            {mobile ? (<>
+              <Field label={`${tr('pa.travelFee')} (${salon?.currency ?? 'AZN'})`} value={travel} onChangeText={setTravel} keyboardType="decimal-pad" />
+              <Field label={tr('pa.area')} value={area} onChangeText={setArea} maxLength={500} />
+            </>) : null}
+            <ToggleRow label={tr('pa.virtual')} value={virtual} onChange={setVirtual} />
             <ToggleRow label={tr('ux.isClass')} value={isClass} onChange={setIsClass} />
             {isClass ? <Field label={tr('ux.maxP')} value={maxP} onChangeText={setMaxP} keyboardType="number-pad" /> : null}
             {service ? <Btn label={tr('sx.archive')} variant="danger" icon="trash" style={{ marginTop: 14 }} onPress={archive} /> : null}

@@ -11,6 +11,7 @@ import { Avatar, Btn, Card, Circ, ErrorState, Field, Header, HeroCard, Pill, Scr
 import { BackBar, Card as KCard, EmptyState, IconBtn, LoadRing, Pill as KPill, Skeleton as KSkel, T, Title, Avatar as KAvatar } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
+import { apiB } from '@/lib/api-biz';
 import { apiX, type StaffBody, type StaffFull } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
 import { pickAndUpload } from '@/lib/pick';
@@ -35,7 +36,14 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
   const [email, setEmail] = useState(staff?.email ?? '');
   const [pos, setPos] = useState(staff?.position ?? '');
   const [active, setActive] = useState(staff?.isActive ?? true);
-  const [role, setRole] = useState(staff?.role ?? 'STAFF');
+  const roles = useLoad(() => apiB.roles(sid).catch(() => []), [sid]);
+  const [roleId, setRoleId] = useState<string>('');
+  const [roleInit, setRoleInit] = useState('');
+  useEffect(() => {
+    const cur = (roles.data ?? []).find((r) => staff && (r.memberIds ?? []).map(String).includes(String(staff.id)));
+    const dflt = (roles.data ?? []).find((r) => r.isDefault);
+    const v = String((cur ?? dflt)?.id ?? ''); setRoleId(v); setRoleInit(cur ? v : '');
+  }, [roles.data, staff?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [ids, setIds] = useState<string[]>((staff?.serviceIds ?? []).map(String));
   // The backend keeps specialist <-> service links in the catalog (GET /services/assignments/...), not on the staff row.
   useEffect(() => { if (staff) void apiX.staffServiceIds(sid, staff.id).then((a) => setIds((a ?? []).map(String))).catch(() => undefined); }, [staff?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -63,7 +71,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
       let id = staff?.id;
       if (staff) await apiX.updateStaff(sid, staff.id, body); else id = (await apiX.createStaff(sid, body)).id;
       if (id != null) await apiX.setStaffServiceIds(sid, id, ids);
-      if (staff && role !== staff.role && staff.role) await apiX.setStaffRole(staff.id, role).catch(() => undefined);
+      if (id != null && roleId && roleId !== roleInit) await apiX.setStaffRoleId(id, roleId).catch(() => undefined);
       if (invite && id != null) { await apiX.inviteStaff(id); Alert.alert(tr('tm.invited')); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); onSaved();
@@ -88,7 +96,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
           <Field label={tr('cl.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
         </Section>
         {staff ? <ToggleRow label={active ? tr('tm.deactivate') : tr('tm.activate')} value={active} onChange={setActive} /> : null}
-        {staff?.role ? (<><SectionTitle>{tr('tm.role')}</SectionTitle><Choice value={role} onChange={setRole} options={['OWNER', 'MANAGER', 'STAFF'].map((r) => ({ value: r, label: r }))} /></>) : null}
+        {(roles.data ?? []).filter((r) => !r.isOwner).length ? (<><SectionTitle>{tr('tm.role')}</SectionTitle><Choice value={roleId} onChange={setRoleId} options={(roles.data ?? []).filter((r) => !r.isOwner || String(r.id) === roleId).map((r) => ({ value: String(r.id), label: r.name }))} /></>) : null}
         <SectionTitle>{tr('tm.services')}</SectionTitle>
         <MultiChoice value={ids} onChange={setIds} options={(svc.data ?? []).filter((s) => s.isActive).map((s) => ({ value: String(s.id), label: s.name }))} />
         <SectionTitle>{tr('tm.schedule')}</SectionTitle>

@@ -10,7 +10,7 @@ export interface ProductInput { name: string; sku?: string; price: number; quant
 export interface Promo { id: Id; code: string; type: string; value: number; max_uses: number | null; uses: number; valid_to: string | null; active: boolean }
 export interface Campaign { id: Id; name: string; channel: string; segment: string; subject: string | null; body: string; status: string; recipientCount: number; sentCount?: number }
 export interface Expense { id: Id; category: string; description: string | null; amount: number; spent_on: string; recurs_monthly: boolean }
-export interface Role { id: Id; name: string; description?: string | null; isOwner: boolean; isDefault: boolean; permissions: string[]; memberCount: number }
+export interface Role { id: Id; memberIds?: Id[]; name: string; description?: string | null; isOwner: boolean; isDefault: boolean; permissions: string[]; memberCount: number }
 export interface Perm { key: string; group: string; label: string; description: string }
 export interface CommissionRule { id?: Id; businessId: Id; category: string; staffId?: Id; type: string; value: number; description?: string; isActive?: boolean }
 export interface TargetRow { staffId: Id; staffName: string; revenueTarget: number; bookingsTarget: number; revenueActual: number; bookingsActual: number }
@@ -33,7 +33,7 @@ export interface AuditRow { actor_name: string | null; method: string; entity_ty
 export interface ReportDataset { key: string; label: string; columns: { key: string; label: string }[]; defaultGroupBy: string | null }
 export interface ReportResult { columns: { key: string; label: string }[]; rows: (string | number | boolean | null)[][]; truncated: boolean }
 export interface Saved { id: string; name: string }
-export interface BizProfile { id: Id; name: string; description?: string; phone?: string; email?: string; website?: string; address?: string; city?: string; onlineBookingEnabled?: boolean; minBookingNoticeMinutes?: number; maxBookingDaysAhead?: number; cancellationWindowHours?: number; depositPercent?: number; googleReviewUrl?: string | null; logoUrl?: string }
+export interface BizProfile { id: Id; name: string; description?: string; phone?: string; email?: string; website?: string; address?: string; city?: string; onlineBookingEnabled?: boolean; minBookingNoticeMinutes?: number; maxBookingDaysAhead?: number; cancellationWindowHours?: number; depositPercent?: number; googleReviewUrl?: string | null; category?: string; taxRate?: number | null; lateCancellationFee?: number | null; acceptedPaymentMethods?: string | null; receiptFooter?: string | null; coverImageUrl?: string | null; country?: string; slug?: string; logoUrl?: string }
 
 export interface Ticket { ref: string; category: string; subject: string; status: string; lastMessageAt: string }
 export interface Thread { ticket: Ticket; messages: { id: Id; authorType: string; authorName: string | null; body: string; createdAt: string }[] }
@@ -168,6 +168,8 @@ export const apiB = {
   runReport: (b: Id, def: { dataset: string; columns: string[]; groupBy: string | null; from: string | null; to: string | null }) => request<ReportResult>(`${B(b)}/custom-reports/run`, { method: 'POST', body: { ...def, staffId: null, serviceId: null, statuses: [], sources: [] } }),
   savedReports: (b: Id) => request<Saved[]>(`${B(b)}/custom-reports`),
   business: (b: Id) => request<BizProfile>(`/businesses/${b}`),
+  /** PUT /api/businesses/{id}/google-review-link {url}: BusinessUpdateRequest has no such field, a plain update silently drops it. */
+  setReviewLink: (b: Id, url: string | null) => request<unknown>(`/businesses/${b}/google-review-link`, { method: 'PUT', body: { url } }),
   updateBusiness: (b: Id, body: Partial<BizProfile>) => request<BizProfile>(`/businesses/${b}`, { method: 'PUT', body }),
 
   offerWaitlist: (b: Id, id: Id, slots: { staffId: Id; date: string; startTime: string }[]) => request<void>(`/waitlist/business/${b}/${id}/offer`, { method: 'POST', body: { slots } }),

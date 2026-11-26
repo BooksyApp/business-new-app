@@ -3,6 +3,7 @@ import { uxEn } from './ux';
 import { v2En } from './v2';
 import { v3En } from './v3';
 import { obEn } from './ob';
+import { parEn } from './par';
 import { extraEn } from './extra';
 import { moreEn } from './more';
 import { bizEn } from './biz';
@@ -226,6 +227,7 @@ export const en = {
   ...v2En,
   ...v3En,
   ...obEn,
+  ...parEn,
 };
 
 export type Strings = typeof en;
