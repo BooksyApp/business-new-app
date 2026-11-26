@@ -1437,7 +1437,8 @@
       "cancelAllHint": "Qarşıdakı, ödənilməmiş bütün təkrarlar ləğv olunur.",
       "cancelled": "Seriyada {count} rezerv ləğv edildi"
     },
-    "lateBadge": "Gecikir: {min} dəq"
+    "lateBadge": "Gecikir: {min} dəq",
+    "nextClient": "Növbəti müştəri"
   },
   "checkout": {
     "pickAClientToUse": "Abonement, paket, bonus və ya qazanılmış pulsuz xidmətdən istifadə üçün müştəri seçin.",

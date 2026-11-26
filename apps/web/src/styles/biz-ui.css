@@ -745,3 +745,72 @@
 .bz .dlg.bz-fixed{position:fixed;z-index:41;max-width:calc(100vw - 32px)}
 .bz .fld input,.bz .fld textarea,.bz .fld select{border:0;background:transparent;font:inherit;font-weight:700;color:inherit;outline:0;width:100%;padding:0;box-shadow:none}
 .bz .tg{cursor:pointer}
+
+/* ── Booking drawer (Təqvim → Yeni rezerv / Rezervi redaktə). Composed from kit classes (.dwr .fld .slot .dstrip .rd .card .chip). ── */
+.bz .bkd{display:flex;flex-direction:column;gap:22px}
+.bz .bkd-sec{display:flex;flex-direction:column;gap:10px}
+.bz .bkd-k{font-size:14px;font-weight:800;letter-spacing:.08em;color:var(--bz-muted);text-transform:uppercase}
+.bz .bkd-k em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
+.bz .bkd-client{padding:12px 14px;cursor:pointer;width:100%;text-align:left;border:0;font:inherit;color:inherit}
+.bz .bkd-client .tx{flex:1;min-width:0}
+.bz .bkd-client .tx b{display:block;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bz .bkd-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.bz .bkd-days button{border:0;font:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;height:64px;justify-content:center;border-radius:20px;background:var(--bz-surface);box-shadow:inset 0 0 0 1px var(--bz-line);font-size:13px;font-weight:700;color:var(--bz-muted)}
+.bz .bkd-days button b{font-size:18px;font-weight:800;color:var(--bz-ink)}
+.bz .bkd-days button.on{background:var(--bz-violet);color:rgba(255,255,255,.85);box-shadow:var(--bz-cta)}
+.bz .bkd-days button.on b{color:#fff}
+.bz .bkd-days button.off:not(.on){opacity:.5}
+.bz .bkd-slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:208px;overflow-y:auto;padding:2px}
+.bz .bkd-slots .slot{min-width:0;padding:0;border:0;font:inherit;font-weight:700;cursor:pointer}
+.bz .bkd-slots .slot:not(.on){background:var(--bz-surface);color:var(--bz-ink);box-shadow:inset 0 0 0 1px var(--bz-line);font-weight:600}
+.bz .bkd .rd{width:100%;border:0;font:inherit;text-align:left;cursor:pointer}
+.bz .bkd .rd .tx{flex:1;min-width:0}
+.bz .bkd .rd .pr{font-weight:800;font-size:15px;white-space:nowrap}
+.bz .bkd-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;padding:2px}
+.bz .bkd-staff{display:flex;flex-wrap:wrap;gap:8px}
+.bz .bkd-staff .chip{height:46px;padding:0 16px 0 5px;gap:8px}
+.bz .bkd-staff .chip .ini{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bz-vsoft);color:var(--bz-vtext);font-size:12px;font-weight:800}
+.bz .bkd-staff .chip.on .ini{background:rgba(255,255,255,.18);color:inherit}
+.bz .bkd-box{background:var(--bz-surface);border-radius:20px;box-shadow:inset 0 0 0 1px var(--bz-line);padding:14px;display:flex;flex-direction:column;gap:10px}
+.bz .bkd-box .hd{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;color:var(--bz-muted)}
+.bz .bkd-ico{border:0;background:var(--bz-fill);width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--bz-muted);flex:none}
+.bz .bkd-ico .ic{width:16px;height:16px}
+.bz .bkd-sum{background:var(--bz-vsoft);border-radius:20px;padding:14px 18px;display:flex;flex-direction:column;gap:6px}
+.bz .bkd-sum div{display:flex;justify-content:space-between;font-weight:700;font-size:15px}
+.bz .bkd-sum div:last-child{font-weight:800;color:var(--bz-vtext)}
+.bz .bkd-note{font-size:14px;font-weight:600;border-radius:14px;padding:10px 14px;background:#fff6dd;color:#7a5200}
+.bz .bkd-note.er{background:var(--bz-c2);color:#a02244}
+.bz .bkd-rep{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;cursor:pointer}
+.bz .bkd-rep input{width:20px;height:20px;accent-color:var(--bz-violet)}
+.bz .bkd-ul{list-style:none;margin:0;padding:0;max-height:160px;overflow-y:auto;font-size:14px;font-weight:600;color:var(--bz-muted);display:flex;flex-direction:column;gap:2px}
+.bz .bkd-ul li.bad{color:#a05a00}
+.bz .bkd-heart{display:inline-flex;align-items:center;gap:10px;border:0;background:none;font:inherit;font-weight:700;font-size:15px;cursor:pointer;color:var(--bz-ink);padding:0}
+.bz .bkd-heart .ic{width:20px;height:20px;color:var(--bz-ink3)}
+.bz .bkd-heart.on .ic{color:#e83e63;fill:#e83e63}
+.bz .bkd-end{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bz .bkd-end .fw{width:150px}
+
+/* ── Təqvim chrome (BF02): toolbar, view switch, grid. Kit classes first; these only adapt them to buttons / live grid. ── */
+.bz .tile.in{position:relative;inset:auto;width:100%;height:100%;box-sizing:border-box;cursor:pointer}
+.bz button.circ,.bz button.chip,.bz a.chip{border:0;font:inherit;cursor:pointer;color:inherit}
+.bz button.chip{background:var(--bz-surface)}
+.bz button.chip.on{background:var(--bz-ink);color:var(--bz-canvas)}
+.bz button.chip.vo{background:var(--bz-vsoft);color:var(--bz-vtext)}
+.bz .cal-bar{z-index:30;padding:16px 24px 14px;background:var(--bz-hdr);backdrop-filter:blur(14px);display:flex;flex-direction:column;gap:12px}
+@media(max-width:767px){.bz .cal-bar{padding:12px 12px 10px}}
+.bz .cal-seg{display:inline-flex;padding:4px;border-radius:999px;background:var(--bz-fill2);font-weight:700;font-size:14.5px;flex:none}
+.bz .cal-seg button{height:38px;padding:0 18px;border:0;border-radius:999px;background:transparent;color:var(--bz-muted);font:inherit;font-weight:700;cursor:pointer}
+.bz .cal-seg button.on{background:var(--bz-surface);color:var(--bz-ink);box-shadow:var(--bz-sh)}
+.bz .cal-srch{height:42px;font-size:14.5px;padding:0 16px;gap:8px;width:230px}
+.bz .cal-srch input{flex:1;min-width:0;background:transparent;border:0;outline:0;font:inherit;color:inherit}
+.bz .cal-srch .ic{width:17px;height:17px}
+.bz .cal-title{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.bz .cal-card{background:var(--bz-surface);box-shadow:var(--bz-sh);border-radius:28px}
+@media(max-width:767px){.bz .cal-card{border-radius:0;box-shadow:none}}
+.bz .cal-colh{display:flex;align-items:center;gap:10px;height:64px;padding:0 14px;font-weight:800;font-size:16px;background:color-mix(in srgb,var(--bz-surface) 95%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--bz-line)}
+.bz .cal-colh small{display:block;font-size:13px;color:var(--bz-muted);font-weight:600;margin-top:1px}
+.bz .cal-th{font-size:14px;font-weight:600;color:var(--bz-ink3);font-variant-numeric:tabular-nums}
+.bz .cal-now-pill{background:var(--bz-guava);color:#fff;border-radius:999px;padding:2px 8px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.bz .cal-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;max-width:360px;margin:auto;padding:24px}
+.bz .cal-empty h2{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.bz .cal-empty .ico{width:72px;height:72px;border-radius:50%;background:var(--bz-mesh);display:flex;align-items:center;justify-content:center;color:var(--bz-ink)}

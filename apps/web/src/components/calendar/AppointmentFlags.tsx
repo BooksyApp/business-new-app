@@ -42,7 +42,7 @@ export function FlagLegend() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-white px-3.5 text-sm font-semibold text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line))] transition-colors hover:ring-[rgb(var(--reg-brand)/0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--reg-brand))]"
+          className="chip"
         >
           <Info size={16} strokeWidth={1.75} aria-hidden />
           <span className="hidden sm:inline">{t("calendar.legendTitle")}</span>
