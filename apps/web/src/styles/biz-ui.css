@@ -814,3 +814,7 @@
 .bz .cal-empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;max-width:360px;margin:auto;padding:24px}
 .bz .cal-empty h2{font-size:24px;font-weight:800;letter-spacing:-.02em}
 .bz .cal-empty .ico{width:72px;height:72px;border-radius:50%;background:var(--bz-mesh);display:flex;align-items:center;justify-content:center;color:var(--bz-ink)}
+
+/* ── Təqvim chrome (BF02 .pgt + BF40 .a-tb rows). ── */
+.bz .cal-head{padding:28px 32px 0;flex:none}
+@media(max-width:767px){.bz .cal-head{padding:16px 12px 0}.bz .cal-head .pgt h5{font-size:26px}}

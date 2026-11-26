@@ -1141,6 +1141,7 @@
     "verifyingAccess": "Проверяем доступ..."
   },
   "calendar": {
+    "pickDate": "Выбрать дату",
     "flagLate": "Опаздывает",
     "flagVip": "VIP-клиент",
     "flagNew": "Новый клиент",

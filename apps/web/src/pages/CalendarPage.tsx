@@ -2,7 +2,7 @@ import type { Id } from "@/types/id";
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { lazyWithReload } from "@/lib/lazyWithReload";
 import { appointmentTags, clientColorClasses } from "@/lib/appointmentVisuals";
-import { ChevronLeft, ChevronRight, Bell, Search, Settings, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bell, Search, Settings, SlidersHorizontal, Plus, ChevronDown, ChevronUp, Calendar as CalendarIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { addDays, subDays, addWeeks, subWeeks, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, getDay, parse } from "date-fns";
 import { format } from "@/i18n/dateFns";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -1998,73 +1998,90 @@ export default function CalendarPage() {
           {/* Top Navigation Bar - Only show when staff exists */}
           {!loading && apiStaff && apiStaff.length > 0 && (
           <>
-          <div className="cal-bar">
-            {/* Row 1 — where am I: ‹ Today ›, the date (with the picker), the day's hours; actions on the right. */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-2 md:flex-nowrap md:gap-3">
-              <div className="row gap8 shrink-0">
-                <button
-                  type="button"
-                  className="circ"
-                  aria-label={viewType === "Day" ? tr("calendar.previousDay") : viewType === "Weekly" ? tr("calendar.previousWeek") : tr("calendar.previousMonth")}
-                  onClick={viewType === "Day" ? goToPrevDay : viewType === "Weekly" ? goToPrevWeek : goToPrevMonth}
-                >
-                  <ChevronLeft className="ic" />
-                </button>
-                <button type="button" onClick={goToToday} className={cn("chip", isCurrentDate && viewType === "Day" && "on")}>
-                  {tr("common.today")}
-                </button>
-                <button
-                  type="button"
-                  className="circ"
-                  aria-label={viewType === "Day" ? tr("calendar.nextDay") : viewType === "Weekly" ? tr("calendar.nextWeek") : tr("calendar.nextMonth")}
-                  onClick={viewType === "Day" ? goToNextDay : viewType === "Weekly" ? goToNextWeek : goToNextMonth}
-                >
-                  <ChevronRight className="ic" />
-                </button>
+<div className="cal-head">
+            <div className="pgt">
+              <div>
+                <h5>{tr("nav.calendar")}</h5>
+                <small>{format(viewType === "Day" ? currentDate : viewType === "Weekly" ? weekViewDate : monthViewDate, viewType === "Month" ? "MMMM yyyy" : "EEEE, d MMMM")}</small>
               </div>
-
-              {legendEntries.length > 0 && (
+              <div className="row gap8">
+                <div role="tablist" aria-label={tr("calendar.calendarView")} className="segc" style={{ width: 300, gridTemplateColumns: "repeat(3, 1fr)" }}>
+                  {([["Day", tr("calendar.viewDay")], ["Weekly", tr("calendar.viewWeek")], ["Month", tr("calendar.viewMonth")]] as const).map(([v, label]) => (
+                    <span key={v} role="tab" tabIndex={0} aria-selected={viewType === v} onClick={() => setViewType(v)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewType(v); } }} className={viewType === v ? "on" : undefined} style={{ cursor: "pointer" }}>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+                {viewType === "Day" && !isMobile && staff.length > 1 && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={tr("calendar.colourLegend")}
-                      className="chip shrink-0"
-                    >
-                      <span className="flex -space-x-1">
-                        {legendEntries.slice(0, 4).map((e) => (
-                          <span key={e.key} className="h-3 w-3 rounded-full ring-2 ring-white" style={{ backgroundColor: e.tint.accent }} />
-                        ))}
-                      </span>
-                      {tr("calendar.colours")}
+                    <button type="button" className="chip">
+                      <SlidersHorizontal className="ic" aria-hidden />
+                      {visibleStaff.length === staff.length ? tr("common.team") : tr("calendar.of", { count: visibleStaff.length, count2: staff.length })}
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="start" className="w-64 p-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{tr("calendar.serviceCategory")}</p>
-                    <ul className="space-y-1.5">
-                      {legendEntries.map((e) => (
-                        <li key={e.key} className="flex items-center gap-2 text-sm">
-                          <span className="h-4 w-4 shrink-0 rounded border-l-[3px]" style={{ backgroundColor: e.tint.fill, borderColor: e.tint.accent }} />
-                          <span className="truncate">{e.name}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-3 border-t border-[rgb(var(--reg-line))] pt-2 text-xs text-[rgb(var(--reg-muted))]">
-                      {tr("calendar.statusDotInTheCorner")}
-                    </p>
+                  <PopoverContent align="start" className="w-64 rounded-2xl p-2">
+                    <button type="button" onClick={() => setHiddenStaffIds([])} className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-[rgb(var(--reg-canvas))]">
+                      {tr("calendar.showEveryone")}
+                    </button>
+                    {staff.map((member) => {
+                      const shown = !hiddenStaffIds.includes(member.id);
+                      return (
+                        <label key={member.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-[rgb(var(--reg-canvas))]">
+                          <Checkbox
+                            checked={shown}
+                            onCheckedChange={(on) =>
+                              setHiddenStaffIds((ids) => (on ? ids.filter((x) => x !== member.id) : [...ids, member.id]))
+                            }
+                            className="data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]"
+                          />
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
+                            {initialsOf(member.name)}
+                          </span>
+                          <span className="truncate">{member.name}</span>
+                        </label>
+                      );
+                    })}
                   </PopoverContent>
                 </Popover>
               )}
 
-              {viewType === "Day" ? (
+              
+              </div>
+            </div>
+
+            <div className="a-tb">
+              <button
+                type="button"
+                className="circ"
+                style={{ border: 0, cursor: "pointer", color: "inherit" }}
+                aria-label={viewType === "Day" ? tr("calendar.previousDay") : viewType === "Weekly" ? tr("calendar.previousWeek") : tr("calendar.previousMonth")}
+                onClick={viewType === "Day" ? goToPrevDay : viewType === "Weekly" ? goToPrevWeek : goToPrevMonth}
+              >
+                <ChevronLeft className="ic" />
+              </button>
+              <button type="button" onClick={goToToday} className={cn("chip", isCurrentDate && viewType === "Day" && "on")} style={{ border: 0, cursor: "pointer", font: "inherit", fontWeight: 600 }}>
+                {tr("common.today")}
+              </button>
+              <button
+                type="button"
+                className="circ"
+                style={{ border: 0, cursor: "pointer", color: "inherit" }}
+                aria-label={viewType === "Day" ? tr("calendar.nextDay") : viewType === "Weekly" ? tr("calendar.nextWeek") : tr("calendar.nextMonth")}
+                onClick={viewType === "Day" ? goToNextDay : viewType === "Weekly" ? goToNextWeek : goToNextMonth}
+              >
+                <ChevronRight className="ic" />
+              </button>
+
+                            {viewType === "Day" ? (
                 <Popover onOpenChange={(open) => { if (open) setDatePickerMonth(currentDate); }}>
                   <PopoverTrigger asChild>
-                    <button type="button" className="order-last flex min-w-0 basis-full items-center gap-1.5 rounded-full py-1 text-left hover:bg-white/70 md:order-none md:basis-auto md:px-2">
-                      <span className="cal-title truncate">
+                    <button type="button" aria-label={tr("calendar.pickDate")} className="order-last flex min-w-0 basis-full items-center gap-1.5 bg-transparent p-0 text-left md:order-none md:basis-auto" style={{ border: 0, cursor: "pointer", color: "inherit" }}>
+                      <b style={{ fontSize: 16, marginLeft: 6 }}>
                         <span className="md:hidden">{format(currentDate, "EEE, d MMM")}</span>
                         <span className="hidden md:inline">{format(currentDate, "EEEE, d MMMM")}</span>
-                      </span>
-                      <ChevronDown size={16} className="shrink-0 text-[rgb(var(--reg-muted))]" />
+                      </b>
+                      <ChevronDown className="ic" style={{ width: 16, height: 16 }} aria-hidden />
                     </button>
                   </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -2130,7 +2147,7 @@ export default function CalendarPage() {
                     </PopoverContent>
                 </Popover>
               ) : (
-                <p className="cal-title order-last min-w-0 basis-full truncate md:order-none md:basis-auto md:px-2">
+                <b className="order-last min-w-0 basis-full truncate md:order-none md:basis-auto" style={{ fontSize: 16, marginLeft: 6 }}>
                   {viewType === "Weekly"
                     ? (() => {
                         const weekStart = startOfWeek(weekViewDate, { weekStartsOn: 1 });
@@ -2138,47 +2155,76 @@ export default function CalendarPage() {
                         return `${format(weekStart, "d MMM")} – ${format(weekEnd, "d MMM")}`;
                       })()
                     : format(monthViewDate, "MMMM yyyy")}
-                </p>
+                </b>
               )}
 
-              <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
-                <div className="srch cal-srch hidden lg:flex">
-                  <Search className="ic" />
-                  <input
-                    type="text"
-                    value={calendarSearch}
-                    onChange={(e) => setCalendarSearch(e.target.value)}
-                    placeholder={tr("calendar.findAClient")}
-                    aria-label={tr("calendar.findAClient2")}
-                    className="min-w-0"
-                  />
-                  {calendarSearch && (
-                    <button onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} className="text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]">
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-                <Button
+              <span style={{ flex: 1 }} />
+
+              <label className="sch max-lg:!hidden">
+                <Search className="ic" />
+                <input
+                  type="text"
+                  value={calendarSearch}
+                  onChange={(e) => setCalendarSearch(e.target.value)}
+                  placeholder={tr("calendar.findAClient")}
                   aria-label={tr("calendar.findAClient2")}
-                  aria-expanded={mobileSearchOpen}
-                  variant="ghost"
-                  size="icon"
-                  className="circ h-10 w-10 lg:hidden"
-                  onClick={() => setMobileSearchOpen((v) => !v)}
-                >
-                  <Search size={18} strokeWidth={1.75} />
-                </Button>
-          {businessId && <WhatsAppReminders businessId={businessId} />}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button aria-label={tr("calendar.needsAttention")} variant="ghost" size="icon" className="circ relative">
-                <Bell size={18} strokeWidth={1.75} />
-                {attention.length > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold text-white">
-                    {attention.length}
-                  </span>
+                  style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: 0, font: "inherit", color: "inherit" }}
+                />
+                {calendarSearch && (
+                  <button type="button" onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} style={{ border: 0, background: "none", cursor: "pointer", color: "inherit", display: "flex" }}>
+                    <X className="ic" />
+                  </button>
                 )}
-              </Button>
+              </label>
+              <button
+                type="button"
+                aria-label={tr("calendar.findAClient2")}
+                aria-expanded={mobileSearchOpen}
+                className="circ lg:!hidden"
+                style={{ border: 0, cursor: "pointer", color: "inherit" }}
+                onClick={() => setMobileSearchOpen((v) => !v)}
+              >
+                <Search className="ic" />
+              </button>
+                            {legendEntries.length > 0 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={tr("calendar.colourLegend")}
+                      className="chip shrink-0"
+                    >
+                      <span className="flex -space-x-1">
+                        {legendEntries.slice(0, 4).map((e) => (
+                          <span key={e.key} className="h-3 w-3 rounded-full ring-2 ring-white" style={{ backgroundColor: e.tint.accent }} />
+                        ))}
+                      </span>
+                      {tr("calendar.colours")}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-64 p-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{tr("calendar.serviceCategory")}</p>
+                    <ul className="space-y-1.5">
+                      {legendEntries.map((e) => (
+                        <li key={e.key} className="flex items-center gap-2 text-sm">
+                          <span className="h-4 w-4 shrink-0 rounded border-l-[3px]" style={{ backgroundColor: e.tint.fill, borderColor: e.tint.accent }} />
+                          <span className="truncate">{e.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 border-t border-[rgb(var(--reg-line))] pt-2 text-xs text-[rgb(var(--reg-muted))]">
+                      {tr("calendar.statusDotInTheCorner")}
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {businessId && <WhatsAppReminders businessId={businessId} />}
+                        <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" aria-label={tr("calendar.needsAttention")} className="circ ib" style={{ border: 0, cursor: "pointer", color: "inherit" }}>
+                <Bell className="ic" />
+                {attention.length > 0 && <sup>{attention.length}</sup>}
+              </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-[320px] p-0">
               <div className="border-b px-3 py-2">
@@ -2207,30 +2253,25 @@ export default function CalendarPage() {
                 </div>
               )}
             </PopoverContent>
-          </Popover>
-                <Button
-                  aria-label={tr("calendar.calendarSettings")}
-                  variant="ghost"
-                  size="icon"
-                  className="circ hidden sm:inline-flex"
-                  onClick={() => navigate(getPath("/booking-rules"))}
-                >
-                  <Settings size={18} strokeWidth={1.75} />
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => setIsNewAppointmentOpen(true)}
-                  className="btn btn-v s ml-1 hidden md:inline-flex"
-                >
-                  <Plus size={16} strokeWidth={2.25} />
-                  {tr("common.newBooking")}
-                </button>
-              </div>
+              <button
+                type="button"
+                aria-label={tr("calendar.calendarSettings")}
+                title={tr("calendar.calendarSettings")}
+                className="circ max-sm:!hidden"
+                style={{ border: 0, cursor: "pointer", color: "inherit" }}
+                onClick={() => navigate(getPath("/booking-rules"))}
+              >
+                <Settings className="ic" />
+              </button>
+              <button type="button" onClick={() => setIsNewAppointmentOpen(true)} className="btn btn-v s max-md:!hidden">
+                <Plus className="ic" aria-hidden />
+                {tr("common.newBooking")}
+              </button>
             </div>
 
             {mobileSearchOpen && (
-              <div className="mt-3 flex h-11 items-center gap-2 rounded-full bg-white px-4 ring-1 ring-[rgb(var(--reg-line))] lg:hidden">
-                <Search size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
+              <div className="sch lg:!hidden" style={{ marginBottom: 12 }}>
+                <Search className="ic" />
                 <input
                   autoFocus
                   type="text"
@@ -2238,132 +2279,74 @@ export default function CalendarPage() {
                   onChange={(e) => setCalendarSearch(e.target.value)}
                   placeholder={tr("calendar.findAClient")}
                   aria-label={tr("calendar.findAClient2")}
-                  className="min-w-0 flex-1 border-0 bg-transparent text-base outline-none placeholder:text-[rgb(var(--reg-muted))]"
+                  style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: 0, font: "inherit", color: "inherit" }}
                 />
                 {calendarSearch && (
-                  <button onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} className="text-[rgb(var(--reg-muted))]">
-                    <X size={16} />
+                  <button type="button" onClick={() => setCalendarSearch("")} aria-label={tr("calendar.clearSearch")} style={{ border: 0, background: "none", cursor: "pointer", color: "inherit", display: "flex" }}>
+                    <X className="ic" />
                   </button>
                 )}
               </div>
             )}
 
-            {/* Row 2 — how am I looking: view switch, who, and the day's hours. */}
-            <div className="mt-3 flex items-center gap-2">
-              <div role="tablist" aria-label={tr("calendar.calendarView")} className="cal-seg">
-                {([["Day", tr("calendar.viewDay")], ["Weekly", tr("calendar.viewWeek")], ["Month", tr("calendar.viewMonth")]] as const).map(([v, label]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    role="tab"
-                    aria-selected={viewType === v}
-                    onClick={() => setViewType(v)}
-                    className={viewType === v ? "on" : undefined}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {viewType === "Day" && !isMobile && staff.length > 1 && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button type="button" className="chip">
-                      <Users size={16} strokeWidth={1.75} className="text-[rgb(var(--reg-muted))]" />
-                      {visibleStaff.length === staff.length ? tr("calendar.allTeam") : tr("calendar.of", { count: visibleStaff.length, count2: staff.length })}
-                      <ChevronDown size={14} className="text-[rgb(var(--reg-muted))]" />
+            {(viewType === "Day" || viewType === "Weekly") && (
+              <div className="a-tb" style={{ marginBottom: 0 }}>
+                {viewType === "Day" && !isMobile && staff.length > 1 && staff.map((member) => {
+                  const shown = !hiddenStaffIds.includes(member.id);
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      aria-pressed={shown}
+                      onClick={() => setHiddenStaffIds((ids) => (shown ? [...ids, member.id] : ids.filter((x) => x !== member.id)))}
+                      className={cn("chip", shown && "vo")}
+                      style={{ height: 42, paddingLeft: 6, border: 0, cursor: "pointer", font: "inherit", fontWeight: 600 }}
+                    >
+                      <div className="ring">
+                        {member.avatar ? (
+                          <img src={member.avatar} alt="" style={{ width: 28, height: 28 }} />
+                        ) : (
+                          <span style={{ width: 28, height: 28, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{member.initials || initialsOf(member.name)}</span>
+                        )}
+                      </div>
+                      {member.name}
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-64 rounded-2xl p-2">
-                    <button type="button" onClick={() => setHiddenStaffIds([])} className="w-full rounded-xl px-3 py-2 text-left text-sm font-semibold hover:bg-[rgb(var(--reg-canvas))]">
-                      {tr("calendar.showEveryone")}
-                    </button>
-                    {staff.map((member) => {
-                      const shown = !hiddenStaffIds.includes(member.id);
-                      return (
-                        <label key={member.id} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-[rgb(var(--reg-canvas))]">
-                          <Checkbox
-                            checked={shown}
-                            onCheckedChange={(on) =>
-                              setHiddenStaffIds((ids) => (on ? ids.filter((x) => x !== member.id) : [...ids, member.id]))
-                            }
-                            className="data-[state=checked]:border-[rgb(var(--reg-brand))] data-[state=checked]:bg-[rgb(var(--reg-brand))]"
-                          />
-                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-[11px] font-bold text-[rgb(var(--reg-brand-strong))]">
-                            {initialsOf(member.name)}
-                          </span>
-                          <span className="truncate">{member.name}</span>
-                        </label>
-                      );
-                    })}
-                  </PopoverContent>
-                </Popover>
-              )}
-
-              {(viewType === "Day" || viewType === "Weekly") && flags.waitlist !== false && (
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showWaiting}
-                  onClick={() => setShowWaiting(!showWaiting)}
-                  className={cn("chip", showWaiting && "vo")}
-                >
-                  <Clock size={16} strokeWidth={1.75} aria-hidden />
-                  <span className="hidden sm:inline">{tr("waitlistCal.showWaiting")}</span>
-                  <span className="sm:hidden">{tr("waitlistCal.stripLabel")}</span>
-                </button>
-              )}
-              {(viewType === "Day" || viewType === "Weekly") && flags.waitlist !== false && (
-                <button
-                  type="button"
-                  onClick={() => setAddWaiterOpen(true)}
-                  className="chip"
-                >
-                  <Plus size={16} strokeWidth={1.75} aria-hidden />
-                  <span className="hidden sm:inline">{tr("waitlistCal.addButton")}</span>
-                </button>
-              )}
-
-              {(viewType === "Day" || viewType === "Weekly") && (
-                <>
-                  <FlagLegend />
-                  <div role="group" aria-label={tr("calendar.densityTitle")} className="cal-seg">
-                    {(["comfy", "compact"] as const).map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        aria-pressed={density === d}
-                        onClick={() => setDensity(d)}
-                        className={density === d ? "on" : undefined}
-                      >
-                        {d === "comfy" ? tr("calendar.densityComfy") : tr("calendar.densityTight")}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {viewType === "Day" && (() => {
-                const { startHour, endHour, isEnabled } = getBusinessHoursForDate(currentDate);
-                return (
-                  <span
-                    className={cn(
-                      "chip shrink-0",
-                      getAppointmentsForDate(currentDate).length === 0 ? "ml-auto lg:ml-3" : "ml-auto",
-                      !isEnabled && "dim",
-                    )}
-                    style={isEnabled ? undefined : { background: "var(--bz-fill)", color: "var(--bz-muted)", boxShadow: "none" }}
-                  >
-                    <Clock size={13} strokeWidth={1.75} aria-hidden />
-                    {isEnabled
-                      ? `${startHour.toString().padStart(2, "0")}:00–${endHour.toString().padStart(2, "0")}:00`
-                      : <><span className="md:hidden">{tr("common.closed")}</span><span className="hidden md:inline">{tr("calendar.closedToday")}</span></>}
+                  );
+                })}
+                <span style={{ flex: 1 }} />
+                <FlagLegend />
+                <span className="a-dns" role="group" aria-label={tr("calendar.densityTitle")}>
+                  <b>{tr("calendar.densityTitle")}</b>
+                  {(["comfy", "compact"] as const).map((d) => (
+                    <span key={d} role="button" tabIndex={0} aria-pressed={density === d} onClick={() => setDensity(d)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDensity(d); } }} className={density === d ? "on" : undefined} style={{ cursor: "pointer" }}>
+                      {d === "comfy" ? tr("calendar.densityComfy") : tr("calendar.densityTight")}
+                    </span>
+                  ))}
+                </span>
+                {flags.waitlist !== false && (
+                  <span className="row gap8" style={{ marginLeft: 14, fontSize: 14.5, fontWeight: 700 }}>
+                    {tr("waitlistCal.showWaiting")}
+                    <span role="switch" tabIndex={0} aria-checked={showWaiting} aria-label={tr("waitlistCal.showWaiting")} onClick={() => setShowWaiting(!showWaiting)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowWaiting(!showWaiting); } }} className={cn("tg", !showWaiting && "off")} />
                   </span>
-                );
-              })()}
-            </div>
+                )}
+              </div>
+            )}
 
-            {/* Phone: the week as a day strip (BF02 · 390). */}
+            {(viewType === "Day" || viewType === "Weekly") && flags.waitlist !== false && showWaiting && (
+              <div className="a-wait">
+                <b style={{ fontSize: 14.5, color: "var(--bz-vtext)" }}>{tr("waitlistCal.stripLabel")}</b>
+                {waitlist.filter((w) => waitsOn(w, dayKey)).slice(0, 4).map((w) => (
+                  <span key={String(w.id)} className="c">{[w.clientName, w.serviceName].filter(Boolean).join(" · ")}</span>
+                ))}
+                <span style={{ flex: 1 }} />
+                <button type="button" onClick={() => setAddWaiterOpen(true)} className="btn btn-soft s" style={{ height: 38 }}>
+                  <Plus className="ic" aria-hidden />
+                  {tr("waitlistCal.addButton")}
+                </button>
+              </div>
+            )}
+
+                        {/* Phone: the week as a day strip (BF02 · 390). */}
             {viewType === "Day" && isMobile && (
               <div className="dstrip" style={{ marginTop: 12 }} role="tablist" aria-label={tr("calendar.calendarView")}>
                 {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(currentDate, { weekStartsOn: 1 }), i)).map((d) => (
@@ -2403,7 +2386,7 @@ export default function CalendarPage() {
       {/* Calendar Grid - Conditional based on view type */}
           {viewType === "Day" && (
           <div className="flex min-h-0 flex-1 overflow-hidden">
-          <div ref={dayGridRef} className="cal-card relative flex min-w-0 flex-1 overflow-auto md:ml-6 md:mr-5 md:mb-4">
+          <div ref={dayGridRef} className="cal-card relative flex min-w-0 flex-1 overflow-auto md:mx-8 md:mb-4">
             {/* Current Time Indicator - Full horizontal line across all columns */}
             {isCurrentDate && (() => {
               const timePosition = getCurrentTimePosition();

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { MessageCircle, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { appointmentService, type WhatsAppReminderRow } from "@/services/appointmentService";
 import { t } from "@/i18n";
@@ -36,11 +35,10 @@ export function WhatsAppReminders({ businessId }: { businessId: Id }) {
 
   return (
     <>
-      <Button aria-label={t("reminders.open")} title={t("reminders.open")} variant="ghost" size="icon"
-        className="h-10 w-10 rounded-full text-[rgb(var(--reg-ink)/0.75)] hover:bg-white hover:text-[rgb(var(--reg-ink))]"
-        onClick={() => setOpen(true)}>
-        <MessageCircle size={18} strokeWidth={1.75} />
-      </Button>
+      <button type="button" aria-label={t("reminders.open")} title={t("reminders.open")} className="chip max-xl:!hidden" style={{ border: 0, cursor: "pointer", font: "inherit", fontWeight: 600 }} onClick={() => setOpen(true)}>
+        <MessageCircle className="ic" aria-hidden />
+        {t("reminders.open")}
+      </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[85vh] overflow-y-auto rounded-2xl sm:max-w-lg">
           <DialogHeader>
