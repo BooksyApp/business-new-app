@@ -3,6 +3,7 @@ import { ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Avatar, Card, Header, Screen, StateView } from '@/components/ui';
+import { Button as KButton } from '@/components/kit';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
 import { t as tr } from '@/i18n';
@@ -19,7 +20,7 @@ export default function Salons() {
     <Screen>
       <Header title={tr('login.pickSalon')} subtitle={tr('login.pickSalonHint')} onBack={salon ? () => router.back() : undefined} />
       {salons.length === 0 ? (
-        <StateView icon="store" title={tr('login.pickSalon')} body={tr('clients.empty')} />
+        <StateView icon="store" title={tr('ob.noSalonTitle')} body={tr('ob.noSalonBody')} actionLabel={tr('ob.addSalon')} onAction={() => router.push('/create-business')} />
       ) : (
         <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
           {salons.map((b) => (
@@ -32,6 +33,7 @@ export default function Salons() {
               {salon?.id === b.id ? <Icon name="check" size={22} color={t.vtext} /> : <Icon name="chev" size={20} color={t.ink3} />}
             </Card>
           ))}
+          <KButton label={tr('ob.addSalon')} icon="plus" kind="ol" onPress={() => router.push('/create-business')} style={{ marginTop: 6 }} />
         </ScrollView>
       )}
     </Screen>

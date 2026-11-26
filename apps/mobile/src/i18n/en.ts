@@ -2,6 +2,7 @@
 import { uxEn } from './ux';
 import { v2En } from './v2';
 import { v3En } from './v3';
+import { obEn } from './ob';
 import { extraEn } from './extra';
 import { moreEn } from './more';
 import { bizEn } from './biz';
@@ -224,6 +225,7 @@ export const en = {
   ...uxEn,
   ...v2En,
   ...v3En,
+  ...obEn,
 };
 
 export type Strings = typeof en;

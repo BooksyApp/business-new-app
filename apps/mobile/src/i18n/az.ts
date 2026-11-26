@@ -2,6 +2,7 @@ import type { Strings } from './en';
 import { uxAz } from './ux';
 import { v2Az } from './v2';
 import { v3Az } from './v3';
+import { obAz } from './ob';
 import { extraAz } from './extra';
 import { moreAz } from './more';
 import { bizAz } from './biz';
@@ -239,4 +240,5 @@ export const az: DeepPartial<Strings> = {
   ...uxAz,
   ...v2Az,
   ...v3Az,
+  ...obAz,
 };

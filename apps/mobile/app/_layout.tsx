@@ -60,10 +60,14 @@ function Shell() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.canvas }, animation: 'slide_from_right', gestureEnabled: true, animationDuration: 260 }}>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="login" />
+          <Stack.Screen name="register" />
+          <Stack.Screen name="forgot" />
+          <Stack.Screen name="accept-invite" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="salons" />
+          <Stack.Screen name="create-business" />
           <Stack.Screen name="bookings" />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="client/[id]" />

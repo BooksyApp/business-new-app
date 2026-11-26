@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
@@ -10,8 +10,9 @@ import { Text } from '@/components/Text';
 import { Wordmark } from '@/components/Wordmark';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { api, saveSession, ApiError } from '@/lib/api';
+import { authErrorKey } from '@/lib/api-onboard';
 import { useApp } from '@/lib/app';
-import { API_BASE } from '@/lib/config';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { useTheme } from '@/theme/ThemeContext';
 import { font, wordmarkOnDark } from '@/theme/tokens';
@@ -23,6 +24,7 @@ export default function Login() {
   const { t } = useTheme();
   const ins = useSafeAreaInsets();
   const { signedIn, enterDemo } = useApp();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,7 +45,8 @@ export default function Login() {
       await signedIn(u, salons);
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      setError(e instanceof ApiError && e.status === 0 ? tr('common.offline') : (e as Error).message);
+      const k = authErrorKey(e);
+      setError(e instanceof ApiError && e.status === 0 ? tr('common.offline') : k ? tr(k) : (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -72,8 +75,14 @@ export default function Login() {
           ) : null}
           <Button label={tr('v2.signIn')} onPress={() => void submit()} loading={busy} disabled={!email || !password} style={{ marginTop: 4 }} />
           <Button label={tr('v2.demoTry')} icon="eye" kind="ol" onPress={() => setDemoOpen(true)} />
-          <Pressable onPress={() => void Linking.openURL(API_BASE).catch(() => {})} accessibilityRole="link" style={{ alignSelf: 'center', marginTop: 6, minHeight: 32, justifyContent: 'center' }}>
-            <Text style={{ fontFamily: font.r, fontSize: 11.5, color: t.ink3 }}>{tr('v2.noSalon')} <Text style={{ fontFamily: font.b, color: t.vtext }}>{tr('v2.signUp')}</Text></Text>
+          <Pressable onPress={() => router.push('/forgot')} accessibilityRole="link" style={{ alignSelf: 'center', marginTop: 2, minHeight: 36, justifyContent: 'center' }}>
+            <Text style={{ fontFamily: font.b, fontSize: 12.5, color: t.vtext }}>{tr('ob.forgotLink')}</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/register')} accessibilityRole="link" style={{ alignSelf: 'center', marginTop: 0, minHeight: 36, justifyContent: 'center' }}>
+            <Text style={{ fontFamily: font.r, fontSize: 12.5, color: t.ink3 }}>{tr('v2.noSalon')} <Text style={{ fontFamily: font.b, color: t.vtext }}>{tr('v2.signUp')}</Text></Text>
+          </Pressable>
+          <Pressable onPress={() => router.push('/accept-invite')} accessibilityRole="link" style={{ alignSelf: 'center', minHeight: 32, justifyContent: 'center' }}>
+            <Text style={{ fontFamily: font.r, fontSize: 12.5, color: t.ink3 }}>{tr('ob.haveInvite')}</Text>
           </Pressable>
         </View>
         <View style={{ flex: 1 }} />

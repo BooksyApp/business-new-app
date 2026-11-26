@@ -72,6 +72,9 @@ export const apiX = {
   staffFull: (b: Id) => request<StaffFull[]>(`/staff/business/${b}`),
   createStaff: (b: Id, body: StaffBody) => request<StaffFull>(`/staff/business/${b}`, { method: 'POST', body }),
   updateStaff: (b: Id, id: Id, body: StaffBody) => request<StaffFull>(`/staff/${id}/business/${b}`, { method: 'PUT', body }),
+  /** GET/PUT /api/services/assignments/business/{b}/staff/{s}: the services a specialist performs (StaffCreateRequest has no serviceIds, the hub saves them here). */
+  staffServiceIds: (b: Id, s: Id) => request<Id[]>(`/services/assignments/business/${b}/staff/${s}`),
+  setStaffServiceIds: (b: Id, s: Id, serviceIds: Id[]) => request<Id[]>(`/services/assignments/business/${b}/staff/${s}`, { method: 'PUT', body: { serviceIds } }),
   inviteStaff: (id: Id) => request<void>(`/staff/${id}/invite`, { method: 'POST', body: {} }),
   setStaffRole: (id: Id, role: string) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { role } }),
   timeOffForStaff: (b: Id, s: Id) => request<{ id: Id; startDate: string; endDate: string; isFullDay: boolean; reason?: string | null; isApproved?: boolean }[]>(`/time-off/staff/${s}`),

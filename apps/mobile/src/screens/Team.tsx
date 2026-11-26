@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, FlatList, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -37,6 +37,8 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
   const [active, setActive] = useState(staff?.isActive ?? true);
   const [role, setRole] = useState(staff?.role ?? 'STAFF');
   const [ids, setIds] = useState<string[]>((staff?.serviceIds ?? []).map(String));
+  // The backend keeps specialist <-> service links in the catalog (GET /services/assignments/...), not on the staff row.
+  useEffect(() => { if (staff) void apiX.staffServiceIds(sid, staff.id).then((a) => setIds((a ?? []).map(String))).catch(() => undefined); }, [staff?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [sched, setSched] = useState<Record<string, { on: boolean; from: string; to: string }>>(() => Object.fromEntries(DAYS.map((d) => {
     const a = staff?.workingHoursStart?.[d]; const b = staff?.workingHoursEnd?.[d];
     return [d, a && b ? { on: true, from: hm(a), to: hm(b) } : { on: !staff && d !== 'SUNDAY', from: '09:00', to: '18:00' }];
@@ -60,6 +62,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
     try {
       let id = staff?.id;
       if (staff) await apiX.updateStaff(sid, staff.id, body); else id = (await apiX.createStaff(sid, body)).id;
+      if (id != null) await apiX.setStaffServiceIds(sid, id, ids);
       if (staff && role !== staff.role && staff.role) await apiX.setStaffRole(staff.id, role).catch(() => undefined);
       if (invite && id != null) { await apiX.inviteStaff(id); Alert.alert(tr('tm.invited')); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});

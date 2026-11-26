@@ -15,6 +15,8 @@ import { api, toDay, type Appointment, type ClientWithStats, type Staff } from '
 import { apiX } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
 import { markArrived } from '@/lib/arrived';
+import { salonShareLink } from '@/lib/config';
+import { SetupChecklist } from '@/components/SetupChecklist';
 import { rememberClients } from '@/lib/client-cache';
 import { clientPhoto, firstName, live, nextUp, nowMin, series } from '@/lib/day';
 import { useDockInset } from '@/lib/dock';
@@ -91,6 +93,8 @@ export default function Today() {
             <IconBtn icon="plus" label={tr('v2.create')} onPress={() => setQuick(true)} />
           </>} />
 
+        <SetupChecklist />
+
         {/* story rail: own story first, then the team */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 4 }}>
           <StoryBubble uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} label={ownStory ? tr('v2.yourStory') : tr('v2.addStory')} add={!ownStory} onPress={() => (ownStory ? router.push('/story/view?mode=own') : router.push('/story/create'))} />
@@ -160,7 +164,7 @@ export default function Today() {
         <View style={{ height: 54, borderRadius: 16, borderWidth: 1, borderColor: t.hair, backgroundColor: t.surface, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
           <Text style={{ flex: 1, fontFamily: font.s, fontSize: 15, color: t.ink }}>{salonUrl(salon)}</Text>
         </View>
-        <Button label={tr('v2.share')} icon="share" onPress={() => { setLink(false); void Share.share({ message: `${salon?.name ?? 'booqi'} · https://${salonUrl(salon)}` }).catch(() => {}); }} style={{ marginTop: 12 }} />
+        <Button label={tr('v2.share')} icon="share" onPress={() => { setLink(false); void Share.share({ message: `${salon?.name ?? 'booqi'} · ${salonShareLink(salon)}` }).catch(() => {}); }} style={{ marginTop: 12 }} />
       </BottomSheet>
 
       <BlockTimeSheet open={block} date={now} masters={team} onClose={() => setBlock(false)} onDone={() => { setBlock(false); bump(); }} />
@@ -168,7 +172,7 @@ export default function Today() {
   );
 }
 
-const salonUrl = (s: unknown) => `booqi.az/${(s as { slug?: string } | null)?.slug ?? String((s as { id?: string } | null)?.id ?? '')}`;
+const salonUrl = (s: unknown) => salonShareLink(s).replace(/^https?:\/\//, '');
 
 
 /** Next client photo card (`.hero`): 236 high, dark wash, time pills, name 21/700, specialist row, white "Gəldi". */
