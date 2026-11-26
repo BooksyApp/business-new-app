@@ -84,6 +84,7 @@ const PaymentMethodPage = lazyWithReload(() => import("./pages/PaymentMethodPage
 const NotFound = lazyWithReload(() => import("./pages/NotFound"));
 const LegacyPanelRedirect = lazyWithReload(() => import("./components/LegacyPanelRedirect"));
 const BzKitPage = lazyWithReload(() => import("./pages/BzKitPage"));
+const BzStaticPage = lazyWithReload(() => import("./pages/BzStaticPage"));
 const ProtectedRoute = lazyWithReload(() => import("./components/ProtectedRoute"));
 
 /*
@@ -303,6 +304,7 @@ const App = () => (
               <Route path="social-images" element={<Suspense fallback={<PageLoader />}><SocialImagesPage /></Suspense>} />
               <Route path="timesheet" element={<Suspense fallback={<PageLoader />}><TimesheetPage /></Suspense>} />
               <Route path="bz-kit" element={<Suspense fallback={<PageLoader />}><BzKitPage /></Suspense>} />
+              <Route path="bz-static/:frameId?" element={<Suspense fallback={<PageLoader />}><BzStaticPage /></Suspense>} />
               <Route path="my-day" element={<Suspense fallback={<PageLoader />}><MyDayPage /></Suspense>} />
               <Route path="expenses" element={<Suspense fallback={<PageLoader />}><ExpensesPage /></Suspense>} />
               <Route path="promotion" element={<Suspense fallback={<PageLoader />}><PromotionPage /></Suspense>} />
