@@ -37,6 +37,8 @@ export interface Dashboard {
   topServices: { name: string; bookings: number; revenue: number }[];
   staff: { name: string; visits: number; revenue: number; utilization: number | null }[];
   sources: { source: string; bookings: number }[];
+  /** optional daily revenue series (newest last); the chart shows only when the API sends it */
+  series?: number[];
 }
 export interface HoursRow { dayOfWeek: string; enabled: boolean; startTime: string | null; endTime: string | null }
 export interface NotifSettings {

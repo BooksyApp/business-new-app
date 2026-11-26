@@ -9,7 +9,6 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Btn, ErrorState, Field, Screen } from '@/components/ui';
 import { Avatar, BackBar, Button, Chip, ChipRow, EmptyState, Skeleton, Stars, T, Title } from '@/components/kit';
-import { DEMO_IMG } from '@/demo/photos';
 import { t as tr } from '@/i18n';
 import { apiX, type Review } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
@@ -78,7 +77,7 @@ export function Reviews({ onBack }: { onBack: () => void }) {
               </ChipRow>
             </View>
           ) : null}
-          ListEmptyComponent={<EmptyState photo={DEMO_IMG['f04']} title={tr('rv.empty')} body={tr('rv.emptyBody')} />}
+          ListEmptyComponent={<EmptyState photo={'demo:f04'} title={tr('rv.empty')} body={tr('rv.emptyBody')} />}
           renderItem={({ item: r, index }) => (
             <View style={{ marginHorizontal: 20, paddingVertical: 16, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: t.hair, gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

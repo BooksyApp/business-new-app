@@ -110,7 +110,7 @@ export function buildDemo(): { routes: Route[]; user: Record<string, unknown>; b
     { id: 2, rating: 5, comment: 'Kirpiklər 3 həftədir eynidir. Lalə xanıma təşəkkürlər!', createdAt: iso(-5, 12), authorName: 'Nərmin Quliyeva', reply: null, repliedAt: null, serviceName: 'Kirpik artırma 2D', staffName: 'Lalə' },
     { id: 3, rating: 4, comment: 'Kəsim əla idi, sadəcə 10 dəqiqə gözlədim.', createdAt: iso(-7, 12), authorName: 'Tural Abbasov', reply: null, repliedAt: null, serviceName: 'Saç + saqqal', staffName: 'Kamran' },
   ];
-  const dash = { kpis: { revenue: { value: 6840, previous: 6100 }, bookings: { value: 186, previous: 171 }, newClients: { value: 31, previous: 24 }, avgTicket: { value: 37, previous: 36 } },
+  const dash = { series: [3,2,5,4,6,3,2,7,8,6,7,9,5,6,10,11,8,9,12,10,9,13,12,11,14,13,15,14,16,17], kpis: { revenue: { value: 6840, previous: 6100 }, bookings: { value: 186, previous: 171 }, newClients: { value: 31, previous: 24 }, averageTicket: { value: 37, previous: 36 } },
     topServices: [{ name: 'Kirpik artırma 2D', bookings: 38, revenue: 2280 }, { name: 'Gel-lak manikür', bookings: 44, revenue: 1320 }, { name: 'Qadın saç kəsimi', bookings: 31, revenue: 1085 }],
     staff: staff.map((s, i) => ({ name: s.name.split(' ')[0], visits: 40 - i * 4, revenue: 1800 - i * 220, utilization: s.load })), sources: [{ source: 'web', bookings: 112 }, { source: 'manual', bookings: 74 }] };
   const hours = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((d, i) => ({ dayOfWeek: d, enabled: i < 6, startTime: '09:00', endTime: '20:00' }));

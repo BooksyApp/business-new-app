@@ -8,7 +8,6 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ErrorState, Screen } from '@/components/ui';
 import { Avatar, BackBar, Button, Card, Chip, ChipRow, EmptyState, IconBtn, Skeleton, T, Title } from '@/components/kit';
-import { DEMO_IMG } from '@/demo/photos';
 import { t as tr } from '@/i18n';
 import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -174,7 +173,7 @@ export default function Notifications() {
             </Card>
           )) : null}
           {filter === 'all' ? <Button kind="ghost" size="sm" icon="plus" label={tr('wl.add')} onPress={() => setWlOpen(true)} style={{ alignSelf: 'flex-start' }} /> : null}
-          {empty ? <EmptyState photo={DEMO_IMG['f03']} title={tr('v2.allRead')} body={tr('v2.allReadBody')} /> : null}
+          {empty ? <EmptyState photo={'demo:f03'} title={tr('v2.allRead')} body={tr('v2.allReadBody')} /> : null}
         </ScrollView>
       )}
       <OfferSheet entryId={offerId} open={!!offerId} onClose={() => setOfferId(null)} onSent={() => setOfferId(null)} />

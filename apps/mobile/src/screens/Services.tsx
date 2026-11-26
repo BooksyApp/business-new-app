@@ -9,7 +9,6 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Btn, Card, Chip, Circ, ErrorState, Field, Header, HeroCard, Pill, Screen, ServiceThumb, Skeleton, StateView, StickyCta, Toggle } from '@/components/ui';
 import { BackBar, Chip as KChip, ChipRow, EmptyState, IconBtn, ListItem, Pill as KPill, PhotoRow, SecHead, Skeleton as KSkel, Title } from '@/components/kit';
-import { DEMO_IMG } from '@/demo/photos';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB, type PeakRule } from '@/lib/api-biz';
@@ -262,7 +261,7 @@ export function Services({ onBack }: { onBack: () => void }) {
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <KSkel blocks={[{ h: 90 }, { h: 90 }, { h: 90 }, { h: 90 }]} /> : (
         <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingBottom: 60 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => { void list.reload(); void cats.reload(); }} tintColor={t.violet} />}
-          ListEmptyComponent={<EmptyState photo={DEMO_IMG['p3997381']} title={tr('create.noServices')} action={{ label: tr('sx.add'), icon: 'plus', onPress: () => { setEdit(null); setView('edit'); } }} />}
+          ListEmptyComponent={<EmptyState photo={'demo:p3997381'} title={tr('create.noServices')} action={{ label: tr('sx.add'), icon: 'plus', onPress: () => { setEdit(null); setView('edit'); } }} />}
           ListFooterComponent={<View style={{ marginTop: 18, marginHorizontal: 20 }}><SecHead title={tr('v3.more')} style={{ marginHorizontal: 0, marginTop: 8 }} />{more.map(([ic, l, fn], i) => <ListItem key={l} first={i === 0} title={l} onPress={fn} lead={<Icon name={ic} size={20} color={t.ink} />} right={<Icon name="chev" size={16} color={t.ink3} />} />)}</View>}
           renderItem={({ item: s, index }) => {
             const on = local[s.id] ?? s.isActive;

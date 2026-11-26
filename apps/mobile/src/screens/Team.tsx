@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Avatar, Btn, Card, Circ, ErrorState, Field, Header, HeroCard, Pill, Screen, Section, Skeleton, StateView, StickyCta, Toggle } from '@/components/ui';
+import { BackBar, Card as KCard, EmptyState, IconBtn, LoadRing, Pill as KPill, Skeleton as KSkel, T, Title, Avatar as KAvatar } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiX, type StaffBody, type StaffFull } from '@/lib/api-ext';
@@ -129,27 +130,34 @@ export function Team({ onBack }: { onBack: () => void }) {
   const list = useLoad(() => apiX.staffFull(salon?.id ?? ''), [salon?.id]);
   const [sel, setSel] = useState<StaffFull | null | 'new'>(null);
   if (sel) return <Editor staff={sel === 'new' ? null : sel} onClose={() => setSel(null)} onSaved={() => { setSel(null); void list.reload(); }} />;
-  const addBtn = <Circ icon="user-plus" violet label={tr('tm.add')} onPress={() => setSel('new')} />;
+  const addBtn = <IconBtn icon="plus" label={tr('tm.add')} onPress={() => setSel('new')} />;
+  const rows = list.data ?? [];
+  const cells: (StaffFull | 'invite')[] = [...rows, 'invite'];
   return (
     <Screen>
-      <Header title={tr('sections.team')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
-      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}
+      <BackBar label={tr('v2.tabMore')} onBack={onBack} right={addBtn} />
+      <Title sub={`${rows.length} ${tr('v3.specN')}`} style={{ paddingBottom: 12 }}>{tr('sections.team')}</Title>
+      {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <KSkel blocks={[{ h: 190, w: '48%' }, { h: 190 }]} /> : !rows.length ? <EmptyState photo={'demo:a-salon'} title={tr('team.empty')} action={{ label: tr('tm.add'), icon: 'plus', onPress: () => setSel('new') }} /> : (
+        <FlatList numColumns={2} initialNumToRender={12} windowSize={9} data={cells} keyExtractor={(s) => (s === 'invite' ? 'invite' : String(s.id))} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }} columnWrapperStyle={{ gap: 12 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListHeaderComponent={(list.data ?? []).length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, marginBottom: 6, flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }}>{(list.data ?? []).map((m) => <Pressable key={m.id} onPress={() => setSel(m)} accessibilityRole="button" accessibilityLabel={m.name} style={{ alignItems: 'center', gap: 6, width: 76 }}><Avatar name={m.name} size={68} uri={m.avatarUrl} /><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13.5, color: t.ink }}>{m.name}</Text></Pressable>)}</ScrollView> : null}
-          ListEmptyComponent={<StateView icon="users" title={tr('team.empty')} actionLabel={tr('tm.add')} onAction={() => setSel('new')} />}
-          renderItem={({ item: s }) => (
-            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 92, opacity: s.isActive === false ? 0.6 : 1 }}>
-              <Pressable onPress={() => setSel(s)} accessibilityRole="button" accessibilityLabel={s.name} noScale style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <Avatar name={s.name} uri={s.avatarUrl} size={60} />
-              <View style={{ flex: 1, gap: 3 }}>
-                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{s.name}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{s.position || s.role || ''}</Text>
-                {s.isActive === false ? <Pill text={tr('team.inactive')} tone="muted" /> : s.role ? <Pill text={s.role} tone="violet" /> : null}
+          renderItem={({ item: s }) => s === 'invite' ? (
+            <Pressable onPress={() => setSel('new')} accessibilityRole="button" accessibilityLabel={tr('tm.add')} style={{ flex: 1, minHeight: 190, borderRadius: 22, borderWidth: 1.5, borderColor: t.hair, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={24} color={t.ink} /></View>
+              <T k="h3">{tr('tm.add')}</T>
+            </Pressable>
+          ) : (
+            <KCard style={{ flex: 1, minHeight: 190, opacity: s.isActive === false ? 0.6 : 1 }}>
+              <Pressable onPress={() => setSel(s)} accessibilityRole="button" accessibilityLabel={s.name} noScale style={{ alignItems: 'center', paddingVertical: 18, paddingHorizontal: 10, gap: 4 }}>
+              <LoadRing value={((s as { load?: number }).load ?? 0.6)} size={84}><KAvatar name={s.name} uri={s.avatarUrl} size={70} /></LoadRing>
+              <T k="h2" lines={1} style={{ marginTop: 8 }}>{s.name.split(' ')[0]}</T>
+              <T k="sm" color={t.muted} lines={1}>{s.position || s.role || ''}</T>
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
+                {(s as { rating?: number }).rating ? <KPill icon="star" text={String((s as { rating?: number }).rating).replace('.', ',')} /> : null}
+                {s.isActive === false ? <KPill text={tr('team.inactive')} /> : (s as { load?: number }).load != null ? <KPill text={`${Math.round(((s as { load?: number }).load ?? 0) * 100)}%`} /> : null}
               </View>
               </Pressable>
-              {s.phone ? <Pressable onPress={() => void Linking.openURL(`tel:${s.phone!.replace(/\s+/g, '')}`).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('common.call')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="phone" size={22} color={t.vtext} /></Pressable> : null}
-            </Card>
+              {s.phone ? <Pressable onPress={() => void Linking.openURL(`tel:${s.phone!.replace(/\s+/g, '')}`).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('common.call')} hitSlop={6} style={{ position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}><Icon name="phone" size={17} color={t.ink3} /></Pressable> : null}
+            </KCard>
           )} />
       )}
     </Screen>

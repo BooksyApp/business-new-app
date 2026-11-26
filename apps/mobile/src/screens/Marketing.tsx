@@ -9,6 +9,8 @@ import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Btn, Card, Circ, ErrorState, Field, Header, Hero, Pill, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
+import { IconBtn, Button, EmptyState, ListItem, Pill as KPill, SecHead, T } from '@/components/kit';
+import { PromoteSheet } from '@/components/PromoteSheet';
 import { t as tr } from '@/i18n';
 import { apiB, type Automation } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
@@ -43,9 +45,10 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const [subject, setSubject] = useState(''); const [body, setBody] = useState('');
   const [code, setCode] = useState(''); const [ptype, setPtype] = useState<'PERCENT' | 'FIXED'>('PERCENT'); const [value, setValue] = useState(''); const [uses, setUses] = useState('');
   const [busy, setBusy] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
   const aud = useLoad(() => (sheet && tab === 'campaigns' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel, tab]);
   const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
-  const addBtn = <Circ icon="plus" violet label={tr('mk.add')} onPress={() => setSheet(true)} />;
+  const addBtn = <IconBtn icon="plus" label={tr('mk.add')} onPress={() => setSheet(true)} />;
   const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : tab === 'members' ? mem : tab === 'refs' ? refs : auto;
   return (
     <Screen>
@@ -111,22 +114,32 @@ export function Marketing({ onBack }: { onBack: () => void }) {
           ) : null}
         </ScrollView>
       ) : tab === 'campaigns' ? (
-        <FlatList data={camps.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}
+        <FlatList data={camps.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={camps.refreshing} onRefresh={() => void camps.reload()} tintColor={t.violet} />}
-          ListEmptyComponent={<StateView icon="send" title={tr('mk.empty')} body={tr('mk.emptyBody')} />}
-          renderItem={({ item: c }) => (
-            <LinearGradient colors={c.status === 'SENT' ? ['#1d1730', '#35276b'] : c.status === 'FAILED' ? ['#e83e63', '#a02244'] : ['#6f52ed', '#a24cd8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 28, padding: 20, gap: 14 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.16)', alignItems: 'center', justifyContent: 'center' }}><Icon name={c.channel === 'SMS' ? 'chat' : 'mail'} size={20} color="#fff" /></View>
-                <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: '#fff' }}>{c.name}</Text>
-                <View style={{ height: 28, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,.18)', justifyContent: 'center' }}><Text style={{ fontFamily: font.b, fontSize: 13, color: '#fff' }}>{c.status}</Text></View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                <View><Text style={{ fontFamily: font.x, fontSize: 44, lineHeight: 48, letterSpacing: -1.5, color: '#fff' }}>{c.status === 'SENT' ? (c.sentCount ?? c.recipientCount) : c.recipientCount}</Text><Text style={{ fontFamily: font.s, fontSize: 14, color: 'rgba(255,255,255,.8)' }}>{tr(`mk.seg.${c.segment}` as 'mk.seg.ALL_CLIENTS')}</Text></View>
-                <Text style={{ fontFamily: font.b, fontSize: 14, color: 'rgba(255,255,255,.75)' }}>{c.channel}</Text>
-              </View>
-              {c.status === 'DRAFT' ? <Btn label={tr('mk.send')} small loading={busy} onPress={() => Alert.alert(tr('mk.sendConfirm'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('mk.send'), onPress: () => void run(() => apiB.queueCampaign(sid, c.id), () => void camps.reload()) }])} /> : null}
-            </LinearGradient>
+          ListEmptyComponent={<EmptyState photo={'demo:f05'} title={tr('mk.empty')} body={tr('mk.emptyBody')} action={{ label: tr('mk.add'), icon: 'plus', onPress: () => setSheet(true) }} />}
+          ListFooterComponent={<View style={{ marginHorizontal: 20, marginTop: 6, gap: 12 }}>
+            <ListItem first title={tr('v3.adsRow')} sub={tr('v3.adsRowSub')} onPress={() => setPromoOpen(true)} lead={<View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name="send" size={22} color={t.ink} /></View>} right={<KPill text={tr('v3.paid')} />} />
+            <Button kind="ol" icon="plus" label={tr('v3.newCampaign')} onPress={() => setSheet(true)} />
+          </View>}
+          renderItem={({ item: c, index }) => index === 0 ? (
+            <View style={{ marginHorizontal: 20, marginBottom: 12 }}>
+              <LinearGradient colors={c.status === 'FAILED' ? ['#e83e63', '#a02244'] : ['#5b3fd6', '#8a6bff', '#d65f9a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 26, padding: 20, gap: 8 }}>
+                <KPill text={c.status === 'SENT' ? tr('v3.sent') : c.status === 'DRAFT' ? tr('v3.draft') : c.status} tone="wh" />
+                <T k="h1" color="#fff" style={{ fontSize: 21, lineHeight: 26, marginTop: 4 }}>{c.name}</T>
+                <T k="body" color="rgba(255,255,255,.82)">{tr(`mk.seg.${c.segment}` as 'mk.seg.ALL_CLIENTS')} · {c.channel}</T>
+                <View style={{ flexDirection: 'row', gap: 28, marginTop: 10 }}>
+                  <View><Text style={{ fontFamily: font.b, fontSize: 22, color: '#fff' }}>{c.status === 'SENT' ? (c.sentCount ?? c.recipientCount) : c.recipientCount}</Text><T k="xs" color="rgba(255,255,255,.75)">{tr('v3.reach')}</T></View>
+                </View>
+                {c.status === 'DRAFT' ? <Button kind="wh" size="sm" label={tr('mk.send')} loading={busy} style={{ alignSelf: 'flex-start', marginTop: 8 }} onPress={() => Alert.alert(tr('mk.sendConfirm'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('mk.send'), onPress: () => void run(() => apiB.queueCampaign(sid, c.id), () => void camps.reload()) }])} /> : null}
+              </LinearGradient>
+              {(camps.data ?? []).length > 1 ? <SecHead title={tr('v3.otherCampaigns')} style={{ marginHorizontal: 0 }} /> : null}
+            </View>
+          ) : (
+            <View style={{ marginHorizontal: 20 }}>
+              <ListItem first={index === 1} title={c.name} sub={`${tr(`mk.seg.${c.segment}` as 'mk.seg.ALL_CLIENTS')} · ${c.channel}`}
+                lead={<View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name={c.channel === 'SMS' ? 'chat' : 'mail'} size={22} color={t.ink} /></View>}
+                right={c.status === 'DRAFT' ? <Button size="sm" kind="fl" label={tr('mk.send')} onPress={() => Alert.alert(tr('mk.sendConfirm'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('mk.send'), onPress: () => void run(() => apiB.queueCampaign(sid, c.id), () => void camps.reload()) }])} /> : <KPill text={c.status === 'SENT' ? tr('v3.sent') : c.status} tone={c.status === 'SENT' ? 'ok' : c.status === 'FAILED' ? 'g' : 'fl'} />} />
+            </View>
           )} />
       ) : (
         <FlatList data={promos.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}
@@ -168,6 +181,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
         )}
         <View style={{ height: 16 }} />
       </BottomSheet>
+      <PromoteSheet open={promoOpen} onClose={() => setPromoOpen(false)} />
     </Screen>
   );
 }
