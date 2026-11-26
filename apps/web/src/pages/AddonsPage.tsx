@@ -130,7 +130,11 @@ export default function AddonsPage({ startNew = false }: { startNew?: boolean } 
               <div className="prv">
                 <small>{t("addons.preview")} · {t("addons.onTheBillAtThe")}</small>
                 <div className="l">
-                  <b>{form.name.trim() || t("addons.yourAddOn")}</b>
+                  <b>{t("addons.womenSCutBlowDry")}</b>
+                  <b>{money(45, currencySymbol())}</b>
+                </div>
+                <div className="l">
+                  <b>+ {form.name.trim() || t("addons.yourAddOn")}</b>
                   <b>{priceOf({ price: form.price, priceType: form.priceType })}</b>
                 </div>
               </div>

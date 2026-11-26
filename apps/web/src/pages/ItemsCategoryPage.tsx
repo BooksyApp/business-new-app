@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Archive, ArchiveRestore, ChevronDown, FolderPlus, Layers, Package, Pencil, Plus, Scissors, Search, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { AvatarStack, Btn, ConfirmDialog, Drawer, EmptyState, Field, Note, PageHead, RowItem, Skeleton, Tag, Toolbar } from "@/components/bz";
+import { AvatarStack, Btn, Chip, ConfirmDialog, Drawer, EmptyState, Field, Note, PageHead, RowItem, Skeleton, Tag, Toolbar } from "@/components/bz";
 import { BzPage } from "@/components/bz/p2-page";
 import { ActionMenu } from "@/components/page/kit";
 import { money } from "@/components/page/kitStyles";
@@ -393,7 +393,7 @@ export default function ItemsCategoryPage() {
         />
       ) : (
         <div className="sp2">
-          <div className="rail" role="tablist" aria-label={t("itemsCategory.categories")}>
+          <div className="rail max-lg:hidden" role="tablist" aria-label={t("itemsCategory.categories")}>
             <div className="lbl" style={{ padding: "0 14px 8px", fontWeight: 800 }}>{t("itemsCategory.categories")}</div>
             {catOptions.map((o) => (
               <span key={String(o.id)} role="tab" aria-selected={selected === o.id} className={selected === o.id ? "on" : ""} onClick={() => setSelected(o.id)}>
@@ -419,6 +419,24 @@ export default function ItemsCategoryPage() {
             )}
           </div>
           <div>
+            <div className="lg:hidden" style={{ marginBottom: 12 }}>
+              <div className="row gap8" style={{ flexWrap: "wrap" }} role="tablist" aria-label={t("itemsCategory.categories")}>
+                {catOptions.map((o) => (
+                  <Chip key={String(o.id)} on={selected === o.id} onClick={() => setSelected(o.id)}>
+                    {o.name} {countIn(o.id)}
+                  </Chip>
+                ))}
+                {typeof selected === "number" && (
+                  <ActionMenu
+                    label={t("itemsCategory.moreForThisCategory")}
+                    actions={[
+                      { label: t("itemsCategory.renameCategory"), icon: Pencil, onSelect: () => { const c = categories.find((x) => x.id === selected); if (c) openCat(c); } },
+                      { label: t("itemsCategory.deleteCategory"), icon: Trash2, danger: true, onSelect: () => { const c = categories.find((x) => x.id === selected); if (c) void removeCat(c); } },
+                    ]}
+                  />
+                )}
+              </div>
+            </div>
             <div className="tbx">
               <div className="srch" style={{ height: 52, marginBottom: 14, maxWidth: 520 }}>
                 <Search className="ic" aria-hidden />

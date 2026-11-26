@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Btn, Drawer, EmptyState, Field, FormGrid, PageHead, Skeleton, Tabs } from "@/components/bz";
 import { BzPage } from "@/components/bz/p2-page";
+import { Meter } from "@/components/page/kit";
 import { money } from "@/components/page/kitStyles";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
@@ -275,6 +276,15 @@ export default function InventoryPage() {
                     {low && <span className="tag2 a">{t("inventory.reorder")}</span>}
                     {low && <span className="tag2">{t("inventory.reorderAt", { lowStockThreshold: p.lowStockThreshold })}</span>}
                     {!p.isActive && <span className="tag2">{t("inventory.inactive")}</span>}
+                    <div style={{ width: 120, flex: "none" }}>
+                      <Meter
+                        tone={low ? "rose" : "brand"}
+                        value={p.quantityOnHand}
+                        max={Math.max(p.lowStockThreshold * 3, p.quantityOnHand, 1)}
+                        label={t("inventory.inStockReorderAt", { name: p.name, quantityOnHand: p.quantityOnHand, lowStockThreshold: p.lowStockThreshold })}
+                      />
+                      <small>{t("inventory.reorderAt", { lowStockThreshold: p.lowStockThreshold })}</small>
+                    </div>
                     <span className="acts">
                       <button type="button" className="tbtn" aria-label={t("inventory.oneFewer", { name: p.name })} disabled={moving === p.id || p.quantityOnHand <= 0} onClick={() => void move(p, -1)}>
                         <Minus className="ic" />

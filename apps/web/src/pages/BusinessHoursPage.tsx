@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { salonToday } from "@/lib/salonClock";
+import { salonNow, salonToday } from "@/lib/salonClock";
 import { useSalonTimeZone } from "@/hooks/useSalonTimeZone";
 import { CalendarOff, Copy, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Btn, Card, Dialog, Field, FormGrid, SegPills, Skeleton, PageHead, Tag } from "@/components/bz";
 import { BzPage } from "@/components/bz/p2-page";
-import { ActionMenu } from "@/components/page/kit";
+import { ActionMenu, ClientPreview } from "@/components/page/kit";
+import { cn } from "@/lib/utils";
 import { lifecycleOf } from "@/components/page/kitStyles";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 import { useBusinessId } from "@/hooks/useBusinessId";
@@ -209,6 +210,8 @@ export default function BusinessHoursPage() {
     </Dialog>
   ) : undefined;
 
+  const todayKey = DAYS[(salonNow().getDay() + 6) % 7].key;
+
   return (
     <BzPage overlay={excDialog}>
       <PageHead
@@ -308,6 +311,28 @@ export default function BusinessHoursPage() {
         {exceptions !== null && upcoming.length === 0 && <span className="hint">{tr("businessHours.holidaysAndShortDaysGo")}</span>}
         {past.length > 0 && <span className="hint">{tr("businessHours.pastHidden", { count: past.length })}</span>}
       </Card>
+
+      <div style={{ marginTop: 16 }}>
+        <ClientPreview where={tr("common.yourSalonPage")}>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="mb-2 text-base font-extrabold">{tr("common.openingHours")}</p>
+                  <ul className="space-y-1.5 text-sm">
+                    {DAYS.map((d) => {
+                      const day = schedule[d.key];
+                      const isToday = d.key === todayKey;
+                      return (
+                        <li key={d.key} className={cn("flex justify-between gap-3", isToday && "font-bold")}>
+                          <span>{d.label}</span>
+                          <span className={cn("tabular-nums", !day.enabled && "text-[rgb(var(--reg-muted))]")}>
+                            {day.enabled ? `${day.startTime} – ${day.endTime}` : tr("common.closed")}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </ClientPreview>
+      </div>
     </BzPage>
   );
 }

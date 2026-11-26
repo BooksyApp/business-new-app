@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SalonPreview } from "@/components/auth/SalonPreview";
 import { Btn, BzScope, Chip, ChipRow, Field, RowItem, SelectField } from "@/components/bz";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sparkles, Scissors, Heart, Stethoscope } from "lucide-react";
@@ -110,9 +111,26 @@ export default function CreateBusinessPage() {
     }
   };
 
+  const categoryName = allCategories.find((c) => c.slug === category);
+  const categoryLabel = categoryName ? (categoryName.label ?? categoryName.name) : "";
+  const user = getCurrentUser();
+  const preview = (
+    <SalonPreview
+      data={{
+        businessName: name.trim(),
+        category: categoryLabel,
+        address: [address.split(",").slice(0, 2).join(","), buildingNumber].filter(Boolean).join(" "),
+        ownerName: [user?.firstName, user?.lastName].filter(Boolean).join(" "),
+        businessHours: {},
+        services: [],
+        staff: [],
+      }}
+    />
+  );
+
   return (
     <BzScope>
-      <div className="dsh bz-surface bz-live" style={{ justifyContent: "center", padding: 30, background: "var(--bz-canvas)" }}>
+      <div className="dsh bz-surface bz-live" style={{ justifyContent: "center", gap: 32, flexWrap: "wrap", padding: 30, background: "var(--bz-canvas)" }}>
         <form
           className="stk"
           style={{ width: 620, maxWidth: "100%" }}
@@ -227,6 +245,7 @@ export default function CreateBusinessPage() {
             </Btn>
           </div>
         </form>
+        <div style={{ width: 340, maxWidth: "100%", alignSelf: "flex-start" }}>{preview}</div>
       </div>
     </BzScope>
   );
