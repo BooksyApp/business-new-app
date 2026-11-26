@@ -3,13 +3,10 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn } from "@/components/page/booqiStyles";
+import { Check, Copy } from "lucide-react";
+import { Btn, Card, CheckRow, Field, Skeleton } from "@/components/bz";
+import { SettingsFrame } from "@/components/bz/p3-Settings";
 import { ClientPreview } from "@/components/page/kit";
-import { fieldCls } from "@/components/page/kitStyles";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { businessService, type Business } from "@/services/businessService";
 import { getCurrentBusinessId } from "@/config/api";
 import { useNavigation } from "@/utils/navigationUtils";
@@ -86,166 +83,126 @@ export default function BrandingPage() {
 
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={t("branding.branding")}
-          subtitle={t("branding.howYourSalonLooksTo")}
-          actions={
-            <Button className={primaryBtn} disabled={saving || loading} onClick={() => void save()}>
-              {saving ? t("common.saving") : t("branding.saveBranding")}
-            </Button>
-          }
-        />
-
-        <div className={pageBody}>
-          {loading ? (
-            <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-              <div className="min-w-0 space-y-6">
-                <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
-                  <h2 className="text-base font-extrabold">{t("branding.brandColour")}</h2>
-                  <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{t("branding.usedOnYourSalonProfile")}</p>
-                  <div className="mt-4 flex flex-wrap items-center gap-2" role="radiogroup" aria-label={t("branding.suggestedColours")}>
-                    {swatches.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        role="radio"
-                        aria-checked={form.brandColor.toLowerCase() === c}
-                        aria-label={c}
-                        onClick={() => setForm(f => ({ ...f, brandColor: c }))}
-                        className={cn("h-10 w-10 rounded-full ring-offset-2 transition hover:scale-105", form.brandColor.toLowerCase() === c && "ring-2 ring-[rgb(var(--reg-ink))]")}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                    <span className="mx-1 h-6 w-px bg-[rgb(var(--reg-line))]" aria-hidden />
-                    <label className="flex items-center gap-2">
-                      <span className="sr-only">{t("branding.pickAnyColour")}</span>
-                      <input
-                        type="color"
-                        className="h-10 w-12 cursor-pointer rounded-xl border border-[rgb(var(--reg-line))] bg-white p-1"
-                        value={validColor ? form.brandColor : "#6d4df2"}
-                        onChange={e => setForm(f => ({ ...f, brandColor: e.target.value }))}
-                      />
-                    </label>
-                    <input
-                      aria-label={t("branding.brandColourHex")}
-                      className={cn(fieldCls, "h-10 w-[130px] font-mono text-sm", form.brandColor && !validColor && "ring-2 ring-rose-400")}
-                      value={form.brandColor}
-                      onChange={e => setForm(f => ({ ...f, brandColor: e.target.value }))}
-                      placeholder="#6d4df2"
-                      maxLength={9}
-                    />
-                    {form.brandColor && (
-                      <button type="button" className="text-sm font-semibold text-[rgb(var(--reg-muted))] hover:underline" onClick={() => setForm(f => ({ ...f, brandColor: "" }))}>
-                        {t("branding.useDefault")}
-                      </button>
-                    )}
-                  </div>
-                </section>
-
-                <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
-                  <h2 className="text-base font-extrabold">{t("branding.receiptFooter")}</h2>
-                  <p className="mt-0.5 text-sm text-[rgb(var(--reg-muted))]">{t("branding.printedAtTheBottomOf")}</p>
-                  <Textarea
-                    aria-label={t("branding.receiptFooter")}
-                    rows={3}
-                    className="mt-4 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base"
-                    value={form.receiptFooter}
-                    onChange={e => setForm(f => ({ ...f, receiptFooter: e.target.value }))}
-                    placeholder={t("branding.thankYouForVisitingReturns")}
-                  />
-                </section>
-
-                <section className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:px-6">
-                  <div>
-                    <p className="font-semibold">{t("branding.coverLogoAndGallery")}</p>
-                    <p className="text-sm text-[rgb(var(--reg-muted))]">{t("branding.photosHaveTheirOwnPage")}</p>
-                  </div>
-                  <Button variant="outline" className={secondaryBtn} asChild>
-                    <Link to={getPath("photos")}>{t("branding.managePhotos")}</Link>
-                  </Button>
-                </section>
-                <section className="rounded-2xl bg-white p-5 space-y-3">
-                  <div>
-                    <p className="text-sm font-bold">{t("branding.healthTitle")}</p>
-                    <p className="text-xs text-[rgb(var(--reg-muted))]">{t("branding.healthHint")}</p>
-                  </div>
-                  {healthLabels.map(([code, label]) => (
-                    <label key={code} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={healthCodes.includes(code)} onChange={() => toggleHealth(code)} />
-                      {label}
-                    </label>
-                  ))}
-                  <Textarea
-                    rows={2}
-                    maxLength={2000}
-                    placeholder={t("branding.healthNote")}
-                    value={form.healthSafetyNote}
-                    onChange={(e) => setForm({ ...form, healthSafetyNote: e.target.value })}
-                  />
-                </section>
-                <section className="rounded-2xl bg-white p-5 space-y-3">
-                  <div>
-                    <p className="text-sm font-bold">{t("branding.widgetTitle")}</p>
-                    <p className="text-xs text-[rgb(var(--reg-muted))]">{t("branding.widgetHint")}</p>
-                  </div>
-                  {([
-                    ["script", t("branding.widgetScript"), widgetCode],
-                    ["iframe", t("branding.widgetIframe"), iframeCode],
-                    ["link", t("branding.widgetLink"), linkCode],
-                  ] as const).map(([k, label, code]) => (
-                    <div key={k} className="space-y-1.5">
-                      <p className="text-xs font-semibold">{label}</p>
-                      <textarea readOnly rows={k === "link" ? 4 : 3} aria-label={label} className={cn(fieldCls, "font-mono text-xs")} value={code} />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={secondaryBtn}
-                        onClick={() => {
-                          navigator.clipboard?.writeText(code);
-                          toast.success(t("branding.widgetCopied"));
-                        }}
-                      >
-                        {t("branding.widgetCopy")}
-                      </Button>
-                    </div>
-                  ))}
-                </section>
+      <SettingsFrame
+        title={t("branding.branding")}
+        sub={t("branding.howYourSalonLooksTo")}
+        right={
+          <Btn kind="v" disabled={saving || loading} onClick={() => void save()}>
+            {saving ? t("common.saving") : t("branding.saveBranding")}
+          </Btn>
+        }
+      >
+        {loading ? (
+          <Skeleton />
+        ) : (
+          <>
+            <Card title={t("branding.brandColour")} help={t("branding.usedOnYourSalonProfile")}>
+              <div className="colr">
+                <span className="sw3" aria-hidden style={{ background: validColor ? form.brandColor : "var(--bz-violet)" }} />
+                <Field label={t("branding.brandColourHex")} hint={form.brandColor && !validColor ? "#rrggbb" : undefined} error={form.brandColor && !validColor ? "#rrggbb" : undefined}>
+                  <input aria-label={t("branding.brandColourHex")} value={form.brandColor} onChange={e => setForm(f => ({ ...f, brandColor: e.target.value }))} placeholder="#6d4df2" maxLength={9} />
+                </Field>
+                <input
+                  type="color"
+                  aria-label={t("branding.pickAnyColour")}
+                  title={t("branding.pickAnyColour")}
+                  style={{ width: 48, height: 44, borderRadius: 12, border: "1px solid var(--bz-line)", background: "var(--bz-surface)", padding: 4, cursor: "pointer" }}
+                  value={validColor ? form.brandColor : "#6d4df2"}
+                  onChange={e => setForm(f => ({ ...f, brandColor: e.target.value }))}
+                />
               </div>
+              <div className="row gap8" role="radiogroup" aria-label={t("branding.suggestedColours")}>
+                {swatches.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={form.brandColor.toLowerCase() === c}
+                    aria-label={c}
+                    onClick={() => setForm(f => ({ ...f, brandColor: c }))}
+                    style={{ width: 40, height: 40, borderRadius: 12, border: 0, backgroundColor: c, cursor: "pointer", boxShadow: form.brandColor.toLowerCase() === c ? "0 0 0 2px var(--bz-surface), 0 0 0 4px var(--bz-ink)" : "none" }}
+                  />
+                ))}
+                {form.brandColor && (
+                  <Btn kind="ol" onClick={() => setForm(f => ({ ...f, brandColor: "" }))}>{t("branding.useDefault")}</Btn>
+                )}
+              </div>
+            </Card>
 
-              <aside className="min-w-0 space-y-4 lg:sticky lg:top-[132px] lg:self-start">
-                <ClientPreview where={t("common.yourSalonPage")}>
-                  <div className="rounded-2xl bg-white p-4">
-                    <p className="truncate text-xl font-extrabold tracking-[-0.02em]">{name}</p>
-                    {accent ? (
-                      <span aria-hidden className="mt-3 block h-1 w-14 rounded-full" style={{ backgroundColor: accent }} />
-                    ) : (
-                      <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">{t("branding.noAccentBarWithoutA")}</p>
-                    )}
+            <Card title={t("branding.receiptFooter")}>
+              <Field label={t("branding.receiptFooter")} kind="ta" hint={t("branding.printedAtTheBottomOf")}>
+                <textarea aria-label={t("branding.receiptFooter")} rows={3} value={form.receiptFooter} onChange={e => setForm(f => ({ ...f, receiptFooter: e.target.value }))} placeholder={t("branding.thankYouForVisitingReturns")} />
+              </Field>
+            </Card>
+
+            <Card title={t("branding.coverLogoAndGallery")}>
+              <span className="hint">{t("branding.photosHaveTheirOwnPage")}</span>
+              <div>
+                <Link to={getPath("photos")} className="btn btn-ol s" style={{ textDecoration: "none" }}>{t("branding.managePhotos")}</Link>
+              </div>
+            </Card>
+
+            <Card title={t("branding.healthTitle")} help={t("branding.healthHint")}>
+              {healthLabels.map(([code, label]) => (
+                <CheckRow key={code} label={label} checked={healthCodes.includes(code)} icon={<Check className="ic" />} onChange={() => toggleHealth(code)} />
+              ))}
+              <Field label={t("branding.healthNote")} kind="ta">
+                <textarea rows={2} maxLength={2000} placeholder={t("branding.healthNote")} value={form.healthSafetyNote} onChange={(e) => setForm({ ...form, healthSafetyNote: e.target.value })} />
+              </Field>
+            </Card>
+
+            <Card title={t("branding.widgetTitle")} help={t("branding.widgetHint")}>
+              {([
+                ["script", t("branding.widgetScript"), widgetCode],
+                ["iframe", t("branding.widgetIframe"), iframeCode],
+                ["link", t("branding.widgetLink"), linkCode],
+              ] as const).map(([k, label, code]) => (
+                <div key={k} className="stk">
+                  <div className="cd"><b>{label}</b><br /><textarea readOnly rows={k === "link" ? 4 : 3} aria-label={label} style={{ width: "100%", background: "transparent", color: "inherit", border: 0, font: "inherit", resize: "none", outline: 0 }} value={code} /></div>
+                  <div>
+                    <Btn
+                      kind="soft"
+                      icon={<Copy className="ic" />}
+                      onClick={() => {
+                        navigator.clipboard?.writeText(code);
+                        toast.success(t("branding.widgetCopied"));
+                      }}
+                    >
+                      {t("branding.widgetCopy")}
+                    </Btn>
                   </div>
-                </ClientPreview>
-                <ClientPreview where={t("branding.theirReceipt")}>
-                  <div className="mx-auto max-w-[280px] rounded-xl bg-white px-5 py-4 font-mono text-[12px] leading-relaxed text-[rgb(var(--reg-ink))] shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)]">
-                    <div className="h-1.5 -mx-5 -mt-4 mb-3 rounded-t-xl" style={{ backgroundColor: accent ?? "rgb(var(--reg-brand))" }} aria-hidden />
-                    <p className="text-center text-[13px] font-bold">{name}</p>
-                    <p className="text-center text-[rgb(var(--reg-muted))]">{today}</p>
-                    <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
-                    <p className="flex justify-between"><span>{t("branding.womenSCut")}</span><span>45.00</span></p>
-                    <p className="flex justify-between"><span>{t("branding.maskAddOn")}</span><span>12.00</span></p>
-                    <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
-                    <p className="flex justify-between font-bold"><span>{t("common.total")}</span><span>57.00</span></p>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">
-                      {form.receiptFooter.trim() || t("branding.yourFooterPrintsHere")}
-                    </p>
-                  </div>
-                </ClientPreview>
-              </aside>
-            </div>
-          )}
-        </div>
-      </BooqiScope>
+                </div>
+              ))}
+            </Card>
+
+            <ClientPreview where={t("common.yourSalonPage")}>
+              <div className="rounded-2xl bg-white p-4">
+                <p className="truncate text-xl font-extrabold tracking-[-0.02em]">{name}</p>
+                {accent ? (
+                  <span aria-hidden className="mt-3 block h-1 w-14 rounded-full" style={{ backgroundColor: accent }} />
+                ) : (
+                  <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">{t("branding.noAccentBarWithoutA")}</p>
+                )}
+              </div>
+            </ClientPreview>
+            <ClientPreview where={t("branding.theirReceipt")}>
+              <div className="mx-auto max-w-[280px] rounded-xl bg-white px-5 py-4 font-mono text-[12px] leading-relaxed text-[rgb(var(--reg-ink))] shadow-[0_8px_20px_-14px_rgb(var(--reg-ink)/0.4)]">
+                <div className="h-1.5 -mx-5 -mt-4 mb-3 rounded-t-xl" style={{ backgroundColor: accent ?? "rgb(var(--reg-brand))" }} aria-hidden />
+                <p className="text-center text-[13px] font-bold">{name}</p>
+                <p className="text-center text-[rgb(var(--reg-muted))]">{today}</p>
+                <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+                <p className="flex justify-between"><span>{t("branding.womenSCut")}</span><span>45.00</span></p>
+                <p className="flex justify-between"><span>{t("branding.maskAddOn")}</span><span>12.00</span></p>
+                <div className="my-2 border-t border-dashed border-[rgb(var(--reg-line))]" />
+                <p className="flex justify-between font-bold"><span>{t("common.total")}</span><span>57.00</span></p>
+                <p className="mt-3 whitespace-pre-wrap break-words text-center text-[rgb(var(--reg-muted))]">
+                  {form.receiptFooter.trim() || t("branding.yourFooterPrintsHere")}
+                </p>
+              </div>
+            </ClientPreview>
+          </>
+        )}
+      </SettingsFrame>
     </AppLayout>
   );
 }

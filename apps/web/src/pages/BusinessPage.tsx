@@ -2,12 +2,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { SalonQrCard } from "@/components/SalonQrCard";
 import { ShareKitCard } from "@/components/ShareKitCard";
 import { subscriptionService, type SubscriptionStatus } from "@/services/subscriptionService";
-import { Check, Copy, ExternalLink, Eye, MapPin, Pencil, Share2 } from "lucide-react";
-import { BooqiScope, FormSheet, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn, secondaryBtn, sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
-import { ClientPreview, Field, Meter, SectionTitle } from "@/components/page/kit";
-import { fieldCls } from "@/components/page/kitStyles";
-import { cn } from "@/lib/utils";
+import { Check, Copy, ExternalLink, Eye, MapPin, Pencil, Share2, X } from "lucide-react";
+import { Btn, Card, CheckRow, Drawer, Field, FormGrid, FormSection, Note, PageHead, RowItem, SelectField, Skeleton, StatusPill } from "@/components/bz";
+import { BzPage } from "@/components/bz/p3-Settings";
+import { ClientPreview, Meter } from "@/components/page/kit";
 import { useEffect, useMemo, useState } from "react";
 import { categoryService, type BusinessCategory } from "@/services/categoryService";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,8 +14,6 @@ import { serviceService, type Service } from "@/services/serviceService";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PaymentReturnBanner } from "@/components/page/PaymentReturnBanner";
 import { useNavigation } from "@/utils/navigationUtils";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatPrice } from "@/lib/currency";
 import { reviewService, type Review, type RatingSummary } from "@/services/reviewService";
@@ -301,212 +297,181 @@ export default function BusinessPage() {
     </div>
   );
 
+  // The drawer has no Radix shell: Escape closes it, as the sheet did.
+  useEffect(() => {
+    if (!editOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setEditOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editOpen]);
+
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader
+      <BzPage>
+        <PageHead
           title={t("common.businessProfile")}
-          subtitle={t("business.whatClientsSeeWhenThey")}
-          actions={
+          sub={t("business.whatClientsSeeWhenThey")}
+          right={
             <>
-              <Button variant="outline" className={cn(secondaryBtn, "hidden sm:inline-flex")} onClick={handlePreview} disabled={!publicUrl}>
-                <Eye size={16} />{" "}{t("business.preview")}
-              </Button>
-              <Button variant="outline" className={secondaryBtn} onClick={handleShare} disabled={!publicUrl} aria-label={t("business.sharePublicProfile")}>
-                <Share2 size={16} /> <span className="hidden sm:inline">{t("business.share")}</span>
-              </Button>
-              <Button className={primaryBtn} onClick={handleEditProfile} disabled={!business}>
-                <Pencil size={16} />{" "}{t("business.editProfile")}
-              </Button>
+              <Btn kind="ol" icon={<Eye size={16} />} onClick={handlePreview} disabled={!publicUrl}>{t("business.preview")}</Btn>
+              <Btn kind="ol" icon={<Share2 size={16} />} onClick={handleShare} disabled={!publicUrl} aria-label={t("business.sharePublicProfile")}>{t("business.share")}</Btn>
+              <Btn kind="v" icon={<Pencil size={16} />} onClick={handleEditProfile} disabled={!business}>{t("business.editProfile")}</Btn>
             </>
           }
         />
 
-        <div className={pageBody}>
+        <div className="stk">
           <PaymentReturnBanner kind="subscription" flag={subscribedFlag} confirmed={subscriptionActive} />
-          {error ? (
-            <div className="rounded-[20px] bg-rose-50 p-4 text-sm text-rose-900 ring-1 ring-inset ring-rose-200">{error}</div>
-          ) : null}
-
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-            <div className="min-w-0 space-y-6">
+          {error ? <Note kind="er">{error}</Note> : null}
+          <div style={{ display: "grid", gap: 16, gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", alignItems: "start" }}>
+            <div className="stk" style={{ minWidth: 0 }}>
               <ClientPreview where={t("common.yourSalonPage")}>
-                {isLoading ? <div className="aspect-[16/9] animate-pulse rounded-2xl bg-white" /> : webCard}
+                {isLoading ? <Skeleton height={160} /> : webCard}
               </ClientPreview>
 
-              <button
-                type="button"
-                onClick={handleCopyUrl}
-                disabled={!publicUrl}
-                className="flex w-full items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-[rgb(var(--reg-line)/0.8)] transition hover:ring-[rgb(var(--reg-brand)/0.4)] disabled:opacity-60"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-semibold text-[rgb(var(--reg-muted))]">{t("business.yourBookingLink")}</span>
-                  <span className="block truncate text-sm font-semibold">{shareUrl || t("business.publicUrlUnavailable")}</span>
-                </span>
-                <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[rgb(var(--reg-brand-strong))]">
-                  {copied ? <><Check size={15} />{" "}{t("business.copied")}</> : <><Copy size={15} />{" "}{t("common.copy")}</>}
-                </span>
-              </button>
+              <RowItem
+                title={shareUrl || t("business.publicUrlUnavailable")}
+                sub={t("business.yourBookingLink")}
+                onClick={publicUrl ? handleCopyUrl : undefined}
+                right={
+                  <span className="row gap8" style={{ fontWeight: 700, color: "var(--bz-vtext)" }}>
+                    {copied ? <><Check size={15} />{t("business.copied")}</> : <><Copy size={15} />{t("common.copy")}</>}
+                  </span>
+                }
+              />
 
               <SalonQrCard salonUrl={publicUrl} salonName={business?.slug ?? business?.name} />
               <ShareKitCard salonUrl={publicUrl} salonName={business?.name ?? ""} businessId={String(business?.id ?? "")} />
 
-              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
-                <SectionTitle>{t("business.about")}</SectionTitle>
-                <p className="whitespace-pre-line text-sm leading-relaxed text-[rgb(var(--reg-ink)/0.85)]">
-                  {business?.description || <span className="text-[rgb(var(--reg-muted))]">{t("business.noDescriptionYetTwoLines")}</span>}
+              <Card title={t("business.about")}>
+                <p style={{ whiteSpace: "pre-line", margin: 0 }}>
+                  {business?.description || <span style={{ color: "var(--bz-muted)" }}>{t("business.noDescriptionYetTwoLines")}</span>}
                 </p>
-                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                <FormGrid cols={3}>
                   {[
                     [t("common.phone"), business?.phone],
                     [t("common.email"), business?.email],
                     [t("business.website"), business?.website],
                   ].map(([k, v]) => (
-                    <div key={k} className="min-w-0 rounded-xl bg-[rgb(var(--reg-canvas))] px-3 py-2">
-                      <dt className="text-[11px] font-semibold text-[rgb(var(--reg-muted))]">{k}</dt>
-                      <dd className="truncate font-semibold">{v || "—"}</dd>
-                    </div>
+                    <Field key={k} label={k} disabled>
+                      <b style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{v || "—"}</b>
+                    </Field>
                   ))}
-                </dl>
-              </section>
+                </FormGrid>
+              </Card>
 
-              <section className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                <div className="grid md:grid-cols-[minmax(0,1fr)_240px]">
-                  <div className="p-5 md:p-6">
-                    <SectionTitle>{t("business.location")}</SectionTitle>
-                    <p className="flex items-start gap-2 text-sm"><MapPin size={16} className="mt-0.5 shrink-0 text-[rgb(var(--reg-muted))]" /> {formatAddress(business)}</p>
-                    <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">{locationLabel}</p>
-                    {hasCoords && mapsUrl ? (
-                      <a href={mapsUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline">
-                        {t("business.openInMaps")}{" "}<ExternalLink size={13} />
-                      </a>
-                    ) : null}
-                  </div>
-                  {mapsEmbedUrl ? (
-                    <iframe title={t("business.businessLocationMap")} src={mapsEmbedUrl} className="h-48 w-full border-0 md:h-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-                  ) : (
-                    <div className="flex h-40 items-center justify-center bg-[rgb(var(--reg-canvas))] px-4 text-center text-xs text-[rgb(var(--reg-muted))] md:h-full">
-                      <span><MapPin size={20} className="mx-auto mb-1.5" />{" "}{t("business.locationCoordinatesAreNotSet")}</span>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
-                <SectionTitle aside={<button type="button" className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline" onClick={() => navigate(getPath("items-category"))}>{t("business.editMenu")}</button>}>
-                  {t("common.services")}
-                </SectionTitle>
-                {services.length ? (
-                  <ul className="divide-y divide-[rgb(var(--reg-line)/0.6)]">
-                    {services.slice(0, 6).map((service) => (
-                      <li key={service.id} className="flex items-center justify-between gap-3 py-2.5">
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-semibold">{service.name}</span>
-                          <span className="block text-xs text-[rgb(var(--reg-muted))]">
-                            {[formatDuration(service.durationMinutes), service.categoryName].filter(Boolean).join(" · ") || t("business.noDuration")}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-sm font-bold tabular-nums">{formatMoney(service.price)}</span>
-                      </li>
-                    ))}
-                  </ul>
+              <Card title={t("business.location")}>
+                <p className="row gap8" style={{ margin: 0 }}><MapPin size={16} /> {formatAddress(business)}</p>
+                <span className="hint">{locationLabel}</span>
+                {hasCoords && mapsUrl ? (
+                  <a href={mapsUrl} target="_blank" rel="noreferrer" className="btn btn-ol s" style={{ textDecoration: "none", alignSelf: "flex-start" }}>
+                    {t("business.openInMaps")}{" "}<ExternalLink size={13} />
+                  </a>
+                ) : null}
+                {mapsEmbedUrl ? (
+                  <iframe title={t("business.businessLocationMap")} src={mapsEmbedUrl} style={{ width: "100%", height: 192, border: 0, borderRadius: 14 }} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
                 ) : (
-                  <p className="text-sm text-[rgb(var(--reg-muted))]">{t("business.noServicesAddedYet")}</p>
+                  <Note kind="in" icon={<MapPin size={16} />}>{t("business.locationCoordinatesAreNotSet")}</Note>
                 )}
-                {services.length > 6 && <p className="mt-2 text-xs text-[rgb(var(--reg-muted))]">{t("business.moreOnYourMenu", { value: services.length - 6 })}</p>}
-              </section>
+              </Card>
+
+              <Card title={t("common.services")}>
+                <div style={{ textAlign: "right" }}>
+                  <Btn kind="ol" onClick={() => navigate(getPath("items-category"))}>{t("business.editMenu")}</Btn>
+                </div>
+                {services.length ? (
+                  services.slice(0, 6).map((service) => (
+                    <RowItem
+                      key={service.id}
+                      title={service.name}
+                      sub={[formatDuration(service.durationMinutes), service.categoryName].filter(Boolean).join(" · ") || t("business.noDuration")}
+                      right={<b>{formatMoney(service.price)}</b>}
+                    />
+                  ))
+                ) : (
+                  <span className="hint">{t("business.noServicesAddedYet")}</span>
+                )}
+                {services.length > 6 && <span className="hint">{t("business.moreOnYourMenu", { value: services.length - 6 })}</span>}
+              </Card>
             </div>
 
-            <aside className="min-w-0 space-y-4">
-              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-[rgb(var(--reg-muted))]">{t("business.profileCompleteness")}</p>
-                  <span className="text-sm font-bold">{completionTier}</span>
+            <div className="stk" style={{ minWidth: 0 }}>
+              <Card title={t("business.profileCompleteness")}>
+                <div className="row sp">
+                  <b style={{ fontSize: 28 }}>{completionPercent}%</b>
+                  <StatusPill kind={completionPercent >= 80 ? "c" : completionPercent >= 50 ? "w" : "d"}>{completionTier}</StatusPill>
                 </div>
-                <p className="mt-1 text-[28px] font-extrabold leading-none tracking-[-0.03em] tabular-nums">{completionPercent}%</p>
-                <Meter className="mt-3" value={completedCount} max={completenessChecks.length} label={t("business.ofCompleted", { completedCount, count: completenessChecks.length })} />
-                <ul className="mt-4 space-y-2">
-                  {completenessChecks.map((c) => (
-                    <li key={c.label} className="flex items-center gap-2 text-sm">
-                      <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", c.ok ? "bg-[rgb(var(--reg-success))] text-white" : "ring-2 ring-inset ring-[rgb(var(--reg-line))]")}>
-                        {c.ok && <Check size={12} strokeWidth={3} />}
-                      </span>
-                      <span className={c.ok ? "" : "font-semibold"}>{c.label}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
+                <Meter value={completedCount} max={completenessChecks.length} label={t("business.ofCompleted", { completedCount, count: completenessChecks.length })} />
+                {completenessChecks.map((c) => (
+                  <CheckRow key={c.label} label={c.label} checked={c.ok} icon={<Check className="ic" />} />
+                ))}
+              </Card>
 
-              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                <SectionTitle aside={reviews.length > 0 ? <button type="button" onClick={() => navigate(getPath("reviews"))} className="text-sm font-semibold text-[rgb(var(--reg-brand-strong))] hover:underline">{t("business.seeAllAndReply")}</button> : undefined}>
-                  {t("common.reviews")}
-                </SectionTitle>
+              <Card title={t("common.reviews")}>
+                {reviews.length > 0 && (
+                  <div style={{ textAlign: "right" }}>
+                    <Btn kind="ol" onClick={() => navigate(getPath("reviews"))}>{t("business.seeAllAndReply")}</Btn>
+                  </div>
+                )}
                 {reviews.length === 0 ? (
-                  <p className="text-sm text-[rgb(var(--reg-muted))]">{t("business.noReviewsYetClientsCan")}</p>
+                  <span className="hint">{t("business.noReviewsYetClientsCan")}</span>
                 ) : (
                   <>
-                    <p className="text-sm">
-                      <span className="text-2xl font-extrabold">{ratingSummary?.average != null ? ratingSummary.average.toFixed(1) : "–"}</span>{" "}{t("business.from")}{" "}
+                    <p style={{ margin: 0 }}>
+                      <b style={{ fontSize: 24 }}>{ratingSummary?.average != null ? ratingSummary.average.toFixed(1) : "–"}</b>{" "}{t("business.from")}{" "}
                       {t("business.reviewCount", { count: ratingSummary?.count ?? reviews.length })}
                     </p>
-                    <ul className="mt-3 space-y-3">
-                      {reviews.slice(0, 3).map((r) => (
-                        <li key={r.id} className="border-t border-[rgb(var(--reg-line)/0.6)] pt-3 text-sm">
-                          <span className="font-semibold text-amber-600">{"★".repeat(r.rating)}</span>{" "}
-                          <span className="text-[rgb(var(--reg-muted))]">{r.authorName ?? t("business.aClient")}</span>
-                          {r.comment && <p className="mt-1 line-clamp-3">{r.comment}</p>}
-                        </li>
-                      ))}
-                    </ul>
+                    {reviews.slice(0, 3).map((r) => (
+                      <RowItem
+                        key={r.id}
+                        title={<><span style={{ color: "var(--bz-star)" }}>{"★".repeat(r.rating)}</span>{" "}{r.authorName ?? t("business.aClient")}</>}
+                        sub={r.comment ? <span className="line-clamp-3">{r.comment}</span> : undefined}
+                      />
+                    ))}
                   </>
                 )}
-              </section>
+              </Card>
 
               {/* #42: subscription state and upgrade path (the salon's booqi plan). */}
-              <section className="rounded-[20px] bg-white p-5 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
-                <SectionTitle>{t("business.yourBooqiPlan")}</SectionTitle>
-                <p className="text-sm text-[rgb(var(--reg-ink)/0.85)]">
+              <Card title={t("business.yourBooqiPlan")}>
+                <p style={{ margin: 0 }}>
                   {subscription && subscription.status !== "NONE" ? (
                     <>
-                      {t("business.plan")}{" "}<span className="font-semibold">{subscription.planKey || "—"}</span> · {subscription.status}
+                      {t("business.plan")}{" "}<b>{subscription.planKey || "—"}</b> · {subscription.status}
                       {subscription.currentPeriodEnd ? t("business.renews", { value: formatLocaleDate(new Date(subscription.currentPeriodEnd), { year: "numeric", month: "numeric", day: "numeric" }) }) : ""}
                     </>
                   ) : (
                     t("business.noActiveSubscription")
                   )}
                 </p>
-                <Button variant="outline" className={`${secondaryBtn} mt-3`} onClick={() => navigate(getPath("billing"))}>
-                  {t("billing.manage")}
-                </Button>
-              </section>
-            </aside>
+                <div><Btn kind="ol" onClick={() => navigate(getPath("billing"))}>{t("billing.manage")}</Btn></div>
+              </Card>
+            </div>
           </div>
         </div>
 
-        <FormSheet
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          title={t("business.editBusinessProfile")}
-          description={t("business.changesShowOnBooqiAs")}
-          footer={
-            <>
-              <Button variant="outline" className={sheetSecondary} onClick={() => setEditOpen(false)}>{t("common.cancel")}</Button>
-              <Button className={sheetPrimary} onClick={handleSaveProfile} disabled={saving || !editForm.name.trim()}>
-                {saving ? t("common.saving") : t("common.saveChanges")}
-              </Button>
-            </>
-          }
-        >
-          <ClientPreview where={t("common.yourSalonPage")}>{webCard}</ClientPreview>
-
-          <FormSection title={t("business.basics")}>
-            <Field label={t("common.businessName")} htmlFor="bz-name">
-              <input id="bz-name" className={fieldCls} value={editForm.name} onChange={setF("name")} />
+        {editOpen && (
+          <Drawer
+            title={t("business.editBusinessProfile")}
+            sub={t("business.changesShowOnBooqiAs")}
+            onClose={() => setEditOpen(false)}
+            closeIcon={<X className="ic" />}
+            footer={
+              <>
+                <Btn kind="ol" onClick={() => setEditOpen(false)}>{t("common.cancel")}</Btn>
+                <Btn kind="v" onClick={handleSaveProfile} disabled={saving || !editForm.name.trim()}>
+                  {saving ? t("common.saving") : t("common.saveChanges")}
+                </Btn>
+              </>
+            }
+          >
+            <FormSection>{t("business.basics")}</FormSection>
+            <Field label={t("common.businessName")}>
+              <input id="bz-name" value={editForm.name} onChange={setF("name")} />
             </Field>
-            <Field label={`${t("common.category")} *`}>
+            <SelectField label={t("common.category")} required>
               <Select value={editForm.category} onValueChange={(v) => setEditForm((f) => ({ ...f, category: v }))}>
-                <SelectTrigger className="h-12 rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base">
+                <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none focus:ring-0">
                   <SelectValue placeholder={t("business.chooseACategory")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -515,13 +480,12 @@ export default function BusinessPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </SelectField>
+            <Field label={t("business.description")} kind="ta" hint={t("business.charactersCount", { n: editForm.description.length })}>
+              <textarea id="bz-desc" rows={4} value={editForm.description} onChange={setF("description")} placeholder={t("business.whatYouDoBestIn")} />
             </Field>
-            <Field label={t("business.description")} htmlFor="bz-desc" hint={t("business.charactersCount", { n: editForm.description.length })}>
-              <Textarea id="bz-desc" rows={4} className="rounded-[14px] border-[rgb(var(--reg-line))] bg-white text-base" value={editForm.description} onChange={setF("description")} placeholder={t("business.whatYouDoBestIn")} />
-            </Field>
-          </FormSection>
 
-          <FormSection title={t("business.coverPhoto")}>
+            <FormSection>{t("business.coverPhoto")}</FormSection>
             {/* customer-app #4: without this the salon shows a stock photo, same as every other salon. */}
             <ImageUploadField
               label={t("business.coverPhoto")}
@@ -531,47 +495,35 @@ export default function BusinessPage() {
               onChange={(url) => setEditForm((f) => ({ ...f, coverImageUrl: url }))}
               hint={t("business.shownToCustomersOnThe")}
             />
-          </FormSection>
 
-          <FormSection title={t("business.contact")}>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label={t("common.phone")} htmlFor="bz-phone">
-                <input id="bz-phone" type="tel" className={fieldCls} value={editForm.phone} onChange={setF("phone")} />
+            <FormSection>{t("business.contact")}</FormSection>
+            <FormGrid cols={2}>
+              <Field label={t("common.phone")}>
+                <input id="bz-phone" type="tel" value={editForm.phone} onChange={setF("phone")} />
               </Field>
-              <Field label={t("common.email")} htmlFor="bz-email">
-                <input id="bz-email" type="email" className={fieldCls} value={editForm.email} onChange={setF("email")} />
+              <Field label={t("common.email")}>
+                <input id="bz-email" type="email" value={editForm.email} onChange={setF("email")} />
               </Field>
-            </div>
-            <Field label={t("business.website")} htmlFor="bz-web">
-              <input id="bz-web" className={fieldCls} value={editForm.website} onChange={setF("website")} placeholder="https://example.com" />
+            </FormGrid>
+            <Field label={t("business.website")}>
+              <input id="bz-web" value={editForm.website} onChange={setF("website")} placeholder="https://example.com" />
             </Field>
-          </FormSection>
 
-          <FormSection title={t("business.location")}>
-            <Field label={t("common.address")} htmlFor="bz-address">
-              <input id="bz-address" className={fieldCls} value={editForm.address} onChange={setF("address")} placeholder={t("business.streetNumber")} />
+            <FormSection>{t("business.location")}</FormSection>
+            <Field label={t("common.address")}>
+              <input id="bz-address" value={editForm.address} onChange={setF("address")} placeholder={t("business.streetNumber")} />
             </Field>
-          </FormSection>
 
-          {/* #37: cancellation policy. Empty keeps the current value. Deposits and late
-              fees need online payment, which v1 does not take (clients pay at the salon),
-              so those two stay off this form; their values are left untouched. */}
-          <FormSection title={t("common.cancellations")}>
-            <Field label={t("business.freeCancellationUpToHours")} htmlFor="bz-cancel" hint={t("business.emptyKeepsTheCurrentSetting")}>
-              <input id="bz-cancel" type="number" min={0} step={1} className={fieldCls} value={editForm.cancellationWindowHours} onChange={setF("cancellationWindowHours")} placeholder="24" />
+            {/* #37: cancellation policy. Empty keeps the current value. Deposits and late
+                fees need online payment, which v1 does not take (clients pay at the salon),
+                so those two stay off this form; their values are left untouched. */}
+            <FormSection>{t("common.cancellations")}</FormSection>
+            <Field label={t("business.freeCancellationUpToHours")} hint={t("business.emptyKeepsTheCurrentSetting")}>
+              <input id="bz-cancel" type="number" min={0} step={1} value={editForm.cancellationWindowHours} onChange={setF("cancellationWindowHours")} placeholder="24" />
             </Field>
-          </FormSection>
-        </FormSheet>
-      </BooqiScope>
+          </Drawer>
+        )}
+      </BzPage>
     </AppLayout>
-  );
-}
-
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h3 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{title}</h3>
-      {children}
-    </section>
   );
 }
