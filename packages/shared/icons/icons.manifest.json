@@ -1,0 +1,1131 @@
+{
+  "license": "Solar Icon Set by 480 Design (figma.com/community/file/1166831539721848736), licensed CC BY 4.0",
+  "nav": [
+    {
+      "name": "home",
+      "label": "Kəşf"
+    },
+    {
+      "name": "search",
+      "label": "Axtar"
+    },
+    {
+      "name": "spark",
+      "label": "Görünüşlər"
+    },
+    {
+      "name": "cal",
+      "label": "Rezervlər"
+    },
+    {
+      "name": "user",
+      "label": "Mən"
+    }
+  ],
+  "icons": [
+    {
+      "name": "back",
+      "regular": "svg/back.svg",
+      "bold": "svg/back-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/search",
+        "mobile:app/book/[salonId]/time",
+        "mobile:app/salon/[id]",
+        "mobile:app/salon/[id]/gallery",
+        "mobile:src/components/booking-ui",
+        "web:W01",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W06",
+        "web:W07",
+        "web:W08",
+        "web:W09",
+        "web:W10",
+        "web:W14",
+        "web:W15",
+        "web:W16",
+        "web:W17",
+        "web:W18",
+        "web:W19",
+        "web:W20",
+        "web:W24",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/BookingDetail",
+        "web:src/components/BookingFlow",
+        "web:src/components/ForgotForm",
+        "web:src/components/Rail",
+        "web:src/components/SpecHydrate"
+      ]
+    },
+    {
+      "name": "bag",
+      "regular": "svg/bag.svg",
+      "bold": "svg/bag-bold.svg",
+      "category": "commerce",
+      "usedIn": []
+    },
+    {
+      "name": "bell",
+      "regular": "svg/bell.svg",
+      "bold": "svg/bell-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/(tabs)/index",
+        "mobile:app/account/notifications",
+        "mobile:src/components/acct-hero",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W15",
+        "web:W19",
+        "web:W21",
+        "web:W24",
+        "web:W29",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/SpecHydrate"
+      ]
+    },
+    {
+      "name": "bookmark",
+      "regular": "svg/bookmark.svg",
+      "bold": "svg/bookmark-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/(tabs)/looks",
+        "web:W02",
+        "web:W03",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/FeedView"
+      ]
+    },
+    {
+      "name": "box",
+      "regular": "svg/box.svg",
+      "bold": "svg/box-bold.svg",
+      "category": "commerce",
+      "usedIn": []
+    },
+    {
+      "name": "cal",
+      "regular": "svg/cal.svg",
+      "bold": "svg/cal-bold.svg",
+      "category": "nav",
+      "usedIn": [
+        "mobile:app/(tabs)/_layout",
+        "mobile:app/(tabs)/bookings",
+        "mobile:app/book/success",
+        "mobile:src/components/acct-hero",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W08",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W15",
+        "web:W19",
+        "web:W20",
+        "web:W21",
+        "web:W22",
+        "web:W24",
+        "web:W29",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/Header"
+      ]
+    },
+    {
+      "name": "cam",
+      "regular": "svg/cam.svg",
+      "bold": "svg/cam-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "mobile:app/account/personal",
+        "web:W12",
+        "web:W29",
+        "web:W30"
+      ]
+    },
+    {
+      "name": "car",
+      "regular": "svg/car.svg",
+      "bold": "svg/car-bold.svg",
+      "category": "place",
+      "usedIn": []
+    },
+    {
+      "name": "card",
+      "regular": "svg/card.svg",
+      "bold": "svg/card-bold.svg",
+      "category": "commerce",
+      "usedIn": [
+        "mobile:src/components/acct-hero"
+      ]
+    },
+    {
+      "name": "cash",
+      "regular": "svg/cash.svg",
+      "bold": "svg/cash-bold.svg",
+      "category": "commerce",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/payments"
+      ]
+    },
+    {
+      "name": "chat",
+      "regular": "svg/chat.svg",
+      "bold": "svg/chat-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/chat",
+        "mobile:app/account/messages",
+        "mobile:app/account/ticket",
+        "mobile:src/components/acct-hero",
+        "web:W02",
+        "web:W05",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/SalonHydrate"
+      ]
+    },
+    {
+      "name": "check",
+      "regular": "svg/check.svg",
+      "bold": "svg/check-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/bookings",
+        "mobile:app/account/loyalty",
+        "mobile:app/account/payments",
+        "mobile:app/book/[salonId]/confirm",
+        "mobile:app/book/[salonId]/index",
+        "mobile:app/book/success",
+        "mobile:src/components/AuthForm",
+        "mobile:src/components/acct-hero",
+        "web:W03",
+        "web:W05",
+        "web:W06",
+        "web:W07",
+        "web:W08",
+        "web:W09",
+        "web:W11",
+        "web:W13",
+        "web:W17",
+        "web:W22",
+        "web:W29",
+        "web:src/components/GiftView",
+        "web:src/components/HomeSearch"
+      ]
+    },
+    {
+      "name": "chev",
+      "regular": "svg/chev.svg",
+      "bold": "svg/chev-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/bookings",
+        "mobile:app/(tabs)/looks",
+        "mobile:app/account/support",
+        "mobile:app/book/[salonId]/time",
+        "mobile:app/booking/[id]",
+        "mobile:src/components/acct",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W05",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W19",
+        "web:W24",
+        "web:W31",
+        "web:W37",
+        "web:src/components/MeView",
+        "web:src/components/Rail"
+      ]
+    },
+    {
+      "name": "chevd",
+      "regular": "svg/chevd.svg",
+      "bold": "svg/chevd-bold.svg",
+      "category": "action",
+      "usedIn": []
+    },
+    {
+      "name": "chevu",
+      "regular": "svg/chevu.svg",
+      "bold": "svg/chevu-bold.svg",
+      "category": "action",
+      "usedIn": []
+    },
+    {
+      "name": "clock",
+      "regular": "svg/clock.svg",
+      "bold": "svg/clock-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/(tabs)/bookings",
+        "mobile:app/(tabs)/search",
+        "mobile:app/book/[salonId]/confirm",
+        "mobile:src/components/acct-hero",
+        "web:W01",
+        "web:W02",
+        "web:W04",
+        "web:W19",
+        "web:W24",
+        "web:src/components/BookingDetail"
+      ]
+    },
+    {
+      "name": "copy",
+      "regular": "svg/copy.svg",
+      "bold": "svg/copy-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "web:W35"
+      ]
+    },
+    {
+      "name": "crown",
+      "regular": "svg/crown.svg",
+      "bold": "svg/crown-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/loyalty",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37"
+      ]
+    },
+    {
+      "name": "dots",
+      "regular": "svg/dots.svg",
+      "bold": "svg/dots-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "web:src/components/FeedView"
+      ]
+    },
+    {
+      "name": "edit",
+      "regular": "svg/edit.svg",
+      "bold": "svg/edit-bold.svg",
+      "category": "action",
+      "usedIn": []
+    },
+    {
+      "name": "eye",
+      "regular": "svg/eye.svg",
+      "bold": "svg/eye-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "web:W16"
+      ]
+    },
+    {
+      "name": "eyeoff",
+      "regular": "svg/eyeoff.svg",
+      "bold": "svg/eyeoff-bold.svg",
+      "category": "status",
+      "usedIn": []
+    },
+    {
+      "name": "fire",
+      "regular": "svg/fire.svg",
+      "bold": "svg/fire-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/(tabs)/index",
+        "mobile:src/components/salon/ServicesTab",
+        "web:W01",
+        "web:W03",
+        "web:W24"
+      ]
+    },
+    {
+      "name": "gear",
+      "regular": "svg/gear.svg",
+      "bold": "svg/gear-bold.svg",
+      "category": "system",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37"
+      ]
+    },
+    {
+      "name": "gift",
+      "regular": "svg/gift.svg",
+      "bold": "svg/gift-bold.svg",
+      "category": "commerce",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/gift-buy",
+        "mobile:app/account/gifts",
+        "mobile:app/account/loyalty",
+        "mobile:src/components/acct-hero",
+        "web:W05",
+        "web:W14",
+        "web:W15",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/SalonView"
+      ]
+    },
+    {
+      "name": "globe",
+      "regular": "svg/globe.svg",
+      "bold": "svg/globe-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "web:W14",
+        "web:W22"
+      ]
+    },
+    {
+      "name": "grid",
+      "regular": "svg/grid.svg",
+      "bold": "svg/grid-bold.svg",
+      "category": "system",
+      "usedIn": [
+        "web:W05",
+        "web:src/lib/spec/live"
+      ]
+    },
+    {
+      "name": "heart",
+      "regular": "svg/heart.svg",
+      "bold": "svg/heart-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/(tabs)/looks",
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/gift-buy",
+        "mobile:app/account/invite",
+        "mobile:app/account/saved",
+        "mobile:app/salon/[id]",
+        "mobile:src/components/search/SearchResultCard",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W14",
+        "web:W19",
+        "web:W24",
+        "web:src/components/FeedView",
+        "web:src/components/SalonCard",
+        "web:src/components/StoryViewer"
+      ]
+    },
+    {
+      "name": "help",
+      "regular": "svg/help.svg",
+      "bold": "svg/help-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37"
+      ]
+    },
+    {
+      "name": "home",
+      "regular": "svg/home.svg",
+      "bold": "svg/home-bold.svg",
+      "category": "nav",
+      "usedIn": [
+        "mobile:app/(tabs)/_layout",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W15",
+        "web:W19",
+        "web:W20",
+        "web:W21",
+        "web:W22",
+        "web:W24",
+        "web:W29",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/Header"
+      ]
+    },
+    {
+      "name": "img",
+      "regular": "svg/img.svg",
+      "bold": "svg/img-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "mobile:src/components/salon/ReviewsTab"
+      ]
+    },
+    {
+      "name": "info",
+      "regular": "svg/info.svg",
+      "bold": "svg/info-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/account/settings",
+        "web:W01",
+        "web:W14",
+        "web:W15",
+        "web:W24"
+      ]
+    },
+    {
+      "name": "locate",
+      "regular": "svg/locate.svg",
+      "bold": "svg/locate-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "web:W04",
+        "web:src/lib/spec/live"
+      ]
+    },
+    {
+      "name": "lock",
+      "regular": "svg/lock.svg",
+      "bold": "svg/lock-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/account/settings",
+        "mobile:src/components/AuthForm",
+        "web:W15"
+      ]
+    },
+    {
+      "name": "mail",
+      "regular": "svg/mail.svg",
+      "bold": "svg/mail-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/account/settings",
+        "mobile:src/components/AuthForm",
+        "web:W18"
+      ]
+    },
+    {
+      "name": "map",
+      "regular": "svg/map.svg",
+      "bold": "svg/map-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "web:W04"
+      ]
+    },
+    {
+      "name": "minus",
+      "regular": "svg/minus.svg",
+      "bold": "svg/minus-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "web:W04",
+        "web:W37",
+        "web:src/lib/spec/live"
+      ]
+    },
+    {
+      "name": "moon",
+      "regular": "svg/moon.svg",
+      "bold": "svg/moon-bold.svg",
+      "category": "system",
+      "usedIn": [
+        "web:W01",
+        "web:W14",
+        "web:W22",
+        "web:W23",
+        "web:W24"
+      ]
+    },
+    {
+      "name": "out",
+      "regular": "svg/out.svg",
+      "bold": "svg/out-bold.svg",
+      "category": "system",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/settings",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37"
+      ]
+    },
+    {
+      "name": "paper",
+      "regular": "svg/paper.svg",
+      "bold": "svg/paper-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "web:W30"
+      ]
+    },
+    {
+      "name": "phone",
+      "regular": "svg/phone.svg",
+      "bold": "svg/phone-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/account/settings",
+        "mobile:src/components/AuthForm",
+        "mobile:src/components/salon/AboutTab",
+        "web:W13",
+        "web:W20",
+        "web:W29",
+        "web:src/components/SalonView"
+      ]
+    },
+    {
+      "name": "pin",
+      "regular": "svg/pin.svg",
+      "bold": "svg/pin-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "mobile:app/(tabs)/bookings",
+        "web:W01",
+        "web:W04",
+        "web:W05",
+        "web:W12",
+        "web:W13",
+        "web:W19",
+        "web:W20",
+        "web:W24",
+        "web:src/components/BookingsList",
+        "web:src/components/SalonView"
+      ]
+    },
+    {
+      "name": "plus",
+      "regular": "svg/plus.svg",
+      "bold": "svg/plus-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/looks",
+        "web:W04",
+        "web:W05",
+        "web:W06",
+        "web:W07",
+        "web:W23",
+        "web:W32",
+        "web:W37",
+        "web:src/lib/spec/live"
+      ]
+    },
+    {
+      "name": "receipt",
+      "regular": "svg/receipt.svg",
+      "bold": "svg/receipt-bold.svg",
+      "category": "commerce",
+      "usedIn": [
+        "mobile:app/account/payments",
+        "mobile:src/components/acct-hero"
+      ]
+    },
+    {
+      "name": "refresh",
+      "regular": "svg/refresh.svg",
+      "bold": "svg/refresh-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "web:W04",
+        "web:W20",
+        "web:src/lib/spec/live"
+      ]
+    },
+    {
+      "name": "repeat",
+      "regular": "svg/repeat.svg",
+      "bold": "svg/repeat-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/booking/[id]",
+        "web:W01",
+        "web:W12",
+        "web:W13",
+        "web:W24",
+        "web:W29"
+      ]
+    },
+    {
+      "name": "route",
+      "regular": "svg/route.svg",
+      "bold": "svg/route-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/book/success",
+        "web:W01",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W20",
+        "web:W24",
+        "web:src/components/BookingDetail"
+      ]
+    },
+    {
+      "name": "scissors",
+      "regular": "svg/scissors.svg",
+      "bold": "svg/scissors-bold.svg",
+      "category": "commerce",
+      "usedIn": []
+    },
+    {
+      "name": "search",
+      "regular": "svg/search.svg",
+      "bold": "svg/search-bold.svg",
+      "category": "nav",
+      "usedIn": [
+        "mobile:app/(tabs)/_layout",
+        "mobile:app/(tabs)/index",
+        "mobile:app/(tabs)/looks",
+        "mobile:app/(tabs)/search",
+        "mobile:app/account/messages",
+        "mobile:app/account/support",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W15",
+        "web:W19",
+        "web:W20",
+        "web:W21",
+        "web:W22",
+        "web:W24",
+        "web:W29",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/Header",
+        "web:src/components/HomeSearch",
+        "web:src/components/SearchView",
+        "web:src/lib/spec/live"
+      ]
+    },
+    {
+      "name": "send",
+      "regular": "svg/send.svg",
+      "bold": null,
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/looks",
+        "mobile:app/book/success",
+        "mobile:src/components/chat",
+        "web:W02",
+        "web:W03",
+        "web:W11",
+        "web:W36"
+      ]
+    },
+    {
+      "name": "share",
+      "regular": "svg/share.svg",
+      "bold": "svg/share-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/booking/[id]",
+        "mobile:app/salon/[id]",
+        "mobile:app/salon/[id]/gallery",
+        "mobile:src/components/salon/AboutTab",
+        "web:W05",
+        "web:src/components/FeedView"
+      ]
+    },
+    {
+      "name": "shield",
+      "regular": "svg/shield.svg",
+      "bold": "svg/shield-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "mobile:app/account/settings",
+        "mobile:src/components/acct-hero",
+        "web:W32"
+      ]
+    },
+    {
+      "name": "sliders",
+      "regular": "svg/sliders.svg",
+      "bold": "svg/sliders-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/index",
+        "mobile:app/(tabs)/search",
+        "web:W01",
+        "web:W04",
+        "web:W24"
+      ]
+    },
+    {
+      "name": "spark",
+      "regular": "svg/spark.svg",
+      "bold": "svg/spark-bold.svg",
+      "category": "nav",
+      "usedIn": [
+        "mobile:app/(tabs)/_layout",
+        "mobile:app/(tabs)/index",
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/saved",
+        "mobile:app/book/[salonId]/time",
+        "mobile:src/components/acct-hero",
+        "mobile:src/components/home-blocks",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W08",
+        "web:W09",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W15",
+        "web:W19",
+        "web:W20",
+        "web:W21",
+        "web:W22",
+        "web:W24",
+        "web:W29",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/Header",
+        "web:src/components/LooksView"
+      ]
+    },
+    {
+      "name": "star",
+      "regular": "svg/star.svg",
+      "bold": "svg/star-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/(tabs)/search",
+        "mobile:app/account/saved",
+        "mobile:app/book/[salonId]/confirm",
+        "mobile:app/book/[salonId]/time",
+        "mobile:app/booking/[id]",
+        "mobile:app/salon/[id]",
+        "mobile:src/components/SalonCard",
+        "mobile:src/components/home-blocks",
+        "mobile:src/components/salon/TeamTab",
+        "mobile:src/components/search/SearchResultCard",
+        "web:W01",
+        "web:W04",
+        "web:W05",
+        "web:W12",
+        "web:W19",
+        "web:W24",
+        "web:W29",
+        "web:src/components/LookCard",
+        "web:src/components/SalonCard",
+        "web:src/components/SalonHydrate",
+        "web:src/components/SalonView",
+        "web:src/components/SearchView",
+        "web:src/components/sx",
+        "web:src/lib/spec/h",
+        "web:src/lib/spec/live",
+        "web:src/lib/spec/livemap"
+      ]
+    },
+    {
+      "name": "store",
+      "regular": "svg/store.svg",
+      "bold": "svg/store-bold.svg",
+      "category": "commerce",
+      "usedIn": [
+        "mobile:app/account/gift-buy",
+        "mobile:app/account/gifts",
+        "mobile:app/account/payments",
+        "mobile:src/components/acct-hero"
+      ]
+    },
+    {
+      "name": "sun",
+      "regular": "svg/sun.svg",
+      "bold": "svg/sun-bold.svg",
+      "category": "system",
+      "usedIn": [
+        "web:W01",
+        "web:W22",
+        "web:W23",
+        "web:W24"
+      ]
+    },
+    {
+      "name": "tag",
+      "regular": "svg/tag.svg",
+      "bold": "svg/tag-bold.svg",
+      "category": "commerce",
+      "usedIn": []
+    },
+    {
+      "name": "timer",
+      "regular": "svg/timer.svg",
+      "bold": "svg/timer-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "web:W12",
+        "web:W13",
+        "web:W20"
+      ]
+    },
+    {
+      "name": "trash",
+      "regular": "svg/trash.svg",
+      "bold": "svg/trash-bold.svg",
+      "category": "action",
+      "usedIn": []
+    },
+    {
+      "name": "user",
+      "regular": "svg/user.svg",
+      "bold": "svg/user-bold.svg",
+      "category": "nav",
+      "usedIn": [
+        "mobile:app/(tabs)/_layout",
+        "mobile:app/(tabs)/me",
+        "mobile:src/components/AuthForm",
+        "web:W01",
+        "web:W02",
+        "web:W03",
+        "web:W04",
+        "web:W05",
+        "web:W11",
+        "web:W12",
+        "web:W13",
+        "web:W14",
+        "web:W15",
+        "web:W19",
+        "web:W20",
+        "web:W21",
+        "web:W22",
+        "web:W24",
+        "web:W29",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37",
+        "web:src/components/Header",
+        "web:src/components/SignInGate"
+      ]
+    },
+    {
+      "name": "users",
+      "regular": "svg/users.svg",
+      "bold": "svg/users-bold.svg",
+      "category": "social",
+      "usedIn": [
+        "mobile:app/(tabs)/me",
+        "mobile:app/account/invite",
+        "web:W14",
+        "web:W22",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37"
+      ]
+    },
+    {
+      "name": "verified",
+      "regular": "svg/verified.svg",
+      "bold": "svg/verified-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "web:src/components/SalonView"
+      ]
+    },
+    {
+      "name": "walk",
+      "regular": "svg/walk.svg",
+      "bold": "svg/walk-bold.svg",
+      "category": "place",
+      "usedIn": [
+        "mobile:app/(tabs)/bookings",
+        "web:W12",
+        "web:W13",
+        "web:W20"
+      ]
+    },
+    {
+      "name": "wallet",
+      "regular": "svg/wallet.svg",
+      "bold": "svg/wallet-bold.svg",
+      "category": "commerce",
+      "usedIn": [
+        "mobile:app/book/[salonId]/confirm",
+        "web:W05",
+        "web:W06",
+        "web:W07",
+        "web:W08",
+        "web:W09",
+        "web:W10",
+        "web:W13",
+        "web:W14",
+        "web:W30",
+        "web:W31",
+        "web:W32",
+        "web:W33",
+        "web:W34",
+        "web:W35",
+        "web:W36",
+        "web:W37"
+      ]
+    },
+    {
+      "name": "wifi",
+      "regular": "svg/wifi.svg",
+      "bold": "svg/wifi-bold.svg",
+      "category": "status",
+      "usedIn": []
+    },
+    {
+      "name": "wifioff",
+      "regular": "svg/wifioff.svg",
+      "bold": "svg/wifioff-bold.svg",
+      "category": "status",
+      "usedIn": [
+        "web:W20"
+      ]
+    },
+    {
+      "name": "x",
+      "regular": "svg/x.svg",
+      "bold": "svg/x-bold.svg",
+      "category": "action",
+      "usedIn": [
+        "mobile:app/(tabs)/search",
+        "mobile:app/salon/[id]/gallery",
+        "mobile:app/story",
+        "web:W03",
+        "web:W04",
+        "web:W06",
+        "web:W07",
+        "web:W08",
+        "web:W09",
+        "web:W10",
+        "web:W13",
+        "web:W20",
+        "web:W29",
+        "web:W32",
+        "web:src/components/Sheet",
+        "web:src/components/StoryViewer"
+      ]
+    }
+  ]
+}
