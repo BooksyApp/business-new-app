@@ -20,6 +20,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-background.png",
         "backgroundColor": "#1D1730"
       },
       "predictiveBackGestureEnabled": false,
@@ -35,7 +36,8 @@
         "expo-notifications",
         {
           "color": "#6F52ED",
-          "defaultChannel": "bookings"
+          "defaultChannel": "bookings",
+          "icon": "./assets/notification-icon.png"
         }
       ],
       [

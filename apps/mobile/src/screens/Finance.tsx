@@ -3,7 +3,7 @@ import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Line, TabBar, num } from '@/components/form';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Hero, Pill, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Card, ErrorState, Field, Header, Hero, Pill, Screen, Skeleton, Spark, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { toDay } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
@@ -46,6 +46,7 @@ export function Finance({ onBack }: { onBack: () => void }) {
               <Hero><View style={{ padding: 20, gap: 4 }}>
                 <Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('fn.profit')}</Text>
                 <Text style={{ fontFamily: font.x, fontSize: 40, letterSpacing: -1.3, color: t.ink }}>{m(profit.data.totals?.profit)}</Text>
+                {(profit.data.months ?? []).length > 1 ? <View style={{ marginTop: 6, marginHorizontal: -4 }}><Spark data={[...(profit.data.months ?? [])].reverse().map((x) => N(x.profit))} width={300} height={56} /></View> : null}
                 <View style={{ flexDirection: 'row', gap: 18, marginTop: 10 }}>
                   {([[tr('rp.revenue'), profit.data.totals?.revenue], [tr('ex.title'), profit.data.totals?.expenses], [tr('fn.wages'), profit.data.totals?.wages]] as const).map(([k, v]) => (
                     <View key={k} style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{k}</Text><Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.x, fontSize: 17, color: t.ink }}>{m(v)}</Text></View>

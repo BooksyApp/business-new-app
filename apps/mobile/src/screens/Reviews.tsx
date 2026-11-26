@@ -6,7 +6,7 @@ import { Choice } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Btn, Card, ErrorState, Field, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, ErrorState, Field, Header, Hero, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiX, type Review } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
@@ -50,10 +50,15 @@ export function Reviews({ onBack }: { onBack: () => void }) {
         <FlatList initialNumToRender={10} windowSize={9} data={list.data?.rows ?? []} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={sum && sum.count ? (
-            <Card style={{ backgroundColor: t.vsoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View><Text style={{ fontFamily: font.x, fontSize: 30, color: t.vtext }}>{sum.average != null ? sum.average.toFixed(1) : '-'}</Text><Text style={{ fontFamily: font.m, fontSize: 13, color: t.vtext }}>{tr('rv.count', { n: sum.count })}</Text></View>
-              <Stars n={Math.round(sum.average ?? 0)} />
-            </Card>
+            <Hero style={{ marginBottom: 4 }}>
+              <View style={{ padding: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View>
+                  <Text style={{ fontFamily: font.x, fontSize: 56, lineHeight: 60, letterSpacing: -2, color: t.ink }}>{sum.average != null ? sum.average.toFixed(1) : '-'}</Text>
+                  <Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{sum.count} {tr('rv.title').toLowerCase()}</Text>
+                </View>
+                <Stars n={Math.round(sum.average ?? 0)} />
+              </View>
+            </Hero>
           ) : null}
           ListEmptyComponent={<StateView icon="star" title={tr('rv.empty')} body={tr('rv.emptyBody')} />}
           renderItem={({ item: r }) => (

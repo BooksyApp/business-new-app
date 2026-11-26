@@ -130,8 +130,9 @@ export function Team({ onBack }: { onBack: () => void }) {
     <Screen>
       <Header title={tr('sections.team')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
+          ListHeaderComponent={(list.data ?? []).length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, marginBottom: 6, flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 16 }}>{(list.data ?? []).map((m) => <Pressable key={m.id} onPress={() => setSel(m)} accessibilityRole="button" accessibilityLabel={m.name} style={{ alignItems: 'center', gap: 6, width: 76 }}><Avatar name={m.name} size={68} uri={m.avatarUrl} /><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13.5, color: t.ink }}>{m.name}</Text></Pressable>)}</ScrollView> : null}
           ListEmptyComponent={<StateView icon="users" title={tr('team.empty')} actionLabel={tr('tm.add')} onAction={() => setSel('new')} />}
           renderItem={({ item: s }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, minHeight: 92, opacity: s.isActive === false ? 0.6 : 1 }}>

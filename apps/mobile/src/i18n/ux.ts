@@ -2,6 +2,9 @@
 export const uxEn = {
   ux: {
     //@@en
+    openingSub: 'Calendar, clients, till',
+    openingTitle: 'Run your salon from your pocket.\nEvery booking in one tap.',
+    businessPill: 'FOR BUSINESS',
     fLate: 'Late',
     fConfirmed: 'Confirmed',
     fPending: 'Waiting',
@@ -59,6 +62,9 @@ export const uxEn = {
 export const uxAz: typeof uxEn = {
   ux: {
     //@@az
+    openingSub: 'Təqvim, müştərilər, kassa',
+    openingTitle: 'Salonunu cibindən idarə et.\nHər rezerv bir toxunuşda.',
+    businessPill: 'BİZNES ÜÇÜN',
     fLate: 'Gecikir',
     fConfirmed: 'Təsdiqlənib',
     fPending: 'Gözləyir',
@@ -116,6 +122,9 @@ export const uxAz: typeof uxEn = {
 export const uxRu: typeof uxEn = {
   ux: {
     //@@ru
+    openingSub: 'Календарь, клиенты, касса',
+    openingTitle: 'Управляй салоном с телефона.\nКаждая запись в одно касание.',
+    businessPill: 'ДЛЯ БИЗНЕСА',
     fLate: 'Опаздывают',
     fConfirmed: 'Подтверждены',
     fPending: 'Ожидают',

@@ -6,7 +6,7 @@ import { Choice, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { Btn, Card, ErrorState, Field, Header, Hero, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { toDay } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
@@ -52,7 +52,7 @@ export function Expenses({ onBack }: { onBack: () => void }) {
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
         <FlatList data={list.data ?? []} keyExtractor={(e) => String(e.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListHeaderComponent={(list.data ?? []).length ? <Card style={{ backgroundColor: t.vsoft, flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontFamily: font.s, color: t.vtext }}>{tr('sl.total')}</Text><Text style={{ fontFamily: font.x, fontSize: 20, color: t.vtext }}>{money(total, salon?.currency)}</Text></Card> : null}
+          ListHeaderComponent={(list.data ?? []).length ? <Hero style={{ marginBottom: 4 }}><View style={{ padding: 20, gap: 2 }}><Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('ex.title')} · {monthLabel(m)}</Text><Text style={{ fontFamily: font.x, fontSize: 38, letterSpacing: -1.2, color: t.ink }}>{money((list.data ?? []).reduce((n, e) => n + (e.amount ?? 0), 0), salon?.currency)}</Text></View></Hero> : null}
           ListEmptyComponent={<StateView icon="receipt" title={tr('ex.empty')} />}
           renderItem={({ item: e }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>

@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } fr
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { Icon } from '@/components/Icon';
+import Svg, { Defs, LinearGradient as SvgGrad, Path, Stop } from 'react-native-svg';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ApiError } from '@/lib/api';
@@ -295,5 +296,36 @@ export function ServiceThumb({ name, cat, uri, size = 88 }: { name: string; cat?
     <LinearGradient colors={[...THUMB[h]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size * 0.24, alignItems: 'center', justifyContent: 'center' }}>
       <Icon name={icon} size={size * 0.4} color={t.dark ? t.vtext : '#5b3fd6'} />
     </LinearGradient>
+  );
+}
+
+/** Smooth area sparkline (react-native-svg). `data` needs >= 2 points; width follows the parent via `width`. */
+export function Spark({ data, width = 160, height = 48, color }: { data: number[]; width?: number; height?: number; color?: string }) {
+  const { t } = useTheme();
+  const c = color ?? t.violet;
+  if (data.length < 2) return null;
+  const lo = Math.min(...data); const hi = Math.max(...data); const span = hi - lo || 1; const pad = 4;
+  const pts = data.map((v, i) => [pad + (i * (width - 2 * pad)) / (data.length - 1), pad + (1 - (v - lo) / span) * (height - 2 * pad)] as const);
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1]; const [x1, y1] = pts[i]; const mx = (x0 + x1) / 2; d += ` C${mx} ${y0} ${mx} ${y1} ${x1} ${y1}`; }
+  const area = `${d} L${pts[pts.length - 1][0]} ${height} L${pts[0][0]} ${height} Z`;
+  return (
+    <Svg width={width} height={height}>
+      <Defs><SvgGrad id="sp" x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={c} stopOpacity="0.28" /><Stop offset="1" stopColor={c} stopOpacity="0" /></SvgGrad></Defs>
+      <Path d={area} fill="url(#sp)" />
+      <Path d={d} fill="none" stroke={c} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Two bars: previous period (soft) vs current (violet), heights relative to the larger one. */
+export function MiniBars({ prev, cur }: { prev: number; cur: number }) {
+  const { t } = useTheme();
+  const m = Math.max(prev, cur, 1);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 5, height: 34 }}>
+      <View style={{ width: 12, height: Math.max(4, (prev / m) * 34), borderRadius: 5, backgroundColor: t.lilac }} />
+      <View style={{ width: 12, height: Math.max(4, (cur / m) * 34), borderRadius: 5, backgroundColor: t.violet }} />
+    </View>
   );
 }

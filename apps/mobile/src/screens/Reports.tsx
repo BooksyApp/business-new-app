@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { Text } from '@/components/Text';
-import { Card, Chip, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { Card, Chip, ErrorState, Header, MiniBars, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
@@ -37,10 +37,13 @@ export function Reports({ onBack }: { onBack: () => void }) {
             {KPIS.filter((k) => d.data!.kpis[k]).map((k) => {
               const p = d.data!.kpis[k]; const dl = delta(p.value, p.previous);
               return (
-                <Card key={k} style={{ width: '48%', flexGrow: 1, padding: 12 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12.5, color: t.muted }}>{tr(`rp.${k}` as 'rp.revenue')}</Text>
-                  <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginTop: 2 }}>{fmt(k, p.value)}</Text>
-                  {dl != null ? <Text style={{ fontFamily: font.b, fontSize: 12, color: dl >= 0 ? t.ok : t.gink }}>{dl >= 0 ? '+' : ''}{dl}% {tr('rp.vsPrev')}</Text> : null}
+                <Card key={k} style={{ width: '48%', flexGrow: 1, padding: 16, gap: 4, minHeight: 124 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, color: t.muted }}>{tr(`rp.${k}` as 'rp.revenue')}</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.x, fontSize: 27, letterSpacing: -0.8, color: t.ink }}>{fmt(k, p.value)}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 4 }}>
+                    {dl != null ? <View style={{ height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: dl >= 0 ? t.oksoft : t.gsoft, justifyContent: 'center' }}><Text style={{ fontFamily: font.b, fontSize: 13, color: dl >= 0 ? t.ok : t.gink }}>{dl >= 0 ? '+' : ''}{dl}%</Text></View> : <View />}
+                    <MiniBars prev={p.previous} cur={p.value} />
+                  </View>
                 </Card>
               );
             })}
