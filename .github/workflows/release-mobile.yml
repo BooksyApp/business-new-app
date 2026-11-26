@@ -1,0 +1,251 @@
+# Release booqi Business mobile shell (apps/mobile): business-android-v<ver> and business-ios-v<ver>.
+# Manual: Actions > release-mobile > Run workflow. Tag push (business-android-v*, business-ios-v*) releases only that platform.
+# Optional secrets/vars missing => that step is skipped with a warning, never a failure. See apps/mobile/README-release.md.
+name: release-mobile
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch'
+  && format('Release booqi Business v{0} → {1}{2}', inputs.version, inputs.android && 'android ' || '', inputs.ios && 'ios' || '')
+  || format('Release {0}', github.ref_name) }}
+on:
+  workflow_dispatch:
+    inputs:
+      version: { description: "Version (x.y.z)", type: string, required: true, default: "0.1.0" }
+      android: { description: "Release Android (APK)", type: boolean, default: true }
+      ios: { description: "Release iOS (macOS runner, 10x minutes)", type: boolean, default: false }
+      distribute: { description: "Android: upload to Firebase App Distribution (group testers)", type: boolean, default: true }
+  push:
+    tags: ["business-android-v*", "business-ios-v*"]
+concurrency: { group: release-mobile, cancel-in-progress: false }
+permissions: { contents: read }
+jobs:
+  meta:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.m.outputs.version }}
+      android: ${{ steps.m.outputs.android }}
+      ios: ${{ steps.m.outputs.ios }}
+      distribute: ${{ steps.m.outputs.distribute }}
+    steps:
+      - id: m
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref_name }}
+          I_VERSION: ${{ inputs.version }}
+          I_ANDROID: ${{ inputs.android }}
+          I_IOS: ${{ inputs.ios }}
+          I_DIST: ${{ inputs.distribute }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            V="${I_VERSION#v}"; A=$I_ANDROID; I=$I_IOS; D=$I_DIST
+          else
+            P="${REF%%-v*}"; V="${REF#*-v}"; A=false; I=false; D=true
+            case "$P" in business-android) A=true;; business-ios) I=true;; esac
+          fi
+          [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?$ ]] || { echo "bad version: $V" >&2; exit 1; }
+          { echo "version=$V"; echo "android=$A"; echo "ios=$I"; echo "distribute=$D"; } >> "$GITHUB_OUTPUT"
+          echo "### booqi Business v$V: android=$A ios=$I" >> "$GITHUB_STEP_SUMMARY"
+  android:
+    name: Android → business-android-v${{ needs.meta.outputs.version }}
+    needs: meta
+    if: needs.meta.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: echo "V=${{ needs.meta.outputs.version }}" >> "$GITHUB_ENV"
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/lib/android/sdk/ndk /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/share/swift || true
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - name: Set version (versionCode = 1000 + run number)
+        working-directory: apps/mobile
+        run: |
+          node -e '
+          const fs=require("fs");const j=JSON.parse(fs.readFileSync("app.json"));
+          j.expo.version=process.env.V; j.expo.android=j.expo.android||{};
+          j.expo.android.versionCode=1000+Number(process.env.GITHUB_RUN_NUMBER);
+          fs.writeFileSync("app.json",JSON.stringify(j,null,2));'
+      - name: Prebuild
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install --clean
+      - name: Gradle properties and signing (keystore secrets optional)
+        working-directory: apps/mobile/android
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          printf '%s\n' "reactNativeArchitectures=arm64-v8a,x86_64" "org.gradle.parallel=true" "org.gradle.caching=true" \
+            "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" \
+            "android.enableMinifyInReleaseBuilds=true" "android.enableShrinkResourcesInReleaseBuilds=true" \
+            "expo.useLegacyPackaging=false" >> gradle.properties
+          if [ -n "$KS_B64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            for k in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do echo "$k=${!k}" >> "$GITHUB_ENV"; done
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            (cd .. && ANDROID_ABIS="arm64-v8a,x86_64" ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/release.keystore" node scripts/inject-android-signing.js)
+            echo "SIGNING=release keystore" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Keystore secrets missing (ANDROID_KEYSTORE_BASE64/_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD): APK is signed with the DEBUG key, not for store upload"
+            echo "SIGNING=DEBUG key (keystore secrets missing)" >> "$GITHUB_ENV"
+          fi
+      - name: Assemble release
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease
+      - name: Checksum
+        working-directory: apps/mobile/android/app/build/outputs/apk/release
+        run: |
+          APK="booqi-business-${V}.apk"; mv "$(ls *.apk | head -1)" "$APK"
+          sha256sum "$APK" | tee "$APK.sha256"
+          echo "APK=$PWD/$APK" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: booqi-business-android-${{ env.V }}
+          path: ${{ env.APK }}*
+          retention-days: 14
+      - name: Firebase App Distribution (needs FIREBASE_SERVICE_ACCOUNT_JSON secret and FIREBASE_ANDROID_APP_ID secret/variable)
+        if: needs.meta.outputs.distribute == 'true'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID || vars.FIREBASE_ANDROID_APP_ID }}
+        run: |
+          if [ -z "$SA" ] || [ -z "$APP_ID" ]; then
+            echo "FIREBASE=skipped (FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_ANDROID_APP_ID missing)" >> "$GITHUB_ENV"
+            echo "::warning::Firebase distribution skipped: FIREBASE_SERVICE_ACCOUNT_JSON and/or FIREBASE_ANDROID_APP_ID is not set"; exit 0
+          fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx -y firebase-tools@14 appdistribution:distribute "$APK" \
+            --app "$APP_ID" --groups testers --release-notes "booqi Business $V (GitHub Actions)"
+          rm -f "$RUNNER_TEMP/sa.json"; echo "FIREBASE=distributed to group testers" >> "$GITHUB_ENV"
+      - name: GitHub Release business-android-v${{ env.V }}
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          PREV=$(git tag -l 'business-android-v*' --sort=-v:refname | grep -vx "business-android-v$V" | head -1 || true)
+          { echo "booqi Business Android $V. Signing: $SIGNING."; echo; echo "Changes (apps/mobile):";
+            git log ${PREV:+$PREV..}HEAD -n 40 --pretty='- %s (%h)' -- apps/mobile; } > notes.md
+          T="business-android-v$V"
+          if gh release view "$T" >/dev/null 2>&1; then gh release upload "$T" "$APK" "$APK.sha256" --clobber; gh release edit "$T" --notes-file notes.md
+          else gh release create "$T" "$APK" "$APK.sha256" --target "$GITHUB_SHA" --title "booqi Business Android $V" --notes-file notes.md --prerelease; fi
+          { echo "### Android → $T"; echo "- Release: $(gh release view "$T" --json url -q .url)"; echo "- Signing: $SIGNING"; echo "- Firebase: ${FIREBASE:-not requested}"; } >> "$GITHUB_STEP_SUMMARY"
+
+  ios:
+    name: iOS → business-ios-v${{ needs.meta.outputs.version }}
+    needs: meta
+    if: needs.meta.outputs.ios == 'true'
+    # With APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (base64 of .p8) all set: signed archive + TestFlight upload.
+    # Otherwise (warning): UNSIGNED simulator .app.
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions: { contents: write }
+    env:
+      DERIVED: ${{ github.workspace }}/../DerivedData-booqi-business
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: echo "V=${{ needs.meta.outputs.version }}" >> "$GITHUB_ENV"
+      - name: Check signing secrets
+        env:
+          T: ${{ secrets.APPLE_TEAM_ID }}
+          K: ${{ secrets.ASC_KEY_ID }}
+          I: ${{ secrets.ASC_ISSUER_ID }}
+          P: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          if [ -n "$T" ] && [ -n "$K" ] && [ -n "$I" ] && [ -n "$P" ]; then echo "SIGNED=true" >> "$GITHUB_ENV"
+          else echo "SIGNED=false" >> "$GITHUB_ENV"; echo "::warning::Apple secrets missing (APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8): building UNSIGNED simulator app, no TestFlight upload"; fi
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Set version and build number (build number = run number)
+        working-directory: apps/mobile
+        run: |
+          node -e '
+          const fs=require("fs");const j=JSON.parse(fs.readFileSync("app.json"));
+          j.expo.version=process.env.V; j.expo.ios.buildNumber=process.env.GITHUB_RUN_NUMBER;
+          fs.writeFileSync("app.json",JSON.stringify(j,null,2));'
+      - name: Prebuild iOS
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform ios --clean
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            ${{ env.DERIVED }}
+          key: ios-biz-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: ios-biz-${{ runner.os }}-
+      - name: Install pods
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build unsigned simulator app
+        if: env.SIGNED != 'true'
+        working-directory: apps/mobile/ios
+        run: |
+          WS=$(ls -d *.xcworkspace | head -1); SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$DERIVED" CODE_SIGNING_ALLOWED=NO ARCHS=arm64 ONLY_ACTIVE_ARCH=NO | tail -30
+          cd "$DERIVED/Build/Products/Release-iphonesimulator"
+          ZIP="$GITHUB_WORKSPACE/booqi-business-ios-simulator-UNSIGNED-$V.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$(ls -d *.app | head -1)" "$ZIP"
+          cd "$GITHUB_WORKSPACE" && shasum -a 256 "$(basename "$ZIP")" | tee "$(basename "$ZIP").sha256"
+          echo "IOS_FILES=booqi-business-ios-simulator-UNSIGNED-$V.zip booqi-business-ios-simulator-UNSIGNED-$V.zip.sha256" >> "$GITHUB_ENV"
+          echo "IOS_NOTE=Simulator-only, UNSIGNED. Not installable on devices." >> "$GITHUB_ENV"
+      - name: Archive (automatic signing, ASC API key) and upload to TestFlight
+        if: env.SIGNED == 'true'
+        working-directory: apps/mobile/ios
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          KEY_B64: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -o pipefail
+          KEY="$RUNNER_TEMP/AuthKey_${KEY_ID}.p8"; echo "$KEY_B64" | base64 --decode > "$KEY"; chmod 600 "$KEY"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER" -authenticationKeyPath "$KEY")
+          WS=$(ls -d *.xcworkspace | head -1); SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/app.xcarchive" -derivedDataPath "$DERIVED" \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            "${AUTH[@]}" archive | tail -25
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PL
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PL
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}" | tail -25
+          rm -f "$KEY"
+          echo "IOS_FILES=" >> "$GITHUB_ENV"
+          echo "IOS_NOTE=Build $GITHUB_RUN_NUMBER uploaded to TestFlight (private, no IPA attached). App Store Connect > Apps > booqi Business > TestFlight." >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        if: env.SIGNED != 'true'
+        with:
+          name: booqi-business-ios-${{ env.V }}
+          path: |
+            booqi-business-ios-*
+          retention-days: 14
+      - name: GitHub Release business-ios-v${{ env.V }}
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          PREV=$(git tag -l 'business-ios-v*' --sort=-v:refname | grep -vx "business-ios-v$V" | head -1 || true)
+          { echo "booqi Business iOS $V. $IOS_NOTE"; echo; echo "Changes (apps/mobile):";
+            git log ${PREV:+$PREV..}HEAD -n 40 --pretty='- %s (%h)' -- apps/mobile; } > notes.md
+          T="business-ios-v$V"
+          if gh release view "$T" >/dev/null 2>&1; then { [ -z "$IOS_FILES" ] || gh release upload "$T" $IOS_FILES --clobber; }; gh release edit "$T" --notes-file notes.md
+          else gh release create "$T" $IOS_FILES --target "$GITHUB_SHA" --title "booqi Business iOS $V" --notes-file notes.md --prerelease; fi
+          { echo "### iOS → $T"; echo "- Release: $(gh release view "$T" --json url -q .url)"; echo "- $IOS_NOTE"; } >> "$GITHUB_STEP_SUMMARY"
