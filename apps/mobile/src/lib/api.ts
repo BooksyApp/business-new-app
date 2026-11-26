@@ -317,7 +317,7 @@ export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
     const timer = setTimeout(() => ctl.abort(), 60000);
     try {
       return await fetch(`${API_BASE}/api${path}`, { method: 'POST', signal: ctl.signal, headers: { Accept: 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) }, body: form });
-    } catch { throw new ApiError('offline', 0); } finally { clearTimeout(timer); }
+    } catch (e) { throw new ApiError(`Yükləmə alınmadı (${(e as Error)?.message || 'şəbəkə'})`, 0); } finally { clearTimeout(timer); }
   };
   let res = await go(accessToken);
   if (res.status === 401) { const nt = await renew().catch(() => null); if (nt) res = await go(nt); }
