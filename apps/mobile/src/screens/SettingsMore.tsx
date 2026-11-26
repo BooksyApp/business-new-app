@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MultiChoice, ToggleRow } from '@/components/form';
+import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, Chip, ErrorState, Field, Header, Row, Screen, Skeleton } from '@/components/ui';
+import { Btn, Card, Chip, ErrorState, Field, Header, HeroCard, Row, Screen, Section, Skeleton, StickyCta, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
@@ -31,54 +33,67 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   async function addEx() {
     const re = /^\d{4}-\d{2}-\d{2}$/;
-    if (!re.test(xf) || !re.test(xt || xf) || (xt || xf) < xf) { Alert.alert(tr('common.error'), tr('hr.badDate')); return; }
-    try { await apiX.addHoursException(sid, xf, xt || xf, xn.trim()); setXf(''); setXt(''); setXn(''); bump(); await ex.reload(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); }
+    if (!re.test(xf) || !re.test(xt || xf) || (xt || xf) < xf) { toast(tr('hr.badDate'), 'error'); return; }
+    try { await apiX.addHoursException(sid, xf, xt || xf, xn.trim()); setXf(''); setXt(''); setXn(''); bump(); await ex.reload(); } catch (e) { toast((e as Error).message, 'error'); }
   }
   useEffect(() => {
     if (!q.data) return;
     setRows(Object.fromEntries(DAYS.map((d) => { const r = q.data!.find((x) => x.dayOfWeek === d); return [d, { on: !!r?.enabled, from: hm(r?.startTime) || '09:00', to: hm(r?.endTime) || '18:00' }]; })));
   }, [q.data]);
   async function save() {
-    for (const d of DAYS) { const r = rows[d]; if (r?.on && (!ok(r.from) || !ok(r.to) || r.to <= r.from)) { Alert.alert(tr('common.error'), tr('hr.badTime')); return; } }
+    for (const d of DAYS) { const r = rows[d]; if (r?.on && (!ok(r.from) || !ok(r.to) || r.to <= r.from)) { toast(tr('hr.badTime'), 'error'); return; } }
     setBusy(true);
     try {
       await apiX.saveHours(sid, DAYS.map((d) => ({ dayOfWeek: d, enabled: !!rows[d]?.on, startTime: rows[d]?.from ?? '09:00', endTime: rows[d]?.to ?? '18:00' })));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      bump(); Alert.alert(tr('hr.saved')); onBack();
-    } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+      bump(); toast(tr('hr.saved'), 'success'); onBack();
+    } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   const set = (d: string, p: Partial<{ on: boolean; from: string; to: string }>) => setRows((m) => ({ ...m, [d]: { ...m[d], ...p } }));
   return (
     <Screen>
       <Header title={tr('hr.title')} subtitle={salon?.name} onBack={onBack} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={7} height={52} /> : (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
-          {DAYS.map((d) => rows[d] ? (
-            <View key={d} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Pressable onPress={() => set(d, { on: !rows[d].on })} accessibilityRole="button" accessibilityState={{ selected: rows[d].on }} style={{ width: 64, height: 44, borderRadius: 14, backgroundColor: rows[d].on ? t.vsoft : t.fill, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontFamily: font.b, fontSize: 14, color: rows[d].on ? t.vtext : t.muted }}>{tr(`tm.days.${d}` as 'tm.days.MONDAY')}</Text>
-              </Pressable>
-              {rows[d].on ? (<>
-                <Field label="" value={rows[d].from} onChangeText={(v) => set(d, { from: v })} keyboardType="numbers-and-punctuation" maxLength={5} style={{ flex: 1, textAlign: 'center' }} />
-                <Text style={{ color: t.muted }}>-</Text>
-                <Field label="" value={rows[d].to} onChangeText={(v) => set(d, { to: v })} keyboardType="numbers-and-punctuation" maxLength={5} style={{ flex: 1, textAlign: 'center' }} />
-              </>) : <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{tr('hr.closed')}</Text>}
-            </View>
-          ) : null)}
-          <Btn label={tr('hr.save')} loading={busy} onPress={() => void save()} style={{ marginTop: 12 }} />
-          <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 24, marginBottom: 8 }}>{tr('hr.exceptions')}</Text>
-          {(ex.data ?? []).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 8 }}>{tr('hr.none')}</Text> : (ex.data ?? []).map((x) => (
-            <Card key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginBottom: 8 }}>
-              <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{dateLabel(fromIso(x.startDate))}{x.endDate !== x.startDate ? ` - ${dateLabel(fromIso(x.endDate))}` : ''}{x.notes ? ` · ${x.notes}` : ''}</Text>
-              <Pressable onPress={() => void apiX.removeHoursException(sid, x.id).then(() => { bump(); return ex.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.gink }}>{tr('lk.delete')}</Text></Pressable>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 12 }}>
+          <Section title={tr('ux.secWeek')}>
+            {DAYS.map((d) => rows[d] ? (
+              <Card key={d} style={{ gap: 10, padding: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: t.ink }}>{tr(`tm.days.${d}` as 'tm.days.MONDAY')}</Text>
+                    <Text style={{ fontFamily: font.m, fontSize: 14, color: rows[d].on ? t.ok : t.muted }}>{rows[d].on ? `${rows[d].from} - ${rows[d].to}` : tr('hr.closed')}</Text>
+                  </View>
+                  <Toggle on={rows[d].on} onChange={(v) => set(d, { on: v })} label={d} />
+                </View>
+                {rows[d].on ? (
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}><Field label={tr('ux.opensAt')} value={rows[d].from} onChangeText={(v) => set(d, { from: v })} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                    <View style={{ flex: 1 }}><Field label={tr('ux.closesAt')} value={rows[d].to} onChangeText={(v) => set(d, { to: v })} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                  </View>
+                ) : null}
+              </Card>
+            ) : null)}
+          </Section>
+          <Section title={tr('ux.secExceptions')} hint={(ex.data ?? []).length === 0 ? tr('hr.none') : undefined}>
+            {(ex.data ?? []).map((x) => (
+              <Card key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 15, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="cal" size={22} color={t.gink} /></View>
+                <Text style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.ink }}>{dateLabel(fromIso(x.startDate))}{x.endDate !== x.startDate ? ` - ${dateLabel(fromIso(x.endDate))}` : ''}{x.notes ? ` · ${x.notes}` : ''}</Text>
+                <Pressable onPress={() => void apiX.removeHoursException(sid, x.id).then(() => { bump(); return ex.reload(); }).catch((e: Error) => toast(e.message, 'error'))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={22} color={t.gink} /></Pressable>
+              </Card>
+            ))}
+            <Card style={{ gap: 2, padding: 14 }}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}><Field label={tr('hr.from')} value={xf} onChangeText={setXf} keyboardType="numbers-and-punctuation" maxLength={10} placeholder="2026-12-31" /></View>
+                <View style={{ flex: 1 }}><Field label={tr('hr.to')} value={xt} onChangeText={setXt} keyboardType="numbers-and-punctuation" maxLength={10} /></View>
+              </View>
+              <Field label={tr('hr.note')} value={xn} onChangeText={setXn} />
+              <Btn label={tr('hr.addException')} variant="secondary" icon="plus" disabled={!xf} onPress={() => void addEx()} />
             </Card>
-          ))}
-          <Field label={tr('hr.from')} value={xf} onChangeText={setXf} keyboardType="numbers-and-punctuation" maxLength={10} />
-          <Field label={tr('hr.to')} value={xt} onChangeText={setXt} keyboardType="numbers-and-punctuation" maxLength={10} />
-          <Field label={tr('hr.note')} value={xn} onChangeText={setXn} />
-          <Btn label={tr('hr.addException')} variant="secondary" icon="plus" disabled={!xf} onPress={() => void addEx()} />
+          </Section>
         </ScrollView>
       )}
+      {q.data ? <StickyCta label={tr('hr.save')} loading={busy} onPress={() => void save()} /> : null}
     </Screen>
   );
 }
@@ -97,24 +112,26 @@ export function NotifEditor({ onBack }: { onBack: () => void }) {
   async function save() {
     if (!s) return;
     setBusy(true);
-    try { await apiX.saveNotifSettings(sid, s); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); Alert.alert(tr('ns.saved')); onBack(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    try { await apiX.saveNotifSettings(sid, s); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); toast(tr('ns.saved'), 'success'); onBack(); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <Screen>
       <Header title={tr('ns.title')} subtitle={salon?.name} onBack={onBack} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : !s ? <Skeleton rows={6} height={52} /> : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
-          <Card style={{ paddingVertical: 4 }}>
-            {FLAGS.map((k) => {
-              const av = AVAIL[k];
-              const off = av ? s[av] === false : false;
-              return <ToggleRow key={k} label={tr(`ns.${k}` as 'ns.title')} hint={off ? tr('ns.unavailable') : undefined} disabled={off} value={!!s[k]} onChange={(v) => setS({ ...s, [k]: v })} />;
-            })}
-          </Card>
-          <Btn label={tr('common.save')} loading={busy} onPress={() => void save()} style={{ marginTop: 14 }} />
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 12 }} showsVerticalScrollIndicator={false}>
+          {([['ux.secEmails', FLAGS.filter((k) => k.startsWith('email'))], ['ux.secChannels', FLAGS.filter((k) => !k.startsWith('email'))]] as const).map(([title, list]) => (
+            <Section key={title} title={tr(title)}>
+              {list.map((k) => {
+                const av = AVAIL[k];
+                const off = av ? s[av] === false : false;
+                return <ToggleRow key={k} label={tr(`ns.${k}` as 'ns.title')} hint={off ? tr('ns.unavailable') : undefined} disabled={off} value={!!s[k]} onChange={(v) => setS({ ...s, [k]: v })} />;
+              })}
+            </Section>
+          ))}
         </ScrollView>
       )}
+      {s ? <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save()} /> : null}
     </Screen>
   );
 }
@@ -127,12 +144,7 @@ export function SubscriptionCard() {
   if (!s) return null;
   const date = (v?: string | null) => (v ? dateLabel(fromIso(v)) : '-');
   return (
-    <Card style={{ paddingVertical: 8 }}>
-      <Row label={tr('sub.plan')} value={s.plan} />
-      <Row label={tr('sub.status')} value={s.status} />
-      {s.trialEndsAt ? <Row label={tr('sub.trial')} value={date(s.trialEndsAt)} /> : null}
-      {s.currentPeriodEnd ? <Row label={tr('sub.until')} value={date(s.currentPeriodEnd)} /> : null}
-    </Card>
+    <HeroCard dark icon="crown" title={String(s.plan ?? '')} sub={tr('sub.status') + ': ' + (s.status ?? '-')} stat={s.currentPeriodEnd ? date(s.currentPeriodEnd) : undefined} statLabel={s.currentPeriodEnd ? tr('sub.until') : undefined} />
   );
 }
 
@@ -156,13 +168,13 @@ export function PushPrefsEditor({ onBack }: { onBack: () => void }) {
   }, [q.data]);
   const flip = (ch: 'push' | 'inbox' | 'email', k: string) => setOff((o) => ({ ...o, [ch]: o[ch].includes(k) ? o[ch].filter((x) => x !== k) : [...o[ch], k] }));
   async function save() {
-    if (!hmOk(qs) || !hmOk(qe) || (qs === '') !== (qe === '')) { Alert.alert(tr('common.error'), tr('pp.badTime')); return; }
+    if (!hmOk(qs) || !hmOk(qe) || (qs === '') !== (qe === '')) { toast(tr('pp.badTime'), 'error'); return; }
     setBusy(true);
     try {
       await apiB.savePushPrefs({ pushOff: off.push, inboxOff: off.inbox, emailOff: off.email, quietStart: qs || null, quietEnd: qe || null, staff: ids, stockThreshold: stock.trim() === '' ? null : Math.max(0, Math.round(Number(stock)) || 0) });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      Alert.alert(tr('ns.saved')); onBack();
-    } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+      toast(tr('ns.saved'), 'success'); onBack();
+    } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   const chip = (ch: 'push' | 'inbox' | 'email', k: string) => <Chip key={ch} soft label={tr(`pp.${ch}Col` as 'pp.pushCol')} icon={!off[ch].includes(k) ? 'check' : undefined} active={!off[ch].includes(k)} onPress={() => flip(ch, k)} />;
   return (

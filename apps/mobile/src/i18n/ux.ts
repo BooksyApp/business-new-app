@@ -2,6 +2,20 @@
 export const uxEn = {
   ux: {
     //@@en
+    closesAt: 'Closes',
+    opensAt: 'Opens',
+    planLine: 'Plan',
+    secChannels: 'Channels',
+    secEmails: 'E-mail notifications',
+    secExceptions: 'Holidays and exceptions',
+    secWeek: 'Weekly hours',
+    unsaved: 'Unsaved changes',
+    changePhoto: 'Change photo',
+    secBrand: 'Brand',
+    secOnline: 'Online booking rules',
+    secAddress: 'Address',
+    secContact: 'Contact',
+    secBasics: 'Basics',
     openingSub: 'Calendar, clients, till',
     openingTitle: 'Run your salon from your pocket.\nEvery booking in one tap.',
     businessPill: 'FOR BUSINESS',
@@ -62,6 +76,20 @@ export const uxEn = {
 export const uxAz: typeof uxEn = {
   ux: {
     //@@az
+    closesAt: 'Bağlanır',
+    opensAt: 'Açılır',
+    planLine: 'Plan',
+    secChannels: 'Kanallar',
+    secEmails: 'E-poçt bildirişləri',
+    secExceptions: 'Bayramlar və istisnalar',
+    secWeek: 'Həftəlik qrafik',
+    unsaved: 'Dəyişikliklər yadda saxlanmayıb',
+    changePhoto: 'Şəkli dəyiş',
+    secBrand: 'Brend',
+    secOnline: 'Onlayn rezerv qaydaları',
+    secAddress: 'Ünvan',
+    secContact: 'Əlaqə',
+    secBasics: 'Əsas məlumat',
     openingSub: 'Təqvim, müştərilər, kassa',
     openingTitle: 'Salonunu cibindən idarə et.\nHər rezerv bir toxunuşda.',
     businessPill: 'BİZNES ÜÇÜN',
@@ -122,6 +150,20 @@ export const uxAz: typeof uxEn = {
 export const uxRu: typeof uxEn = {
   ux: {
     //@@ru
+    closesAt: 'Закрытие',
+    opensAt: 'Открытие',
+    planLine: 'Тариф',
+    secChannels: 'Каналы',
+    secEmails: 'E-mail уведомления',
+    secExceptions: 'Праздники и исключения',
+    secWeek: 'График по дням',
+    unsaved: 'Изменения не сохранены',
+    changePhoto: 'Сменить фото',
+    secBrand: 'Бренд',
+    secOnline: 'Правила онлайн-записи',
+    secAddress: 'Адрес',
+    secContact: 'Контакты',
+    secBasics: 'Основное',
     openingSub: 'Календарь, клиенты, касса',
     openingTitle: 'Управляй салоном с телефона.\nКаждая запись в одно касание.',
     businessPill: 'ДЛЯ БИЗНЕСА',

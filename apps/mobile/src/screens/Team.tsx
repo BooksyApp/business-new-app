@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
@@ -49,8 +50,8 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
   }
 
   async function save(invite: boolean) {
-    if (!name.trim()) { Alert.alert(tr('common.error'), tr('tm.needName')); return; }
-    for (const d of DAYS) if (sched[d].on && (!okTime(sched[d].from) || !okTime(sched[d].to) || sched[d].to <= sched[d].from)) { Alert.alert(tr('common.error'), tr('hr.badTime')); return; }
+    if (!name.trim()) { toast(tr('tm.needName'), 'error'); return; }
+    for (const d of DAYS) if (sched[d].on && (!okTime(sched[d].from) || !okTime(sched[d].to) || sched[d].to <= sched[d].from)) { toast(tr('hr.badTime'), 'error'); return; }
     const schedule: Record<string, string[]> = {};
     for (const d of DAYS) if (sched[d].on) schedule[d] = [sched[d].from, sched[d].to];
     const body: StaffBody = { name: name.trim(), phone: phone.trim() || undefined, email: email.trim() || undefined, position: pos.trim() || undefined, serviceIds: ids, schedule, isActive: active };
@@ -63,14 +64,14 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); onSaved();
     } catch (e) {
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally { setBusy(false); }
   }
   const setDay = (d: string, p: Partial<{ on: boolean; from: string; to: string }>) => setSched((m) => ({ ...m, [d]: { ...m[d], ...p } }));
   return (
     <Screen>
       <Header title={staff ? tr('tm.editTitle') : tr('tm.newTitle')} subtitle={staff?.name} onBack={onClose} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}>
         {staff ? <View style={{ alignItems: 'center', gap: 8, marginBottom: 12 }}><Avatar name={staff.name} uri={avatar} size={72} /><Btn label={tr('ad.avatar')} variant="secondary" icon="img" onPress={() => void pickAvatar()} /></View> : null}
         <Field label={tr('tm.name')} value={name} onChangeText={setName} autoCapitalize="words" />
         <Field label={tr('create.phone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
@@ -102,7 +103,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
               <Card key={o.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, padding: 12 }}>
                 <Icon name="clock-alert" size={20} color={t.vtext} />
                 <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{dateLabel(fromIso(o.startDate))}{o.endDate !== o.startDate ? ` - ${dateLabel(fromIso(o.endDate))}` : ''}{o.reason ? ` · ${o.reason}` : ''}</Text>
-                <Pressable onPress={() => void api.deleteTimeOff(o.id).then(() => off.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
+                <Pressable onPress={() => void api.deleteTimeOff(o.id).then(() => off.reload()).catch((e: Error) => toast(e.message, 'error'))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
               </Card>
             ))}
             <Btn label={tr('tm.addTimeOff')} variant="secondary" icon="plus" onPress={() => setBlock(true)} style={{ marginBottom: 8 }} />

@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -46,7 +47,7 @@ export default function ClientCard() {
   const [reason, setReason] = useState('');
   const [settle, setSettle] = useState('');
   const [crmBusy, setCrmBusy] = useState(false);
-  const crmRun = async (fn: () => Promise<unknown>, after: () => void) => { setCrmBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setCrmBusy(false); } };
+  const crmRun = async (fn: () => Promise<unknown>, after: () => void) => { setCrmBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { toast((e as Error).message, 'error'); } finally { setCrmBusy(false); } };
   const consents = useLoad(() => (client?.id ? apiX.clientConsents(client.id).catch(() => []) : Promise.resolve([])), [client?.id]);
   const [note, setNote] = useState('');
   const [ctab, setCtab] = useState<'overview' | 'visits' | 'notes'>('overview');
@@ -65,7 +66,7 @@ export default function ClientCard() {
       setNote('');
       await rec.reload();
     } catch (e) {
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setBusy(false);
     }

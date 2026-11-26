@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { ToggleRow } from '@/components/form';
@@ -27,12 +28,12 @@ export function Roles({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   const open = (r: Role | 'new') => { setEdit(r); const x = r === 'new' ? null : r; setName(x?.name ?? ''); setDesc(x?.description ?? ''); setSel(x?.permissions ?? []); };
   async function save() {
-    if (!name.trim()) { Alert.alert(tr('common.error'), tr('tm.needName')); return; }
+    if (!name.trim()) { toast(tr('tm.needName'), 'error'); return; }
     setBusy(true);
     try { await apiB.saveRole(sid, edit === 'new' || !edit ? null : edit.id, { name: name.trim(), description: desc.trim() || undefined, permissions: sel }); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setEdit(null); void list.reload(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
-  const del = () => { if (edit && edit !== 'new') Alert.alert(tr('rl.confirmDelete'), edit.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteRole(sid, edit.id).then(() => { setEdit(null); return list.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); } }]); };
+  const del = () => { if (edit && edit !== 'new') Alert.alert(tr('rl.confirmDelete'), edit.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteRole(sid, edit.id).then(() => { setEdit(null); return list.reload(); }).catch((e: Error) => toast(e.message, 'error')); } }]); };
   if (edit) {
     const ro = edit !== 'new' && edit.isOwner;
     const groups = [...new Set((perms.data ?? []).map((p) => p.group))];

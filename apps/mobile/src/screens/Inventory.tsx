@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -28,22 +29,22 @@ export function Inventory({ onBack }: { onBack: () => void }) {
   const open = (p: Product | 'new') => { setEdit(p); const x = p === 'new' ? null : p; setName(x?.name ?? ''); setSku(x?.sku ?? ''); setPrice(x ? String(x.price) : ''); setQty(x ? String(x.quantityOnHand) : '0'); setLow(x ? String(x.lowStockThreshold) : '0'); setActive(x?.isActive ?? true); };
   async function save() {
     const p = num(price); const q = Math.round(num(qty)); const l = Math.round(num(low));
-    if (!name.trim() || !(p >= 0) || !(q >= 0) || !(l >= 0)) { Alert.alert(tr('common.error'), tr('inv.invalid')); return; }
+    if (!name.trim() || !(p >= 0) || !(q >= 0) || !(l >= 0)) { toast(tr('inv.invalid'), 'error'); return; }
     setBusy(true);
     try {
       const body = { name: name.trim(), sku: sku.trim() || undefined, price: p, quantityOnHand: q, lowStockThreshold: l, isActive: active };
       if (edit === 'new') await apiB.createProduct(sid, body); else if (edit) await apiB.updateProduct(sid, edit.id, body);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setEdit(null); void list.reload();
-    } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
-  const del = () => { if (edit && edit !== 'new') Alert.alert(tr('inv.confirmDelete'), edit.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteProduct(sid, edit.id).then(() => { setEdit(null); return list.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); } }]); };
+  const del = () => { if (edit && edit !== 'new') Alert.alert(tr('inv.confirmDelete'), edit.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteProduct(sid, edit.id).then(() => { setEdit(null); return list.reload(); }).catch((e: Error) => toast(e.message, 'error')); } }]); };
   const addBtn = <Circ icon="plus" violet label={tr('inv.add')} onPress={() => open('new')} />;
   return (
     <Screen>
       <Header title={tr('inv.title')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="box" title={tr('inv.empty')} actionLabel={tr('inv.add')} onAction={() => open('new')} />}
           renderItem={({ item: p }) => (

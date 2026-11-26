@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -47,8 +48,8 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
   const qty = (k: number, d: number) => setLines((x) => x.flatMap((l) => (l.key !== k ? [l] : l.qty + d <= 0 ? [] : [{ ...l, qty: l.qty + d }])));
 
   async function submit() {
-    if (!lines.length) { Alert.alert(tr('common.error'), tr('sl.needItem')); return; }
-    if (method === 'GIFT_CARD' && !gift.trim()) { Alert.alert(tr('common.error'), tr('sl.needGift')); return; }
+    if (!lines.length) { toast(tr('sl.needItem'), 'error'); return; }
+    if (method === 'GIFT_CARD' && !gift.trim()) { toast(tr('sl.needGift'), 'error'); return; }
     const body: SaleBody = {
       businessId: sid, staffId: master || undefined, clientName: clientName.trim() || undefined,
       items: lines.map((l) => ({ serviceId: l.serviceId != null ? String(l.serviceId) : undefined, serviceName: l.name, serviceType: l.serviceId != null ? 'SERVICE' : 'OTHER', quantity: l.qty, unitPrice: l.price })),
@@ -62,7 +63,7 @@ export function NewSale({ onClose, onDone }: { onClose: () => void; onDone: () =
       bump(); Alert.alert(tr('sl.done'), money(total, cur)); onDone();
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally { setBusy(false); }
   }
   return (

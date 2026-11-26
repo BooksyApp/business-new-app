@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -43,7 +44,7 @@ export function TodayHome({ onOpen, onBlock, onCalendar }: { onOpen: (a: Appoint
 
   async function arrived(a: Appointment) {
     if (a.status !== 'PENDING') { onOpen(a); return; }
-    try { await api.confirmAppointment(a.id); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); }
+    try { await api.confirmAppointment(a.id); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); } catch (e) { toast((e as Error).message, 'error'); }
   }
   const quick = [
     { k: 'new', icon: 'plus', label: tr('ux.quickNew'), bg: t.vsoft, fg: t.vtext, on: () => router.push({ pathname: '/booking/new', params: { date: toDay(now) } }) },

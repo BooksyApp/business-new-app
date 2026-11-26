@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, Image, RefreshControl, View } from 'react-native';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
@@ -30,7 +31,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
     } catch (e) { Alert.alert(tr('common.error'), (e as Error).message === 'permission' ? tr('ad.permission') : (e as Error).message); } finally { setUpBusy(false); }
   }
   const del = (id: string | number) => Alert.alert(tr('lk.confirmDelete'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => {
-    void (tab === 'photos' ? apiX.deleteLook(sid, String(id)) : apiX.deleteStory(sid, String(id))).then(() => list.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message));
+    void (tab === 'photos' ? apiX.deleteLook(sid, String(id)) : apiX.deleteStory(sid, String(id))).then(() => list.reload()).catch((e: Error) => toast(e.message, 'error'));
   } }]);
   return (
     <Screen>
@@ -40,7 +41,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
         <Chip label={tr('lk.stories')} active={tab === 'stories'} onPress={() => setTab('stories')} />
       </View>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={3} height={160} /> : (
-        <FlatList data={list.data ?? []} numColumns={2} keyExtractor={(x) => String(x.id)} columnWrapperStyle={{ gap: 10 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={list.data ?? []} numColumns={2} keyExtractor={(x) => String(x.id)} columnWrapperStyle={{ gap: 10 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={<Btn label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} icon="plus" variant="secondary" loading={upBusy} onPress={() => void add()} style={{ marginBottom: 10 }} />}
           ListEmptyComponent={<StateView icon="img" title={tr('lk.empty')} />}

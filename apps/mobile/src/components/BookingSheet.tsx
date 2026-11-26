@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, Linking, ScrollView, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -54,7 +55,7 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
       else await live.reload();
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setBusy(false);
     }
@@ -195,7 +196,7 @@ function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () => void;
           { text: tr('common.confirm'), onPress: () => void save(true) },
         ]);
       } else {
-        Alert.alert(tr('common.error'), (e as Error).message);
+        toast((e as Error).message, 'error');
       }
     } finally {
       setBusy(false);

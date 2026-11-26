@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -40,14 +41,14 @@ export function Reviews({ onBack }: { onBack: () => void }) {
       else { await apiX.reportReview(sid, sel.id, reason, text.trim()); Alert.alert(tr('rv.reportSent')); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setSel(null); void list.reload();
-    } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   const sum = list.data?.sum;
   return (
     <Screen>
       <Header title={tr('rv.title')} subtitle={salon?.name} onBack={onBack} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={4} height={96} /> : (
-        <FlatList initialNumToRender={10} windowSize={9} data={list.data?.rows ?? []} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={10} windowSize={9} data={list.data?.rows ?? []} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={sum && sum.count ? (
             <Hero style={{ marginBottom: 4 }}>

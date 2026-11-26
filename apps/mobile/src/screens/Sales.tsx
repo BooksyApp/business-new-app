@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
@@ -40,8 +41,8 @@ export function Sales({ onBack }: { onBack: () => void }) {
     const a = Number(amt.replace(',', '.'));
     if (!Number.isFinite(a) || a <= 0 || a > refund.total) { Alert.alert(tr('common.error'), tr('sl.refundMax', { n: money(refund.total, salon?.currency) })); return; }
     setBusy(true);
-    try { await apiX.refundSale(String(refund.id), { amount: a, reason: why.trim() || undefined }); setRefund(null); Alert.alert(tr('sl.refunded')); void list.reload(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    try { await apiX.refundSale(String(refund.id), { amount: a, reason: why.trim() || undefined }); setRefund(null); toast(tr('sl.refunded'), 'success'); void list.reload(); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   if (adding) return <NewSale onClose={() => setAdding(false)} onDone={() => { setAdding(false); void list.reload(); }} />;
   const addBtn = <Circ icon="plus" violet label={tr('sl.add')} onPress={() => setAdding(true)} />;
@@ -54,7 +55,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
         {nav('chev', 1, tr('sales.next'))}
       </View>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={rows.length ? (
             <Hero style={{ marginBottom: 4 }}>

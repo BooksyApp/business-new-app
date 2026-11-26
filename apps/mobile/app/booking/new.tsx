@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from '@/lib/insets';
@@ -217,7 +218,7 @@ function ClientStep({ sid, sel, onPick }: { sid: string; sel: Pick | null; onPic
       onPick({ id: c.id, name: `${c.firstName} ${c.lastName ?? ''}`.trim() });
       setAdding(false);
     } catch (e) {
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -31,7 +32,7 @@ export function EditClientSheet({ client, open, onClose, onSaved }: { client: Cl
       await apiX.updateClient(client.id, { firstName: first.trim(), lastName: last.trim(), phone: phone.trim(), email: email.trim(), allowMarketingEmails: mkt, allowSmsNotifications: sms });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); onSaved();
-    } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <BottomSheet open={open} onClose={onClose}>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -6,7 +7,7 @@ import { Choice, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
+import { Btn, Card, Circ, ErrorState, Field, Header, Screen, ServiceThumb, Skeleton, StateView, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
@@ -16,7 +17,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-const plus = (t: { violet: string }, on: () => void, label: string) => <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
+const plus = (_t: { violet: string }, on: () => void, label: string) => <Circ icon="plus" violet label={label} onPress={on} />;
 
 /** Paketlər: prepaid session packages (create, switch on/off). */
 export function Packages({ onBack }: { onBack: () => void }) {
@@ -30,24 +31,25 @@ export function Packages({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   async function save() {
     const sess = Math.round(num(n)); const p = num(price);
-    if (!name.trim() || !(sess > 0) || !(p >= 0)) { Alert.alert(tr('common.error'), tr('sx.needName')); return; }
+    if (!name.trim() || !(sess > 0) || !(p >= 0)) { toast(tr('sx.needName'), 'error'); return; }
     setBusy(true);
     try { await apiB.createPackage(sid, { name: name.trim(), serviceId: service || undefined, sessionsTotal: sess, price: p, validDays: days.trim() ? Math.round(num(days)) : undefined }); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setOpen(false); setName(''); setPrice(''); void list.reload(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <Screen>
       <Header title={tr('ad.packages')} subtitle={salon?.name} onBack={onBack} right={plus(t, () => setOpen(true), tr('ad.newPackage'))} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={3} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           ListEmptyComponent={<StateView icon="gift" title={tr('sx.noPackages')} actionLabel={tr('ad.newPackage')} onAction={() => setOpen(true)} />}
           renderItem={({ item: p }) => (
-            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: p.active ? 1 : 0.6 }}>
-              <View style={{ flex: 1 }}>
-                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{p.name}</Text>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 92, opacity: p.active ? 1 : 0.6 }}>
+              <ServiceThumb name={p.name} cat="gift" size={60} />
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{p.name}</Text>
                 <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{tr('sx.sessions', { n: p.sessions_total })} · {money(p.price, salon?.currency)}</Text>
               </View>
-              <Toggle on={p.active} onChange={(v) => void apiB.setPackageActive(sid, p.id, v).then(() => list.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} label={p.name} />
+              <Toggle on={p.active} onChange={(v) => void apiB.setPackageActive(sid, p.id, v).then(() => list.reload()).catch((e: Error) => toast(e.message, 'error'))} label={p.name} />
             </Card>
           )} />
       )}
@@ -78,21 +80,21 @@ export function Addons({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   async function save() {
     const p = num(price);
-    if (!name.trim() || !(p >= 0)) { Alert.alert(tr('common.error'), tr('sx.needName')); return; }
+    if (!name.trim() || !(p >= 0)) { toast(tr('sx.needName'), 'error'); return; }
     setBusy(true);
     try { await apiB.createAddon(sid, { name: name.trim(), price: p, priceType: 'FIXED' }); setOpen(false); setName(''); setPrice(''); void list.reload(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <Screen>
       <Header title={tr('ad.addons')} subtitle={salon?.name} onBack={onBack} right={plus(t, () => setOpen(true), tr('ad.addAddon'))} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={3} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={list.data ?? []} keyExtractor={(p) => String(p.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           ListEmptyComponent={<StateView icon="plus" title={tr('lk.empty')} actionLabel={tr('ad.addAddon')} onAction={() => setOpen(true)} />}
           renderItem={({ item: a }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{a.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(a.price, salon?.currency)}</Text></View>
-              <Pressable onPress={() => Alert.alert(tr('lk.confirmDelete'), a.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteAddon(sid, a.id).then(() => list.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); } }])} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
+              <Pressable onPress={() => Alert.alert(tr('lk.confirmDelete'), a.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteAddon(sid, a.id).then(() => list.reload()).catch((e: Error) => toast(e.message, 'error')); } }])} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
             </Card>
           )} />
       )}

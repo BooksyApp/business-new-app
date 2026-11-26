@@ -4,14 +4,14 @@ import { Chip, Toggle } from '@/components/ui';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-/** Label + switch row used by every editor. */
+/** Label + switch row used by every editor: its own round card, 64+ px tall, big violet toggle. */
 export function ToggleRow({ label, hint, value, onChange, disabled }: { label: string; hint?: string; value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   const { t } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, minHeight: 56, opacity: disabled ? 0.5 : 1 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 18, minHeight: 68, backgroundColor: t.surface, borderRadius: 24, marginBottom: 10, opacity: disabled ? 0.5 : 1, boxShadow: '0 1px 2px rgba(29,23,48,.04), 0 8px 24px -8px rgba(29,23,48,.10)' } as any}>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: font.s, fontSize: 16, color: t.ink }}>{label}</Text>
-        {hint ? <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginTop: 1 }}>{hint}</Text> : null}
+        <Text style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{label}</Text>
+        {hint ? <Text style={{ fontFamily: font.m, fontSize: 14, lineHeight: 19, color: t.muted, marginTop: 2 }}>{hint}</Text> : null}
       </View>
       <Toggle on={value} onChange={(v) => { if (!disabled) onChange(v); }} label={label} />
     </View>

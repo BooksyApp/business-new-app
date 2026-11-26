@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -27,15 +28,15 @@ export function WaitlistSheet({ open, onClose, onAdded }: { open: boolean; onClo
   const [time, setTime] = useState('');
   const [busy, setBusy] = useState(false);
   async function save() {
-    if (!name.trim() || !service) { Alert.alert(tr('common.error'), tr('wl.needName')); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { Alert.alert(tr('common.error'), tr('wl.badDate')); return; }
+    if (!name.trim() || !service) { toast(tr('wl.needName'), 'error'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { toast(tr('wl.badDate'), 'error'); return; }
     setBusy(true);
     try {
       await apiX.addWaitlist(sid, { serviceId: service, clientName: name.trim(), clientPhone: phone.trim() || undefined, preferredDate: date, preferredTime: /^\d{2}:\d{2}$/.test(time) ? time : undefined });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setName(''); setPhone(''); setService(''); setTime('');
       bump(); onAdded();
-    } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <BottomSheet open={open} onClose={onClose}>
@@ -68,10 +69,10 @@ export function OfferSheet({ entryId, open, onClose, onSent }: { entryId: string
   const [busy, setBusy] = useState(false);
   async function send() {
     const who = master || String((staff.data ?? [])[0]?.id ?? '');
-    if (!entryId || !who || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) { Alert.alert(tr('common.error'), tr('wl.badDate')); return; }
+    if (!entryId || !who || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) { toast(tr('wl.badDate'), 'error'); return; }
     setBusy(true);
     try { await apiB.offerWaitlist(sid, entryId, [{ staffId: who, date, startTime: time }]); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); Alert.alert(tr('ad.offerSent')); onSent(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <BottomSheet open={open} onClose={onClose}>

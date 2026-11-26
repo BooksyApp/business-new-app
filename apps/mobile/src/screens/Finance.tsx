@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Line, TabBar, num } from '@/components/form';
@@ -31,7 +32,7 @@ export function Finance({ onBack }: { onBack: () => void }) {
   const [float, setFloat] = useState(''); const [counted, setCounted] = useState('');
   const [gAmt, setGAmt] = useState(''); const [gMail, setGMail] = useState(''); const [gCode, setGCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after?.(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after?.(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   const q = { profit, tax, tips, invoices: inv, drawer: dr, gift: null }[tab];
   const m = (v: number | string | null | undefined) => money(N(v), cur);
   const sec = (s: string) => <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 17, color: t.ink, marginTop: 6 }}>{s}</Text>;

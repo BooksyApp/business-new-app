@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, RefreshControl, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from '@/lib/insets';
@@ -27,7 +28,7 @@ export function Messages({ onBack }: { onBack: () => void }) {
     <Screen>
       <Header title={tr('sections.messages')} subtitle={salon?.name} onBack={onBack} />
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(c) => c.conversationId} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList initialNumToRender={12} windowSize={9} data={list.data ?? []} keyExtractor={(c) => c.conversationId} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListEmptyComponent={<StateView icon="chat" title={tr('msg.empty')} body={tr('msg.emptyBody')} />}
           renderItem={({ item: c }) => (
@@ -63,7 +64,7 @@ function Thread({ sid, c, onBack }: { sid: string; c: InboxSummary; onBack: () =
       setText('');
       await th.reload();
     } catch (e) {
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setBusy(false);
     }

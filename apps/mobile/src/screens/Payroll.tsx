@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -36,7 +37,7 @@ export function Payroll({ onBack }: { onBack: () => void }) {
   const [open, setOpen] = useState<string | null>(null);
   const detail = useLoad(() => (open != null ? apiB.payrollRun(sid, open) : Promise.resolve(null)), [sid, open]);
   const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after?.(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after?.(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   const q = tab === 'rules' ? rules : tab === 'targets' ? targets : tab === 'time' ? clocks : runs;
   const staffName = (id?: string | number) => (staff.data ?? []).find((s) => String(s.id) === String(id))?.name ?? tr('pr.everyone');
   return (

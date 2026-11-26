@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -33,11 +34,11 @@ export function Expenses({ onBack }: { onBack: () => void }) {
   const total = (list.data ?? []).reduce((n, e) => n + (Number(e.amount) || 0), 0);
   async function save() {
     const a = num(amount);
-    if (!(a > 0)) { Alert.alert(tr('common.error'), tr('ex.amountRequired')); return; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(on)) { Alert.alert(tr('common.error'), tr('wl.badDate')); return; }
+    if (!(a > 0)) { toast(tr('ex.amountRequired'), 'error'); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(on)) { toast(tr('wl.badDate'), 'error'); return; }
     setBusy(true);
     try { await apiB.addExpense(sid, { category: cat, amount: a, spentOn: on, description: desc.trim() || undefined, recursMonthly: rec }); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setAdding(false); setAmount(''); setDesc(''); void list.reload(); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   const nav = (icon: string, d: number, l: string) => <Pressable onPress={() => setM(new Date(m.getFullYear(), m.getMonth() + d, 1))} hitSlop={10} accessibilityRole="button" accessibilityLabel={l} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={20} color={t.ink} /></Pressable>;
   const addBtn = <Pressable onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel={tr('ex.add')} haptic style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>;
@@ -50,7 +51,7 @@ export function Expenses({ onBack }: { onBack: () => void }) {
         {nav('chev', 1, tr('sales.next'))}
       </View>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (
-        <FlatList data={list.data ?? []} keyExtractor={(e) => String(e.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={list.data ?? []} keyExtractor={(e) => String(e.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
           ListHeaderComponent={(list.data ?? []).length ? <Hero style={{ marginBottom: 4 }}><View style={{ padding: 20, gap: 2 }}><Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('ex.title')} · {monthLabel(m)}</Text><Text style={{ fontFamily: font.x, fontSize: 38, letterSpacing: -1.2, color: t.ink }}>{money((list.data ?? []).reduce((n, e) => n + (e.amount ?? 0), 0), salon?.currency)}</Text></View></Hero> : null}
           ListEmptyComponent={<StateView icon="receipt" title={tr('ex.empty')} />}

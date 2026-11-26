@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -51,7 +52,7 @@ export default function Notifications() {
       bump();
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setBusyId(null);
     }
@@ -136,7 +137,7 @@ export default function Notifications() {
               </View>
               <Pressable onPress={() => setOfferId(String(w.id))} accessibilityRole="button" accessibilityLabel={tr('ad.offer')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="send" size={22} color={t.vtext} /></Pressable>
               <Pressable onPress={() => { const c = findClient(w.clientName, w.clientPhone); router.push({ pathname: '/booking/new', params: { ...(c ? { clientId: String(c.id), clientName: `${c.firstName} ${c.lastName ?? ''}`.trim() } : {}), date: w.preferredDate ?? undefined } }); }} accessibilityRole="button" accessibilityLabel={tr('wl.book')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="cal" size={22} color={t.vtext} /></Pressable>
-              <Pressable onPress={() => void apiX.removeWaitlist(salon?.id ?? '', w.id).then(() => { bump(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} accessibilityRole="button" accessibilityLabel={tr('wl.remove')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={22} color={t.gink} /></Pressable>
+              <Pressable onPress={() => void apiX.removeWaitlist(salon?.id ?? '', w.id).then(() => { bump(); }).catch((e: Error) => toast(e.message, 'error'))} accessibilityRole="button" accessibilityLabel={tr('wl.remove')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={22} color={t.gink} /></Pressable>
             </Card>
           ))}
           {empty ? <StateView icon="bell" title={tr('ux.nothingNew')} body={tr('ux.nothingNewBody')} /> : null}

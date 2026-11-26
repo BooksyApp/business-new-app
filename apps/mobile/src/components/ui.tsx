@@ -371,3 +371,67 @@ export function Ring({ value, size = 64, label }: { value: number; size?: number
     </View>
   );
 }
+
+/** Gradient / photo hero for a screen: icon tile, title, line, optional big stat (Airbnb account-page feel). */
+export function HeroCard({ icon, title, sub, stat, statLabel, photo, dark, children }: { icon?: string; title: string; sub?: string; stat?: string; statLabel?: string; photo?: string | null; dark?: boolean; children?: React.ReactNode }) {
+  const { t } = useTheme();
+  const fg = dark ? '#fff' : t.ink; const mu = dark ? 'rgba(255,255,255,.78)' : t.muted;
+  const body = (
+    <View style={{ padding: 20, gap: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        {photo !== undefined ? <Avatar name={title} size={64} uri={photo} /> : icon ? <View style={{ width: 56, height: 56, borderRadius: 20, backgroundColor: dark ? 'rgba(255,255,255,.16)' : t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={28} color={dark ? '#fff' : t.vtext} /></View> : null}
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={2} style={{ fontFamily: font.x, fontSize: 22, lineHeight: 27, letterSpacing: -0.6, color: fg }}>{title}</Text>
+          {sub ? <Text numberOfLines={2} style={{ fontFamily: font.s, fontSize: 14.5, lineHeight: 20, color: mu, marginTop: 2 }}>{sub}</Text> : null}
+        </View>
+      </View>
+      {stat ? <View><Text style={{ fontFamily: font.x, fontSize: 40, lineHeight: 44, letterSpacing: -1.3, color: fg }}>{stat}</Text>{statLabel ? <Text style={{ fontFamily: font.s, fontSize: 14, color: mu }}>{statLabel}</Text> : null}</View> : null}
+      {children}
+    </View>
+  );
+  return dark
+    ? <LinearGradient colors={['#1d1730', '#35276b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 30 }}>{body}</LinearGradient>
+    : <Hero>{body}</Hero>;
+}
+
+/** Small number card: label, big value, optional hint pill. */
+export function StatCard({ label, value, hint, tone = 'muted', style }: { label: string; value: string; hint?: string; tone?: 'ok' | 'guava' | 'muted'; style?: StyleProp<ViewStyle> }) {
+  const { t } = useTheme();
+  const c = tone === 'ok' ? [t.oksoft, t.ok] : tone === 'guava' ? [t.gsoft, t.gink] : [t.fill, t.muted];
+  return (
+    <View style={[{ flex: 1, backgroundColor: t.surface, borderRadius: 24, padding: 16, gap: 4, ...cardShadow }, style]}>
+      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, color: t.muted }}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.8, color: t.ink }}>{value}</Text>
+      {hint ? <View style={{ alignSelf: 'flex-start', height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: c[0], justifyContent: 'center' }}><Text style={{ fontFamily: font.b, fontSize: 13, color: c[1] }}>{hint}</Text></View> : null}
+    </View>
+  );
+}
+
+/** Titled block of grouped content (title 19/800 + children with 12 gap). */
+export function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  const { t } = useTheme();
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={{ paddingHorizontal: 4, marginTop: 10 }}>
+        <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink }}>{title}</Text>
+        {hint ? <Text style={{ fontFamily: font.m, fontSize: 14, lineHeight: 20, color: t.muted, marginTop: 2 }}>{hint}</Text> : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/** Sticky bottom primary action (56 px) over a canvas fade; screens add ~110 px bottom padding. */
+export function StickyCta({ label, onPress, loading, disabled, secondary }: { label: string; onPress: () => void; loading?: boolean; disabled?: boolean; secondary?: { label: string; onPress: () => void; danger?: boolean } }) {
+  const { t } = useTheme();
+  const ins = useSafeAreaInsets();
+  return (
+    <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+      <LinearGradient pointerEvents="none" colors={t.dark ? ['rgba(20,17,29,0)', 'rgba(20,17,29,.96)'] : ['rgba(251,247,242,0)', 'rgba(251,247,242,.96)']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: -30 }} />
+      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 8, paddingBottom: Math.max(ins.bottom, 18) }}>
+        {secondary ? <Btn label={secondary.label} variant={secondary.danger ? 'danger' : 'secondary'} onPress={secondary.onPress} style={{ flex: 1 }} /> : null}
+        <Btn label={label} onPress={onPress} loading={loading} disabled={disabled} style={{ flex: secondary ? 1.4 : 1 }} />
+      </View>
+    </View>
+  );
+}

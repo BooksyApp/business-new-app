@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
@@ -56,7 +57,7 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
       onDone();
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setBusy(false);
     }
@@ -64,7 +65,7 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
   async function remove() {
     if (!existing) return;
     setBusy(true);
-    try { await api.deleteTimeOff(existing.id); onDone(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    try { await api.deleteTimeOff(existing.id); onDone(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
 
   if (existing) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -43,7 +44,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   const [code, setCode] = useState(''); const [ptype, setPtype] = useState<'PERCENT' | 'FIXED'>('PERCENT'); const [value, setValue] = useState(''); const [uses, setUses] = useState('');
   const [busy, setBusy] = useState(false);
   const aud = useLoad(() => (sheet && tab === 'campaigns' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel, tab]);
-  const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<unknown>, after: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   const addBtn = <Circ icon="plus" violet label={tr('mk.add')} onPress={() => setSheet(true)} />;
   const q = tab === 'campaigns' ? camps : tab === 'promos' ? promos : tab === 'members' ? mem : tab === 'refs' ? refs : auto;
   return (
@@ -53,7 +54,7 @@ export function Marketing({ onBack }: { onBack: () => void }) {
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={4} /> : tab === 'members' ? (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}>
           {(mem.data ?? []).map((m) => (
-            <Card key={String(m.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: m.active ? 1 : 0.6 }}>
+            <Card key={String(m.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, opacity: m.active ? 1 : 0.6 }}>
               <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{m.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(m.price, salon?.currency)} / {m.billing_period_months} · -{m.discount_percent}% · {tr('sx.sessions', { n: m.included_sessions })}</Text></View>
               <Toggle on={m.active} onChange={(v) => void run(() => apiB.setMembershipActive(sid, m, v), () => void mem.reload())} label={m.name} />
             </Card>
@@ -131,10 +132,11 @@ export function Marketing({ onBack }: { onBack: () => void }) {
         <FlatList data={promos.data ?? []} keyExtractor={(c) => String(c.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 10 }}
           ListEmptyComponent={<StateView icon="tag" title={tr('mk.noPromos')} />}
           renderItem={({ item: c }) => (
-            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: c.active ? 1 : 0.55 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink, letterSpacing: 0.5 }}>{c.code}</Text>
-                <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{c.type === 'PERCENT' ? `${c.value}%` : c.value} · {c.uses}{c.max_uses ? `/${c.max_uses}` : ''}</Text>
+            <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 92, opacity: c.active ? 1 : 0.55 }}>
+              <LinearGradient colors={['#6f52ed', '#e83e63']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 68, height: 68, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: font.x, fontSize: 21, color: '#fff' }}>{c.type === 'PERCENT' ? `${c.value}%` : money(c.value, salon?.currency)}</Text></LinearGradient>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 19, letterSpacing: 1, color: t.ink }}>{c.code}</Text>
+                <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{c.uses}{c.max_uses ? ` / ${c.max_uses}` : ''} {tr('mk.uses' as never) === 'mk.uses' ? '' : tr('mk.uses' as never)}</Text>
               </View>
               {c.active ? <Pressable onPress={() => void run(() => apiB.deactivatePromo(sid, c.id), () => void promos.reload())} accessibilityRole="button" accessibilityLabel={tr('mk.deactivate')}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.gink }}>{tr('mk.deactivate')}</Text></Pressable> : null}
             </Card>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, FlatList, RefreshControl, ScrollView, Switch, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Choice, MultiChoice, SectionTitle, ToggleRow, num } from '@/components/form';
@@ -55,7 +56,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
     const p = num(price); const d = Math.round(num(dur));
     if (!name.trim() || !Number.isFinite(p) || p < 0 || !Number.isFinite(d) || d <= 0 || d > 720) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      Alert.alert(tr('common.error'), tr('sx.needName'));
+      toast(tr('sx.needName'), 'error');
       setTab('main');
       return;
     }
@@ -73,13 +74,13 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); onSaved();
     } catch (e) {
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally { setBusy(false); }
   }
   function archive() {
     if (!service) return;
     Alert.alert(tr('sx.archiveConfirm'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('sx.archive'), style: 'destructive', onPress: () => {
-      void apiX.archiveService(sid, service.id).then(() => { bump(); onSaved(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message));
+      void apiX.archiveService(sid, service.id).then(() => { bump(); onSaved(); }).catch((e: Error) => toast(e.message, 'error'));
     } }]);
   }
   const pt = [{ value: 'FIXED' as const, label: tr('sx.fixed') }, { value: 'FROM' as const, label: tr('sx.from') }, { value: 'RANGE' as const, label: tr('sx.range') }];
@@ -90,7 +91,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
         {TABS.map((x) => <Chip key={x.k} label={tr(x.label)} active={tab === x.k} onPress={() => setTab(x.k)} />)}
       </ScrollView>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}>
         {tab === 'main' ? (
           <>
             <Field label={tr('sx.name')} value={name} onChangeText={setName} autoCapitalize="sentences" />
@@ -123,7 +124,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
                   <View style={{ flex: 1.4 }}><Field label=" " value={pto} onChangeText={setPto} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
                   <View style={{ flex: 1 }}><Field label={tr('ad.percent')} value={pp} onChangeText={setPp} keyboardType="number-pad" /></View>
                 </View>
-                <Btn label={tr('ad.addRule')} variant="secondary" icon="plus" onPress={() => { const w = Number(pw); const p = Number(pp); if (!(w >= 1 && w <= 7) || !/^\d{2}:\d{2}$/.test(pf) || !/^\d{2}:\d{2}$/.test(pto) || pto <= pf || !(p > 0)) { Alert.alert(tr('common.error'), tr('hr.badTime')); return; } setRules([...peakList, { weekday: w, startTime: pf, endTime: pto, percent: p }]); }} />
+                <Btn label={tr('ad.addRule')} variant="secondary" icon="plus" onPress={() => { const w = Number(pw); const p = Number(pp); if (!(w >= 1 && w <= 7) || !/^\d{2}:\d{2}$/.test(pf) || !/^\d{2}:\d{2}$/.test(pto) || pto <= pf || !(p > 0)) { toast(tr('hr.badTime'), 'error'); return; } setRules([...peakList, { weekday: w, startTime: pf, endTime: pto, percent: p }]); }} />
               </>
             ) : null}
           </>
@@ -166,7 +167,7 @@ function Categories({ cats, onBack, onChanged }: { cats: Category[]; onBack: () 
   const sid = salon?.id ?? '';
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); onChanged(); } catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); } };
+  const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); onChanged(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   return (
     <Screen>
       <Header title={tr('sx.categories')} onBack={onBack} />
@@ -211,7 +212,7 @@ export function Services({ onBack }: { onBack: () => void }) {
       bump();
       await list.reload();
     } catch (e) {
-      Alert.alert(tr('common.error'), (e as Error).message);
+      toast((e as Error).message, 'error');
     } finally {
       setLocal((m) => { const { [s.id]: _d, ...rest } = m; return rest; });
     }
@@ -225,7 +226,7 @@ export function Services({ onBack }: { onBack: () => void }) {
     return (
       <Screen>
         <Header title={isArch ? tr('sx.showArchived') : tr('sx.packages')} onBack={() => setView('list')} />
-        <FlatList data={archived.data as { id: string; name?: string; serviceName?: string; sessions?: number; price?: number }[] ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
+        <FlatList data={archived.data as { id: string; name?: string; serviceName?: string; sessions?: number; price?: number }[] ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}
           ListEmptyComponent={archived.loading ? <Skeleton rows={3} /> : <StateView icon="scissors" title={isArch ? tr('lk.empty') : tr('sx.noPackages')} />}
           renderItem={({ item: s }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -233,7 +234,7 @@ export function Services({ onBack }: { onBack: () => void }) {
                 <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{s.name ?? s.serviceName}</Text>
                 <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{[s.sessions ? tr('sx.sessions', { n: s.sessions }) : null, money(s.price, salon?.currency)].filter(Boolean).join(' · ')}</Text>
               </View>
-              {isArch ? <Btn label={tr('sx.restore')} variant="secondary" onPress={() => void apiX.restoreService(sid, s.id).then(() => { bump(); void archived.reload(); void list.reload(); }).catch((e: Error) => Alert.alert(tr('common.error'), e.message))} /> : null}
+              {isArch ? <Btn label={tr('sx.restore')} variant="secondary" onPress={() => void apiX.restoreService(sid, s.id).then(() => { bump(); void archived.reload(); void list.reload(); }).catch((e: Error) => toast(e.message, 'error'))} /> : null}
             </Card>
           )} />
       </Screen>
@@ -258,7 +259,7 @@ export function Services({ onBack }: { onBack: () => void }) {
           renderItem={({ item: s }) => {
             const on = local[s.id] ?? s.isActive;
             const isQuick = (quick.data ?? []).some((q) => String(q.serviceId) === String(s.id));
-            const toggleQuick = () => { const ids = (quick.data ?? []).map((q) => String(q.serviceId)); const next = ids.includes(String(s.id)) ? ids.filter((x) => x !== String(s.id)) : [...ids, String(s.id)]; void apiB.setQuickSale(sid, next).then(() => quick.reload()).catch((e: Error) => Alert.alert(tr('common.error'), e.message)); };
+            const toggleQuick = () => { const ids = (quick.data ?? []).map((q) => String(q.serviceId)); const next = ids.includes(String(s.id)) ? ids.filter((x) => x !== String(s.id)) : [...ids, String(s.id)]; void apiB.setQuickSale(sid, next).then(() => quick.reload()).catch((e: Error) => toast(e.message, 'error')); };
             return (
               <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, opacity: on ? 1 : 0.7 }}>
                 <Pressable onPress={() => { setEdit(s); setView('edit'); }} accessibilityRole="button" accessibilityLabel={s.name} noScale style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>

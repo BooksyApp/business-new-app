@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Alert, ScrollView, View } from 'react-native';
 import { Choice, MultiChoice } from '@/components/form';
 import { Text } from '@/components/Text';
@@ -27,13 +28,13 @@ export function CustomReports({ onBack }: { onBack: () => void }) {
     if (!cur) return;
     setBusy(true);
     try { setRes(await apiB.runReport(sid, { dataset: cur.key, columns: cols.length ? cols : cur.columns.slice(0, 4).map((c) => c.key), groupBy: cur.defaultGroupBy, from: toDay(addDays(new Date(), -29)), to: toDay(new Date()) })); }
-    catch (e) { Alert.alert(tr('common.error'), (e as Error).message); } finally { setBusy(false); }
+    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
     <Screen>
       <Header title={tr('cr.title')} subtitle={salon?.name} onBack={onBack} />
       {cat.error && !cat.data ? <ErrorState error={cat.error} onRetry={() => void cat.reload()} /> : cat.loading && !cat.data ? <Skeleton rows={3} /> : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48, gap: 10 }}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 10 }}>
           <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('cr.dataset')}</Text>
           <Choice value={ds} onChange={(v) => { setDs(v); setCols([]); setRes(null); }} options={(cat.data ?? []).map((d) => ({ value: d.key, label: d.label }))} />
           {cur ? (<><Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('cr.columns')}</Text><MultiChoice value={cols} onChange={setCols} options={cur.columns.map((c) => ({ value: c.key, label: c.label }))} /><Btn label={tr('cr.run')} loading={busy} onPress={() => void run()} /></>) : <StateView icon="spark" title={tr('cr.pick')} />}

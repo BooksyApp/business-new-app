@@ -32,7 +32,7 @@ export function Reports({ onBack }: { onBack: () => void }) {
         {(['today', 'week', 'month'] as const).map((r) => <Chip key={r} label={tr(`rp.${r}` as 'rp.today')} active={range === r} onPress={() => setRange(r)} />)}
       </View>
       {d.error && !d.data ? <ErrorState error={d.error} onRetry={() => void d.reload()} /> : d.loading && !d.data ? <Skeleton rows={5} height={84} /> : !d.data ? <StateView icon="spark" title={tr('rp.empty')} /> : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48, gap: 12 }} refreshControl={<RefreshControl refreshing={d.refreshing} onRefresh={() => void d.reload()} tintColor={t.violet} />}>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 12 }} refreshControl={<RefreshControl refreshing={d.refreshing} onRefresh={() => void d.reload()} tintColor={t.violet} />}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {KPIS.filter((k) => d.data!.kpis[k]).map((k) => {
               const p = d.data!.kpis[k]; const dl = delta(p.value, p.previous);
