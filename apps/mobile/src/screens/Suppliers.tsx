@@ -7,8 +7,9 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Btn, Card, Chip, Circ, ErrorState, Field, Header, HeroCard, Pill, Screen, SearchBar, Skeleton, StateView, StatCard, StickyCta } from '@/components/ui';
 import { t as tr } from '@/i18n';
-import { apiM, type StockLevel, type Supplier } from '@/lib/api-more';
+import { apiM, type OrderLine, type PurchaseOrder, type StockLevel, type SuggestLine, type Supplier } from '@/lib/api-more';
 import { useApp } from '@/lib/app';
+import { money } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -22,9 +23,15 @@ export function Suppliers({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon, bump } = useApp();
   const sid = salon?.id ?? '';
-  const [tab, setTab] = useState<'suppliers' | 'count'>('suppliers');
+  const [tab, setTab] = useState<'suppliers' | 'count' | 'orders'>('suppliers');
   const sup = useLoad(() => apiM.suppliers(sid), [sid]);
   const lv = useLoad(() => (tab === 'count' ? apiM.stockLevels(sid) : Promise.resolve([] as StockLevel[])), [sid, tab]);
+  const ord = useLoad(() => (tab === 'orders' ? apiM.orders(sid) : Promise.resolve([] as PurchaseOrder[])), [sid, tab]);
+  const [oSheet, setOSheet] = useState<'new' | string | null>(null);
+  const [oDetail, setODetail] = useState<(PurchaseOrder & { lines: OrderLine[] }) | null>(null);
+  const [oSup, setOSup] = useState('');
+  const [oQty, setOQty] = useState<Record<string, number>>({});
+  const sugg = useLoad(() => (oSheet === 'new' ? apiM.orderSuggest(sid) : Promise.resolve([] as SuggestLine[])), [sid, oSheet]);
   const [d, setD] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const [q, setQ] = useState('');
@@ -69,9 +76,10 @@ export function Suppliers({ onBack }: { onBack: () => void }) {
 
   return (
     <Screen>
-      <Header title={tab === 'suppliers' ? tr('ux.suppliers') : tr('ux.stockCount')} subtitle={salon?.name} onBack={onBack} right={tab === 'suppliers' ? <Circ icon="plus" violet label={tr('ux.supplierNew')} onPress={() => setD({ ...blank })} /> : undefined} />
+      <Header title={tab === 'suppliers' ? tr('ux.suppliers') : tab === 'orders' ? tr('ux.orders') : tr('ux.stockCount')} subtitle={salon?.name} onBack={onBack} right={tab === 'suppliers' ? <Circ icon="plus" violet label={tr('ux.supplierNew')} onPress={() => setD({ ...blank })} /> : tab === 'orders' ? <Circ icon="plus" violet label={tr('ux.orderNew')} onPress={() => { setOQty({}); setOSup(''); setOSheet('new'); }} /> : undefined} />
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 14 }}>
         <Chip label={tr('ux.suppliers')} active={tab === 'suppliers'} onPress={() => setTab('suppliers')} />
+        <Chip label={tr('ux.orders')} active={tab === 'orders'} onPress={() => setTab('orders')} />
         <Chip label={tr('ux.stockCount')} active={tab === 'count'} onPress={() => setTab('count')} />
       </View>
       {tab === 'suppliers' ? (
@@ -86,6 +94,19 @@ export function Suppliers({ onBack }: { onBack: () => void }) {
                   <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: t.ink }}>{s.name}</Text><Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{[s.contact_name, s.phone].filter(Boolean).join(' · ') || s.email || '—'}</Text>{s.is_active === false ? <Pill text={tr('team.inactive')} tone="muted" /> : null}</View>
                 </Pressable>
                 {s.phone ? <Pressable onPress={() => void Linking.openURL(`tel:${s.phone!.replace(/\s+/g, '')}`).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('common.call')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="phone" size={22} color={t.vtext} /></Pressable> : null}
+              </Card>
+            )} />
+        )
+      ) : tab === 'orders' ? (
+        ord.error ? <ErrorState error={ord.error} onRetry={() => void ord.reload()} /> : ord.loading && !ord.data ? <Skeleton rows={3} height={96} /> : (
+          <FlatList data={ord.data ?? []} keyExtractor={(o) => String(o.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 12 }} showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={ord.refreshing} onRefresh={() => void ord.reload()} tintColor={t.violet} />}
+            ListEmptyComponent={<StateView icon="box" title={tr('ux.noOrders')} body={tr('ux.noOrdersBody')} actionLabel={tr('ux.orderNew')} onAction={() => { setOQty({}); setOSup(''); setOSheet('new'); }} />}
+            renderItem={({ item: o }) => (
+              <Card onPress={() => void apiM.order(sid, o.id).then(setODetail).catch((e: Error) => toast(e.message, 'error'))} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 88 }}>
+                <View style={{ width: 52, height: 52, borderRadius: 18, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="box" size={24} color={t.vtext} /></View>
+                <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{o.supplier_name ?? o.reference ?? `#${String(o.id).slice(0, 6)}`}</Text><Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{typeof o.lines === 'number' ? o.lines : (o.lines ?? []).length} · {money(Number(o.total_amount ?? 0), salon?.currency)}</Text></View>
+                <Pill text={String(o.status)} tone={o.status === 'RECEIVED' ? 'ok' : o.status === 'ORDERED' ? 'violet' : o.status === 'CANCELLED' ? 'muted' : 'amber'} />
               </Card>
             )} />
         )
@@ -113,6 +134,47 @@ export function Suppliers({ onBack }: { onBack: () => void }) {
           <StickyCta label={`${tr('ux.reviewCount')} · ${tr('ux.diffs', { n: diffs.length })}`} disabled={done === 0} onPress={() => setReview(true)} />
         </>
       )}
+      <BottomSheet open={oSheet === 'new'} onClose={() => setOSheet(null)}>
+        <View style={{ paddingBottom: 18, gap: 12 }}>
+          <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink }}>{tr('ux.orderNew')}</Text>
+          <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{tr('ux.pickSupplier')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8 }}>{(sup.data ?? []).filter((x) => x.is_active !== false).map((x) => <Chip key={String(x.id)} soft label={x.name} active={oSup === String(x.id)} onPress={() => setOSup(String(x.id))} />)}</ScrollView>
+          <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{tr('ux.orderSuggest')}</Text>
+          <ScrollView style={{ maxHeight: 250 }} contentContainerStyle={{ gap: 8 }}>
+            {(sugg.data ?? []).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted, textAlign: 'center', padding: 16 }}>{tr('ux.nothingLow')}</Text> : (sugg.data ?? []).map((l) => {
+              const k = String(l.product_id); const q = oQty[k] ?? Number(l.suggested);
+              return (
+                <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.surface, borderRadius: 20, padding: 10, paddingLeft: 14 }}>
+                  <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{l.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{tr('ux.system')}: {l.quantity_on_hand}</Text></View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: t.fill, borderRadius: 24, padding: 3 }}>
+                    <Pressable onPress={() => setOQty({ ...oQty, [k]: Math.max(0, q - 1) })} accessibilityRole="button" accessibilityLabel={`${l.name} -1`} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="minus" size={18} color={t.ink} /></Pressable>
+                    <Text style={{ fontFamily: font.x, fontSize: 17, minWidth: 28, textAlign: 'center', color: t.ink }}>{q}</Text>
+                    <Pressable onPress={() => setOQty({ ...oQty, [k]: q + 1 })} accessibilityRole="button" accessibilityLabel={`${l.name} +1`} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={18} color={t.ink} /></Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </ScrollView>
+          <Btn label={tr('ux.orderCreate')} loading={busy} disabled={(sugg.data ?? []).length === 0} onPress={() => { setBusy(true); void apiM.orderCreate(sid, { supplierId: oSup || null, lines: (sugg.data ?? []).map((l) => ({ productId: l.product_id, quantity: oQty[String(l.product_id)] ?? Number(l.suggested), unitCost: 0 })) }).then(() => { toast(tr('ux.orderSaved'), 'success'); setOSheet(null); void ord.reload(); }).catch((e: Error) => toast(e.message, 'error')).finally(() => setBusy(false)); }} />
+        </View>
+      </BottomSheet>
+      <BottomSheet open={!!oDetail} onClose={() => setODetail(null)}>
+        {oDetail ? (
+          <View style={{ paddingBottom: 18, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><Text numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, color: t.ink }}>{oDetail.supplier_name ?? tr('ux.orders')}</Text><Pill text={String(oDetail.status)} tone={oDetail.status === 'RECEIVED' ? 'ok' : oDetail.status === 'ORDERED' ? 'violet' : 'amber'} /></View>
+            <ScrollView style={{ maxHeight: 260 }} contentContainerStyle={{ gap: 8 }}>
+              {oDetail.lines.map((l) => (
+                <View key={String(l.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: t.surface, borderRadius: 18, padding: 12 }}>
+                  <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 15.5, color: t.ink }}>{l.product_name}</Text>
+                  <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{l.received} / {l.quantity}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            {oDetail.status === 'DRAFT' ? <Btn label={tr('ux.markOrdered')} loading={busy} onPress={() => { setBusy(true); void apiM.orderMark(sid, oDetail.id).then(() => { setODetail(null); void ord.reload(); }).catch((e: Error) => toast(e.message, 'error')).finally(() => setBusy(false)); }} /> : null}
+            {oDetail.status === 'ORDERED' ? <Btn label={tr('ux.receiveAll')} icon="check" loading={busy} onPress={() => { setBusy(true); void apiM.orderReceive(sid, oDetail.id, oDetail.lines.filter((l) => Number(l.quantity) - Number(l.received) > 0).map((l) => ({ lineId: l.id, quantity: Number(l.quantity) - Number(l.received) }))).then(() => { toast(tr('ux.orderReceived'), 'success'); setODetail(null); void ord.reload(); bump(); }).catch((e: Error) => toast(e.message, 'error')).finally(() => setBusy(false)); }} /> : null}
+          </View>
+        ) : null}
+      </BottomSheet>
       <BottomSheet open={review} onClose={() => setReview(false)}>
         <View style={{ paddingBottom: 18, gap: 12 }}>
           <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink }}>{tr('ux.stockCount')}</Text>

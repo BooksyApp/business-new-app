@@ -15,7 +15,7 @@ import { AppProvider, useApp } from '@/lib/app';
 import { ThemeProvider, useTheme } from '@/theme/ThemeContext';
 
 // DEV-only fixture layer for visual QA (never in release: __DEV__ is false there).
-if (__DEV__ && process.env.EXPO_PUBLIC_MOCK === '1') { try { require('@/dev/mock').install(); } catch { /* ignore */ } }
+if (__DEV__ && process.env.EXPO_PUBLIC_MOCK === '1') { try { require('@/dev/mock').install(); } catch (e) { console.error('mock install failed', e); } }
 installGlobalHandler();
 try { SplashScreen.preventAutoHideAsync().catch(() => {}); } catch { /* ignore */ }
 // Hard cap: the splash never outlives 4s, whatever fonts / session / network do.

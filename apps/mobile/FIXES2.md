@@ -35,3 +35,17 @@ Status: DONE = implemented (code-read, no device run, no local tsc); TODO = not 
 
 ## Not done (needs device or backend; honest scope)
 Frame pixel comparison vs BF frames, FlashList migration, jest tests (jest not configured), deep-link intent filters for https (no business web domain decided), per-screen RU/EN copy review, expo-blur Android, drag-free calendar tap-target audit. ~20 of the requested ~50 were realistic without a device; the rest is TODO.
+
+## Pass 3 (visual overhaul + last eight features; tsc-checked with the customer-new-app node_modules, browser-checked with the mock layer, no device run)
+24. DONE Customer-style glass dock (F62 pill), Business opening with violet "BİZNES ÜÇÜN" pill, new icon set (ink + gradient b + calendar-check badge, adaptive, notification, splash), customer-style headers.
+25. DONE Shared components: HeroCard, StatCard, Section, StickyCta, Toggle/ToggleRow card, Ring, Spark, MiniBars, toast host (error alerts replaced by toasts).
+26. DONE Back-office and form screens rebuilt (profile, hours, notifications, offers, branches, shop, support, integrations, promos, packages, rota, custom reports, service and team editors, looks upload).
+27. DONE Month view: coloured dots + counts, day sheet with bookings, open day, new booking.
+28. DONE Group classes: service class flag + max participants, sessions list (14 days) with capacity bar, add / remove participants, plan a new session.
+29. DONE Client packages (sell, sessions-left ring, plan a session), client delete (confirm sheet), CSV import (picker or paste, mapping, preview, report). expo-document-picker added to package.json (~57.0.3): run `npm install` before the next native build; without it the picker button shows a "paste the text" message.
+30. DONE WhatsApp reminder per booking (server text preview, wa.me link, mark sent / not sent).
+31. DONE Combo services = backend package services (steps, fixed specialist, parallel, party size) + combo booking (package slots, guest names, conflict override). Per-staff price overrides: not in backend, not built.
+32. DONE Recurring time-off blocks (daily / weekly / every 2 weeks + end date) and weekly rota shift series.
+33. DONE Marketplace promotion (packages, reserve + payment page, results, pause / resume / discard).
+34. DONE Suppliers CRUD, purchase orders (suggest, create, mark ordered, receive) and stock count session.
+35. TODO Device checks: dock blur, haptics, reanimated sheets, camera / gallery, document picker, Linking to wa.me and Stripe checkout, icon on iOS and Android.

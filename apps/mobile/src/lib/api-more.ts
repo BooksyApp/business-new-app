@@ -17,6 +17,9 @@ export interface PromoPackage { id: Id; nameAz?: string; nameEn?: string; nameRu
 export interface PromoQuote { enabled: boolean; currency: string | null; alreadyRunning: boolean; packages: PromoPackage[] }
 export interface PromoRow { id: Id; startsAt: string; endsAt: string; days: number; amount: number; currency: string | null; source: 'PAID' | 'FREE_GRANT'; status: 'PENDING' | 'ACTIVE' | 'PAUSED' | 'ENDED' | 'CANCELLED'; impressions: number; clicks: number; bookings: number; ctr: number | null; daysLeft: number; spentAmount: number }
 export interface Supplier { id: Id; name: string; contact_name?: string | null; email?: string | null; phone?: string | null; account_number?: string | null; notes?: string | null; is_active?: boolean }
+export interface PurchaseOrder { id: Id; reference?: string | null; status: 'DRAFT' | 'ORDERED' | 'RECEIVED' | 'CANCELLED' | string; ordered_on?: string | null; expected_on?: string | null; total_amount?: number | null; supplier_name?: string | null; lines?: number | OrderLine[] }
+export interface OrderLine { id: Id; product_id: Id; product_name: string; sku?: string | null; quantity: number; received: number; unit_cost: number }
+export interface SuggestLine { product_id: Id; name: string; sku?: string | null; quantity_on_hand: number; low_stock_threshold: number; suggested: number }
 export interface StockLevel { id: Id; name: string; sku?: string | null; quantity_on_hand: number; low_stock_threshold?: number | null }
 
 export const apiM = {
@@ -50,6 +53,12 @@ export const apiM = {
   suppliers: (b: Id) => request<Supplier[]>(`${B(b)}/suppliers`),
   saveSupplier: (b: Id, id: Id | null, body: { name: string; contactName?: string; email?: string; phone?: string; accountNumber?: string; notes?: string; isActive?: boolean }) =>
     request<Supplier>(id == null ? `${B(b)}/suppliers` : `${B(b)}/suppliers/${id}`, { method: id == null ? 'POST' : 'PUT', body }),
+  orders: (b: Id) => request<PurchaseOrder[]>(`${B(b)}/purchase-orders`),
+  orderSuggest: (b: Id) => request<SuggestLine[]>(`${B(b)}/purchase-orders/suggest`),
+  order: (b: Id, id: Id) => request<PurchaseOrder & { lines: OrderLine[] }>(`${B(b)}/purchase-orders/${id}`),
+  orderCreate: (b: Id, body: { supplierId: Id | null; reference?: string; lines: { productId: Id; quantity: number; unitCost: number }[] }) => request<PurchaseOrder>(`${B(b)}/purchase-orders`, { method: 'POST', body }),
+  orderMark: (b: Id, id: Id) => request<PurchaseOrder>(`${B(b)}/purchase-orders/${id}/order`, { method: 'POST', body: {} }),
+  orderReceive: (b: Id, id: Id, lines: { lineId: Id; quantity: number }[]) => request<PurchaseOrder>(`${B(b)}/purchase-orders/${id}/receive`, { method: 'POST', body: { lines } }),
   stockLevels: (b: Id) => request<StockLevel[]>(`${B(b)}/stock/levels`),
   stockCount: (b: Id, productId: Id, counted: number, note?: string) => request<unknown>(`${B(b)}/stock/count`, { method: 'POST', body: { productId, counted, note } }),
   // time off with recurrence

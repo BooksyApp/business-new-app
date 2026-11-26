@@ -1,7 +1,8 @@
 # Feature parity: business mobile vs old web hub
 
 Source: old web pages and services at tag `old-web-before-reset` (`apps/web/src/services/*.ts`). Paths and bodies are the ones the web hub called.
-Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/business/{id}/clients`.
+Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/business/{id}/clients`. No further backend change was needed for group classes, packages, WhatsApp, CSV import, combos, recurring blocks, promotion, suppliers or stock count: every endpoint already exists.
+Not included: per-staff price overrides on combos (the backend has no such field), card colour styles for loyalty tiers.
 
 | Area | Feature | Endpoint | Mobile |
 |---|---|---|---|
@@ -15,10 +16,11 @@ Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/b
 | Calendar | Block time / time off | `POST/DELETE /time-off` | done |
 | Calendar | Markers: online, chosen master, group, note, paid, late | `booking fields` | done |
 | Calendar | Markers: VIP, new, returning | `GET /bookings/business/{id}/clients (+vip, backend)` | done |
-| Calendar | Group / class bookings | `POST /bookings (class)` | missing |
-| Calendar | Package booking (multi-step party) | `POST /bookings/package` | missing |
+| Calendar | Group / class bookings (class service flag + capacity, sessions with fill bar, add / remove participants) | `POST /bookings, PUT /bookings/{id}/cancel; services isClass/maxParticipants` | done |
+| Calendar | Package booking (multi-step party): party size, package slots, guest names, conflict override | `GET /bookings/package/slots, POST /bookings/package` | done |
+| Calendar | Month view (coloured dots, counts, day sheet) | `GET /bookings/business/{id}?startDate&endDate` | done |
 | Calendar | Business activity (audit) log | `GET /businesses/{id}/audit-log` | done |
-| Calendar | WhatsApp reminder per booking | `PUT /businesses/{id}/whatsapp-reminders/{a}` | missing |
+| Calendar | WhatsApp reminder per booking (preview, wa.me send, sent status, unmark) | `GET/PUT /businesses/{id}/whatsapp-reminders[/{a}]` | done |
 | Waitlist | List | `GET /waitlist/business/{id}` | done |
 | Waitlist | Add by hand, remove | `POST/DELETE /waitlist/business/{id}` | done |
 | Waitlist | Offer a time to a waiting client | `POST /waitlist/business/{id}/{id}/offer` | done |
@@ -28,7 +30,9 @@ Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/b
 | Clients | Notes, history, consent forms | `/businesses/{id}/clients/{c}/record, /clients/{id}/consent-submissions` | done |
 | Clients | Block / unblock, VIP | `PUT/DELETE /businesses/{id}/clients/{c}/block, PUT /clients/{id}` | done |
 | Clients | Balance and settle debt, loyalty points | `/clients/{id}/balance, /loyalty/business/{b}/client/{c}` | done |
-| Clients | Delete client, CSV import | `DELETE /clients, POST /clients/business/{id}/import` | missing |
+| Clients | Delete client (confirm sheet, soft delete) | `DELETE /clients/{id}` | done |
+| Clients | CSV import (file picker or paste, column mapping, preview, result report) | `POST /clients/business/{id}/import[/preview]` | done |
+| Clients | Prepaid packages per client (sell, sessions left ring, plan a session) | `GET /packages/client/{id}, POST /packages/business/{id}/buy` | done |
 | Services | List, on/off, quick-sale star | `GET/PUT /services/business/{id}, /quick-sale` | done |
 | Services | Create/edit all fields (5 tabs) | `POST/PUT /services/business/{id}` | done |
 | Services | Categories CRUD | `/categories/business/{id}` | done |
@@ -36,7 +40,7 @@ Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/b
 | Services | Packages list, create, on/off | `/packages/business/{id}` | done |
 | Services | Add-ons list, create, delete | `/addons/business/{id}` | done |
 | Services | Peak pricing rules | `/bookings/business/{id}/services/{s}/peak-pricing` | done |
-| Services | Combo services, per-staff price overrides | `/services/{id}/combo-items` | missing |
+| Services | Combo services (backend package services: ordered steps, fixed specialist, parallel steps, party size) | `GET /services/business/{id}/packages, PUT /services/{id}/package` | done |
 | Team | List and contact | `GET /staff/business/{id}` | done |
 | Team | Add / edit specialist, services, weekly schedule, photo | `POST/PUT /staff, POST /uploads` | done |
 | Team | Role change, invitation | `PUT /staff/{id}/role, POST /staff/{id}/invite` | done |
@@ -46,7 +50,7 @@ Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/b
 | Team | Payroll runs (build, approve, paid), timesheet clock in/out | `/businesses/{id}/payroll, /timesheets` | done |
 | Team | Weekly rota view (shifts, time off, days off) | `GET /businesses/{id}/rota` | done |
 | Team | Edit rota shifts, copy last week | `/businesses/{id}/rota/shifts|copy` | done |
-| Team | Recurring shift blocks | `/businesses/{id}/rota/blocks` | missing |
+| Team | Recurring blocks: recurring time off (daily / weekly / every 2 weeks, end date) and weekly shift series in the rota | `POST /time-off (isRecurring, recurrencePattern), PUT /businesses/{id}/rota/shifts x N` | done |
 | Sales | List by day | `GET /sales/business/{id}?date` | done |
 | Sales | Create sale (cash, card, gift card, membership, package), discount, tip, quick-sale | `POST /sales` | done |
 | Sales | Refund (amount) | `POST /sales/{id}/refunds` | done |
@@ -78,12 +82,14 @@ Backend change (local, staging/2026-11-15): `vip` flag added to `GET /bookings/b
 | Marketing | Birthday and win-back automation | `/businesses/{id}/marketing-automation` | done |
 | Marketing | Quiet-hour and last-minute offers | `/bookings/business/{id}/slot-discounts` | done |
 | Marketing | Referral codes and analytics (read) | `/referral-codes/business/{id}` | done |
-| Marketing | Marketplace promotion | `/marketplace-promotion` | missing |
+| Marketing | Marketplace promotion: status + bookings sparkline, packages, reserve and pay, results, pause / resume | `/businesses/{id}/marketplace-promotion, /promotion[/history|/{id}/checkout|pause|resume|discard]` | done |
 | Inventory | Products CRUD, low stock | `/products/business/{id}` | done |
-| Inventory | Suppliers, purchase orders, stock count | `/suppliers` | missing |
+| Inventory | Suppliers (create, edit, call) | `/businesses/{id}/suppliers` | done |
+| Inventory | Purchase orders (suggest, create, mark ordered, receive) | `/businesses/{id}/purchase-orders` | done |
+| Inventory | Stock count session (enter counted, review differences, confirm) | `GET /stock/levels, POST /stock/count` | done |
 | Expenses | Expenses by month (add, delete) | `/businesses/{id}/expenses` | done |
 | Admin | API keys, webhooks | `/businesses/{id}/api-keys|webhooks` | done |
 | Admin | Roles and permissions editor | `/businesses/{id}/roles, /team-permissions` | done |
 | Admin | Support tickets (list, new, reply) | `/support/tickets` | done |
 
-Totals: 72 done, 0 partial, 8 missing of 80 rows. Parity (partial = 0.5): 90.0%.
+Totals: 85 done, 0 partial, 0 missing of 85 rows. Parity (partial = 0.5): 100.0%.

@@ -2,6 +2,19 @@
 export const uxEn = {
   ux: {
     //@@en
+    nothingLow: 'Nothing is running low',
+    orderSaved: 'Order created',
+    unitCost: 'Unit cost',
+    orderReceived: 'Stock received',
+    noOrdersBody: 'Create an order for the products running low.',
+    noOrders: 'No orders yet',
+    receiveAll: 'Receive everything',
+    markOrdered: 'Mark as ordered',
+    orderCreate: 'Create order',
+    pickSupplier: 'Pick a supplier',
+    orderSuggest: 'Low stock (suggested)',
+    orderNew: 'New order',
+    orders: 'Orders',
     searchProduct: 'Search products',
     noStock: 'No products',
     countProgress: '{{n}} / {{m}} counted',
@@ -198,6 +211,19 @@ export const uxEn = {
 export const uxAz: typeof uxEn = {
   ux: {
     //@@az
+    nothingLow: 'Azalan məhsul yoxdur',
+    orderSaved: 'Sifariş yaradıldı',
+    unitCost: 'Vahid qiyməti',
+    orderReceived: 'Mallar anbara daxil oldu',
+    noOrdersBody: 'Azalan məhsullar üçün təklif sifarişi yaradın.',
+    noOrders: 'Sifariş yoxdur',
+    receiveAll: 'Hamısını qəbul et',
+    markOrdered: 'Sifariş verildi',
+    orderCreate: 'Sifariş yarat',
+    pickSupplier: 'Təchizatçı seçin',
+    orderSuggest: 'Azalan məhsullar (təklif)',
+    orderNew: 'Yeni sifariş',
+    orders: 'Sifarişlər',
     searchProduct: 'Məhsul axtar',
     noStock: 'Məhsul yoxdur',
     countProgress: '{{n}} / {{m}} sayıldı',
@@ -394,6 +420,19 @@ export const uxAz: typeof uxEn = {
 export const uxRu: typeof uxEn = {
   ux: {
     //@@ru
+    nothingLow: 'Ничего не заканчивается',
+    orderSaved: 'Заказ создан',
+    unitCost: 'Цена за ед.',
+    orderReceived: 'Товар принят',
+    noOrdersBody: 'Создайте заказ на заканчивающиеся товары.',
+    noOrders: 'Заказов нет',
+    receiveAll: 'Принять всё',
+    markOrdered: 'Заказ отправлен',
+    orderCreate: 'Создать заказ',
+    pickSupplier: 'Выберите поставщика',
+    orderSuggest: 'Заканчивается (рекомендация)',
+    orderNew: 'Новый заказ',
+    orders: 'Заказы',
     searchProduct: 'Поиск товара',
     noStock: 'Нет товаров',
     countProgress: '{{n}} / {{m}} посчитано',

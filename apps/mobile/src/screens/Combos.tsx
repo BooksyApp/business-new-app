@@ -29,7 +29,7 @@ export function Combos({ onBack }: { onBack: () => void }) {
   const [busy, setBusy] = useState(false);
   const nameOf = (id: string | number) => (svc.data ?? []).find((s) => String(s.id) === String(id))?.name ?? '';
   const comboIds = new Set((list.data ?? []).map((c) => String(c.serviceId)));
-  const open = (c: Combo | null) => setD(c ? { id: String(c.serviceId), name: nameOf(c.serviceId), party: c.maxPartySize, steps: c.steps.map((s) => ({ serviceId: String(s.serviceId), staffId: s.staffId ? String(s.staffId) : '', parallel: !!s.parallel })) } : { id: null, name: '', party: 1, steps: [] });
+  const open = (c: Combo | null) => setD(c ? { id: String(c.serviceId), name: nameOf(c.serviceId), party: c.maxPartySize, steps: (c.steps ?? []).map((s) => ({ serviceId: String(s.serviceId), staffId: s.staffId ? String(s.staffId) : '', parallel: !!s.parallel })) } : { id: null, name: '', party: 1, steps: [] });
   const total = (steps: Draft['steps']) => steps.reduce((n, s) => { const x = (svc.data ?? []).find((v) => String(v.id) === s.serviceId); return n + (x?.price ?? 0); }, 0);
   const minutes = (steps: Draft['steps']) => { let gs = 0; let ge = 0; steps.forEach((s, i) => { const m = (svc.data ?? []).find((v) => String(v.id) === s.serviceId)?.durationMinutes ?? 60; if (!(i > 0 && s.parallel)) gs = ge; ge = Math.max(ge, gs + m); }); return ge; };
 
@@ -112,10 +112,10 @@ export function Combos({ onBack }: { onBack: () => void }) {
             <Card onPress={() => open(c)} style={{ gap: 12, padding: 18 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <ServiceThumb name={nameOf(c.serviceId)} cat="gift" size={56} />
-                <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink }}>{nameOf(c.serviceId) || c.steps.map((s) => s.serviceName).join(' + ')}</Text><Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{c.totalDurationMinutes} {tr('common.min')} · {tr('ux.people', { n: c.maxPartySize })}</Text></View>
+                <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 19, letterSpacing: -0.4, color: t.ink }}>{nameOf(c.serviceId) || (c.steps ?? []).map((s) => s.serviceName).join(' + ')}</Text><Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{c.totalDurationMinutes} {tr('common.min')} · {tr('ux.people', { n: c.maxPartySize })}</Text></View>
                 <Text style={{ fontFamily: font.x, fontSize: 20, color: t.ink }}>{money(c.totalPrice, salon?.currency)}</Text>
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{c.steps.map((s: ComboStep, i) => <Pill key={i} text={`${i + 1}. ${s.serviceName}${s.parallel ? ' ∥' : ''}`} tone="violet" />)}</View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{(c.steps ?? []).map((s: ComboStep, i) => <Pill key={i} text={`${i + 1}. ${s.serviceName}${s.parallel ? ' ∥' : ''}`} tone="violet" />)}</View>
             </Card>
           )} />
       )}
