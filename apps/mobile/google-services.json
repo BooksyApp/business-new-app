@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "209520070443",
+    "project_id": "booqi-9ecc8",
+    "storage_bucket": "booqi-9ecc8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209520070443:android:115a38c4ace2c2b9757f6e",
+        "android_client_info": {
+          "package_name": "az.booqi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmZYvmNfOZ_gkxlPqsJLvRkPKl8Xr0CE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209520070443:android:d8244adafde5bae8757f6e",
+        "android_client_info": {
+          "package_name": "az.booqi.business"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmZYvmNfOZ_gkxlPqsJLvRkPKl8Xr0CE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

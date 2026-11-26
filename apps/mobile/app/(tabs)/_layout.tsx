@@ -25,7 +25,7 @@ const ITEMS = [
 function TabBar({ state, navigation }: any) {
   const { t } = useTheme(); const ins = useSafeAreaInsets();
   const { badges } = useApp();
-  const count: Record<string, number> = { notifications: badges.pending + badges.waitlist };
+  const count: Record<string, number> = { notifications: badges.pending + badges.waitlist + badges.inbox };
   const bot = dockBottom(ins.bottom);
   const base = t.dark ? 'rgba(30,26,42,.66)' : 'rgba(255,255,255,.66)';
   const solid = t.dark ? 'rgba(30,26,42,.95)' : 'rgba(255,255,255,.95)'; // Android: no per-frame blur, near-opaque keeps 60fps

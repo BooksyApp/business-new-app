@@ -2,8 +2,9 @@ import { AppState as RNAppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, clearSession, loadSession, saveSalon, saveSession, setSignedOutHandler, type AuthResponse, type Business } from '@/lib/api';
 import { loadLocale } from '@/i18n';
+import { apiB } from '@/lib/api-biz';
 import { useOnline } from '@/lib/net';
-import { registerIfGranted } from '@/lib/push';
+import { registerIfGranted, unregisterPush } from '@/lib/push';
 
 type Status = 'boot' | 'offline' | 'out' | 'in';
 type AppState = {
@@ -14,7 +15,7 @@ type AppState = {
   /** Bumped after any mutation so lists reload. */
   version: number;
   /** Tab badges: bookings waiting for confirmation (next 30 days) and open waitlist requests. */
-  badges: { pending: number; waitlist: number };
+  badges: { pending: number; waitlist: number; inbox: number };
   bump: () => void;
   retryBoot: () => void;
   signedIn: (u: AuthResponse, salons: Business[]) => Promise<void>;
@@ -35,7 +36,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [salon, setSalon] = useState<Business | null>(null);
   const [version, setVersion] = useState(0);
   const [attempt, setAttempt] = useState(0);
-  const [badges, setBadges] = useState({ pending: 0, waitlist: 0 });
+  const [badges, setBadges] = useState({ pending: 0, waitlist: 0, inbox: 0 });
 
   const out = useCallback(() => { setUser(null); setSalons([]); setSalon(null); setStatus('out'); }, []);
 
@@ -70,13 +71,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Tab badges follow the salon and every mutation; failures keep the previous numbers.
   useEffect(() => {
-    if (status !== 'in' || !salon) { setBadges({ pending: 0, waitlist: 0 }); return; }
+    if (status !== 'in' || !salon) { setBadges({ pending: 0, waitlist: 0, inbox: 0 }); return; }
     let alive = true;
     const today = new Date();
     const end = new Date(today); end.setDate(end.getDate() + 30);
-    void Promise.all([api.appointments(salon.id, today, end).catch(() => null), api.waitlist(salon.id).catch(() => null)]).then(([a, w]) => {
+    void Promise.all([api.appointments(salon.id, today, end).catch(() => null), api.waitlist(salon.id).catch(() => null), apiB.inboxUnread().catch(() => null)]).then(([a, w, ib]) => {
       if (!alive) return;
       setBadges((b) => ({
+        inbox: ib ? ib.unread : b.inbox,
         pending: a ? a.filter((x) => x.status === 'PENDING').length : b.pending,
         waitlist: w ? w.filter((x) => (x.status ?? '').toUpperCase() === 'WAITING' || (x.status ?? '').toUpperCase() === 'ACTIVE').length : b.waitlist,
       }));
@@ -112,7 +114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUser(u); setSalons(list); setSalon(list.length === 1 ? list[0] : null); setStatus('in');
     },
     chooseSalon: (b) => { setSalon(b); void saveSalon(b.id); setVersion((v) => v + 1); },
-    signOut: () => { void api.logout().catch(() => undefined); void clearSession(); out(); },
+    signOut: () => { void unregisterPush().finally(() => { void api.logout().catch(() => undefined); void clearSession(); }); out(); },
   }), [status, user, salon, salons, version, badges, out]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

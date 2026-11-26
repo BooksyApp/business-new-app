@@ -46,7 +46,15 @@ export interface Membership { id: Id; name: string; price: number; billing_perio
 export interface RefCode { id: Id; code: string; type: string; status: string; rewardAmount: number; currentUses: number; maxUses?: number }
 export interface RefStats { totalReferralCodes: number; activeReferralCodes: number; totalUsages: number; successfulUsages: number; totalRewardsGiven: number }
 
+export interface InboxItem { id: number; type: string; title: string; body: string | null; data: string | null; createdAt: string; readAt: string | null }
+export interface PushPrefs { types: string[]; pushOff: string[]; inboxOff: string[]; emailOff: string[]; quietStart: string | null; quietEnd: string | null; staff: string[]; stockThreshold: number | null }
+
 export const apiB = {
+  inbox: (limit = 50) => request<{ unread: number; items: InboxItem[] }>(`/notifications/inbox?limit=${limit}`),
+  inboxUnread: () => request<{ unread: number }>('/notifications/inbox/unread-count'),
+  readInbox: (id?: number) => request<void>(id == null ? '/notifications/inbox/read' : `/notifications/inbox/${id}/read`, { method: 'POST', body: {} }),
+  pushPrefs: () => request<PushPrefs>('/notifications/preferences'),
+  savePushPrefs: (p: { pushOff: string[]; inboxOff: string[]; emailOff: string[]; quietStart: string | null; quietEnd: string | null; staff: string[]; stockThreshold: number | null }) => request<void>('/notifications/preferences', { method: 'PUT', body: p }),
   memberships: (b: Id) => request<Membership[]>(`${B(b)}/memberships?activeOnly=false`),
   createMembership: (b: Id, body: { name: string; price: number; billingPeriodMonths: number; discountPercent: number; includedSessions: number }) => request<Membership>(`${B(b)}/memberships`, { method: 'POST', body }),
   setMembershipActive: (b: Id, m: Membership, active: boolean) => request<Membership>(`${B(b)}/memberships/${m.id}`, { method: 'PUT', body: { name: m.name, price: m.price, billingPeriodMonths: m.billing_period_months, discountPercent: m.discount_percent, includedSessions: m.included_sessions, active } }),

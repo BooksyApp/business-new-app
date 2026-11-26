@@ -15,6 +15,8 @@ import { enablePush } from '@/lib/push';
 import { findClient } from '@/lib/client-cache';
 import { OfferSheet, WaitlistSheet } from '@/components/WaitlistSheet';
 import { apiX } from '@/lib/api-ext';
+import { apiB } from '@/lib/api-biz';
+import { routeOf } from '@/lib/push';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -36,6 +38,7 @@ export default function Notifications() {
     return { pending: appts.filter((a) => a.status === 'PENDING').sort((a, b) => `${a.appointmentDate}${a.startTime}`.localeCompare(`${b.appointmentDate}${b.startTime}`)), waitlist };
   }, [salon?.id, version]);
   const [wlOpen, setWlOpen] = useState(false);
+  const inbox = useLoad(() => apiB.inbox(30).catch(() => null), [salon?.id, version]);
   const [offerId, setOfferId] = useState<string | null>(null);
   const ev = useLoad(() => apiX.hubEvents(salon?.id ?? '').catch(() => null), [salon?.id, version]);
   const pending = data.data?.pending ?? [];
@@ -69,6 +72,27 @@ export default function Notifications() {
             {pushState !== 'on' ? <Btn label={tr('notifications.pushOn')} onPress={async () => setPushState((await enablePush()) ? 'on' : 'failed')} /> : null}
           </Card>
           {data.loading && !data.data ? <Skeleton rows={3} /> : null}
+          {(inbox.data?.items ?? []).length ? (
+            <View style={{ gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4 }}>{tr('pp.inbox')}{inbox.data!.unread ? ` (${inbox.data!.unread})` : ''}</Text>
+                {inbox.data!.unread ? <Pressable onPress={() => void apiB.readInbox().then(() => { void inbox.reload(); bump(); }).catch(() => {})} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 13.5, color: t.vtext }}>{tr('pp.markAll')}</Text></Pressable> : null}
+              </View>
+              {inbox.data!.items.slice(0, 15).map((n) => {
+                let d: unknown = null; try { d = n.data ? JSON.parse(n.data) : null; } catch { d = null; }
+                return (
+                  <Card key={n.id} onPress={() => { if (!n.readAt) void apiB.readInbox(n.id).then(() => { void inbox.reload(); bump(); }).catch(() => {}); router.push(routeOf(d) as never); }} style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, opacity: n.readAt ? 0.65 : 1 }}>
+                    {!n.readAt ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.guava }} /> : null}
+                    <View style={{ flex: 1 }}>
+                      <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{n.title}</Text>
+                      {n.body ? <Text numberOfLines={2} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{n.body}</Text> : null}
+                      <Text style={{ fontFamily: font.m, fontSize: 12, color: t.ink3 }}>{n.createdAt.slice(0, 16).replace('T', ' ')}</Text>
+                    </View>
+                  </Card>
+                );
+              })}
+            </View>
+          ) : null}
           {(ev.data?.events ?? []).length ? (
             <View style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

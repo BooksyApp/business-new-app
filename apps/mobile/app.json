@@ -23,19 +23,26 @@
         "backgroundColor": "#1D1730"
       },
       "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-status-bar",
       "expo-secure-store",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "color": "#6F52ED",
+          "defaultChannel": "bookings"
+        }
+      ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Salon \u015f\u0259kill\u0259ri v\u0259 hekay\u0259l\u0259r \u00fc\u00e7\u00fcn qalereyaya giri\u015f laz\u0131md\u0131r.",
-          "cameraPermission": "\u015e\u0259kil \u00e7\u0259km\u0259k \u00fc\u00e7\u00fcn kameraya icaz\u0259 laz\u0131md\u0131r.",
+          "photosPermission": "Salon şəkilləri və hekayələr üçün qalereyaya giriş lazımdır.",
+          "cameraPermission": "Şəkil çəkmək üçün kameraya icazə lazımdır.",
           "microphonePermission": false
         }
       ],
