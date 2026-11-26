@@ -17,7 +17,7 @@ import {
   Heart, Stethoscope, MapPin, X, Plus, Minus, Eye, EyeOff, User, Bell, 
   DollarSign, Building2, Clock, Users, Settings, CheckCircle2
 } from "lucide-react";
-import { CheckRow, Field, FormGrid, Note, RadioGroup, SelectField } from "@/components/bz";
+import { Avatar, CheckRow, ChipRow, Field, FormGrid, Note, RadioGroup, RowItem, SelectField } from "@/components/bz";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { categoryService, type BusinessCategory } from "@/services/categoryService";
@@ -1112,89 +1112,89 @@ const RegistrationPage = () => {
             )}
 
             {screen.key === "team" && (
-              <div className="space-y-6">
-                <div>
-                  <p className={fieldLabel}>{tr("registration.teamSize")}{" "}{optional}</p>
-                  <div className="grid grid-cols-2 gap-2.5">
+              <div className="stk">
+                <div className="stk">
+                  <div className="lbl2">{tr("registration.teamSize")}{" "}{optional}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     {["Just me", "2-4 staff members", "5-9 staff members", "More than 10 staff members"].map((option) => {
                       const v = option.toLowerCase().replace(/\s+/g, "-");
                       const on = formData.teamSize === v;
                       return (
-                        <button key={option} type="button" aria-pressed={on} onClick={() => updateFormData("teamSize", on ? "" : v)} className={cn(choiceCard(on), "justify-center text-center text-sm")}>
-                          {tOpt("teamSize", option)}
-                        </button>
+                        <div
+                          key={option}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={on}
+                          className={cn("rd", on && "on")}
+                          style={{ justifyContent: "center", textAlign: "center" }}
+                          onClick={() => updateFormData("teamSize", on ? "" : v)}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); updateFormData("teamSize", on ? "" : v); } }}
+                        >
+                          <b>{tOpt("teamSize", option)}</b>
+                        </div>
                       );
                     })}
                   </div>
-                  {formData.teamSize === "just-me" && (
-                    <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{tr("registration.justMeAsStaffHint")}</p>
-                  )}
+                  {formData.teamSize === "just-me" && <span className="hint">{tr("registration.justMeAsStaffHint")}</span>}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">{tr("registration.people")}</p>
-                    <button type="button" onClick={() => setIsAddStaffOpen(true)} className={cn(authLink, "inline-flex items-center gap-1 text-sm")}>
-                      <Plus className="h-4 w-4" aria-hidden />{" "}{tr("registration.addPerson")}
+                <div className="stk">
+                  <div className="row sp">
+                    <div className="lbl2">{tr("registration.people")}</div>
+                    <button type="button" onClick={() => setIsAddStaffOpen(true)} className="btn btn-soft s">
+                      <Plus className="ic" aria-hidden />{" "}{tr("registration.addPerson")}
                     </button>
                   </div>
-                  <ul className="mt-2 space-y-2">
-                    <li className="flex items-center gap-3 rounded-2xl bg-[rgb(var(--reg-ink)/0.03)] px-4 py-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(var(--reg-brand-soft))] text-xs font-bold text-[rgb(var(--reg-brand-strong))]">
-                        <User className="h-4 w-4" aria-hidden />
-                      </span>
-                      <span className="text-sm">
-                        <span className="block font-semibold">{ownerName || tr("registration.you")}</span>
-                        <span className="block text-[rgb(var(--reg-muted))]">{tr("registration.owner")}</span>
-                      </span>
-                    </li>
-                    {formData.staffMembers.map((staff) => (
-                      <li key={staff.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
-                        <span className="min-w-0 text-sm">
-                          <span className="block truncate font-semibold">{staff.name}</span>
-                          <span className="block text-[rgb(var(--reg-muted))]">{positionLabel(staff.position) || tr("common.teamMember")}</span>
-                        </span>
-                        <button type="button" aria-label={tr("registration.remove", { name: staff.name })} onClick={() => updateFormData("staffMembers", formData.staffMembers.filter((s) => s.id !== staff.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
-                          <X className="h-4 w-4" aria-hidden />
+                  <RowItem
+                    left={<Avatar initials={(ownerName || tr("registration.you")).slice(0, 1).toUpperCase()} size={36} />}
+                    title={ownerName || tr("registration.you")}
+                    sub={tr("registration.owner")}
+                  />
+                  {formData.staffMembers.map((staff) => (
+                    <RowItem
+                      key={staff.id}
+                      left={<Avatar initials={(staff.name || "?").slice(0, 1).toUpperCase()} size={36} />}
+                      title={staff.name}
+                      sub={positionLabel(staff.position) || tr("common.teamMember")}
+                      right={
+                        <button type="button" aria-label={tr("registration.remove", { name: staff.name })} onClick={() => updateFormData("staffMembers", formData.staffMembers.filter((s) => s.id !== staff.id))} className="circ" style={{ border: 0, cursor: "pointer" }}>
+                          <X className="ic" aria-hidden />
                         </button>
-                      </li>
-                    ))}
-                  </ul>
+                      }
+                    />
+                  ))}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">{tr("common.services")}{" "}{optional}</p>
-                    <button type="button" onClick={() => setIsAddServiceOpen(true)} className={cn(authLink, "inline-flex items-center gap-1 text-sm")}>
-                      <Plus className="h-4 w-4" aria-hidden />{" "}{tr("registration.addService")}
+                <div className="stk">
+                  <div className="row sp">
+                    <div className="lbl2">{tr("common.services")}{" "}{optional}</div>
+                    <button type="button" onClick={() => setIsAddServiceOpen(true)} className="btn btn-soft s">
+                      <Plus className="ic" aria-hidden />{" "}{tr("registration.addService")}
                     </button>
                   </div>
                   {formData.services.length ? (
-                    <ul className="mt-2 space-y-2">
-                      {formData.services.map((svc) => (
-                        <li key={svc.id} className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 ring-1 ring-[rgb(var(--reg-line))]">
-                          <span className="min-w-0 text-sm">
-                            <span className="block truncate font-semibold">{svc.name}</span>
-                            <span className="block text-[rgb(var(--reg-muted))]">{svc.priceType === "From" ? tr("common.from") : ""}{svc.price}</span>
-                          </span>
-                          <button type="button" aria-label={tr("registration.remove", { name: svc.name })} onClick={() => updateFormData("services", formData.services.filter((s) => s.id !== svc.id))} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[rgb(var(--reg-muted))] hover:bg-[rgb(var(--reg-ink)/0.05)]">
-                            <X className="h-4 w-4" aria-hidden />
+                    formData.services.map((svc) => (
+                      <RowItem
+                        key={svc.id}
+                        title={svc.name}
+                        sub={<>{svc.priceType === "From" ? tr("common.from") : ""}{svc.price}</>}
+                        right={
+                          <button type="button" aria-label={tr("registration.remove", { name: svc.name })} onClick={() => updateFormData("services", formData.services.filter((s) => s.id !== svc.id))} className="circ" style={{ border: 0, cursor: "pointer" }}>
+                            <X className="ic" aria-hidden />
                           </button>
-                        </li>
-                      ))}
-                    </ul>
+                        }
+                      />
+                    ))
                   ) : (
-                    <p className="mt-2 rounded-2xl border border-dashed border-[rgb(var(--reg-line))] px-4 py-3 text-sm text-[rgb(var(--reg-muted))]">
-                      {tr("registration.youCanAddYourMenu")}
-                    </p>
+                    <Note kind="in">{tr("registration.youCanAddYourMenu")}</Note>
                   )}
                 </div>
               </div>
             )}
 
             {screen.key === "goals" && (
-              <div className="space-y-6">
-                <div className="flex flex-wrap gap-2">
+              <div className="stk">
+                <ChipRow>
                   {helpOptions.map((option) => {
                     const isSelected = formData.helpOptions.includes(option);
                     const canSelect = isSelected || formData.helpOptions.length < 5;
@@ -1207,69 +1207,54 @@ const RegistrationPage = () => {
                         onClick={() =>
                           updateFormData("helpOptions", isSelected ? formData.helpOptions.filter((o) => o !== option) : [...formData.helpOptions, option])
                         }
-                        className={cn(
-                          "rounded-full border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
-                          isSelected
-                            ? "border-[rgb(var(--reg-brand))] bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]"
-                            : "border-[rgb(var(--reg-line))] bg-white hover:border-[rgb(var(--reg-brand)/0.5)]",
-                        )}
+                        className={cn("chip", isSelected && "on")}
+                        style={{ border: 0, cursor: canSelect ? "pointer" : "not-allowed", opacity: canSelect ? 1 : 0.4 }}
                       >
-                        {isSelected && <Check className="-ml-1 mr-1 inline h-4 w-4" aria-hidden />}
+                        {isSelected && <Check className="ic" aria-hidden />}
                         {tOpt("regHelp", option)}
                       </button>
                     );
                   })}
-                </div>
+                </ChipRow>
 
-                <div>
-                  <p className={fieldLabel}>{tr("registration.haveYouUsedAnotherBooking")}</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[["no", tr("common.no")], ["yes", tr("common.yes")]].map(([v, t]) => (
-                      <button key={v} type="button" aria-pressed={formData.hasUsedTools === v} onClick={() => updateFormData("hasUsedTools", v)} className={cn(choiceCard(formData.hasUsedTools === v), "justify-center")}>
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                  {formData.hasUsedTools === "yes" && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {businessTools.map((tool) => {
-                        const on = formData.previousTools.includes(tool);
-                        return (
-                          <button
-                            key={tool}
-                            type="button"
-                            aria-pressed={on}
-                            onClick={() => updateFormData("previousTools", on ? formData.previousTools.filter((t) => t !== tool) : [...formData.previousTools, tool])}
-                            className={cn(
-                              "rounded-full border px-3 py-1.5 text-sm transition",
-                              on ? "border-[rgb(var(--reg-brand))] bg-[rgb(var(--reg-brand-soft))] font-semibold text-[rgb(var(--reg-brand-strong))]" : "border-[rgb(var(--reg-line))] bg-white",
-                            )}
-                          >
-                            {tool}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <RadioGroup
+                  title={tr("registration.haveYouUsedAnotherBooking")}
+                  value={formData.hasUsedTools}
+                  onChange={(v) => updateFormData("hasUsedTools", v)}
+                  options={[{ value: "no", label: tr("common.no") }, { value: "yes", label: tr("common.yes") }]}
+                />
+                {formData.hasUsedTools === "yes" && (
+                  <ChipRow>
+                    {businessTools.map((tool) => {
+                      const on = formData.previousTools.includes(tool);
+                      return (
+                        <button
+                          key={tool}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => updateFormData("previousTools", on ? formData.previousTools.filter((t) => t !== tool) : [...formData.previousTools, tool])}
+                          className={cn("chip", on && "on")}
+                          style={{ border: 0, cursor: "pointer" }}
+                        >
+                          {tool}
+                        </button>
+                      );
+                    })}
+                  </ChipRow>
+                )}
               </div>
             )}
 
             {screen.key === "launch" && (
-              <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label={tr("registration.goLiveDate")}>
-                {[["today", tr("common.today")], ["tomorrow", tr("common.tomorrow")], ["3-days", tr("registration.inDays")], ["1-week", tr("registration.inWeek")], ["2-weeks", tr("registration.inWeeks")], ["1-month", tr("registration.inMonth")]].map(([v, t]) => {
-                  const on = formData.profileLiveDate === v;
-                  return (
-                    <button key={v} type="button" role="radio" aria-checked={on} onClick={() => updateFormData("profileLiveDate", v)} className={cn(choiceCard(on), "justify-center py-4")}>
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
+              <RadioGroup
+                value={formData.profileLiveDate}
+                onChange={(v) => updateFormData("profileLiveDate", v)}
+                options={[["today", tr("common.today")], ["tomorrow", tr("common.tomorrow")], ["3-days", tr("registration.inDays")], ["1-week", tr("registration.inWeek")], ["2-weeks", tr("registration.inWeeks")], ["1-month", tr("registration.inMonth")]].map(([value, label]) => ({ value, label }))}
+              />
             )}
 
             {screen.key === "review" && (
-              <dl className="divide-y divide-[rgb(var(--reg-line)/0.7)] rounded-2xl bg-white ring-1 ring-[rgb(var(--reg-line))]">
+              <div className="stk">
                 {[
                   { k: "account", label: tr("registration.you"), value: `${ownerName} · ${formData.email}` },
                   { k: "name", label: tr("common.business"), value: [formData.businessName, otherCategories.find((c) => c.name === formData.category)?.label ?? formData.category].filter(Boolean).join(" · ") },
@@ -1281,17 +1266,18 @@ const RegistrationPage = () => {
                     value: tr("registration.teamServicesSummary", { people: formData.staffMembers.length + 1, services: formData.services.length }),
                   },
                 ].map((row) => (
-                  <div key={row.k} className="flex items-start justify-between gap-3 px-4 py-3.5">
-                    <div className="min-w-0">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--reg-muted))]">{row.label}</dt>
-                      <dd className="mt-0.5 break-words text-[15px] font-semibold">{row.value}</dd>
-                    </div>
-                    <button type="button" onClick={() => goTo(screenIndex(row.k))} className={cn(authLink, "shrink-0 py-1 text-sm")} aria-label={tr("registration.edit", { label: row.label })}>
-                      {tr("common.edit")}
-                    </button>
-                  </div>
+                  <RowItem
+                    key={row.k}
+                    title={row.value}
+                    sub={row.label}
+                    right={
+                      <button type="button" onClick={() => goTo(screenIndex(row.k))} className="btn btn-ol s" aria-label={tr("registration.edit", { label: row.label })}>
+                        {tr("common.edit")}
+                      </button>
+                    }
+                  />
                 ))}
-              </dl>
+              </div>
             )}
           </div>
 
