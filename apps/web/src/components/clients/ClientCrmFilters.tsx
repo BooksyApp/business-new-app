@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import { t } from "@/i18n";
 import { clientTagService, type ClientField, type ClientTag } from "@/services/clientTagService";
 import type { Id } from "@/types/id";
-import { Input } from "@/components/ui/input";
-
-const selectCls = "h-9 rounded-full border border-[rgb(var(--reg-line))] bg-white px-3 text-sm";
+import { Btn, Field, Toolbar } from "@/components/bz";
 
 /**
  * FG-W2-05: filter the client list by the salon's tag and/or a custom field. The server answers
@@ -52,45 +50,51 @@ export function ClientCrmFilters({ businessId, onChange }: {
   if (tags.length === 0 && fields.length === 0) return null;
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
+    <Toolbar style={{ marginTop: 12, marginBottom: 0 }}>
       {tags.length > 0 && (
-        <select className={selectCls} aria-label={t("clients.cfFilterTag")} value={tagId} onChange={(e) => setTagId(e.target.value)}>
-          <option value="">{t("clients.cfFilterAnyTag")}</option>
-          {tags.map((x) => <option key={x.id} value={String(x.id)}>{x.name}</option>)}
-        </select>
+        <Field label={t("clients.cfFilterTag")} kind="sel">
+          <select aria-label={t("clients.cfFilterTag")} value={tagId} onChange={(e) => setTagId(e.target.value)}>
+            <option value="">{t("clients.cfFilterAnyTag")}</option>
+            {tags.map((x) => <option key={x.id} value={String(x.id)}>{x.name}</option>)}
+          </select>
+        </Field>
       )}
       {fields.length > 0 && (
-        <select
-          className={selectCls}
-          aria-label={t("clients.cfFilterField")}
-          value={fieldId}
-          onChange={(e) => { setFieldId(e.target.value); setValue(""); }}
-        >
-          <option value="">{t("clients.cfFilterAnyField")}</option>
-          {fields.map((x) => <option key={x.id} value={String(x.id)}>{x.name}</option>)}
-        </select>
+        <Field label={t("clients.cfFilterField")} kind="sel">
+          <select
+            aria-label={t("clients.cfFilterField")}
+            value={fieldId}
+            onChange={(e) => { setFieldId(e.target.value); setValue(""); }}
+          >
+            <option value="">{t("clients.cfFilterAnyField")}</option>
+            {fields.map((x) => <option key={x.id} value={String(x.id)}>{x.name}</option>)}
+          </select>
+        </Field>
       )}
       {field && field.type === "SELECT" && (
-        <select className={selectCls} aria-label={t("clients.cfFilterValue")} value={value} onChange={(e) => setValue(e.target.value)}>
-          <option value="">{t("clients.cfFilterAnyValue")}</option>
-          {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
+        <Field label={t("clients.cfFilterValue")} kind="sel">
+          <select aria-label={t("clients.cfFilterValue")} value={value} onChange={(e) => setValue(e.target.value)}>
+            <option value="">{t("clients.cfFilterAnyValue")}</option>
+            {field.options.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </Field>
       )}
       {field && field.type !== "SELECT" && (
-        <Input
-          className="h-9 w-44 rounded-full"
-          aria-label={t("clients.cfFilterValue")}
-          type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : "text"}
-          value={value}
-          placeholder={t("clients.cfFilterValue")}
-          onChange={(e) => setValue(e.target.value)}
-        />
+        <Field label={t("clients.cfFilterValue")}>
+          <input
+            aria-label={t("clients.cfFilterValue")}
+            type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : "text"}
+            value={value}
+            placeholder={t("clients.cfFilterValue")}
+            onChange={(e) => setValue(e.target.value)}
+          />
+        </Field>
       )}
       {(tagId || fieldId) && (
-        <button type="button" className="text-sm font-semibold text-[rgb(var(--reg-muted))] underline" onClick={() => { setTagId(""); setFieldId(""); setValue(""); }}>
+        <Btn kind="gh" onClick={() => { setTagId(""); setFieldId(""); setValue(""); }}>
           {t("clients.cfFilterClear")}
-        </button>
+        </Btn>
       )}
-    </div>
+    </Toolbar>
   );
 }
