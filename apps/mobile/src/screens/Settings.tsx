@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import Constants from 'expo-constants';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
@@ -13,7 +13,7 @@ import { font } from '@/theme/tokens';
 
 /** Ayarlar (basics): salon details, language, push notifications, account, version. Editing the salon stays in the web panel. */
 export function Settings({ onBack }: { onBack: () => void }) {
-  const { t } = useTheme();
+  const { t, mode, setMode } = useTheme();
   const { user, salon, signOut } = useApp();
   const [push, setPush] = useState<'idle' | 'on' | 'failed'>('idle');
   const h = (s: string) => <Text style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginTop: 8 }}>{s}</Text>;
@@ -38,6 +38,15 @@ export function Settings({ onBack }: { onBack: () => void }) {
             </Pressable>
           ))}
         </Card>
+        {h(tr('set.theme'))}
+        <Card style={{ paddingVertical: 4 }}>
+          {([['system', 'set.themeSystem'], ['light', 'set.themeLight'], ['dark', 'set.themeDark']] as const).map(([m, k]) => (
+            <Pressable key={m} onPress={() => setMode(m)} accessibilityRole="button" accessibilityState={{ selected: mode === m }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 }}>
+              <Text style={{ fontFamily: mode === m ? font.x : font.s, fontSize: 16, color: t.ink }}>{tr(k)}</Text>
+              {mode === m ? <Icon name="check" size={20} color={t.vtext} /> : null}
+            </Pressable>
+          ))}
+        </Card>
         {h(tr('set.notifications'))}
         <Card style={{ gap: 8 }}>
           <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{push === 'on' ? tr('notifications.pushEnabled') : push === 'failed' ? tr('notifications.pushFailed') : tr('notifications.pushOnHint')}</Text>
@@ -50,7 +59,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <Row label={tr('set.role')} value={user?.role} />
           <Row label={tr('more.version')} value={Constants.expoConfig?.version} />
         </Card>
-        <Btn label={tr('more.signOut')} variant="danger" icon="out" onPress={signOut} />
+        <Btn label={tr('more.signOut')} variant="danger" icon="out" onPress={() => Alert.alert(tr('more.signOutConfirm'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('more.signOut'), style: 'destructive', onPress: signOut }])} />
       </ScrollView>
     </Screen>
   );

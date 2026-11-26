@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Alert, FlatList, KeyboardAvoidingView, Platform, RefreshControl, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -45,6 +46,7 @@ export function Messages({ onBack }: { onBack: () => void }) {
 
 function Thread({ sid, c, onBack }: { sid: string; c: InboxSummary; onBack: () => void }) {
   const { t } = useTheme();
+  const ins = useSafeAreaInsets();
   const th = useLoad(() => api.conversation(sid, c.conversationId), [c.conversationId]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -80,7 +82,7 @@ function Thread({ sid, c, onBack }: { sid: string; c: InboxSummary; onBack: () =
               </View>
             )} />
         )}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 12, paddingBottom: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 12, paddingBottom: Math.max(18, ins.bottom + 6) }}>
           <TextInput value={text} onChangeText={setText} placeholder={tr('msg.reply')} placeholderTextColor={t.ink3} multiline accessibilityLabel={tr('msg.reply')}
             style={{ flex: 1, minHeight: 48, maxHeight: 120, borderRadius: 24, borderWidth: 1, borderColor: t.line, backgroundColor: t.surface, paddingHorizontal: 16, paddingTop: 13, paddingBottom: 13, fontFamily: font.m, fontSize: 15, color: t.ink }} />
           <Pressable onPress={() => void send()} disabled={busy || !text.trim()} haptic accessibilityRole="button" accessibilityLabel={tr('msg.send')}

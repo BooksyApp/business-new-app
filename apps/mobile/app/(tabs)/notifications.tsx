@@ -30,7 +30,7 @@ export default function Notifications() {
   const data = useLoad(async () => {
     const today = new Date();
     const [appts, waitlist] = await Promise.all([api.appointments(salon?.id ?? '', today, addDays(today, 30)), api.waitlist(salon?.id ?? '').catch(() => [])]);
-    return { pending: appts.filter((a) => a.status === 'PENDING'), waitlist };
+    return { pending: appts.filter((a) => a.status === 'PENDING').sort((a, b) => `${a.appointmentDate}${a.startTime}`.localeCompare(`${b.appointmentDate}${b.startTime}`)), waitlist };
   }, [salon?.id, version]);
   const pending = data.data?.pending ?? [];
   const waitlist = data.data?.waitlist ?? [];
@@ -52,7 +52,7 @@ export default function Notifications() {
   return (
     <Screen>
       <Header title={tr('notifications.title')} subtitle={salon?.name} />
-      {data.error ? (
+      {data.error && !data.data ? (
         <ErrorState error={data.error} onRetry={() => void data.reload()} />
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: inset }}
