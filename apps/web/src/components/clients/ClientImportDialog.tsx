@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Download, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Btn, DataTable, Dialog, Field as BzField, FormGrid, Note, Tile, Tiles } from "@/components/bz";
 import { t } from "@/i18n";
 import { readSheet, toCsv } from "@/lib/sheet";
 import { clientImportService, type ImportPlan, type ImportRow } from "@/services/clientImportService";
@@ -23,9 +23,6 @@ const GUESS: [Field, RegExp][] = [
   ["tags", /tag|teq|тег|kateqor|categ/i],
 ];
 
-const btn = "inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition disabled:opacity-60";
-const primary = `${btn} bg-[rgb(var(--reg-brand-strong))] text-white hover:brightness-110`;
-const secondary = `${btn} bg-white ring-1 ring-[rgb(var(--reg-line))] hover:bg-[rgb(var(--reg-brand-soft))]`;
 
 export function ClientImportDialog({ businessId, open, onOpenChange, onImported }: {
   businessId: Id;
@@ -109,104 +106,100 @@ export function ClientImportDialog({ businessId, open, onOpenChange, onImported 
   };
 
   const counts = (p: ImportPlan) => (
-    <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+    <Tiles cols={4}>
       {(["NEW", "MERGE_EXISTING", "MERGE_IN_FILE", "ERROR"] as const).map((s) => (
-        <li key={s} className="rounded-2xl bg-[rgb(var(--reg-brand-soft))] p-3">
-          <p className="text-xl font-extrabold">{p.counts[s] ?? 0}</p>
-          <p className="text-[rgb(var(--reg-muted))]">{t(`clients.importStatus${s}`)}</p>
-        </li>
+        <Tile key={s} label={t(`clients.importStatus${s}`)} value={p.counts[s] ?? 0} />
       ))}
-    </ul>
+    </Tiles>
   );
 
+  if (!open) return null;
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t("clients.importTitle")}</DialogTitle>
-        </DialogHeader>
-
-        {done ? (
-          <div className="space-y-4">
-            <p className="text-sm">{t("clients.importDone")}</p>
-            {counts(done)}
-            {(done.counts.ERROR ?? 0) > 0 && (
-              <button type="button" className={secondary} onClick={() => errorsCsv(done)}>
-                <Download size={16} /> {t("clients.importErrorsCsv")}
-              </button>
-            )}
-          </div>
-        ) : !table ? (
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-[rgb(var(--reg-line))] p-8 text-center">
-            <Upload size={24} aria-hidden />
-            <span className="font-semibold">{t("clients.importChoose")}</span>
-            <span className="text-sm text-[rgb(var(--reg-muted))]">{t("clients.importHint")}</span>
-            <input type="file" accept=".csv,.txt,.xlsx" className="sr-only" onChange={(e) => void pick(e.target.files?.[0])} />
-          </label>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-[rgb(var(--reg-muted))]">{t("clients.importMapHint", { count: body.length })}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {header.map((h, i) => (
-                <label key={i} className="flex items-center justify-between gap-2 rounded-xl bg-white p-2 text-sm ring-1 ring-[rgb(var(--reg-line))]">
-                  <span className="min-w-0 truncate font-semibold" title={h}>{h || `#${i + 1}`}</span>
-                  <select
-                    value={map[i] ?? ""}
-                    onChange={(e) => { const next = [...map]; next[i] = e.target.value as Field | ""; setMap(next); setPlan(null); }}
-                    className="h-9 rounded-lg border border-[rgb(var(--reg-line))] bg-white px-2"
-                  >
-                    <option value="">{t("clients.importSkip")}</option>
-                    {FIELDS.map((f) => <option key={f} value={f}>{t(`clients.importField_${f}`)}</option>)}
-                  </select>
-                </label>
-              ))}
+    <Dialog
+      title={t("clients.importTitle")}
+      width={720}
+      onClose={() => { reset(); onOpenChange(false); }}
+    >
+      {done ? (
+        <>
+          <Note kind="gd">{t("clients.importDone")}</Note>
+          {counts(done)}
+          {(done.counts.ERROR ?? 0) > 0 && (
+            <div>
+              <Btn kind="ol" icon={<Download className="ic" />} onClick={() => errorsCsv(done)}>
+                {t("clients.importErrorsCsv")}
+              </Btn>
             </div>
-
-            {plan && (
-              <>
-                {counts(plan)}
-                <div className="max-h-64 overflow-auto rounded-xl ring-1 ring-[rgb(var(--reg-line))]">
-                  <table className="w-full text-left text-sm">
-                    <tbody>
-                      {plan.rows.slice(0, 200).map((r) => (
-                        <tr key={r.row} className="border-b border-[rgb(var(--reg-line))] last:border-0">
-                          <td className="p-2 text-[rgb(var(--reg-muted))]">{r.row + 1}</td>
-                          <td className="p-2">{r.name ?? "—"}</td>
-                          <td className="p-2">{r.phone ?? r.email ?? ""}</td>
-                          <td className="p-2">
-                            {t(`clients.importStatus${r.status}`)}
-                            {r.matchedName ? ` · ${r.matchedName}` : ""}
-                            {r.status === "ERROR" && r.reason ? ` · ${r.reason}` : ""}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={secondary} onClick={reset} disabled={busy}>{t("clients.importAnotherFile")}</button>
-              {!plan ? (
-                <button type="button" className={primary} onClick={() => void preview()} disabled={busy || !map.some(Boolean)}>
-                  {busy && <Loader2 size={16} className="animate-spin" />} {t("clients.importPreview")}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={primary}
-                  onClick={() => void run()}
-                  disabled={busy || (plan.counts.NEW ?? 0) + (plan.counts.MERGE_EXISTING ?? 0) + (plan.counts.MERGE_IN_FILE ?? 0) === 0}
+          )}
+        </>
+      ) : !table ? (
+        <label className="esx" style={{ cursor: "pointer" }}>
+          <div className="ib"><Upload className="ic" aria-hidden /></div>
+          <b>{t("clients.importChoose")}</b>
+          <span>{t("clients.importHint")}</span>
+          <input type="file" accept=".csv,.txt,.xlsx" className="sr-only" onChange={(e) => void pick(e.target.files?.[0])} />
+        </label>
+      ) : (
+        <>
+          <div className="a-note">{t("clients.importMapHint", { count: body.length })}</div>
+          <FormGrid cols={2}>
+            {header.map((h, i) => (
+              <BzField key={i} label={h || `#${i + 1}`} kind="sel">
+                <select
+                  value={map[i] ?? ""}
+                  onChange={(e) => { const next = [...map]; next[i] = e.target.value as Field | ""; setMap(next); setPlan(null); }}
                 >
-                  {busy && <Loader2 size={16} className="animate-spin" />} {t("clients.importRun")}
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-[rgb(var(--reg-muted))]">{t("clients.importConsentNote")}</p>
+                  <option value="">{t("clients.importSkip")}</option>
+                  {FIELDS.map((f) => <option key={f} value={f}>{t(`clients.importField_${f}`)}</option>)}
+                </select>
+              </BzField>
+            ))}
+          </FormGrid>
+
+          {plan && (
+            <>
+              {counts(plan)}
+              <div style={{ maxHeight: 256, overflow: "auto" }}>
+                <DataTable
+                  grid="48px 1.4fr 1.4fr 2fr"
+                  columns={["#", t("clients.importField_name"), t("clients.importField_phone"), ""]}
+                  rows={plan.rows.slice(0, 200)}
+                  rowKey={(r) => r.row}
+                  render={(r) => [
+                    r.row + 1,
+                    r.name ?? "—",
+                    r.phone ?? r.email ?? "",
+                    <>
+                      {t(`clients.importStatus${r.status}`)}
+                      {r.matchedName ? ` · ${r.matchedName}` : ""}
+                      {r.status === "ERROR" && r.reason ? ` · ${r.reason}` : ""}
+                    </>,
+                  ]}
+                />
+              </div>
+            </>
+          )}
+
+          <div className="row gap8" style={{ flexWrap: "wrap" }}>
+            <Btn kind="ol" onClick={reset} disabled={busy}>{t("clients.importAnotherFile")}</Btn>
+            {!plan ? (
+              <Btn kind="v" onClick={() => void preview()} disabled={busy || !map.some(Boolean)} icon={busy ? <Loader2 className="ic animate-spin" /> : undefined}>
+                {t("clients.importPreview")}
+              </Btn>
+            ) : (
+              <Btn
+                kind="v"
+                onClick={() => void run()}
+                disabled={busy || (plan.counts.NEW ?? 0) + (plan.counts.MERGE_EXISTING ?? 0) + (plan.counts.MERGE_IN_FILE ?? 0) === 0}
+                icon={busy ? <Loader2 className="ic animate-spin" /> : undefined}
+              >
+                {t("clients.importRun")}
+              </Btn>
+            )}
           </div>
-        )}
-      </DialogContent>
+          <div className="a-note">{t("clients.importConsentNote")}</div>
+        </>
+      )}
     </Dialog>
   );
 }
