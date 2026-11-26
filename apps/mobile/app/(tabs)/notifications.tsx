@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Header, Screen, Skeleton, StateView } from '@/components/ui';
+import { Avatar, Btn, Card, ErrorState, Header, Pill, Screen, Skeleton, StateView } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -40,7 +40,7 @@ export default function Notifications() {
       {data.error ? (
         <ErrorState error={data.error} onRetry={() => void data.reload()} />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: inset }}
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: inset }}
           refreshControl={<RefreshControl refreshing={data.refreshing} onRefresh={() => void data.reload()} tintColor={t.violet} />}>
           <Card style={{ backgroundColor: t.vsoft, gap: 6 }}>
             <Text style={{ fontFamily: font.b, fontSize: 15.5, color: t.ink }}>{pushState === 'on' ? tr('notifications.pushEnabled') : tr('notifications.pushOn')}</Text>
@@ -49,20 +49,21 @@ export default function Notifications() {
           </Card>
           {data.loading && !data.data ? <Skeleton rows={3} /> : null}
           {empty ? <StateView icon="bell" title={tr('notifications.empty')} /> : null}
-          {pending.length ? <Text style={{ fontFamily: font.x, fontSize: 18, color: t.ink }}>{tr('notifications.pending')}</Text> : null}
+          {pending.length ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4, marginTop: 4 }}>{tr('notifications.pending')}</Text> : null}
           {pending.map((a) => (
             <Pressable key={a.id} onPress={() => router.navigate('/calendar')}>
-              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 }}>
-                <Icon name="clock" size={24} color={t.violet} />
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <Avatar name={a.clientName ?? ''} size={44} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{a.clientName || '-'} · {a.serviceName}</Text>
+                  <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{a.clientName || '-'}</Text>
+                  <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{a.serviceName}</Text>
                   <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{dateLabel(fromIso(a.appointmentDate))} · {hhmm(a.startTime)} · {a.staffName}</Text>
                 </View>
-                <Icon name="chev" size={18} color={t.ink3} />
+                <Pill text={tr('status.PENDING')} tone="amber" />
               </Card>
             </Pressable>
           ))}
-          {waitlist.length ? <Text style={{ fontFamily: font.x, fontSize: 18, color: t.ink }}>{tr('notifications.waitlist')}</Text> : null}
+          {waitlist.length ? <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink, marginHorizontal: 4, marginTop: 4 }}>{tr('notifications.waitlist')}</Text> : null}
           {waitlist.map((w) => (
             <Card key={w.id} style={{ padding: 14 }}>
               <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{w.clientName || '-'}</Text>

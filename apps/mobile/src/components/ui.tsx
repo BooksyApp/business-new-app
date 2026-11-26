@@ -9,7 +9,7 @@ import { Text } from '@/components/Text';
 import { ApiError } from '@/lib/api';
 import { initials } from '@/lib/format';
 import { t as tr } from '@/i18n';
-import { cardShadow, ctaShadow, font } from '@/theme/tokens';
+import { cardShadow, circShadow, ctaShadow, font } from '@/theme/tokens';
 import { useTheme } from '@/theme/ThemeContext';
 
 /** Full-screen canvas; `top` adds the status-bar inset (tab screens draw their own header). */
@@ -22,15 +22,15 @@ export function Screen({ children, style }: { children: React.ReactNode; style?:
 export function Header({ title, subtitle, onBack, right }: { title: string; subtitle?: string; onBack?: () => void; right?: React.ReactNode }) {
   const { t } = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 10, paddingBottom: 10, gap: 12 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 56, gap: 12 }}>
       {onBack ? (
-        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...cardShadow }}>
+        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={tr('common.back')} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center', ...circShadow }}>
           <Icon name="back" size={22} color={t.ink} />
         </Pressable>
       ) : null}
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.6, color: t.ink }}>{title}</Text>
-        {subtitle ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted, marginTop: 1 }}>{subtitle}</Text> : null}
+        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: onBack ? 22 : 32, letterSpacing: onBack ? -0.44 : -0.96, color: t.ink }}>{title}</Text>
+        {subtitle ? <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted, marginTop: 1 }}>{subtitle}</Text> : null}
       </View>
       {right}
     </View>
@@ -39,7 +39,7 @@ export function Header({ title, subtitle, onBack, right }: { title: string; subt
 
 export function Card({ children, style, onPress }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const { t } = useTheme();
-  const base: ViewStyle = { backgroundColor: t.surface, borderRadius: 20, padding: 16, ...cardShadow };
+  const base: ViewStyle = { backgroundColor: t.surface, borderRadius: 22, padding: 14, ...cardShadow };
   return onPress ? <Pressable onPress={onPress} style={[base, style]}>{children}</Pressable> : <View style={[base, style]}>{children}</View>;
 }
 
@@ -93,9 +93,9 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
   );
 }
 
-export function Pill({ text, tone = 'violet' }: { text: string; tone?: 'violet' | 'ok' | 'guava' | 'muted' }) {
+export function Pill({ text, tone = 'violet' }: { text: string; tone?: 'violet' | 'ok' | 'guava' | 'muted' | 'amber' }) {
   const { t } = useTheme();
-  const c = { violet: [t.vsoft, t.vtext], ok: [t.oksoft, t.ok], guava: [t.gsoft, t.gink], muted: [t.fill, t.muted] }[tone];
+  const c = { violet: [t.vsoft, t.vtext], ok: [t.oksoft, t.ok], guava: [t.gsoft, t.gink], muted: [t.fill, t.muted], amber: t.dark ? ['#342a1d', '#f0c27a'] : ['#fbecd6', '#8a5200'] }[tone];
   return (
     <View style={{ alignSelf: 'flex-start', height: 26, paddingHorizontal: 11, borderRadius: 13, backgroundColor: c[0], justifyContent: 'center' }}>
       <Text style={{ fontFamily: font.b, fontSize: 12.5, color: c[1] }}>{text}</Text>

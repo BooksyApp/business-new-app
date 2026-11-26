@@ -1,11 +1,12 @@
-import React from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import React, { useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Avatar, Card, Chip, Header, Row, Screen, Skeleton } from '@/components/ui';
+import { Btn, Card, Header, Screen } from '@/components/ui';
 import { SUPPORTED, getLocale, setLocale, t as tr, type StringKey } from '@/i18n';
 import { api } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -20,65 +21,62 @@ const MENU = [
   { key: 'reviews', icon: 'star' }, { key: 'messages', icon: 'chat' }, { key: 'settings', icon: 'gear' },
 ] as const;
 
+/** `.rowc` of BF79-7: icon, title 16/800, muted line 14, optional chevron. */
+function Item({ icon, title, sub, onPress, danger }: { icon: string; title: string; sub?: string; onPress?: () => void; danger?: boolean }) {
+  const { t } = useTheme();
+  return (
+    <Card onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+      <Icon name={icon} size={24} color={danger ? t.gink : t.vtext} />
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: danger ? t.gink : t.ink }}>{title}</Text>
+        {sub ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{sub}</Text> : null}
+      </View>
+      {onPress && !danger ? <Icon name="chev" size={18} color={t.ink3} /> : null}
+    </Card>
+  );
+}
+
 export default function More() {
   const { t } = useTheme();
   const router = useRouter();
   const { user, salon, salons, signOut, version } = useApp();
   const inset = useDockInset(16);
+  const [out, setOut] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const today = useLoad(() => api.daySheet(salon?.id ?? '', new Date()), [salon?.id, version]);
   const tot = today.data?.totals;
+  const lang = SUPPORTED.find((l) => l.code === getLocale())?.endonym;
 
   return (
     <Screen>
       <Header title={tr('more.title')} />
-      <ScrollView contentContainerStyle={{ padding: 18, gap: 12, paddingBottom: inset }}>
-        <Card>
-          <Text style={{ fontFamily: font.s, fontSize: 13.5, color: t.muted, marginBottom: 6 }}>{tr('more.takings')}</Text>
-          {today.loading && !today.data ? <Skeleton rows={1} height={40} /> : (
-            <>
-              <Text style={{ fontFamily: font.x, fontSize: 32, letterSpacing: -0.8, color: t.ink }}>{money(tot?.already_paid ?? 0, salon?.currency)}</Text>
-              <Row label={tr('more.expected')} value={money(tot?.expected ?? 0, salon?.currency)} />
-              <Row label={tr('more.bookings')} value={String(tot?.bookings ?? 0)} />
-            </>
-          )}
-        </Card>
-        <Card onPress={salons.length > 1 ? () => router.push('/salons') : undefined} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Avatar name={user?.fullName ?? ''} size={48} />
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{user?.fullName}</Text>
-            <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{salon?.name}</Text>
-          </View>
-          {salons.length > 1 ? <Text style={{ fontFamily: font.b, fontSize: 13, color: t.vtext }}>{tr('more.switchSalon')}</Text> : null}
-        </Card>
-        <Card style={{ padding: 6 }}>
-          {MENU.map((m) => (
-            <Pressable key={m.key} onPress={() => router.push(`/section/${m.key}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name={m.icon} size={22} color={t.vtext} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{tr(`sections.${m.key}` as StringKey)}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr(`sections.${m.key}Hint` as StringKey)}</Text>
-              </View>
-              <Icon name="chev" size={18} color={t.ink3} />
-            </Pressable>
-          ))}
-        </Card>
-        <Card>
-          <Text style={{ fontFamily: font.s, fontSize: 13.5, color: t.muted, marginBottom: 10 }}>{tr('more.language')}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {SUPPORTED.map((l) => <Chip key={l.code} label={l.endonym} active={getLocale() === l.code} onPress={() => void setLocale(l.code)} />)}
-          </View>
-        </Card>
-        <Card onPress={() => Alert.alert(tr('more.signOutConfirm'), undefined, [
-          { text: tr('common.cancel'), style: 'cancel' },
-          { text: tr('more.signOut'), style: 'destructive', onPress: signOut },
-        ])} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: t.gsoft }}>
-          <Icon name="out" size={22} color={t.gink} />
-          <Text style={{ fontFamily: font.b, fontSize: 16, color: t.gink }}>{tr('more.signOut')}</Text>
-        </Card>
-        <Text style={{ fontFamily: font.m, fontSize: 12, color: t.ink3, textAlign: 'center' }}>{tr('more.version')} {Constants.expoConfig?.version}</Text>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: inset }} showsVerticalScrollIndicator={false}>
+        <Item icon="wallet" title={tr('more.takings')} sub={`${tr('more.expected')} ${money(tot?.expected ?? 0, salon?.currency)} · ${tr('more.collected')} ${money(tot?.already_paid ?? 0, salon?.currency)}`} />
+        <Item icon="cal" title={tr('more.bookings')} sub={`${tr('common.today')} · ${tot?.bookings ?? 0}`} onPress={() => router.navigate('/calendar')} />
+        <Item icon="user" title={tr('more.profile')} sub={[user?.fullName, user?.role].filter(Boolean).join(' · ')} />
+        <Item icon="globe" title={tr('more.language')} sub={lang} onPress={() => setLangOpen(true)} />
+        <Item icon="store" title={salons.length > 1 ? tr('more.switchSalon') : tr('more.salon')} sub={salon?.name} onPress={salons.length > 1 ? () => router.push('/salons') : undefined} />
+        {MENU.map((m) => (
+          <Item key={m.key} icon={m.icon} title={tr(`sections.${m.key}` as StringKey)} sub={tr(`sections.${m.key}Hint` as StringKey)} onPress={() => router.push(`/section/${m.key}`)} />
+        ))}
+        <Item icon="out" danger title={tr('more.signOut')} sub={`${tr('more.version')} ${Constants.expoConfig?.version ?? ''}`} onPress={() => setOut(true)} />
       </ScrollView>
+      <BottomSheet open={out} onClose={() => setOut(false)}>
+        <Text style={{ fontFamily: font.x, fontSize: 20, color: t.ink }}>{tr('more.signOutConfirm')}</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 14, paddingBottom: 12 }}>
+          <Btn label={tr('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={() => setOut(false)} />
+          <Btn label={tr('more.signOut')} variant="danger" style={{ flex: 1 }} onPress={() => { setOut(false); signOut(); }} />
+        </View>
+      </BottomSheet>
+      <BottomSheet open={langOpen} onClose={() => setLangOpen(false)}>
+        <Text style={{ fontFamily: font.x, fontSize: 20, color: t.ink, marginBottom: 8 }}>{tr('more.language')}</Text>
+        {SUPPORTED.map((l) => (
+          <Pressable key={l.code} onPress={() => { setLangOpen(false); void setLocale(l.code); }} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 }}>
+            <Text style={{ fontFamily: getLocale() === l.code ? font.x : font.s, fontSize: 16, color: t.ink }}>{l.endonym}</Text>
+            {getLocale() === l.code ? <Icon name="check" size={20} color={t.vtext} /> : null}
+          </Pressable>
+        ))}
+      </BottomSheet>
     </Screen>
   );
 }
