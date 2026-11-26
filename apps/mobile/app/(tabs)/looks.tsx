@@ -36,6 +36,8 @@ export default function LooksTab() {
   const list = looks.data ?? [];
   const own = (stories.data ?? []).length > 0;
   const manage = () => router.push('/section/views');
+  const addStory = () => router.push('/story/create');
+  const openStory = () => router.push('/story/view?mode=own');
   const cats = [...new Set((services.data ?? []).map((s) => s.categoryName).filter(Boolean) as string[])].slice(0, 5);
   const hl = cats.map((c, i) => ({ c, photo: (services.data ?? []).find((s) => s.categoryName === c && (s as { imageUrl?: string }).imageUrl) as { imageUrl?: string } | undefined, i }));
   const cell = (W - 4) / 3;
@@ -44,11 +46,11 @@ export default function LooksTab() {
 
   return (
     <Screen style={{ paddingTop: ins.top }}>
-      <TopBar title={tr('v2.looksTitle')} right={<><IconBtn icon="plus" label={tr('v2.storyAdd')} onPress={manage} /><IconBtn icon="gear" label={tr('sections.views')} onPress={manage} /></>} />
+      <TopBar title={tr('v2.looksTitle')} right={<><IconBtn icon="plus" label={tr('v2.storyAdd')} onPress={addStory} /><IconBtn icon="gear" label={tr('sections.views')} onPress={manage} /></>} />
       <ScrollView contentContainerStyle={{ paddingBottom: inset }} showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={looks.refreshing} onRefresh={() => void looks.reload()} tintColor={t.violet} />}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22, paddingHorizontal: 20, paddingTop: 6 }}>
-          <StoryBubble size={86} uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} label="" add={!own} onPress={manage} />
+          <StoryBubble size={86} uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} label="" add={!own} onPress={own ? openStory : addStory} />
           <View style={{ flex: 1, flexDirection: 'row' }}>
             {([[String(list.length), tr('v2.posts')], [views ? fmt(views) : '0', tr('v2.viewsMonth')], [sum.data?.average ? String(sum.data.average.toFixed(1)).replace('.', ',') : '–', tr('v2.rating')]] as const).map(([v, l]) => (
               <View key={l} style={{ flex: 1, alignItems: 'center' }}>
@@ -63,7 +65,7 @@ export default function LooksTab() {
           <T k="sm" color={t.muted}>{[cats.slice(0, 3).join(' · ').toLowerCase(), salon?.address].filter(Boolean).join(' · ')}</T>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
             <Button size="sm" kind="fl" label={tr('v2.editProfile')} style={{ flex: 1, height: 38 }} onPress={() => router.push('/section/profile')} />
-            <Button size="sm" kind="fl" label={tr('v2.storyAdd')} style={{ flex: 1, height: 38 }} onPress={manage} />
+            <Button size="sm" kind="fl" label={tr('v2.storyAdd')} style={{ flex: 1, height: 38 }} onPress={addStory} />
           </View>
         </View>
         {list.length ? (
@@ -92,7 +94,7 @@ export default function LooksTab() {
         {looks.error ? <ErrorState error={looks.error} onRetry={() => void looks.reload()} /> : looks.loading && !looks.data ? <Skeleton blocks={[{ h: cell * 1.25, r: 0 }, { h: cell * 1.25, r: 0 }]} /> : list.length ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
             {list.map((l, i) => (
-              <Pressable key={String(l.id)} onPress={manage} noScale accessibilityRole="imagebutton" accessibilityLabel={l.title ?? l.serviceName ?? ''}>
+              <Pressable key={String(l.id)} onPress={() => router.push(`/post/${l.id}`)} noScale accessibilityRole="imagebutton" accessibilityLabel={l.title ?? l.serviceName ?? ''}>
                 <Photo src={l.photoUrl} style={{ width: cell, height: cell * 1.25 }}>
                   {i % 4 === 1 ? <View style={{ position: 'absolute', top: 7, right: 7 }}><Icon name="img" filled size={16} color="#fff" /></View> : null}
                 </Photo>
@@ -106,7 +108,7 @@ export default function LooksTab() {
               <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: 1.5, borderColor: t.ink, alignItems: 'center', justifyContent: 'center' }}><Icon name="cam" size={24} color={t.ink} /></View>
               <T k="h2" style={{ fontSize: 18, marginTop: 12, textAlign: 'center' }}>{tr('v2.firstWorkTitle')}</T>
               <T k="sm" color={t.muted} style={{ textAlign: 'center', marginTop: 4, marginBottom: 14 }}>{tr('v2.firstWorkBody')}</T>
-              <Button icon="plus" label={tr('v2.firstStory')} onPress={manage} />
+              <Button icon="plus" label={tr('v2.firstStory')} onPress={addStory} />
             </View>
           </View>
         )}

@@ -71,6 +71,10 @@ function Shell() {
           <Stack.Screen name="booking/classic" />
           <Stack.Screen name="section/[key]" />
           <Stack.Screen name="booking/[id]" />
+          <Stack.Screen name="post/[id]" />
+          <Stack.Screen name="post-stats/[id]" />
+          <Stack.Screen name="story/view" options={{ presentation: 'fullScreenModal', animation: 'fade' }} />
+          <Stack.Screen name="story/create" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         </Stack.Protected>
       </Stack>
     </>

@@ -93,7 +93,7 @@ export default function Today() {
 
         {/* story rail: own story first, then the team */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 4 }}>
-          <StoryBubble uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} label={ownStory ? tr('v2.yourStory') : tr('v2.addStory')} add={!ownStory} onPress={() => router.navigate('/looks')} />
+          <StoryBubble uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} label={ownStory ? tr('v2.yourStory') : tr('v2.addStory')} add={!ownStory} onPress={() => (ownStory ? router.push('/story/view?mode=own') : router.push('/story/create'))} />
           {team.map((s, i) => (
             <StoryBubble key={String(s.id)} uri={s.avatarUrl} name={s.name} label={firstName(s.name)} seen={i === team.length - 1 && team.length > 3}
               onPress={() => router.navigate({ pathname: '/calendar', params: { staff: String(s.id) } })} />
