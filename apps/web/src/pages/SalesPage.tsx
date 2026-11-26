@@ -26,8 +26,9 @@ import { myAccess } from "@/components/layout/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { FormSheet, StatCard } from "@/components/page/booqi";
+import { FormSheet } from "@/components/page/booqi";
 import { StatusChip } from "@/components/page/kit";
+import { Btn, Card, DataTable, EmptyState, PageHead, SegPills, Skeleton, StatusPill, Tag, Tile, Tiles } from "@/components/bz";
 import { toast } from "sonner";
 import type { Service } from "@/services/serviceService";
 import { quickSaleService, type QuickSaleItem as QuickSaleItemAPI } from "@/services/quickSaleService";
@@ -1466,32 +1467,20 @@ export default function SalesPage() {
       <div className="flex h-full w-full flex-col bg-[rgb(var(--reg-canvas))] text-[rgb(var(--reg-ink))]" style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', fontFamily: BRAND_FONT }}>
         {/* Header: the page name and its two modes. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-[rgb(var(--reg-line)/0.8)] bg-[rgb(var(--reg-canvas)/0.92)] px-4 py-4 backdrop-blur-xl md:px-8">
-          <h1 className="text-[28px] font-extrabold leading-none tracking-[-0.03em] md:text-[32px]">{tr("common.till")}</h1>
-          <div role="tablist" aria-label={tr("common.till")} className="flex rounded-full bg-[rgb(var(--reg-ink)/0.05)] p-1">
-          <button
-            role="tab"
-            aria-selected={activeTab === "NEW SALES"}
-            onClick={() => setActiveTab("NEW SALES")}
-            className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
-              activeTab === "NEW SALES"
-                ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
-                : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
-            }`}
-          >
-            {tr("sales.newSale")}
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === "TRANSACTIONS"}
-            onClick={() => setActiveTab("TRANSACTIONS")}
-            className={`h-9 rounded-full px-4 text-sm font-semibold transition-colors ${
-              activeTab === "TRANSACTIONS"
-                ? "bg-white shadow-[0_1px_2px_rgb(var(--reg-ink)/0.06),0_4px_12px_-6px_rgb(var(--reg-ink)/0.15)]"
-                : "text-[rgb(var(--reg-muted))] hover:text-[rgb(var(--reg-ink))]"
-            }`}
-          >
-            {tr("sales.transactions")}
-          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <PageHead
+              title={tr("common.till")}
+              right={
+                <SegPills
+                  items={[
+                    { key: "NEW SALES", label: tr("sales.newSale") },
+                    { key: "TRANSACTIONS", label: tr("sales.transactions") },
+                  ]}
+                  value={activeTab}
+                  onChange={setActiveTab}
+                />
+              }
+            />
           </div>
           {/* Invoices section disabled */}
           {/* <button
@@ -1941,55 +1930,50 @@ export default function SalesPage() {
               const revenue = paid.reduce((n, t) => n + Number(t.sale.total || 0), 0);
               const undone = shown.filter((t) => t.status === "CANCELLED" || t.status === "REFUNDED").length;
               const chip = (status: string) =>
-                status === "PAID" ? <StatusChip status="active" label={tr("common.paid")} /> : status === "CANCELLED" ? <StatusChip status="ended" label={tr("sales.voided")} /> : status === "REFUNDED" ? <StatusChip status="failed" label={tr("sales.refunded")} /> : <StatusChip status="draft" label={status.charAt(0) + status.slice(1).toLowerCase()} />;
+                status === "PAID" ? <StatusPill kind="c">{tr("common.paid")}</StatusPill> : status === "CANCELLED" ? <StatusPill kind="x">{tr("sales.voided")}</StatusPill> : status === "REFUNDED" ? <StatusPill kind="r">{tr("sales.refunded")}</StatusPill> : <StatusPill kind="d">{status.charAt(0) + status.slice(1).toLowerCase()}</StatusPill>;
               const methodChip = (m: string) => (
-                <span className="inline-flex max-w-[160px] truncate rounded-full bg-[rgb(var(--reg-ink)/0.05)] px-2.5 py-1 text-xs font-semibold">{m}</span>
+                <Tag>{m}</Tag>
               );
               const itemsSummary = (t: Transaction) => (t.items.length ? t.items.map((i) => (i.quantity > 1 ? `${i.quantity}× ${i.name}` : i.name)).join(", ") : t.description || "—");
               return (
                 <>
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <StatCard icon={Receipt} label={tr("common.sales")} value={paid.length} hint={tr("sales.inRange", { count: shown.length })} tone="violet" />
-                    <StatCard icon={CreditCard} label={tr("common.revenue")} value={`${revenue.toFixed(2)} ${currencySymbol()}`} hint={tr("sales.paidSales")} tone="emerald" />
-                    <StatCard icon={User} label={tr("sales.averageTicket")} value={paid.length ? `${(revenue / paid.length).toFixed(2)} ${currencySymbol()}` : "—"} tone="sky" />
-                    <StatCard icon={XIcon} label={tr("sales.voidedRefunded")} value={undone} tone={undone ? "rose" : "slate"} />
-                  </div>
+                  <Tiles cols={4}>
+                    <Tile label={tr("common.sales")} value={paid.length} hint={tr("sales.inRange", { count: shown.length })} />
+                    <Tile label={tr("common.revenue")} value={`${revenue.toFixed(2)} ${currencySymbol()}`} hint={tr("sales.paidSales")} />
+                    <Tile label={tr("sales.averageTicket")} value={paid.length ? `${(revenue / paid.length).toFixed(2)} ${currencySymbol()}` : "—"} />
+                    <Tile label={tr("sales.voidedRefunded")} value={undone} />
+                  </Tiles>
 
                   {loadingTransactions ? (
-                    <div className="h-64 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+                    <div aria-busy><Skeleton lines={[90, 70, 80, 55, 75]} /></div>
                   ) : shown.length === 0 ? (
-                    <div className="rounded-[20px] bg-white px-6 py-14 text-center ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                      <p className="text-lg font-extrabold">{tr("sales.noSalesHere")}</p>
-                      <p className="mt-1 text-sm text-[rgb(var(--reg-muted))]">{transactions.length ? tr("sales.nothingMatchesTheseFilters") : tr("sales.salesYouTakeAtThe")}</p>
-                      {!transactions.length && <button type="button" onClick={() => setActiveTab("NEW SALES")} className="mt-4 inline-flex h-10 items-center rounded-full bg-[rgb(var(--reg-ink))] px-5 text-sm font-semibold text-white">{tr("sales.newSale")}</button>}
-                    </div>
+                    <EmptyState
+                      icon={<Receipt className="ic" />}
+                      title={tr("sales.noSalesHere")}
+                      text={transactions.length ? tr("sales.nothingMatchesTheseFilters") : tr("sales.salesYouTakeAtThe")}
+                      action={!transactions.length ? <Btn kind="v" onClick={() => setActiveTab("NEW SALES")}>{tr("sales.newSale")}</Btn> : undefined}
+                    />
                   ) : (
                     <>
-                      <div className="hidden overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] md:block">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-[rgb(var(--reg-line)/0.8)] text-left text-xs uppercase tracking-[0.06em] text-[rgb(var(--reg-muted))]">
-                              {/* i18n-ignore: column ids, labels go through tOpt */ ["When", "Client", "Items", "Staff", "Method", "Total", "Status"].map((h) => (
-                                <th key={h} scope="col" className={cn("px-4 py-3 font-bold", h === "Total" && "text-right")}>{tOpt("salesCols", h)}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {shown.map((t) => (
-                              <tr key={t.id} onClick={() => setSelectedTransaction(t)} className="cursor-pointer border-t border-[rgb(var(--reg-line)/0.5)] transition hover:bg-[rgb(var(--reg-canvas)/0.7)]">
-                                <td className="whitespace-nowrap px-4 py-3"><span className="font-semibold tabular-nums">{t.time}</span><span className="block text-xs text-[rgb(var(--reg-muted))]">{t.date}</span></td>
-                                <td className="max-w-[180px] truncate px-4 py-3 font-semibold">
-                                  <button type="button" className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); setSelectedTransaction(t); }}>{t.clientName}</button>
-                                </td>
-                                <td className="max-w-[260px] truncate px-4 py-3 text-[rgb(var(--reg-ink)/0.8)]">{itemsSummary(t)}</td>
-                                <td className="px-4 py-3">{t.staffName || "—"}</td>
-                                <td className="px-4 py-3">{methodChip(t.paymentMethod)}</td>
-                                <td className={cn("px-4 py-3 text-right font-extrabold tabular-nums", t.status !== "PAID" && "text-[rgb(var(--reg-muted))] line-through")}>{t.amount}</td>
-                                <td className="px-4 py-3">{chip(t.status)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="hidden md:block">
+                        <Card>
+                          <DataTable
+                            grid="1fr 1.2fr 2fr 1fr 1fr 1fr 1fr"
+                            columns={/* i18n-ignore: column ids, labels go through tOpt */ ["When", "Client", "Items", "Staff", "Method", "Total", "Status"].map((h) => tOpt("salesCols", h))}
+                            rows={shown}
+                            rowKey={(t) => t.id}
+                            onRowClick={(t) => setSelectedTransaction(t)}
+                            render={(t) => [
+                              <><b>{t.time}</b><small style={{ display: "block" }}>{t.date}</small></>,
+                              <b>{t.clientName}</b>,
+                              itemsSummary(t),
+                              t.staffName || "—",
+                              methodChip(t.paymentMethod),
+                              <b style={t.status !== "PAID" ? { textDecoration: "line-through", opacity: 0.6 } : undefined}>{t.amount}</b>,
+                              chip(t.status),
+                            ]}
+                          />
+                        </Card>
                       </div>
                       <ul className="space-y-2 md:hidden">
                         {shown.map((t) => (
