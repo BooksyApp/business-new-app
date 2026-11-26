@@ -1,8 +1,7 @@
 import type { Id } from "@/types/id";
 import { useState, useEffect } from "react";
 import { currencySymbol } from "@/lib/currency";
-import { RouteSheet, SheetTabs } from "@/components/page/RouteSheet";
-import { sheetPrimary, sheetSecondary } from "@/components/page/booqiStyles";
+import { BzScope, Btn, Drawer, Tabs } from "@/components/bz";
 import ItemsCategoryPage from "./ItemsCategoryPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -515,35 +514,35 @@ export default function AddComboServicePage() {
   const close = () => navigate(getPath("items-category"));
 
   return (
-    <RouteSheet
-      backdrop={<ItemsCategoryPage />}
-      onClose={close}
-      size="lg"
-      title={isEditMode ? formData.comboName || t("addComboService.editCombo") : t("addComboService.newCombo")}
-      description={t("addComboService.severalServicesBookedTogetherAs")}
-      header={
-        <SheetTabs
-          label={t("addComboService.comboSections")}
-          value={activeSidebarItem}
-          onChange={setActiveSidebarItem}
-          items={sidebarItems.map((i) => ({ id: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
-        />
-      }
-      footer={
-        <>
-          {!isEditMode ? (
-            <Button variant="outline" className={sheetSecondary} onClick={handleSaveAndAddNext}>{t("common.saveAddNext")}</Button>
-          ) : (
-            <Button variant="outline" className={sheetSecondary} onClick={close}>{t("common.cancel")}</Button>
-          )}
-          {/* It was disabled when creating, so a new combo could only be saved through
-              "save & add next"; handleSave creates as well as updates. */}
-          <Button className={sheetPrimary} onClick={handleSave}>
-            {isEditMode ? t("common.saveChanges") : t("addComboService.saveCombo")}
-          </Button>
-        </>
-      }
-    >
+    <BzScope>
+      <ItemsCategoryPage />
+      <Drawer
+        title={isEditMode ? formData.comboName || t("addComboService.editCombo") : t("addComboService.newCombo")}
+        sub={t("addComboService.severalServicesBookedTogetherAs")}
+        onClose={close}
+        closeIcon={<X className="ic" />}
+        tabs={
+          <Tabs
+            value={activeSidebarItem}
+            onChange={setActiveSidebarItem}
+            items={sidebarItems.map((i) => ({ key: i.id, label: i.label.charAt(0) + i.label.slice(1).toLowerCase() }))}
+          />
+        }
+        footer={
+          <>
+            {!isEditMode ? (
+              <Btn kind="soft" onClick={handleSaveAndAddNext}>{t("common.saveAddNext")}</Btn>
+            ) : (
+              <Btn kind="ol" onClick={close}>{t("common.cancel")}</Btn>
+            )}
+            {/* It was disabled when creating, so a new combo could only be saved through
+                "save & add next"; handleSave creates as well as updates. */}
+            <Btn kind="v" onClick={handleSave}>
+              {isEditMode ? t("common.saveChanges") : t("addComboService.saveCombo")}
+            </Btn>
+          </>
+        }
+      >
               <div className="bg-white rounded-2xl shadow-sm border border-[rgb(var(--reg-line)/0.8)] p-6">
                 <h2 className="text-lg font-bold text-[rgb(var(--reg-ink))] mb-6">
                   {t("addComboService.comboServiceDetails")}
@@ -1097,7 +1096,8 @@ export default function AddComboServicePage() {
                   </div>
                 )}
               </div>
-    </RouteSheet>
+      </Drawer>
+    </BzScope>
   );
 }
 

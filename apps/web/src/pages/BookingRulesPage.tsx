@@ -2,20 +2,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
-import { ClientPreview, Field } from "@/components/page/kit";
-import { fieldCls } from "@/components/page/kitStyles";
-import { Button } from "@/components/ui/button";
+import { Btn, Card, Field, FormGrid, RadioGroup, SectionCard, Skeleton, Toggle } from "@/components/bz";
+import { BzSaveBar, SettingsFrame } from "@/components/bz/p3-Settings";
+import { ClientPreview } from "@/components/page/kit";
 import { ArrowDown, ArrowUp, CalendarCheck, CreditCard, Receipt, ShieldCheck, Users } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { currencySymbol } from "@/lib/currency";
-import { Switch } from "@/components/ui/switch";
 import { businessService, type Business, type StaffAssignmentMode } from "@/services/businessService";
 import { staffService } from "@/services/staffService";
 import { getCurrentBusinessId } from "@/config/api";
 import { getPlatformSettings } from "@/services/platformService";
-import { BackToSettings, SaveBar } from "@/components/page/SettingsChrome";
 import { SlotOffersCard } from "@/components/bookings/SlotOffersCard";
 import { t } from "@/i18n";
 import type { Id } from "@/types/id";
@@ -182,10 +177,9 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
     hint: string,
     props: Record<string, unknown> = {}
   ) => (
-    <Field label={label} htmlFor={`br-${key}`} hint={hint}>
+    <Field label={label} hint={hint}>
       <input
         id={`br-${key}`}
-        className={fieldCls}
         value={form[key]}
         onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
         {...props}
@@ -215,23 +209,11 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
     get "payment-methods"() { return { title: t("bookingRules.paymentMethods"), subtitle: t("bookingRules.whatTheTillOffersWhen") }; },
     get "currency-tax"() { return { title: t("setup.currencyTax"), subtitle: t("setup.currencyTaxSub") }; },
   };
-  // A single section reads as its own page: no repeated card title under the page title.
-  const section_ = (icon: typeof CalendarCheck, title: string, children: React.ReactNode, tone?: string) =>
-    section ? <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6"><div className="space-y-4">{children}</div></section> : sectionCard(icon, title, children, tone);
   const withPreview = !section || section === "online" || section === "cancellation";
-
-  const sectionCard = (icon: typeof CalendarCheck, title: string, children: React.ReactNode, tone = "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]") => {
-    const Icon = icon;
-    return (
-      <section className="rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tone)}><Icon size={18} /></span>
-          <h2 className="text-base font-extrabold">{title}</h2>
-        </div>
-        <div className="space-y-4">{children}</div>
-      </section>
-    );
-  };
+  // A single section reads as its own page (no repeated card title); with all four it is a numbered card.
+  let secN = 0;
+  const section_ = (_icon: unknown, title: string, children: React.ReactNode, _tone?: string) =>
+    section ? <div className="stk">{children}</div> : <SectionCard n={++secN} title={title}><div className="stk">{children}</div></SectionCard>;
 
   // What booqi-web's salon page says under "Before you book", from the values on screen.
   const hours = form.cancellationWindowHours.trim() === "" ? null : Number(form.cancellationWindowHours);
@@ -242,156 +224,118 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
 
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader
-          title={section ? HEAD[section].title : t("bookingRules.bookingRules")}
-          subtitle={section ? HEAD[section].subtitle : t("bookingRules.theRulesTheAppAnd")}
-          actions={
-            <Button className={cn(primaryBtn, "hidden md:inline-flex")} disabled={saving || loading || !dirty} onClick={() => void save()}>
-              {saving ? t("common.saving") : dirty ? t("common.saveChanges") : t("common.saved")}
-            </Button>
-          }
-        />
+      <SettingsFrame
+        title={section ? HEAD[section].title : t("bookingRules.bookingRules")}
+        sub={section ? HEAD[section].subtitle : t("bookingRules.theRulesTheAppAnd")}
+        right={
+          <Btn kind="v" disabled={saving || loading || !dirty} onClick={() => void save()}>
+            {saving ? t("common.saving") : dirty ? t("common.saveChanges") : t("common.saved")}
+          </Btn>
+        }
+      >
+        {loading ? (
+          <Skeleton />
+        ) : (
+          <>
+            {show("online") && section_(CalendarCheck, t("bookingRules.onlineBooking"), (
+              <>
+                <Toggle title={t("bookingRules.acceptBookingsFromTheApp")} help={t("bookingRules.turnThisOffWhileYou")} checked={onlineBooking} onChange={setOnlineBooking} />
+                <FormGrid cols={2}>
+                  {field("minBookingNoticeMinutes", t("bookingRules.minimumNoticeMinutes"), t("bookingRules.howSoonFromNowSomeone"), { type: "number", min: 0, placeholder: "30" })}
+                  {field("maxBookingDaysAhead", t("bookingRules.bookUpToDaysAhead"), t("bookingRules.howFarIntoTheFuture"), { type: "number", min: 1, max: 365, placeholder: "180" })}
+                </FormGrid>
+              </>
+            ))}
 
-        <div className={pageBody}>
-          {section && <BackToSettings />}
-          {loading ? (
-            <div className="h-72 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
-          ) : (
-            <div className={cn("grid gap-6", withPreview ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "max-w-3xl")}>
-              <div className="min-w-0 space-y-6">
-                {show("online") && section_(CalendarCheck, t("bookingRules.onlineBooking"), (
-                  <>
-                    <label htmlFor="br-online" className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-[rgb(var(--reg-canvas))] p-4">
-                      <span>
-                        <span className="block text-[15px] font-semibold">{t("bookingRules.acceptBookingsFromTheApp")}</span>
-                        <span className="mt-0.5 block text-sm text-[rgb(var(--reg-muted))]">
-                          {t("bookingRules.turnThisOffWhileYou")}
-                        </span>
-                      </span>
-                      <Switch id="br-online" checked={onlineBooking} onCheckedChange={setOnlineBooking} className="data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
-                    </label>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {field("minBookingNoticeMinutes", t("bookingRules.minimumNoticeMinutes"), t("bookingRules.howSoonFromNowSomeone"), { type: "number", min: 0, placeholder: "30" })}
-                      {field("maxBookingDaysAhead", t("bookingRules.bookUpToDaysAhead"), t("bookingRules.howFarIntoTheFuture"), { type: "number", min: 1, max: 365, placeholder: "180" })}
-                    </div>
-                  </>
+            {show("cancellation") && section_(ShieldCheck, t("bookingRules.depositsAndCancellations"), (
+              <>
+                {/* Online payments off (v1: pay at the salon): the deposit and paid-online settings
+                    are hidden, not deleted, so what was saved is kept for when they go live. */}
+                <FormGrid cols={onlinePayments !== false ? 3 : 2}>
+                  {onlinePayments !== false && field("depositPercent", t("bookingRules.depositPct"), t("bookingRules.takenUpFrontABooking"), { type: "number", min: 0, max: 100, placeholder: "0" })}
+                  {field("cancellationWindowHours", t("bookingRules.freeCancellationHours"), t("bookingRules.howLongBeforeTheAppointment"), { type: "number", min: 0, placeholder: "24" })}
+                  {field("lateCancellationFee", t("bookingRules.lateCancellationFee"), t("bookingRules.chargedWhenTheyCancelInside"), { type: "number", min: 0, step: "0.01", placeholder: "0.00" })}
+                </FormGrid>
+              </>
+            ))}
+
+            {show("payment-methods") && section_(CreditCard, t("bookingRules.paymentMethods"), (
+              <>
+                {!section && <span className="hint">{t("bookingRules.whatTheTillOffersWhen")}</span>}
+                {[
+                  { key: "CASH", label: t("common.cash") },
+                  { key: "CARD", label: t("bookingRules.cardInTheSalon") },
+                  { key: "ONLINE", label: t("bookingRules.paidOnline") },
+                  { key: "GIFT_CARD", label: t("bookingRules.giftCard") },
+                  // Packages and memberships are not being sold yet; offering them at the
+                  // till would price a bill against something that cannot exist.
+                  // { key: "PACKAGE", label: "Package" },
+                  // { key: "MEMBERSHIP", label: "Membership" },
+                ].filter(m => m.key !== "ONLINE" || onlinePayments !== false).map(m => (
+                  <Toggle
+                    key={m.key}
+                    title={m.label}
+                    checked={methods.includes(m.key)}
+                    onChange={v => {
+                      if (!v && methods.length <= 1 && methods.includes(m.key)) { toast.error(t("bookingRules.keepOneMethod")); return; }
+                      setMethods(prev => (v ? [...prev, m.key] : prev.filter(x => x !== m.key)));
+                    }}
+                  />
                 ))}
+              </>
+            ))}
 
-                {show("cancellation") && section_(ShieldCheck, t("bookingRules.depositsAndCancellations"), (
+            {show("online") && section_(Users, t("bookingRules.assignmentTitle"), (
+              <>
+                <RadioGroup
+                  title={t("bookingRules.assignmentTitle")}
+                  value={assignMode}
+                  onChange={(v) => setAssignMode(v as StaffAssignmentMode)}
+                  options={[
+                    { value: "FAIR_EARNINGS", label: t("bookingRules.modeFair"), hint: t("bookingRules.modeFairHint") },
+                    { value: "ROUND_ROBIN", label: t("bookingRules.modeRoundRobin"), hint: t("bookingRules.modeRoundRobinHint") },
+                    { value: "PRIORITY", label: t("bookingRules.modePriority"), hint: t("bookingRules.modePriorityHint") },
+                  ]}
+                />
+                {assignMode === "PRIORITY" && (
                   <>
-                    {/* Online payments off (v1: pay at the salon): the deposit and paid-online settings
-                        are hidden, not deleted, so what was saved is kept for when they go live. */}
-                    <div className={cn("grid gap-4", onlinePayments !== false ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
-                      {onlinePayments !== false && field("depositPercent", t("bookingRules.depositPct"), t("bookingRules.takenUpFrontABooking"), { type: "number", min: 0, max: 100, placeholder: "0" })}
-                      {field("cancellationWindowHours", t("bookingRules.freeCancellationHours"), t("bookingRules.howLongBeforeTheAppointment"), { type: "number", min: 0, placeholder: "24" })}
-                      {field("lateCancellationFee", t("bookingRules.lateCancellationFee"), t("bookingRules.chargedWhenTheyCancelInside"), { type: "number", min: 0, step: "0.01", placeholder: "0.00" })}
-                    </div>
-                  </>
-                ), "bg-amber-50 text-amber-800")}
-
-                {show("payment-methods") && section_(CreditCard, t("bookingRules.paymentMethods"), (
-                  <>
-                    {!section && <p className="text-sm text-[rgb(var(--reg-muted))]">{t("bookingRules.whatTheTillOffersWhen")}</p>}
-                    <ul className="divide-y divide-[rgb(var(--reg-line)/0.6)] rounded-2xl ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                      {[
-                        { key: "CASH", label: t("common.cash") },
-                        { key: "CARD", label: t("bookingRules.cardInTheSalon") },
-                        { key: "ONLINE", label: t("bookingRules.paidOnline") },
-                        { key: "GIFT_CARD", label: t("bookingRules.giftCard") },
-                        // Packages and memberships are not being sold yet; offering them at the
-                        // till would price a bill against something that cannot exist.
-                        // { key: "PACKAGE", label: "Package" },
-                        // { key: "MEMBERSHIP", label: "Membership" },
-                      ].filter(m => m.key !== "ONLINE" || onlinePayments !== false).map(m => (
-                        <li key={m.key}>
-                          <label htmlFor={`br-m-${m.key}`} className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
-                            <span className="text-[15px] font-semibold">{m.label}</span>
-                            <Switch
-                              id={`br-m-${m.key}`}
-                              className="data-[state=checked]:bg-[rgb(var(--reg-brand))]"
-                              checked={methods.includes(m.key)}
-                              onCheckedChange={v =>
-                                {
-                                if (!v && methods.length <= 1 && methods.includes(m.key)) { toast.error(t("bookingRules.keepOneMethod")); return; }
-                                setMethods(prev => (v ? [...prev, m.key] : prev.filter(x => x !== m.key)));
-                              }
-                              }
-                            />
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ), "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand-strong))]")}
-
-                {show("online") && section_(Users, t("bookingRules.assignmentTitle"), (
-                  <>
-                    <div role="radiogroup" aria-label={t("bookingRules.assignmentTitle")} className="space-y-2">
-                      {([
-                        ["FAIR_EARNINGS", t("bookingRules.modeFair"), t("bookingRules.modeFairHint")],
-                        ["ROUND_ROBIN", t("bookingRules.modeRoundRobin"), t("bookingRules.modeRoundRobinHint")],
-                        ["PRIORITY", t("bookingRules.modePriority"), t("bookingRules.modePriorityHint")],
-                      ] as [StaffAssignmentMode, string, string][]).map(([key, label, hint]) => (
-                        <label key={key} htmlFor={`br-mode-${key}`} className="flex cursor-pointer items-start gap-3 rounded-2xl bg-[rgb(var(--reg-canvas))] p-4">
-                          <input
-                            id={`br-mode-${key}`}
-                            type="radio"
-                            name="br-assign-mode"
-                            className="mt-1"
-                            checked={assignMode === key}
-                            onChange={() => setAssignMode(key)}
-                          />
-                          <span>
-                            <span className="block text-[15px] font-semibold">{label}</span>
-                            <span className="mt-0.5 block text-sm text-[rgb(var(--reg-muted))]">{hint}</span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {assignMode === "PRIORITY" && (
-                      <div>
-                        <p className="mb-2 text-sm font-semibold">{t("bookingRules.priorityOrder")}</p>
-                        {order.length === 0 ? (
-                          <p className="text-sm text-[rgb(var(--reg-muted))]">{t("bookingRules.priorityEmpty")}</p>
-                        ) : (
-                          <ol className="divide-y divide-[rgb(var(--reg-line)/0.6)] rounded-2xl ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-                            {order.map((s, i) => (
-                              <li key={String(s.id)} className="flex items-center gap-3 px-4 py-2">
-                                <span className="w-5 text-sm text-[rgb(var(--reg-muted))]">{i + 1}</span>
-                                <span className="flex-1 text-[15px] font-semibold">{s.name}</span>
-                                <Button type="button" variant="ghost" size="icon" disabled={i === 0} aria-label={t("bookingRules.moveUp")} onClick={() => move(i, -1)}><ArrowUp size={16} /></Button>
-                                <Button type="button" variant="ghost" size="icon" disabled={i === order.length - 1} aria-label={t("bookingRules.moveDown")} onClick={() => move(i, 1)}><ArrowDown size={16} /></Button>
-                              </li>
-                            ))}
-                          </ol>
-                        )}
+                    <div className="lbl2">{t("bookingRules.priorityOrder")}</div>
+                    {order.length === 0 ? (
+                      <span className="hint">{t("bookingRules.priorityEmpty")}</span>
+                    ) : (
+                      <div className="stk">
+                        {order.map((s, i) => (
+                          <div key={String(s.id)} className="lr">
+                            <span style={{ width: 20, color: "var(--bz-muted)" }}>{i + 1}</span>
+                            <div className="tx"><b>{s.name}</b></div>
+                            <span className="acts">
+                              <Btn kind="ol" disabled={i === 0} aria-label={t("bookingRules.moveUp")} onClick={() => move(i, -1)} icon={<ArrowUp size={16} />} />
+                              <Btn kind="ol" disabled={i === order.length - 1} aria-label={t("bookingRules.moveDown")} onClick={() => move(i, 1)} icon={<ArrowDown size={16} />} />
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <label htmlFor="br-parallel" className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl bg-[rgb(var(--reg-canvas))] p-4">
-                      <span>
-                        <span className="block text-[15px] font-semibold">{t("bookingRules.parallelTitle")}</span>
-                        <span className="mt-0.5 block text-sm text-[rgb(var(--reg-muted))]">{t("bookingRules.parallelHint")}</span>
-                      </span>
-                      <Switch id="br-parallel" checked={parallel} onCheckedChange={setParallel} className="data-[state=checked]:bg-[rgb(var(--reg-brand))]" />
-                    </label>
                   </>
-                ))}
+                )}
+                <Toggle title={t("bookingRules.parallelTitle")} help={t("bookingRules.parallelHint")} checked={parallel} onChange={setParallel} />
+              </>
+            ))}
 
-                {show("online") && <SlotOffersCard businessId={businessId} />}
-                {show("currency-tax") && section_(Receipt, t("bookingRules.currencyAndTax"), (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {/* Read-only: the currency follows the salon's country, which comes from its
-                        location. A hand-typed code here used to override it per salon. */}
-                    <Field label={t("bookingRules.currency")} htmlFor="br-currency" hint={t("bookingRules.setAutomaticallyFromYourSalon")}>
-                      <input id="br-currency" className={cn(fieldCls, "bg-[rgb(var(--reg-canvas))]")} value={form.currency || "—"} readOnly disabled />
-                    </Field>
-                    {field("taxRate", t("bookingRules.taxRate"), t("bookingRules.appliedToSalesOnReceipts"), { type: "number", min: 0, max: 100, step: "0.01", placeholder: "0" })}
-                  </div>
-                ), "bg-sky-50 text-sky-700")}
-              </div>
+            {show("online") && <SlotOffersCard businessId={businessId} />}
+            {show("currency-tax") && section_(Receipt, t("bookingRules.currencyAndTax"), (
+              <FormGrid cols={2}>
+                {/* Read-only: the currency follows the salon's country, which comes from its
+                    location. A hand-typed code here used to override it per salon. */}
+                <Field label={t("bookingRules.currency")} hint={t("bookingRules.setAutomaticallyFromYourSalon")} disabled>
+                  <input id="br-currency" value={form.currency || "—"} readOnly disabled />
+                </Field>
+                {field("taxRate", t("bookingRules.taxRate"), t("bookingRules.appliedToSalesOnReceipts"), { type: "number", min: 0, max: 100, step: "0.01", placeholder: "0" })}
+              </FormGrid>
+            ))}
 
-              {withPreview && <aside className="min-w-0 lg:sticky lg:top-[132px] lg:self-start">
+            {withPreview && (
+              <>
                 <ClientPreview where={t("common.yourSalonPage")}>
                   <div className="rounded-2xl bg-white p-4">
                     <p className="mb-2 text-sm font-semibold">{t("bookingRules.beforeYouBook")}</p>
@@ -420,40 +364,30 @@ export default function BookingRulesPage({ section }: { section?: BookingRulesSe
                     </div>
                   </div>
                 </ClientPreview>
-                <p className="mt-3 px-1 text-xs text-[rgb(var(--reg-muted))]">
+                <span className="hint">
                   {t("bookingRules.theTillTakes")}{" "}{methods.length ? methods.map((m) => methodLabel[m] ?? m).join(", ") : t("bookingRules.nothingSelected")}
                   {business?.currency ? t("bookingRules.pricesIn", { currency: currencySymbol() }) : ""}
-                </p>
-              </aside>}
-            </div>
-          )}
-        </div>
+                </span>
+              </>
+            )}
 
-        {/* Belongs with online booking only: it showed under every settings sub-page. */}
-        {show("online") && <section className="mt-8 max-w-xl space-y-3 rounded-2xl p-4 ring-1 ring-[rgb(var(--reg-line))]">
-          <Field label={t("bookingRules.googleReviewLink")} htmlFor="br-google-review" hint={t("bookingRules.googleReviewLinkHint")}>
-            <div className="flex flex-wrap gap-2">
-              <input
-                id="br-google-review"
-                type="url"
-                className="h-10 w-full max-w-md rounded-xl border border-[rgb(var(--reg-line))] bg-transparent px-3 text-sm outline-none focus:border-[rgb(var(--reg-brand))]"
-                placeholder="https://g.page/r/..."
-                value={reviewUrl}
-                onChange={(e) => setReviewUrl(e.target.value)}
-              />
-              <Button
-                className={primaryBtn}
-                disabled={reviewUrlSaving || reviewUrl.trim() === (business?.googleReviewUrl ?? "")}
-                onClick={() => void saveReviewUrl()}
-              >
-                {t("common.save")}
-              </Button>
-            </div>
-          </Field>
-        </section>}
-
-        <SaveBar dirty={dirty} saving={saving} onSave={() => void save()} onDiscard={discard} />
-      </BooqiScope>
+            {/* Belongs with online booking only: it showed under every settings sub-page. */}
+            {show("online") && (
+              <Card>
+                <Field label={t("bookingRules.googleReviewLink")} hint={t("bookingRules.googleReviewLinkHint")}>
+                  <input id="br-google-review" type="url" placeholder="https://g.page/r/..." value={reviewUrl} onChange={(e) => setReviewUrl(e.target.value)} />
+                </Field>
+                <div>
+                  <Btn kind="ol" disabled={reviewUrlSaving || reviewUrl.trim() === (business?.googleReviewUrl ?? "")} onClick={() => void saveReviewUrl()}>
+                    {t("common.save")}
+                  </Btn>
+                </div>
+              </Card>
+            )}
+          </>
+        )}
+        <BzSaveBar dirty={dirty} saving={saving} onSave={() => void save()} onDiscard={discard} />
+      </SettingsFrame>
     </AppLayout>
   );
 }

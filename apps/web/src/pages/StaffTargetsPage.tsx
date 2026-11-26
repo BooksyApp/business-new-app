@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Target, Users } from "lucide-react";
 import { toast } from "sonner";
-import { AppLayout } from "@/components/layout/AppLayout";
-import { BooqiScope, EmptyState, PageHeader } from "@/components/page/booqi";
-import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
-import { Field } from "@/components/page/kit";
-import { fieldCls, money } from "@/components/page/kitStyles";
-import { Button } from "@/components/ui/button";
+import { Avatar, Btn, EmptyState, Note, PageHead } from "@/components/bz";
+import { BzPage, initialsOf } from "@/components/bz/p2-page";
+import { money } from "@/components/page/kitStyles";
 import { useBusinessId } from "@/hooks/useBusinessId";
 import { currencySymbol } from "@/lib/currency";
 import { t } from "@/i18n";
@@ -23,14 +20,16 @@ const pct = (actual: number, target: number) => (target > 0 ? Math.min(100, Math
 function Progress({ actual, target }: { actual: number; target: number }) {
   const p = pct(actual, target);
   return (
-    <div className="mt-1">
-      <div className="h-1.5 w-full rounded-full bg-[rgb(var(--reg-line)/0.8)]">
-        <div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${p}%` }} />
+    <div style={{ marginTop: 4 }}>
+      <div style={{ height: 6, borderRadius: 99, background: "var(--bz-fill2)" }}>
+        <div style={{ height: 6, borderRadius: 99, background: "var(--bz-ok)", width: `${p}%` }} />
       </div>
-      <p className="mt-1 text-xs text-[rgb(var(--reg-muted))]">{target > 0 ? `${p}%` : t("staffTargets.noTarget")}</p>
+      <small style={{ color: "var(--bz-muted)", fontWeight: 600 }}>{target > 0 ? `${p}%` : t("staffTargets.noTarget")}</small>
     </div>
   );
 }
+
+const GRID = "1.6fr 1fr 1fr 1.1fr 1.1fr 100px";
 
 function TargetRow({
   row,
@@ -66,28 +65,33 @@ function TargetRow({
   };
 
   return (
-    <tr className="border-t border-[rgb(var(--reg-line)/0.8)] align-top">
-      <td className="px-4 py-3 font-semibold">{row.staffName}</td>
-      <td className="px-4 py-3">
-        <input className={fieldCls} type="number" min={0} step="0.01" aria-label={t("staffTargets.revenueTarget")} value={rev} onChange={(e) => setRev(e.target.value)} />
-      </td>
-      <td className="px-4 py-3">
+    <div className="tdr2" style={{ gridTemplateColumns: GRID }}>
+      <div>
+        <div className="row gap8">
+          <Avatar initials={initialsOf(row.staffName)} size={36} />
+          {row.staffName}
+        </div>
+      </div>
+      <div>
         {money(Math.round(row.revenueActual), sym)}
         <Progress actual={row.revenueActual} target={row.revenueTarget} />
-      </td>
-      <td className="px-4 py-3">
-        <input className={fieldCls} type="number" min={0} step={1} aria-label={t("staffTargets.bookingsTarget")} value={book} onChange={(e) => setBook(e.target.value)} />
-      </td>
-      <td className="px-4 py-3">
+      </div>
+      <div>
         {row.bookingsActual}
         <Progress actual={row.bookingsActual} target={row.bookingsTarget} />
-      </td>
-      <td className="px-4 py-3">
-        <Button className={primaryBtn} disabled={!changed || busy} onClick={() => void save()}>
+      </div>
+      <div>
+        <input className="inp" type="number" min={0} step="0.01" aria-label={t("staffTargets.revenueTarget")} value={rev} onChange={(e) => setRev(e.target.value)} />
+      </div>
+      <div>
+        <input className="inp" type="number" min={0} step={1} aria-label={t("staffTargets.bookingsTarget")} value={book} onChange={(e) => setBook(e.target.value)} />
+      </div>
+      <div>
+        <Btn kind="soft" disabled={!changed || busy} onClick={() => void save()}>
           {t("staffTargets.save")}
-        </Button>
-      </td>
-    </tr>
+        </Btn>
+      </div>
+    </div>
   );
 }
 
@@ -114,44 +118,30 @@ export default function StaffTargetsPage() {
   }, [load]);
 
   return (
-    <AppLayout>
-      <BooqiScope>
-        <PageHeader title={t("staffTargets.title")} subtitle={t("staffTargets.subtitle")} />
-        <div className={pageBody}>
-          <section className="rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-            <Field label={t("staffTargets.month")} htmlFor="st-month">
-              <input id="st-month" type="month" className={fieldCls} value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />
-            </Field>
-          </section>
-
-          {rows.length === 0 && !busy ? (
-            <EmptyState icon={Users} title={t("staffTargets.empty")} body={t("staffTargets.emptyBody")} />
-          ) : (
-            <div className="overflow-x-auto rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="text-xs font-semibold text-[rgb(var(--reg-muted))]">
-                  <tr>
-                    <th className="px-4 py-3">{t("staffTargets.colStaff")}</th>
-                    <th className="px-4 py-3">{t("staffTargets.revenueTarget")}</th>
-                    <th className="px-4 py-3">{t("staffTargets.revenueActual")}</th>
-                    <th className="px-4 py-3">{t("staffTargets.bookingsTarget")}</th>
-                    <th className="px-4 py-3">{t("staffTargets.bookingsActual")}</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <TargetRow key={`${r.staffId}-${month}-${r.revenueTarget}-${r.bookingsTarget}`} row={r} month={month} sym={sym} onSaved={load} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="flex items-center gap-2 text-xs text-[rgb(var(--reg-muted))]">
-            <Target size={14} /> {t("staffTargets.note")}
-          </p>
+    <BzPage>
+      <PageHead
+        title={t("staffTargets.title")}
+        sub={t("staffTargets.subtitle")}
+        right={<input id="st-month" type="month" className="inp" aria-label={t("staffTargets.month")} value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} />}
+      />
+      {rows.length === 0 && !busy ? (
+        <EmptyState icon={<Users className="ic" />} title={t("staffTargets.empty")} text={t("staffTargets.emptyBody")} />
+      ) : (
+        <div className="tbx">
+          <div className="tdr2 h" style={{ gridTemplateColumns: GRID }}>
+            <div>{t("staffTargets.colStaff")}</div>
+            <div>{t("staffTargets.revenueActual")}</div>
+            <div>{t("staffTargets.bookingsActual")}</div>
+            <div>{t("staffTargets.revenueTarget")}</div>
+            <div>{t("staffTargets.bookingsTarget")}</div>
+            <div />
+          </div>
+          {rows.map((r) => (
+            <TargetRow key={`${r.staffId}-${month}-${r.revenueTarget}-${r.bookingsTarget}`} row={r} month={month} sym={sym} onSaved={load} />
+          ))}
         </div>
-      </BooqiScope>
-    </AppLayout>
+      )}
+      <Note kind="in" icon={<Target className="ic" />}>{t("staffTargets.note")}</Note>
+    </BzPage>
   );
 }

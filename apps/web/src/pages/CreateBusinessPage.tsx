@@ -1,13 +1,10 @@
 import { API_BASE_URL } from '@/config/api';
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { AuthShell } from "@/components/auth/AuthShell";
+import { useNavigate } from "react-router-dom";
 import { SalonPreview } from "@/components/auth/SalonPreview";
-import { authGhost, authInput, authLabel, authSubtitle, authTitle, brandCta, choiceCard } from "@/components/auth/authStyles";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { Btn, BzScope, Chip, ChipRow, Field, RowItem, SelectField } from "@/components/bz";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Sparkles, Scissors, Heart, Stethoscope, MapPin } from "lucide-react";
+import { Sparkles, Scissors, Heart, Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import AddressMapPicker from "@/components/AddressMapPicker";
 import { businessService } from "@/services/businessService";
@@ -132,61 +129,50 @@ export default function CreateBusinessPage() {
   );
 
   return (
-    <AuthShell headerLink={{ label: t("common.back"), to: "/?switch=1" }} aside={preview} footer={false} cardClassName="md:max-w-[560px]">
-      <h1 className={authTitle}>{t("createBusiness.addABusiness")}</h1>
-      <p className={authSubtitle}>{t("createBusiness.aNewSalonUnderYour")}</p>
+    <BzScope>
+      <div className="dsh bz-surface bz-live" style={{ justifyContent: "center", gap: 32, flexWrap: "wrap", padding: 30, background: "var(--bz-canvas)" }}>
+        <form
+          className="stk"
+          style={{ width: 620, maxWidth: "100%" }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleCreate();
+          }}
+        >
+          <b style={{ fontSize: 30, letterSpacing: "-.02em" }}>{t("createBusiness.addABusiness")}</b>
+          <span className="hint">{t("createBusiness.aNewSalonUnderYour")}</span>
 
-      <form
-        className="space-y-6"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void handleCreate();
-        }}
-      >
-        <div>
-          <label htmlFor="bizName" className={authLabel}>{t("common.businessName")}</label>
-          <Input id="bizName" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("createBusiness.eGGlamourStudio")} className={authInput} />
-        </div>
+          <Field label={t("common.businessName")} required>
+            <input id="bizName" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("createBusiness.eGGlamourStudio")} />
+          </Field>
 
-        <fieldset>
-          <legend className={authLabel}>{t("createBusiness.whatKindOfBusiness")}</legend>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {featuredCategories.map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <button key={cat.id} type="button" aria-pressed={category === cat.id} onClick={() => setCategory(cat.id)} className={cn(choiceCard(category === cat.id), "flex flex-col items-center gap-2 p-3 text-center")}>
-                  <Icon className="h-5 w-5" aria-hidden />
-                  <span className="text-xs font-semibold leading-tight">{cat.name}</span>
-                </button>
-              );
-            })}
-          </div>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className={cn(authInput, "mt-2.5")} aria-label={t("createBusiness.otherCategory")}>
-              <SelectValue placeholder={t("createBusiness.orPickAnotherCategory")} />
-            </SelectTrigger>
-            <SelectContent>
-              {allCategories.map((cat) => (
-                <SelectItem key={cat.slug} value={cat.slug}>{cat.label ?? cat.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </fieldset>
+          <div className="lbl2">{t("createBusiness.whatKindOfBusiness")}</div>
+          <ChipRow>
+            {featuredCategories.map((cat) => (
+              <Chip key={cat.id} violet={category === cat.id} onClick={() => setCategory(cat.id)}>
+                {cat.name}
+              </Chip>
+            ))}
+          </ChipRow>
+          <SelectField label={t("createBusiness.otherCategory")}>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="h-auto border-0 bg-transparent p-0 font-bold shadow-none" aria-label={t("createBusiness.otherCategory")}>
+                <SelectValue placeholder={t("createBusiness.orPickAnotherCategory")} />
+              </SelectTrigger>
+              <SelectContent>
+                {allCategories.map((cat) => (
+                  <SelectItem key={cat.slug} value={cat.slug}>{cat.label ?? cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </SelectField>
 
-        <div>
-          <label htmlFor="bizPhone" className={authLabel}>
-            {t("common.phone")}{" "}<span className="font-normal text-[rgb(var(--reg-muted))]">{t("createBusiness.optional")}</span>
-          </label>
-          <Input id="bizPhone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("createBusiness.eG")} className={authInput} />
-        </div>
+          <Field label={`${t("common.phone")} · ${t("createBusiness.optional")}`}>
+            <input id="bizPhone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("createBusiness.eG")} />
+          </Field>
 
-        <div>
-          <label htmlFor="bizAddress" className={authLabel}>
-            {t("common.address")}{" "}<span className="font-normal text-[rgb(var(--reg-muted))]">{t("createBusiness.optional")}</span>
-          </label>
-          <div className="relative">
-            <MapPin className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-            <Input
+          <Field label={`${t("common.address")} · ${t("createBusiness.optional")}`} hint={isSearching ? t("createBusiness.searching") : undefined}>
+            <input
               id="bizAddress"
               value={addressSearch}
               onChange={(e) => {
@@ -201,49 +187,40 @@ export default function CreateBusinessPage() {
                 }
               }}
               placeholder={t("createBusiness.searchForAnAddress")}
-              className={cn(authInput, "pl-12")}
             />
-          </div>
-          {isSearching && <p className="mt-2 text-sm text-[rgb(var(--reg-muted))]">{t("createBusiness.searching")}</p>}
+          </Field>
           {addressResults.length > 0 && !isSearching && (
-            <ul className="mt-2 max-h-48 overflow-y-auto rounded-[14px] bg-white ring-1 ring-[rgb(var(--reg-line))]">
+            <div className="tbx" style={{ maxHeight: 192, overflowY: "auto" }}>
               {addressResults.map((addr, index) => {
                 const displayName = addr.display_name || addr.name || "";
                 const addressParts = displayName.split(",").slice(0, 3).join(",");
                 return (
-                  <li key={index}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddress(displayName);
-                        setLatitude(parseFloat(addr.lat));
-                        setLongitude(parseFloat(addr.lon));
-                        const bn = addr.address?.house_number || addr.address?.building || "";
-                        if (bn) setBuildingNumber(bn);
-                        setAddressSearch(addressParts);
-                        setAddressResults([]);
-                      }}
-                      className="w-full border-b border-[rgb(var(--reg-line)/0.6)] px-4 py-3 text-left text-sm last:border-0 hover:bg-[rgb(var(--reg-canvas))]"
-                    >
-                      {displayName}
-                    </button>
-                  </li>
+                  <RowItem
+                    key={index}
+                    title={displayName}
+                    onClick={() => {
+                      setAddress(displayName);
+                      setLatitude(parseFloat(addr.lat));
+                      setLongitude(parseFloat(addr.lon));
+                      const bn = addr.address?.house_number || addr.address?.building || "";
+                      if (bn) setBuildingNumber(bn);
+                      setAddressSearch(addressParts);
+                      setAddressResults([]);
+                    }}
+                  />
                 );
               })}
-            </ul>
+            </div>
           )}
-        </div>
 
-        {address && (
-          <div>
-            <label htmlFor="buildingNumber" className={authLabel}>{t("createBusiness.buildingNumber")}</label>
-            <Input id="buildingNumber" value={buildingNumber} onChange={(e) => setBuildingNumber(e.target.value)} placeholder={t("createBusiness.eG2")} className={authInput} />
-          </div>
-        )}
+          {address && (
+            <Field label={t("createBusiness.buildingNumber")}>
+              <input id="buildingNumber" value={buildingNumber} onChange={(e) => setBuildingNumber(e.target.value)} placeholder={t("createBusiness.eG2")} />
+            </Field>
+          )}
 
-        <div>
-          <p className={authLabel}>{t("createBusiness.pinTheExactSpotOn")}</p>
-          <div className="overflow-hidden rounded-[14px] ring-1 ring-[rgb(var(--reg-line))]">
+          <div className="lbl2">{t("createBusiness.pinTheExactSpotOn")}</div>
+          <div className="mapx" style={{ overflow: "hidden" }}>
             <AddressMapPicker
               onLocationSelect={(lat, lng, resolvedAddress, bn) => {
                 setLatitude(lat);
@@ -258,19 +235,18 @@ export default function CreateBusinessPage() {
             />
           </div>
           {latitude && longitude && (
-            <p className="mt-1.5 text-xs text-[rgb(var(--reg-muted))]">{t("createBusiness.pinnedAt", { value: latitude.toFixed(5), value2: longitude.toFixed(5) })}</p>
+            <span className="hint">{t("createBusiness.pinnedAt", { value: latitude.toFixed(5), value2: longitude.toFixed(5) })}</span>
           )}
-        </div>
 
-        <div className="flex flex-col-reverse gap-3 sm:flex-row">
-          <Link to="/?switch=1" className={cn(authGhost, "sm:flex-1")}>
-            <ArrowLeft className="h-4 w-4" aria-hidden />{" "}{t("common.cancel")}
-          </Link>
-          <button type="submit" disabled={!canCreate} className={cn(brandCta, "sm:flex-[1.6]")}>
-            {creating ? t("common.creating") : t("createBusiness.createBusiness")}
-          </button>
-        </div>
-      </form>
-    </AuthShell>
+          <div className="row gap8" style={{ justifyContent: "flex-end" }}>
+            <Btn kind="ol" onClick={() => navigate("/?switch=1")}>{t("common.cancel")}</Btn>
+            <Btn kind="v" type="submit" disabled={!canCreate}>
+              {creating ? t("common.creating") : t("createBusiness.createBusiness")}
+            </Btn>
+          </div>
+        </form>
+        <div style={{ width: 340, maxWidth: "100%", alignSelf: "flex-start" }}>{preview}</div>
+      </div>
+    </BzScope>
   );
 }

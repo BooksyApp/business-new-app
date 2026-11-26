@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { ChevronRight, Search } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useVisibleSettings } from "@/components/layout/navigation";
-import { NavCard, NavCardGrid } from "@/components/layout/NavCards";
-import { BooqiScope, PageHeader } from "@/components/page/booqi";
-import { pageBody } from "@/components/page/booqiStyles";
-import { fieldCls } from "@/components/page/kitStyles";
-import { cn } from "@/lib/utils";
+import { Card, Field, FormGrid, PageHead } from "@/components/bz";
+import { BzPage, HelpLink } from "@/components/bz/p3-Settings";
 import { useNavigation } from "@/utils/navigationUtils";
 import { t } from "@/i18n";
 
@@ -44,41 +41,36 @@ export default function SetupPage() {
 
   return (
     <AppLayout>
-      <BooqiScope>
-        <PageHeader helpSlug="ilk-addimlar" title={t("setup.settings")} subtitle={t("nav.set.subtitle")} />
+      <BzPage>
+        <PageHead title={t("setup.settings")} sub={t("nav.set.subtitle")} right={<HelpLink slug="ilk-addimlar" />} />
 
-        <div className={pageBody}>
-          <div className="relative mb-6 max-w-md">
-            <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[rgb(var(--reg-muted))]" aria-hidden />
-            <input aria-label={t("setup.searchSettings")} className={cn(fieldCls, "h-11 pl-10")} placeholder={t("setup.searchSettings")} value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
-
-          {sections.length === 0 && (
-            <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">{t("setup.noSettingMatches", { query })}</p>
-          )}
-
-          <div className="space-y-8">
-            {sections.map((s) => (
-              <section
-                key={s.id}
-                id={`setup-${s.id}`}
-                aria-labelledby={`setup-${s.id}-title`}
-                className={cn("scroll-mt-[140px] rounded-[24px]", focusedCategory === s.id && "outline outline-2 outline-offset-8 outline-[rgb(var(--reg-brand)/0.45)]")}
-              >
-                <header className="mb-3 flex items-baseline gap-3">
-                  <h2 id={`setup-${s.id}-title`} className="text-[17px] font-extrabold tracking-[-0.01em]">{s.title}</h2>
-                  <p className="hidden truncate text-sm text-[rgb(var(--reg-muted))] sm:block">{s.description}</p>
-                </header>
-                <NavCardGrid>
-                  {s.rows.map((r) => (
-                    <NavCard key={r.path} to={getPath(r.path)} icon={r.icon} title={r.label} description={r.hint} />
-                  ))}
-                </NavCardGrid>
-              </section>
-            ))}
-          </div>
+        <div style={{ maxWidth: 420, marginBottom: 16 }}>
+          <Field label={t("setup.searchSettings")} suffix={<Search size={16} aria-hidden />}>
+            <input aria-label={t("setup.searchSettings")} placeholder={t("setup.searchSettings")} value={query} onChange={(e) => setQuery(e.target.value)} />
+          </Field>
         </div>
-      </BooqiScope>
+
+        {sections.length === 0 && (
+          <Card>
+            <p style={{ textAlign: "center", color: "var(--bz-muted)", padding: "24px 0" }}>{t("setup.noSettingMatches", { query })}</p>
+          </Card>
+        )}
+
+        <FormGrid cols={3}>
+          {sections.map((s) => (
+            <section key={s.id} id={`setup-${s.id}`} aria-labelledby={`setup-${s.id}-title`} style={{ scrollMarginTop: 140, ...(focusedCategory === s.id ? { outline: "2px solid var(--bz-violet)", outlineOffset: 6, borderRadius: 22 } : null) }}>
+              <Card title={<span id={`setup-${s.id}-title`}>{s.title}</span>}>
+                {s.rows.map((r) => (
+                  <Link key={r.path} to={getPath(r.path)} className="row sp" style={{ padding: "8px 0", borderTop: "1px solid var(--bz-line)", fontWeight: 700, fontSize: 15, color: "inherit", textDecoration: "none" }} title={r.hint}>
+                    {r.label}
+                    <span style={{ color: "var(--bz-ink3)" }}><ChevronRight className="ic" aria-hidden /></span>
+                  </Link>
+                ))}
+              </Card>
+            </section>
+          ))}
+        </FormGrid>
+      </BzPage>
     </AppLayout>
   );
 }
