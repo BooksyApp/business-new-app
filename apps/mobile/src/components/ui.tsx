@@ -147,3 +147,14 @@ export function ErrorState({ error, onRetry }: { error: Error; onRetry: () => vo
     ? <StateView icon="wifioff" title={tr('state.offlineTitle')} body={tr('state.offlineBody')} actionLabel={tr('state.retry')} onAction={onRetry} />
     : <StateView icon="info" title={tr('state.errorTitle')} body={error.message} actionLabel={tr('state.retry')} onAction={onRetry} />;
 }
+
+export function Chip({ label, active, onPress, icon }: { label: string; active?: boolean; onPress: () => void; icon?: string }) {
+  const { t } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected: !!active }}
+      style={{ height: 40, paddingHorizontal: 16, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: active ? t.vsoft : t.surface, borderWidth: 1, borderColor: active ? 'rgba(111,82,237,.35)' : t.line }}>
+      {icon ? <Icon name={icon} size={16} color={active ? t.vtext : t.muted} /> : null}
+      <Text style={{ fontFamily: active ? font.b : font.s, fontSize: 14, color: active ? t.vtext : t.ink }}>{label}</Text>
+    </Pressable>
+  );
+}
