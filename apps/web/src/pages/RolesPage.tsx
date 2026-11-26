@@ -193,13 +193,13 @@ const RolesPage = () => {
 
         <div className={pageBody}>
           {loading ? (
-            <div className="h-72 animate-pulse rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]" aria-busy />
+            <div className="h-72 animate-pulse rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]" aria-busy />
           ) : (
             <>
               {/* Role summary cards */}
               <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {roles.map((r) => (
-                  <li key={r.id} data-testid={`role-${r.name}`} className="flex items-start gap-3 rounded-[20px] bg-white p-4 ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                  <li key={r.id} data-testid={`role-${r.name}`} className="flex items-start gap-3 rounded-[20px] bg-white p-4 ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                     <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", r.isOwner ? "bg-[rgb(var(--reg-ink)/0.06)] text-[rgb(var(--reg-ink)/0.7)]" : "bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]")}>
                       {r.isOwner ? <Lock size={18} /> : <ShieldCheck size={18} />}
                     </span>
@@ -229,7 +229,7 @@ const RolesPage = () => {
               </p>
 
               {/* Desktop: the matrix */}
-              <div className="hidden overflow-x-auto rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)] md:block">
+              <div className="hidden overflow-x-auto rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)] md:block">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-[rgb(var(--reg-line)/0.8)]">
@@ -283,7 +283,7 @@ const RolesPage = () => {
                 </div>
                 {phoneRole &&
                   groups.map(([group, items]) => (
-                    <section key={group} className="overflow-hidden rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+                    <section key={group} className="overflow-hidden rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
                       <h3 className="bg-[rgb(var(--reg-canvas))] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-ink)/0.7)]">{permGroup(group)}</h3>
                       <ul>
                         {items.map((p, i) => (

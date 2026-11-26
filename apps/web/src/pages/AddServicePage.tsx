@@ -522,7 +522,7 @@ export default function AddServicePage() {
             {activeSidebarItem === "general" ? (
               <div className="space-y-8">
               {/* Main details (required) section */}
-              <div className="space-y-6">
+              <div className="space-y-6 rounded-[20px] bg-white p-5 shadow-[var(--shadow-sm)] ring-1 ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                 <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">
                   {tr("addService.mainDetailsRequired")}
                 </h2>
@@ -567,6 +567,7 @@ export default function AddServicePage() {
                   </Select>
                 </div>
 
+                <div className="grid items-start gap-6 md:grid-cols-2">
                 {/* Duration */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[rgb(var(--reg-ink)/0.85)]">{tr("common.duration")}</Label>
@@ -632,10 +633,11 @@ export default function AddServicePage() {
                     />
                   </div>
                 </div>
+                </div>
               </div>
 
               {/* Additional details section */}
-              <div className="space-y-6 pt-6 border-t border-[rgb(var(--reg-line)/0.8)]">
+              <div className="space-y-6 rounded-[20px] bg-white p-5 shadow-[var(--shadow-sm)] ring-1 ring-[rgb(var(--reg-line)/0.6)] md:p-6">
                 <h2 className="text-xs font-extrabold uppercase tracking-[0.08em] text-[rgb(var(--reg-muted))]">{tr("addService.additionalDetails")}</h2>
 
                 {/* Service Category */}

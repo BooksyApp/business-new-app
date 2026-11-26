@@ -54,7 +54,7 @@ export default function SetupPage() {
           </div>
 
           {sections.length === 0 && (
-            <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 ring-[rgb(var(--reg-line)/0.8)]">{t("setup.noSettingMatches", { query })}</p>
+            <p className="rounded-[20px] bg-white px-5 py-10 text-center text-sm text-[rgb(var(--reg-muted))] ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">{t("setup.noSettingMatches", { query })}</p>
           )}
 
           <div className="space-y-8">

@@ -159,7 +159,7 @@ export function ShiftsWeek({
         </section>
       )}
 
-      <div className="overflow-x-auto rounded-[20px] bg-white ring-1 ring-[rgb(var(--reg-line)/0.8)]">
+      <div className="overflow-x-auto rounded-[20px] bg-white ring-1 shadow-[var(--shadow-sm)] ring-[rgb(var(--reg-line)/0.6)]">
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <thead>
             <tr>

@@ -7,6 +7,7 @@ import { BooqiScope, PageHeader } from "@/components/page/booqi";
 import { pageBody, primaryBtn } from "@/components/page/booqiStyles";
 import { Field } from "@/components/page/kit";
 import { fieldCls } from "@/components/page/kitStyles";
+import { BCard } from "@/components/biz/b-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { businessService } from "@/services/businessService";
@@ -49,14 +50,7 @@ export default function SecurityPage() {
       <BooqiScope>
         <PageHeader title={t("security.security")} subtitle={t("security.yourSignInDetails")} />
         <div className={pageBody}>
-          <section className="max-w-xl rounded-[20px] bg-white p-5 ring-1 ring-[rgb(var(--reg-line)/0.8)] md:p-6">
-            <div className="mb-5 flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgb(var(--reg-brand-soft))] text-[rgb(var(--reg-brand))]"><KeyRound size={18} /></span>
-              <div>
-                <h2 className="text-base font-extrabold">{t("security.changePassword")}</h2>
-                <p className="text-sm text-[rgb(var(--reg-muted))]">{t("security.atLeastCharacters")}</p>
-              </div>
-            </div>
+          <BCard className="max-w-xl" icon={<KeyRound size={18} />} title={t("security.changePassword")} hint={t("security.atLeastCharacters")}>
             <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (ready && !saving) void submit(); }}>
               <Field label={t("security.currentPassword")} htmlFor="pw-current">
                 <input id="pw-current" type="password" className={fieldCls} value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
@@ -86,7 +80,7 @@ export default function SecurityPage() {
                 {saving ? t("security.changing") : t("security.changePassword")}
               </Button>
             </form>
-          </section>
+          </BCard>
         </div>
       </BooqiScope>
     </AppLayout>
