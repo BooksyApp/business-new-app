@@ -1,5 +1,6 @@
 /** English strings; the shape every other locale is checked against. */
 import { extraEn } from './extra';
+import { moreEn } from './more';
 
 export const en = {
   common: {
@@ -211,6 +212,7 @@ export const en = {
   },
   days: { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' },
   ...extraEn,
+  ...moreEn,
 };
 
 export type Strings = typeof en;

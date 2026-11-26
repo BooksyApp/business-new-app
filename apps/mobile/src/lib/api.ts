@@ -289,7 +289,7 @@ const core = createApi({
 });
 
 /** Every call reports reachability to the offline banner (status 0 = the network failed; any HTTP answer = online). */
-async function request<T>(path: string, opts?: Parameters<typeof core.request>[1]): Promise<T> {
+export async function request<T>(path: string, opts?: Parameters<typeof core.request>[1]): Promise<T> {
   try {
     const r = await core.request<T>(path, opts);
     setOnline(true);
