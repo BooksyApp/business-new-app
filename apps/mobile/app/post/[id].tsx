@@ -28,8 +28,9 @@ export default function PostView() {
   const looks = useLoad(() => apiX.looks(sid), [sid]);
   const l = (looks.data as LookX[] | null)?.find((x) => String(x.id) === String(id));
   const [ar, setAr] = useState(0.8);
+  const [raw, setRaw] = useState(0);
   const uri = (() => { const ps = l ? photoSource(l.photoUrl) : null; return ps && typeof ps === 'object' && 'uri' in ps ? String((ps as { uri?: string }).uri ?? '') : ''; })();
-  useEffect(() => { if (uri) Image.getSize(uri, (w, h) => { if (w > 0 && h > 0) setAr(Math.min(1.91, Math.max(0.8, w / h))); }, () => {}); }, [uri]);
+  useEffect(() => { if (uri) Image.getSize(uri, (w, h) => { if (w > 0 && h > 0) { setRaw(w / h); setAr(Math.min(1.91, Math.max(0.8, w / h))); } }, () => {}); }, [uri]);
   const PH = W / ar;
   const back = () => (router.canGoBack() ? router.back() : router.replace('/looks'));
   const del = () => Alert.alert(tr('lk.confirmDelete'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiX.deleteLook(sid, String(id)).then(() => { bump(); back(); }).catch((e: Error) => toast(e.message, 'error')); } }]);
@@ -43,7 +44,7 @@ export default function PostView() {
             <View style={{ flex: 1 }}><T k="h3" lines={1}>{salon?.name}</T>{l.serviceName ? <T k="xs" color={t.muted}>{l.serviceName}</T> : null}</View>
           </View>
           <Photo src={l.photoUrl} fit="contain" style={{ width: W, height: PH }} label={l.title ?? undefined}>
-            {parseTags(l.photoTags).length ? <TagLayer tags={parseTags(l.photoTags)} w={W} h={PH} /> : l.serviceName || l.staffName ? (
+            {parseTags(l.photoTags).length ? <TagLayer tags={parseTags(l.photoTags)} w={W} h={PH} ar={raw || ar} /> : l.serviceName || l.staffName ? (
               <View style={{ position: 'absolute', left: 12, right: 12, bottom: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {l.serviceName ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, height: 32, paddingHorizontal: 12, maxWidth: '75%' }}><Icon name="tag" size={14} color="#5b3fd6" /><Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{l.serviceName}</Text></View> : null}
                 {l.staffName ? <View style={{ backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, height: 32, paddingHorizontal: 12, justifyContent: 'center' }}><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>@{l.staffName.split(' ')[0]}</Text></View> : null}

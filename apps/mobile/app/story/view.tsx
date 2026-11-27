@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, PanResponder, TextInput, View, useWindowDimensions } from 'react-native';
+import { Alert, Image, PanResponder, TextInput, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar, Photo, T } from '@/components/kit';
@@ -10,6 +10,7 @@ import { TagLayer, parseTags } from '@/components/TagLayer';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
+import { photoSource } from '@/lib/photo';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { toast } from '@/lib/toast';
 import { useLoad } from '@/lib/useLoad';
@@ -51,6 +52,14 @@ export default function StoryView() {
     onMoveShouldSetPanResponder: (_e, g) => g.dy > 14 && Math.abs(g.dy) > Math.abs(g.dx),
     onPanResponderRelease: (_e, g) => { if (g.dy > 80) close(); },
   })).current;
+  const [ar, setAr] = useState(0);
+  const curUrl = cur?.url;
+  useEffect(() => {
+    setAr(0);
+    const ps = curUrl ? photoSource(curUrl) : null;
+    const u = ps && typeof ps === 'object' && 'uri' in ps ? String((ps as { uri?: string }).uri ?? '') : '';
+    if (u) Image.getSize(u, (w, h) => { if (w > 0 && h > 0) setAr(w / h); }, () => {});
+  }, [curUrl]);
   const own = mode !== 'team';
   const who = own ? salon?.name ?? '' : name ?? '';
   const sendReply = (kind: 'reply' | 'heart') => {
@@ -82,7 +91,7 @@ export default function StoryView() {
         {own ? <Pressable onPress={del} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="dots" size={22} color="#fff" /></Pressable> : null}
         <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={tr('v2.close')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={22} color="#fff" /></Pressable>
       </View>
-      <TagLayer tags={parseTags(cur?.photoTags)} w={SW} h={SH} top={ins.top + 84} bottom={Math.max(ins.bottom, 12) + 70} />
+      <TagLayer tags={parseTags(cur?.photoTags)} w={SW} h={SH} ar={ar || null} top={ins.top + 84} bottom={Math.max(ins.bottom, 12) + 70} />
       {cur?.caption ? (
         <View style={{ position: 'absolute', left: 20, bottom: own ? 110 : 120, maxWidth: '78%', backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, paddingHorizontal: 14, paddingVertical: sticker ? 10 : 8, transform: [{ rotate: '-3deg' }] }}>
           {sticker ? <T k="xs" color="#8c8177">{tr('v2.service')}</T> : null}

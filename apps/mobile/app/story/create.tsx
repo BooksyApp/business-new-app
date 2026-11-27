@@ -1,13 +1,15 @@
-import React, { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, TextInput, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, TextInput, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { DragChip } from '@/components/DragChip';
 import { Icon } from '@/components/Icon';
+import { PhotoCropper, type CropShape, type CropView, type Sized } from '@/components/PhotoCropper';
 import { Avatar, BackBar, Button, Chip, ChipRow, CtaBar, ListItem, Photo, T, Title } from '@/components/kit';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
+import { fitRect } from '@/components/TagLayer';
 import { Screen } from '@/components/ui';
 import { ToastHost } from '@/components/ToastHost';
 import { DEMO_IMG } from '@/demo/photos';
@@ -17,6 +19,7 @@ import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
 import { money } from '@/lib/format';
+import { photoSource } from '@/lib/photo';
 import { pickImage, postStoryPicked, uploadPicked, type Picked } from '@/lib/pick';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { toast } from '@/lib/toast';
@@ -26,7 +29,7 @@ import { font } from '@/theme/tokens';
 
 type Sel = { src: string; picked: Picked };
 
-/** Story create: 1) pick a photo (camera, gallery, in demo the sample photos), 2) edit (text, service tag, specialist) and "Paylaş" (free). */
+/** Story create: 1) pick a photo (camera, gallery, in demo the sample photos), 2) frame it (pinch / drag / shape; skipped when the size is unknown), 3) edit (text, service tag, specialist) and "Paylaş" (free). */
 export default function StoryCreate() {
   const { t } = useTheme();
   const router = useRouter();
@@ -35,7 +38,11 @@ export default function StoryCreate() {
   const { salon, demo, bump } = useApp();
   const sid = salon?.id ?? '';
   const [sel, setSel] = useState<Sel | null>(null);
-  const [step, setStep] = useState<'pick' | 'edit'>('pick');
+  const [step, setStep] = useState<'pick' | 'crop' | 'edit'>('pick');
+  const [orig, setOrig] = useState<Sized | null>(null);
+  const [shape, setShape] = useState<CropShape>('4:5');
+  const view = useRef<CropView | undefined>(undefined);
+  const [arFb, setArFb] = useState(0);
   const [text, setText] = useState('');
   const [editText, setEditText] = useState(false);
   const [svc, setSvc] = useState<{ id?: string | number; name: string; price?: number } | null>(null);
@@ -52,11 +59,35 @@ export default function StoryCreate() {
   const looks = useLoad(() => (demo ? apiX.looks(sid).catch(() => []) : Promise.resolve([])), [sid, demo]);
   const close = () => (router.canGoBack() ? router.back() : router.replace('/looks'));
   const cell = (W - 2) / 3;
+  /** pick -> crop when the real pixel size is known and the photo is a loadable uri; otherwise straight to edit (demo assets, odd sources). */
+  const begin = async (p: Picked, uri: string) => {
+    view.current = undefined; pos.current = {};
+    setShape(alsoLooks ? '4:5' : '9:16'); // a post kept on the profile is a portrait 4:5, a story-only photo fills the 9:16 screen
+    let w = p.width ?? 0; let h = p.height ?? 0;
+    if (!(w > 0 && h > 0) && uri) {
+      const sz = await new Promise<{ w: number; h: number } | null>((res) => { Image.getSize(uri, (a, b) => res({ w: a, h: b }), () => res(null)); });
+      if (sz) { w = sz.w; h = sz.h; }
+    }
+    setSel({ src: p.uri, picked: p });
+    if (w > 0 && h > 0 && uri) { setOrig({ ...p, uri, width: w, height: h }); setStep('crop'); } else { setOrig(null); setStep('edit'); }
+  };
   const from = async (src: 'library' | 'camera') => {
-    try { const p = await pickImage(src); if (p) { setSel({ src: p.uri, picked: p }); setStep('edit'); } }
+    try { const p = await pickImage(src); if (p) await begin(p, p.uri); }
     catch (e) { toast((e as Error).message === 'permission' ? tr('ad.permission') : (e as Error).message, 'error'); }
   };
-  const demoPick = (url: string) => { setSel({ src: url, picked: { uri: url, name: 'story.jpg', type: 'image/jpeg' } }); setStep('edit'); };
+  const demoPick = (url: string) => {
+    const ps = photoSource(url);
+    const uri = ps && typeof ps === 'object' && 'uri' in ps ? String((ps as { uri?: string }).uri ?? '') : '';
+    void begin({ uri: url, name: 'story.jpg', type: 'image/jpeg' }, uri);
+  };
+  const photoAr = sel?.picked.width && sel.picked.height ? sel.picked.width / sel.picked.height : arFb;
+  useEffect(() => {
+    setArFb(0);
+    if (!sel || (sel.picked.width && sel.picked.height)) return;
+    const ps = photoSource(sel.src);
+    const u = ps && typeof ps === 'object' && 'uri' in ps ? String((ps as { uri?: string }).uri ?? '') : '';
+    if (u) Image.getSize(u, (w, h) => { if (w > 0 && h > 0) setArFb(w / h); }, () => {});
+  }, [sel]);
   async function share() {
     if (busy) return;
     const refuse = (m: string) => { setErr(m); toast(m, 'error'); };
@@ -75,7 +106,19 @@ export default function StoryCreate() {
     } catch (e) { const m = `${tr('cp.fail')}: ${(e as Error).message}`; setErr(m); toast(m, 'error'); } finally { setBusy(false); }
   }
 
-  const bounds = { w: box.w, h: box.h, top: ins.top + 72, bottom: Math.max(ins.bottom, 14) + 10 + 54 + 10 + 58 + 10 + 44, toolX: box.w - 70, toolBottom: ins.top + 172 };
+  // DragChips live in a layer that sits exactly on the visible photo (contain-fit of the cropped image inside the screen), so the saved 0..1 are of the photo.
+  const pr = fitRect(box.w, box.h, photoAr);
+  const uiBottom = Math.max(ins.bottom, 14) + 10 + 54 + 10 + 58 + 10 + 44;
+  const bounds = { w: pr.w, h: pr.h, top: Math.max(8, ins.top + 72 - pr.y), bottom: Math.max(8, uiBottom - (box.h - pr.y - pr.h)), toolX: box.w - 70 - pr.x, toolBottom: ins.top + 172 - pr.y };
+  if (step === 'crop' && orig) {
+    return (
+      <PhotoCropper photo={orig} shape={shape} initial={view.current} softFail={demo}
+        onShape={(s2) => { view.current = undefined; setShape(s2); }}
+        onView={(v) => { view.current = v; }}
+        onBack={() => { setSel(null); setOrig(null); setStep('pick'); }}
+        onDone={(c, v) => { view.current = v; pos.current = {}; setSel({ src: c.uri, picked: c }); setStep('edit'); }} />
+    );
+  }
   if (step === 'edit' && sel) {
     const tool = (icon: string, label: string, on: () => void, txt?: string) => (
       <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}>
@@ -86,7 +129,7 @@ export default function StoryCreate() {
       <View style={{ flex: 1, backgroundColor: '#000' }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <Photo src={sel.src} fit="contain" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000' }} />
         <View style={{ position: 'absolute', left: 14, top: ins.top + 10, zIndex: 20, elevation: 20 }}>
-          <Pressable onPress={() => { setSel(null); setSvc(null); setWho(null); setText(''); setStep('pick'); }} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('v2.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={22} color="#fff" /></Pressable>
+          <Pressable onPress={() => { if (orig) { setStep('crop'); return; } setSel(null); setSvc(null); setWho(null); setText(''); setStep('pick'); }} hitSlop={10} accessibilityRole="button" accessibilityLabel={orig ? tr('common.back') : tr('v2.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}><Icon name={orig ? 'back' : 'x'} size={22} color="#fff" /></Pressable>
         </View>
         <View style={{ position: 'absolute', right: 14, top: ins.top + 10, gap: 10, zIndex: 20, elevation: 20 }}>
           {tool('', tr('v3.addText'), () => setEditText(true), 'Aa')}
@@ -102,7 +145,7 @@ export default function StoryCreate() {
           </View>
         ) : null}
         {svc || who ? (
-          <>
+          <View pointerEvents="box-none" style={{ position: 'absolute', left: pr.x, top: pr.y, width: pr.w, height: pr.h, zIndex: 5, elevation: 5 }}>
             {svc ? (
               <DragChip bounds={bounds} slot={0} label={svc.name} onPress={() => setSheet('svc')} onRemove={() => setSvc(null)} onMove={(x, y) => { pos.current.svc = { x, y }; }}>
                 <Icon name="tag" size={14} color="#5b3fd6" />
@@ -114,7 +157,7 @@ export default function StoryCreate() {
                 <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>@{who.name.split(' ')[0]}</Text>
               </DragChip>
             ) : null}
-          </>
+          </View>
         ) : null}
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: Math.max(ins.bottom, 14) + 10, gap: 10, paddingHorizontal: 16, zIndex: 20, elevation: 20 }}>
           <Pressable onPress={() => setAlsoLooks((v) => !v)} accessibilityRole="switch" accessibilityState={{ checked: alsoLooks }} accessibilityLabel={tr('v3.keepTitle')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(29,23,48,.62)', borderRadius: 20, paddingHorizontal: 14, height: 58 }}>

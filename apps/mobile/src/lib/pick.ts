@@ -4,14 +4,14 @@ import { askWithIntro } from '@/components/PermissionIntro';
 import { uploadForm } from '@/lib/api';
 import { t as tr } from '@/i18n';
 
-type Asset = { uri: string; fileName?: string | null; mimeType?: string | null; width?: number };
+type Asset = { uri: string; fileName?: string | null; mimeType?: string | null; width?: number; height?: number };
 /** Any picked image (HEIC, WebP, GIF, BMP, PNG...) is re-encoded to a JPEG of at most 2048 px wide, so the server never refuses a photo
  *  for its format and uploads stay small. If the conversion itself fails the original file is sent as before. */
 async function toJpeg(a: Asset): Promise<Asset> {
   try {
     const wide = (a.width ?? 0) > 2048;
     const r = await ImageManipulator.manipulateAsync(a.uri, wide ? [{ resize: { width: 2048 } }] : [], { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG });
-    return { uri: r.uri, fileName: 'photo.jpg', mimeType: 'image/jpeg', width: r.width };
+    return { uri: r.uri, fileName: 'photo.jpg', mimeType: 'image/jpeg', width: r.width, height: r.height }; // r.width/height = real pixels after EXIF rotation
   } catch { return a; }
 }
 /** The ONLY shape a React Native FormData file part may have: `{ uri: 'file://...', name, type }` (plain strings, no Blob/File/asset objects).
@@ -20,7 +20,7 @@ const part = (a: Asset, fallback: string): Picked => {
   const png = (a.mimeType ?? '').includes('png') || /\.png$/i.test(a.fileName ?? '');
   const raw = String(a.uri ?? '');
   const uri = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `file://${raw}`;
-  return { uri, name: png ? 'photo.png' : fallback, type: png ? 'image/png' : 'image/jpeg' };
+  return { uri, name: png ? 'photo.png' : fallback, type: png ? 'image/png' : 'image/jpeg', width: a.width, height: a.height };
 };
 /** Library and camera both go through our own rationale sheet first (once; 'limited' counts as granted), then the OS prompt.
  *  The system library picker needs no permission, so a refusal never blocks it; only a dismissed sheet cancels. A refused camera cancels. */
@@ -52,7 +52,8 @@ export async function pickAndPostStory(businessId: string | number, caption: str
   return true;
 }
 
-export type Picked = { uri: string; name: string; type: string };
+/** width/height (real pixels, EXIF already applied) are optional: only set when known. */
+export type Picked = { uri: string; name: string; type: string; width?: number; height?: number };
 /** Gallery or camera; resolves null when cancelled. Throws a localized Error when the camera is denied. */
 export async function pickImage(source: 'library' | 'camera'): Promise<Picked | null> {
   const a = await launch(source, false);
