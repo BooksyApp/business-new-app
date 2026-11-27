@@ -122,7 +122,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
         <Field label="Website" value={f.website ?? ''} onChangeText={set('website')} keyboardType="url" autoCapitalize="none" />
       </>);
       case 'address': return (<>
-        <LocationField value={pin} error={pinMiss && !pin} query={[f.address, f.city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); setErr(''); setF((o) => ({ ...o, ...(r.address ? { address: r.address } : {}), ...(r.city ? { city: r.city } : {}) })); }} />
+        <LocationField value={pin} error={pinMiss && !pin} query={[f.address, f.city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); setErr(''); setF((o) => ({ ...o, ...(r.address ? { address: r.address } : {}), ...(r.city ? { city: r.city } : {}), ...(r.state ? { state: r.state } : {}), ...(r.zip ? { zip: r.zip } : {}), ...(r.country ? { country: r.country } : {}) })); }} />
         <Field label={tr('set.address')} value={f.address ?? ''} onChangeText={set('address')} />
         <Field label="City" value={f.city ?? ''} onChangeText={set('city')} />
         {two(<Field label={tr('pa.zip')} value={f.zip ?? ''} onChangeText={set('zip')} />, <Field label={tr('pa.state')} value={f.state ?? ''} onChangeText={set('state')} />)}
