@@ -82,7 +82,7 @@ export default function StoryView() {
         {own ? <Pressable onPress={del} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="dots" size={22} color="#fff" /></Pressable> : null}
         <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={tr('v2.close')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={22} color="#fff" /></Pressable>
       </View>
-      <TagLayer tags={parseTags(cur?.tags)} w={SW} h={SH} top={ins.top + 84} bottom={Math.max(ins.bottom, 12) + 70} />
+      <TagLayer tags={parseTags(cur?.photoTags)} w={SW} h={SH} top={ins.top + 84} bottom={Math.max(ins.bottom, 12) + 70} />
       {cur?.caption ? (
         <View style={{ position: 'absolute', left: 20, bottom: own ? 110 : 120, maxWidth: '78%', backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, paddingHorizontal: 14, paddingVertical: sticker ? 10 : 8, transform: [{ rotate: '-3deg' }] }}>
           {sticker ? <T k="xs" color="#8c8177">{tr('v2.service')}</T> : null}

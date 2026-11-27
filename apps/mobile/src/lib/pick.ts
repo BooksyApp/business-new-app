@@ -60,6 +60,6 @@ export async function postStoryPicked(businessId: string | number, p: Picked, ca
   const form = new FormData();
   form.append('file', filePart(p) as unknown as Blob);
   if (caption.trim()) form.append('caption', caption.trim());
-  if (tags) form.append('tags', tags);
+  if (tags) form.append('photoTags', tags);
   await uploadForm(`/businesses/${businessId}/stories`, form);
 }
