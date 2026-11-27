@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { BackBar, Button, Chip, CtaBar, Field, T } from '@/components/kit';
 import { Screen } from '@/components/ui';
+import { LocationField } from '@/components/LocationField';
+import type { Pin } from '@/lib/geo';
 import { getLocale, t as tr } from '@/i18n';
 import { api, ApiError } from '@/lib/api';
 import { apiO, type BizCategory } from '@/lib/api-onboard';
@@ -23,14 +25,16 @@ export default function CreateBusiness() {
   const [city, setCity] = useState('Bakı');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [pin, setPin] = useState<Pin | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { void apiO.categories(getLocale()).then(setCats).catch(() => undefined); }, []);
 
   async function create() {
     if (!user) return;
+    if (!pin) { toast(tr('lp.blocked'), 'error'); return; }
     setBusy(true);
     try {
-      const b = await apiO.createBusiness({ ownerId: user.userId, name: name.trim(), category: cat, city: city.trim() || undefined, address: address.trim() || undefined, country: 'Azerbaijan', phone: phone.trim() || undefined });
+      const b = await apiO.createBusiness({ ownerId: user.userId, name: name.trim(), category: cat, city: city.trim() || undefined, address: address.trim() || undefined, country: 'Azerbaijan', phone: phone.trim() || undefined, latitude: pin.latitude, longitude: pin.longitude });
       const list = await api.salonsForUser(user).catch(() => [...salons, b]);
       await signedIn(user, list);
       const mine = list.find((x) => String(x.id) === String(b.id)) ?? b;
@@ -54,10 +58,11 @@ export default function CreateBusiness() {
           </View>
           <Field icon="pin" placeholder={tr('ob.city')} accessibilityLabel={tr('ob.city')} value={city} onChangeText={setCity} />
           <Field icon="pin" placeholder={tr('ob.street')} accessibilityLabel={tr('ob.street')} value={address} onChangeText={setAddress} />
+          <LocationField value={pin} query={[address, city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); if (!address.trim() && r.address) setAddress(r.address); if (!city.trim() && r.city) setCity(r.city); }} />
           <Field icon="phone" placeholder={`${tr('ob.bizPhone')} (${tr('ob.optional')})`} accessibilityLabel={tr('ob.bizPhone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         </ScrollView>
       </KeyboardAvoidingView>
-      <CtaBar><Button label={tr('ob.create')} onPress={() => void create()} loading={busy} disabled={!name.trim() || !cat} style={{ flex: 1 }} /></CtaBar>
+      <CtaBar><Button label={tr('ob.create')} onPress={() => void create()} loading={busy} disabled={!name.trim() || !cat || !pin} style={{ flex: 1 }} /></CtaBar>
     </Screen>
   );
 }

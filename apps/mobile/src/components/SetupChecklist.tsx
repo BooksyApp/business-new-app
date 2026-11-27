@@ -6,6 +6,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { BottomSheet } from '@/components/BottomSheet';
 import { LoadRing, T } from '@/components/kit';
+import { useSalonPin } from '@/components/LocationCard';
 import { t as tr } from '@/i18n';
 import { apiB } from '@/lib/api-biz';
 import { apiO } from '@/lib/api-onboard';
@@ -30,6 +31,7 @@ export function SetupChecklist() {
   const { salon, version, bump, demo } = useApp();
   const sid = salon?.id ?? '';
   const q = useLoad(() => apiO.readiness(sid).catch(() => null), [sid, version]);
+  const pinState = useSalonPin();
   const [open, setOpen] = useState(false);
   const [flags, setFlags] = useState<{ shared: boolean; invited: boolean; hidden: boolean }>({ shared: false, invited: false, hidden: false });
   useEffect(() => {
@@ -44,6 +46,7 @@ export function SetupChecklist() {
   const miss = new Set<string>(r.missing);
   const steps: Step[] = [];
   if (miss.has('category')) steps.push({ k: 'category', done: false, title: tr('ob.stCategory'), on: () => router.push('/section/profile') });
+  if (pinState.known) steps.push({ k: 'location', done: pinState.hasPin, title: tr('lp.stTitle'), sub: tr('lp.stSub'), on: () => router.push('/section/profile') });
   steps.push({ k: 'services', done: !miss.has('services'), title: tr('ob.stServices'), sub: tr('ob.stServicesSub'), on: () => router.push('/section/services') });
   steps.push({ k: 'staff', done: !miss.has('staff'), title: tr('ob.stStaff'), sub: tr('ob.stStaffSub'), on: () => router.push('/section/team') });
   steps.push({ k: 'hours', done: !miss.has('hours'), title: tr('ob.stHours'), sub: tr('ob.stHoursSub'), on: () => router.push('/section/hours') });

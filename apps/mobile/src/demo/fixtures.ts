@@ -20,7 +20,7 @@ export function buildDemo(): { routes: Route[]; user: Record<string, unknown>; b
   const shift = Math.max(-570 + 480, Math.min(1430 - 1120, Math.round((nowMin + 18 - 630) / 5) * 5));
   const T = (s: string) => hm(toM(s) + shift);
 
-  const biz = { id: 'demo-mirvari', name: 'Mirvari Beauty Lounge', currency: 'AZN', city: 'Bakı', address: 'Nizami küç. 52', phone: '+994 50 123 45 67', myRole: 'OWNER', logoUrl: ph('a-salon'), coverUrl: ph('f01'), slug: 'mirvari' };
+  const biz = { id: 'demo-mirvari', name: 'Mirvari Beauty Lounge', currency: 'AZN', city: 'Bakı', address: 'Nizami küç. 52', latitude: 40.3795, longitude: 49.8483, phone: '+994 50 123 45 67', myRole: 'OWNER', logoUrl: ph('a-salon'), coverUrl: ph('f01'), slug: 'mirvari' };
   const S = (id: string, name: string, position: string, img: string, rating: number, load: number) => ({ id, name, position, avatarUrl: ph(img), isActive: true, role: 'STAFF', phone: '+994 50 111 22 33', rating, load });
   const staff = [
     S('aysel', 'Aysel Quliyeva', 'Stilist', 'a-aysel', 4.9, 0.75), S('nigar', 'Nigar Səfərova', 'Manikür ustası', 'a-nigar', 4.8, 0.5),

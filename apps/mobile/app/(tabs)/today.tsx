@@ -17,6 +17,7 @@ import { useApp } from '@/lib/app';
 import { markArrived } from '@/lib/arrived';
 import { salonShareLink } from '@/lib/config';
 import { SetupChecklist } from '@/components/SetupChecklist';
+import { LocationCard } from '@/components/LocationCard';
 import { rememberClients } from '@/lib/client-cache';
 import { clientPhoto, firstName, live, nextUp, nowMin, series } from '@/lib/day';
 import { useDockInset } from '@/lib/dock';
@@ -94,6 +95,7 @@ export default function Today() {
           </>} />
 
         <SetupChecklist />
+        <LocationCard />
 
         {/* story rail: own story first, then the team */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 4 }}>

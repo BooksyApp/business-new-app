@@ -14,6 +14,8 @@ import { apiO, authErrorKey, type BizCategory } from '@/lib/api-onboard';
 import { useApp } from '@/lib/app';
 import { WEB_BASE } from '@/lib/config';
 import { num } from '@/components/form';
+import { LocationField } from '@/components/LocationField';
+import type { Pin } from '@/lib/geo';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
@@ -53,6 +55,8 @@ export default function Register() {
   const [city, setCity] = useState('Bakı');
   const [address, setAddress] = useState('');
   const [bizPhone, setBizPhone] = useState('');
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [pinMiss, setPinMiss] = useState(false);
   // 3 hours
   const [rows, setRows] = useState<Record<string, Row>>(() => Object.fromEntries(DAYS.map((d, i) => [d, { on: i < 6, from: '09:00', to: '19:00' }])));
   // 4 team + service
@@ -73,7 +77,7 @@ export default function Register() {
   const setRow = (d: string, p: Partial<Row>) => setRows((m) => ({ ...m, [d]: { ...m[d], ...p } }));
 
   const accountOk = first.trim() && last.trim() && EMAIL.test(email.trim()) && pw.length >= 8 && terms;
-  const bizOk = bizName.trim() && cat;
+  const bizOk = bizName.trim() && cat && pin;
   const hoursOk = DAYS.every((d) => !rows[d].on || (okTime(rows[d].from) && okTime(rows[d].to) && rows[d].to > rows[d].from)) && DAYS.some((d) => rows[d].on);
   const can = [accountOk, bizOk, hoursOk, true][step];
 
@@ -87,7 +91,7 @@ export default function Register() {
       const bid = auth.businessId;
       if (bid == null) throw new Error(tr('ob.noBusiness'));
       // Same follow-up the hub runs after sign-up. Hours / service / staff are best effort: the checklist on Bu gun shows what is still missing.
-      await apiB.updateBusiness(bid, { name: bizName.trim(), category: cat, address: address.trim() || undefined, city: city.trim() || undefined, country: 'Azerbaijan', phone: (bizPhone || phone).trim() || undefined } as never).catch(() => undefined);
+      await apiB.updateBusiness(bid, { name: bizName.trim(), category: cat, address: address.trim() || undefined, city: city.trim() || undefined, country: 'Azerbaijan', phone: (bizPhone || phone).trim() || undefined, latitude: pin?.latitude, longitude: pin?.longitude } as never).catch(() => undefined);
       await apiX.saveHours(bid, DAYS.map((d) => ({ dayOfWeek: d, enabled: rows[d].on, startTime: rows[d].from, endTime: rows[d].to }))).catch(() => undefined);
       let svcId: string | null = null;
       if (!noService && svcName.trim()) {
@@ -115,6 +119,7 @@ export default function Register() {
   }
 
   function next() {
+    if (step === 1 && !pin) { setPinMiss(true); return; }
     if (step < 3) { setStep(step + 1); return; }
     void submit();
   }
@@ -168,6 +173,7 @@ export default function Register() {
             {label(tr('set.address'))}
             <Field icon="pin" placeholder={tr('ob.city')} accessibilityLabel={tr('ob.city')} value={city} onChangeText={setCity} />
             <Field icon="pin" placeholder={tr('ob.street')} accessibilityLabel={tr('ob.street')} value={address} onChangeText={setAddress} />
+            <LocationField value={pin} error={pinMiss && !pin} query={[address, city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); if (!address.trim() && r.address) setAddress(r.address); if (!city.trim() && r.city) setCity(r.city); }} />
             <Field icon="phone" placeholder={`${tr('ob.bizPhone')} (${tr('ob.optional')})`} accessibilityLabel={tr('ob.bizPhone')} value={bizPhone} onChangeText={setBizPhone} keyboardType="phone-pad" />
           </>) : null}
 
@@ -216,7 +222,7 @@ export default function Register() {
         </ScrollView>
       </KeyboardAvoidingView>
       <CtaBar>
-        <Button label={step === 3 ? tr('ob.create') : tr('ob.next')} onPress={next} loading={busy} disabled={!can || closed} style={{ flex: 1 }} />
+        <Button label={step === 3 ? tr('ob.create') : tr('ob.next')} onPress={next} loading={busy} disabled={(!can && !(step === 1 && bizName.trim() && cat)) || closed} style={{ flex: 1 }} />
         {step === 3 ? <Button label={tr('ob.skip')} kind="ol" onPress={() => void submit(true)} disabled={busy} /> : null}
       </CtaBar>
     </Screen>
