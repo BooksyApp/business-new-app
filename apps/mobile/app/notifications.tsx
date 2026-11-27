@@ -30,7 +30,7 @@ import { font } from '@/theme/tokens';
 export default function Notifications() {
   const { t } = useTheme();
   const router = useRouter();
-  const { salon, version, bump } = useApp();
+  const { salon, user, version, bump } = useApp();
   const [busyId, setBusyId] = useState<string | null>(null);
   const inset = useDockInset(16);
   const [pushState, setPushState] = useState<'idle' | 'on' | 'failed' | 'later'>('idle');
@@ -94,7 +94,7 @@ export default function Notifications() {
                 <T k="h3">{tr('push.title')}</T>
                 <T k="t2" color={t.muted}>{pushState === 'failed' ? tr('notifications.pushFailed') : tr('push.body')}</T>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  <Button size="sm" label={tr('push.allow')} onPress={async () => setPushState((await enablePush()) ? 'on' : 'failed')} />
+                  <Button size="sm" label={tr('push.allow')} onPress={async () => setPushState((await enablePush(user?.userId)) ? 'on' : 'failed')} />
                   <Button size="sm" kind="ghost" label={tr('push.later')} onPress={() => setPushState('later')} />
                 </View>
               </View>

@@ -45,7 +45,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <KListItem first title={tr('pp.title')} lead={lead('bell')} right={chev} onPress={() => setSub('pp')} />
           <KListItem title={tr('ns.title')} lead={lead('mail')} right={chev} onPress={() => setSub('notif')} />
           <KListItem title={tr('v3.pushRow')} sub={push === 'on' ? tr('notifications.pushEnabled') : push === 'failed' ? tr('notifications.pushFailed') : undefined} lead={lead('bell')}
-            right={push === 'on' ? <Icon name="check" size={20} color={t.ok} /> : <KButton size="sm" kind="fl" label={tr('push.allow')} onPress={async () => setPush((await enablePush()) ? 'on' : 'failed')} />} />
+            right={push === 'on' ? <Icon name="check" size={20} color={t.ok} /> : <KButton size="sm" kind="fl" label={tr('push.allow')} onPress={async () => setPush((await enablePush(user?.userId)) ? 'on' : 'failed')} />} />
         </KCard>
         {head(tr('set.salon'))}
         <KCard style={{ paddingHorizontal: 18 }}>

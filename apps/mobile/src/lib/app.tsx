@@ -116,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [status]);
 
   // A device that already granted notification permission keeps its push token fresh without asking again.
-  useEffect(() => { if (status === 'in' && salon && !isDemo()) void registerIfGranted(); }, [status, salon?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (status === 'in' && user?.userId && !isDemo()) void registerIfGranted(user.userId); }, [status, user?.userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo<AppState>(() => ({
     status, user, salon, salons, version, badges,
