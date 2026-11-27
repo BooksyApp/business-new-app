@@ -69,34 +69,34 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
         <>
           {/* `.tk` ticket: mesh top (status + number, avatar + client), dashed cut, 2-column grid of k/v */}
           <View style={{ backgroundColor: t.surface, borderRadius: 24, overflow: 'hidden', ...cardShadow }}>
-            <View style={{ padding: 20, paddingVertical: 18, experimental_backgroundImage: mesh } as any}>
+            <View style={{ padding: 16, paddingVertical: 14, experimental_backgroundImage: mesh } as any}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 }}>
                 <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />
-                <Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>№ {String(a.id).slice(0, 6).toUpperCase()}</Text>
+                <Text style={{ fontFamily: font.s, fontSize: 12, color: t.muted }}>№ {String(a.id).slice(0, 6).toUpperCase()}</Text>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 }}>
-                <Avatar name={a.clientName ?? ''} size={84} uri={a.clientId != null ? (recallClient(String(a.clientId)) as { avatarUrl?: string | null } | undefined)?.avatarUrl : null} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                <Avatar name={a.clientName ?? ''} size={52} uri={a.clientId != null ? (recallClient(String(a.clientId)) as { avatarUrl?: string | null } | undefined)?.avatarUrl : null} />
                 <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 28, letterSpacing: -0.8, color: t.ink }}>{a.clientName || '-'}</Text>
-                  <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{a.clientPhone || dateLabel(fromIso(a.appointmentDate))}</Text>
+                  <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 20, letterSpacing: -0.4, color: t.ink }}>{a.clientName || '-'}</Text>
+                  <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13.5, color: t.muted }}>{a.clientPhone || dateLabel(fromIso(a.appointmentDate))}</Text>
                 </View>
               </View>
             </View>
             <View style={{ marginHorizontal: 18, borderTopWidth: 2, borderStyle: 'dashed', borderColor: t.line }} />
-            <View style={{ padding: 20, paddingVertical: 16, flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, columnGap: 12 }}>
+            <View style={{ paddingHorizontal: 16, paddingVertical: 6 }}>
               {([
                 ['appt.service', a.serviceName], ['appt.team', a.staffName], ['appt.time', `${hhmm(a.startTime)} – ${hhmm(a.endTime)}`],
                 ['appt.payment', a.paymentStatus === 'PAID' ? tr('appt.paid') : money(a.price, cur) !== '—' ? `${money(a.price, cur)} · ${tr('appt.unpaid')}` : tr('appt.atSalon')],
               ] as const).map(([k, v]) => (
-                <View key={k} style={{ width: '47%' }}>
-                  <Text style={{ fontFamily: font.x, fontSize: 14, letterSpacing: 1.12, color: t.muted }}>{tr(k).toUpperCase()}</Text>
-                  <Text numberOfLines={2} style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 2 }}>{v || '-'}</Text>
+                <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 38 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13.5, color: t.muted }}>{tr(k)}</Text>
+                  <Text numberOfLines={1} style={{ flex: 1, textAlign: 'right', fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{v || '-'}</Text>
                 </View>
               ))}
               {a.depositAmount ? (
-                <View style={{ width: '47%' }}>
-                  <Text style={{ fontFamily: font.x, fontSize: 14, letterSpacing: 1.12, color: t.muted }}>{tr('appt.deposit').toUpperCase()}</Text>
-                  <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 2 }}>{money(a.depositAmount, cur)}{a.depositPaid ? ' ✓' : ''}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 38 }}>
+                  <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13.5, color: t.muted }}>{tr('appt.deposit')}</Text>
+                  <Text numberOfLines={1} style={{ flex: 1, textAlign: 'right', fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{money(a.depositAmount, cur)}{a.depositPaid ? ' ✓' : ''}</Text>
                 </View>
               ) : null}
             </View>
@@ -108,10 +108,10 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
                 return (
                   <React.Fragment key={st}>
                     <View style={{ alignItems: 'center', gap: 6, width: 78 }}>
-                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: done ? t.violet : t.fill2, alignItems: 'center', justifyContent: 'center' }}>{done ? <Icon name="check" size={16} color="#fff" /> : null}</View>
-                      <Text numberOfLines={1} style={{ fontFamily: i === idx ? font.x : font.s, fontSize: 13, color: i === idx ? t.ink : t.muted }}>{tr(`status.${st}`)}</Text>
+                      <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: done ? t.violet : t.fill2, alignItems: 'center', justifyContent: 'center' }}>{done ? <Icon name="check" size={12} color="#fff" /> : null}</View>
+                      <Text numberOfLines={1} style={{ fontFamily: i === idx ? font.b : font.r, fontSize: 11.5, color: i === idx ? t.ink : t.muted }}>{tr(`status.${st}`)}</Text>
                     </View>
-                    {i < arr.length - 1 ? <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i < idx ? t.violet : t.fill2, marginBottom: 20 }} /> : null}
+                    {i < arr.length - 1 ? <View style={{ flex: 1, height: 2, borderRadius: 1, backgroundColor: i < idx ? t.violet : t.fill2, marginBottom: 18 }} /> : null}
                   </React.Fragment>
                 );
               })}
@@ -119,8 +119,8 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
           ) : null}
           {a.notes ? (
             <View style={{ borderRadius: 16, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, paddingHorizontal: 16, paddingTop: 9, paddingBottom: 10, minHeight: 58 }}>
-              <Text style={{ fontFamily: font.s, fontSize: 14, color: t.muted }}>{tr('appt.salonNote')}</Text>
-              <Text style={{ fontFamily: font.s, fontSize: 16, color: t.ink }}>{a.notes}</Text>
+              <Text style={{ fontFamily: font.r, fontSize: 12.5, color: t.muted }}>{tr('appt.salonNote')}</Text>
+              <Text numberOfLines={3} style={{ fontFamily: font.r, fontSize: 14, color: t.ink }}>{a.notes}</Text>
             </View>
           ) : null}
           {live.loading && !live.data ? <Skeleton rows={1} height={20} /> : null}
