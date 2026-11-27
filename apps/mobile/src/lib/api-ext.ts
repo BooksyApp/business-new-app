@@ -73,7 +73,15 @@ export interface NotifSettings {
 export interface Look { id: Id; photoUrl: string; title?: string | null; serviceName?: string | null; staffName?: string | null; photoTags?: string | null; status: string; saveCount?: number }
 export interface Story { id: Id; url: string; caption?: string | null; photoTags?: string | null; viewCount: number; expiresAt: string }
 export interface ConsentForm { id: Id; name?: string; title?: string; isActive?: boolean }
-export interface SubStatus { plan?: string; status?: string; trialEndsAt?: string | null; currentPeriodEnd?: string | null }
+export interface SubStatus { plan?: string; planKey?: string | null; status?: string; trialEndsAt?: string | null; currentPeriodEnd?: string | null }
+/** GET /businesses/{id}/billing (owner only): subscription view, current plan, next invoice, message balances. */
+export interface BillingOverview {
+  subscription?: { status?: string; planKey?: string | null; cancelAtPeriodEnd?: boolean; currentPeriodEnd?: string | null; trialEnd?: string | null; pastDue?: boolean; graceUntil?: string | null; restricted?: boolean; actionRequired?: boolean } | null;
+  plan?: { planKey?: string | null; nameAz?: string | null; nameEn?: string | null; nameRu?: string | null; monthlyPrice?: number | string | null; currency?: string | null; maxStaff?: number | null; features?: Partial<Record<'az' | 'en' | 'ru', unknown>> | null } | null;
+  nextInvoice?: { date?: string | null; total?: number | string | null; currency?: string | null } | null;
+  messageBalances?: Partial<Record<'SMS' | 'WHATSAPP', number>> | null;
+  commissionPct?: number | string | null;
+}
 export interface ClientBody { firstName?: string; lastName?: string; phone?: string; email?: string; notes?: string; allowMarketingEmails?: boolean; allowSmsNotifications?: boolean; patchTestDate?: string; vip?: boolean }
 export interface ClientTag { id: Id; name: string; colour?: string | null }
 export interface ClientField { id: Id; name: string; type: 'TEXT' | 'NUMBER' | 'DATE' | 'SELECT'; options?: string[] | null; value?: string | null }
@@ -149,6 +157,7 @@ export const apiX = {
   notifSettings: (b: Id) => request<NotifSettings>(`/businesses/${b}/notification-settings`),
   saveNotifSettings: (b: Id, body: NotifSettings) => request<NotifSettings>(`/businesses/${b}/notification-settings`, { method: 'PUT', body }),
   subscription: (b: Id) => request<SubStatus>(`/businesses/${b}/subscription`),
+  billing: (b: Id) => request<BillingOverview>(`/businesses/${b}/billing`),
   // looks & stories
   looks: (b: Id) => requestList<Look>(`/businesses/${b}/looks`),
   deleteLook: (b: Id, id: Id) => request<void>(`/businesses/${b}/looks/${id}`, { method: 'DELETE' }),

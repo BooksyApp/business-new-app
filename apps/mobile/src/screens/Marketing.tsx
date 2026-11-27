@@ -206,6 +206,7 @@ export function Marketing({ onBack, initialView }: { onBack: () => void; initial
             </ScrollView>
             {errLine}
             <Btn label={when === 'draft' ? tr('mk.cDraftBtn') : aud.data ? tr('mk.cSendN', { n: aud.data.reachable }) : tr('mk.cSendAll')} loading={busy} onPress={sendCampaign} />
+          </>
         ) : sheet === 'promo' ? (
           <>
             {sheetTitle(tr('mk.addPromo'))}

@@ -1,19 +1,21 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from '@/lib/toast';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { MultiChoice } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { BottomSheet } from '@/components/BottomSheet';
-import { Segmented, T } from '@/components/kit';
+import { Button as KButton, Pill, Segmented, T } from '@/components/kit';
 import { Btn, ErrorState, Field, Header, Screen, Skeleton, StickyCta, Toggle } from '@/components/ui';
-import { t as tr } from '@/i18n';
+import { getLocale, t as tr } from '@/i18n';
 import { api } from '@/lib/api';
 import { apiB } from '@/lib/api-biz';
-import { apiX, type NotifSettings } from '@/lib/api-ext';
+import { apiX, type BillingOverview, type NotifSettings, type SubStatus } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
-import { dateLabel, fromIso } from '@/lib/format';
+import { dateLabel, fromIso, money } from '@/lib/format';
+import { WEB_BASE } from '@/lib/config';
+import { usePushPerm } from '@/lib/push';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 
@@ -157,65 +159,11 @@ export function HoursEditor({ onBack }: { onBack: () => void }) {
   );
 }
 
-const FLAGS = ['emailConfirmation', 'emailReminder', 'emailCancellation', 'emailReschedule', 'emailWaitlist', 'emailReviewRequest', 'salonAlerts', 'smsEnabled', 'pushEnabled', 'whatsappEnabled'] as const;
-const AVAIL: Partial<Record<(typeof FLAGS)[number], 'smsAvailable' | 'pushAvailable' | 'whatsappAvailable'>> = { smsEnabled: 'smsAvailable', pushEnabled: 'pushAvailable', whatsappEnabled: 'whatsappAvailable' };
-
-/** Bildiriş seçimləri: which e-mails / SMS / push / WhatsApp the salon sends. */
-export function NotifEditor({ onBack }: { onBack: () => void }) {
-  const { t } = useTheme();
-  const { salon } = useApp();
-  const sid = salon?.id ?? '';
-  const q = useLoad(() => apiX.notifSettings(sid), [sid]);
-  const [s, setS] = useState<NotifSettings | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-  useEffect(() => { if (q.data) setS(q.data); }, [q.data]);
-  async function save() {
-    if (!s) return;
-    setErr(''); setBusy(true);
-    try { await apiX.saveNotifSettings(sid, s); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); toast(tr('ns.saved'), 'success'); onBack(); }
-    catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
-  }
-  return (
-    <Screen>
-      <Header title={tr('ns.title')} subtitle={salon?.name} onBack={onBack} />
-      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : !s ? <Skeleton rows={6} height={44} /> : (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
-          {([['ux.secEmails', FLAGS.filter((k) => k.startsWith('email'))], ['ux.secChannels', FLAGS.filter((k) => !k.startsWith('email'))]] as const).map(([title, list]) => (
-            <SetGroup key={title} title={tr(title)}>
-              {list.map((k, i) => {
-                const av = AVAIL[k];
-                const off = av ? s[av] === false : false;
-                return <SwitchRow key={k} first={i === 0} label={tr(`ns.${k}` as 'ns.title')} note={off ? tr('ns.unavailable') : undefined} disabled={off} value={!!s[k]} onChange={(v) => setS({ ...s, [k]: v })} />;
-              })}
-            </SetGroup>
-          ))}
-          {err ? <T k="t2" color={t.gink} style={{ marginTop: 12, marginLeft: 4 }}>{err}</T> : null}
-        </ScrollView>
-      )}
-      {s ? <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save()} /> : null}
-    </Screen>
-  );
-}
-
-/** Abunəlik: read-only plan / status line (billing stays on the web). */
-export function SubscriptionCard() {
-  const { t } = useTheme();
-  const { salon } = useApp();
-  const q = useLoad(() => apiX.subscription(salon?.id ?? '').catch(() => null), [salon?.id]);
-  const s = q.data;
-  if (!s) return null;
-  const until = s.currentPeriodEnd ? dateLabel(fromIso(s.currentPeriodEnd)) : '';
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
-      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="crown" size={20} color={t.vtext} /></View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <T k="t1" lines={1}>{String(s.plan ?? '')}</T>
-        <T k="t2" lines={1} color={t.muted}>{(s.status ?? '-') + (until ? ` \u00b7 ${tr('sub.until')} ${until}` : '')}</T>
-      </View>
-    </View>
-  );
-}
+const FLAGS = ['emailConfirmation', 'emailReminder', 'emailCancellation', 'emailReschedule', 'emailWaitlist', 'emailReviewRequest', 'smsEnabled', 'pushEnabled', 'whatsappEnabled'] as const;
+type NFlag = (typeof FLAGS)[number];
+const AVAIL: Partial<Record<NFlag, 'smsAvailable' | 'pushAvailable' | 'whatsappAvailable'>> = { smsEnabled: 'smsAvailable', pushEnabled: 'pushAvailable', whatsappEnabled: 'whatsappAvailable' };
+const CLIENT_EMAILS = FLAGS.filter((k) => k.startsWith('email'));
+const CLIENT_CHANNELS = FLAGS.filter((k) => !k.startsWith('email'));
 
 const PTYPES = ['BOOKING_NEW', 'BOOKING_CANCELLED', 'BOOKING_RESCHEDULED', 'BOOKING_LATE', 'NO_SHOW', 'REVIEW_NEW', 'WAITLIST_NEW', 'PAYMENT', 'STOCK_LOW'] as const;
 const PGROUPS: { title: 'pp.gBook' | 'pp.gGuests' | 'pp.gMoney'; keys: readonly (typeof PTYPES)[number][] }[] = [
@@ -225,40 +173,84 @@ const PGROUPS: { title: 'pp.gBook' | 'pp.gGuests' | 'pp.gMoney'; keys: readonly 
 ];
 const hmOk = (s: string) => s === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
-/** Bildiriş ayarları: pick a channel, then one switch per event type; quiet hours, followed specialists, own stock level. */
-export function PushPrefsEditor({ onBack }: { onBack: () => void }) {
+/**
+ * Bildirişlər: ONE screen. Top: this phone's push permission (one switch). Then what reaches the owner (per topic, per channel; quiet hours,
+ * specialists, stock level; saved to /notifications/preferences) and what the salon sends to clients (saved to /businesses/{id}/notification-settings).
+ * Both saves sit behind one Save button; failures come back as one inline message.
+ */
+export function NotificationsEditor({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
-  const { salon } = useApp();
+  const { salon, user } = useApp();
   const sid = salon?.id ?? '';
-  const q = useLoad(() => apiB.pushPrefs(), []);
+  const nq = useLoad(() => apiX.notifSettings(sid), [sid]);
+  const pq = useLoad(() => apiB.pushPrefs(), []);
   const staff = useLoad(() => api.staff(sid), [sid]);
+  const { perm, enable } = usePushPerm(user?.userId);
+  const [s, setS] = useState<NotifSettings | null>(null);
   const [off, setOff] = useState<{ push: string[]; inbox: string[]; email: string[] }>({ push: [], inbox: [], email: [] });
   const [ch, setCh] = useState<'push' | 'inbox' | 'email'>('push');
   const [qs, setQs] = useState(''); const [qe, setQe] = useState(''); const [ids, setIds] = useState<string[]>([]); const [stock, setStock] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  useEffect(() => { if (nq.data) setS(nq.data); }, [nq.data]);
   useEffect(() => {
-    const p = q.data; if (!p) return;
+    const p = pq.data; if (!p) return;
     setOff({ push: p.pushOff, inbox: p.inboxOff, email: p.emailOff });
     setQs((p.quietStart ?? '').slice(0, 5)); setQe((p.quietEnd ?? '').slice(0, 5)); setIds(p.staff); setStock(p.stockThreshold != null ? String(p.stockThreshold) : '');
-  }, [q.data]);
+  }, [pq.data]);
   const flip = (c: 'push' | 'inbox' | 'email', k: string) => setOff((o) => ({ ...o, [c]: o[c].includes(k) ? o[c].filter((x) => x !== k) : [...o[c], k] }));
   async function save() {
     if (!hmOk(qs) || !hmOk(qe) || (qs === '') !== (qe === '')) { setErr(tr('pp.badTime')); return; }
     setErr(''); setBusy(true);
-    try {
-      await apiB.savePushPrefs({ pushOff: off.push, inboxOff: off.inbox, emailOff: off.email, quietStart: qs || null, quietEnd: qe || null, staff: ids, stockThreshold: stock.trim() === '' ? null : Math.max(0, Math.round(Number(stock)) || 0) });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      toast(tr('ns.saved'), 'success'); onBack();
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    const errs: string[] = [];
+    if (pq.data) {
+      try { await apiB.savePushPrefs({ pushOff: off.push, inboxOff: off.inbox, emailOff: off.email, quietStart: qs || null, quietEnd: qe || null, staff: ids, stockThreshold: stock.trim() === '' ? null : Math.max(0, Math.round(Number(stock)) || 0) }); }
+      catch (e) { errs.push((e as Error).message); }
+    }
+    if (s) {
+      try { await apiX.saveNotifSettings(sid, s); }
+      catch (e) { errs.push((e as Error).message); }
+    }
+    setBusy(false);
+    if (errs.length) { setErr(Array.from(new Set(errs)).join(' · ')); return; }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    toast(tr('ns.saved'), 'success'); onBack();
   }
+  const failed = nq.error && !nq.data ? nq : pq.error && !pq.data ? pq : null;
+  const ready = !!s && !!pq.data;
+  const permNote = perm === 'granted' ? tr('notifications.pushEnabled') : perm === 'unavailable' ? tr('notifications.pushFailed') : perm === 'settings' ? tr('set.pushDenied') : tr('set.pushWhy');
+  const permOff = perm === 'checking' || perm === 'unavailable';
+  const flagLabel = (k: NFlag) => (k === 'pushEnabled' ? tr('set.clientPush') : tr(`ns.${k}` as 'ns.title'));
+  const flagRow = (k: NFlag, i: number) => {
+    const av = AVAIL[k];
+    const na = av && s ? s[av] === false : false;
+    return <SwitchRow key={k} first={i === 0} label={flagLabel(k)} note={na ? tr('ns.unavailable') : undefined} disabled={na} value={!!s?.[k]} onChange={(v) => setS((cur) => (cur ? { ...cur, [k]: v } : cur))} />;
+  };
   return (
     <Screen>
-      <Header title={tr('pp.title')} subtitle={tr('pp.hint')} onBack={onBack} />
-      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : !q.data ? <Skeleton rows={6} height={44} /> : (
+      <Header title={tr('set.notifications')} subtitle={salon?.name} onBack={onBack} />
+      {failed ? <ErrorState error={failed.error as Error} onRetry={() => { void nq.reload(); void pq.reload(); }} /> : !ready ? <Skeleton rows={6} height={44} /> : (
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}>
-          <T k="sm" lines={1} color={t.muted} style={{ marginTop: 6, marginBottom: 6, marginLeft: 4 }}>{tr('pp.where')}</T>
+          <SetGroup>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, opacity: permOff ? 0.5 : 1 }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <T k="t1" lines={1}>{tr('set.pushTitle')}</T>
+                <T k="t2" lines={1} color={perm === 'settings' ? t.gink : t.muted}>{permNote}</T>
+              </View>
+              {perm === 'settings'
+                ? <KButton size="sm" kind="fl" label={tr('push.settings')} onPress={() => void enable()} />
+                : <Toggle on={perm === 'granted'} label={tr('set.pushTitle')} onChange={(v) => { if (permOff) return; if (v) void enable(); else Linking.openSettings().catch(() => {}); }} />}
+            </View>
+          </SetGroup>
+
+          <T k="h2" lines={1} style={{ marginTop: 26, marginLeft: 4 }}>{tr('set.mine')}</T>
+          <T k="t2" lines={1} color={t.muted} style={{ marginTop: 2, marginLeft: 4, marginBottom: 12 }}>{tr('pp.hint')}</T>
           <Segmented items={[{ k: 'push' as const, label: tr('pp.pushCol') }, { k: 'inbox' as const, label: tr('pp.inboxCol') }, { k: 'email' as const, label: tr('pp.emailCol') }]} value={ch} onChange={setCh} />
+          {ch === 'email' ? (
+            <SetGroup>
+              <SwitchRow first label={tr('ns.salonAlerts')} value={!!s?.salonAlerts} onChange={(v) => setS((cur) => (cur ? { ...cur, salonAlerts: v } : cur))} />
+            </SetGroup>
+          ) : null}
           {PGROUPS.map((g) => {
             const keys = g.keys.filter((k) => ch !== 'email' || k.startsWith('BOOKING'));
             return keys.length === 0 ? null : (
@@ -275,17 +267,131 @@ export function PushPrefsEditor({ onBack }: { onBack: () => void }) {
           </SetGroup>
           <SetGroup title={tr('pp.staff')}>
             <View style={{ paddingVertical: 12 }}>
-              <MultiChoice value={ids} onChange={setIds} options={(staff.data ?? []).filter((s) => s.isActive !== false).map((s) => ({ value: String(s.id), label: s.name }))} />
+              <MultiChoice value={ids} onChange={setIds} options={(staff.data ?? []).filter((m) => m.isActive !== false).map((m) => ({ value: String(m.id), label: m.name }))} />
               {ids.length === 0 ? <T k="t2" lines={1} color={t.muted}>{tr('pp.staffAll')}</T> : null}
             </View>
           </SetGroup>
           <SetGroup>
             <View style={{ paddingTop: 8 }}><Field label={tr('pp.stock')} value={stock} onChangeText={setStock} keyboardType="number-pad" /></View>
           </SetGroup>
+
+          <T k="h2" lines={1} style={{ marginTop: 26, marginLeft: 4 }}>{tr('set.toClients')}</T>
+          <SetGroup title={tr('ux.secEmails')}>{CLIENT_EMAILS.map(flagRow)}</SetGroup>
+          <SetGroup title={tr('ux.secChannels')}>{CLIENT_CHANNELS.map(flagRow)}</SetGroup>
           {err ? <T k="t2" color={t.gink} style={{ marginTop: 12, marginLeft: 4 }}>{err}</T> : null}
         </ScrollView>
       )}
-      {q.data ? <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save()} /> : null}
+      {ready ? <StickyCta label={tr('common.save')} loading={busy} onPress={() => void save()} /> : null}
+    </Screen>
+  );
+}
+/** Kept for existing callers: both old editors are now the one merged screen. */
+export const NotifEditor = NotificationsEditor;
+export const PushPrefsEditor = NotificationsEditor;
+
+/** One label / value line inside a SetGroup. */
+function InfoRow({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { t } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, borderTopWidth: first ? 0 : 1, borderTopColor: t.hair }}>
+      <T k="t1" lines={1} style={{ flex: 1 }}>{label}</T>
+      <T k="t1" lines={1} color={t.muted} style={{ maxWidth: '55%' }}>{value}</T>
+    </View>
+  );
+}
+
+type SubData = { b: BillingOverview | null; l: SubStatus | null };
+
+/** Abunəlik content: plan card, what is included, balances / next payment (only what the API returns), and the web-only billing note. */
+export function SubscriptionCard() {
+  const { t } = useTheme();
+  const { salon } = useApp();
+  const sid = salon?.id ?? '';
+  const q = useLoad(async (): Promise<SubData> => {
+    try { return { b: await apiX.billing(sid), l: null }; }
+    catch { return { b: null, l: await apiX.subscription(sid).catch(() => null) }; }
+  }, [sid]);
+  if (q.loading && !q.data) return <Skeleton rows={4} height={70} />;
+  const b = q.data?.b ?? null; const l = q.data?.l ?? null;
+  const sub = b?.subscription ?? null; const plan = b?.plan ?? null;
+  const lc = getLocale();
+  const lk: 'az' | 'en' | 'ru' = lc === 'en' || lc === 'ru' ? lc : 'az';
+  const planName = (plan ? ((lk === 'az' ? plan.nameAz : lk === 'en' ? plan.nameEn : plan.nameRu) || plan.nameEn || plan.planKey) : null) || sub?.planKey || l?.planKey || l?.plan || '';
+  const status = sub?.status ?? l?.status ?? 'NONE';
+  const hasPlan = status !== 'NONE' && !!planName;
+  const fmt = (v?: string | null) => (v ? dateLabel(fromIso(v)) : '');
+  const periodEnd = sub?.currentPeriodEnd ?? l?.currentPeriodEnd ?? null;
+  const trialEnd = sub?.trialEnd ?? l?.trialEndsAt ?? null;
+  const dateLine = status === 'TRIALING' && trialEnd ? tr('set.trialEnds', { date: fmt(trialEnd) })
+    : sub?.cancelAtPeriodEnd && periodEnd ? tr('set.endsOn', { date: fmt(periodEnd) })
+    : periodEnd ? tr('set.renewsOn', { date: fmt(periodEnd) }) : '';
+  const price = plan ? Number(plan.monthlyPrice) : NaN;
+  const priceLine = plan && plan.monthlyPrice != null && Number.isFinite(price) ? (price === 0 ? tr('set.free') : `${money(price, plan.currency ?? undefined)} ${tr('set.perMonth')}`) : '';
+  const rawFeat = plan?.features?.[lk];
+  const feats = Array.isArray(rawFeat) ? rawFeat.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
+  const lines = [...(plan?.maxStaff && plan.maxStaff > 0 ? [tr('set.maxStaff', { n: plan.maxStaff })] : []), ...feats].slice(0, 5);
+  const pill: { text: string; tone: 'ok' | 'v' | 'g' | 'fl' } =
+    status === 'ACTIVE' ? { text: tr('set.stActive'), tone: 'ok' }
+    : status === 'TRIALING' ? { text: tr('set.stTrial'), tone: 'v' }
+    : status === 'PAST_DUE' ? { text: tr('set.stPastDue'), tone: 'g' }
+    : status === 'CANCELED' || status === 'CANCELLED' ? { text: tr('set.stCanceled'), tone: 'fl' }
+    : { text: status, tone: 'fl' };
+  const bal = b?.messageBalances ?? null;
+  const next = b?.nextInvoice ?? null;
+  const nextTotal = next ? Number(next.total) : NaN;
+  const commission = b?.commissionPct != null && b.commissionPct !== '' && Number.isFinite(Number(b.commissionPct)) ? `${Number(b.commissionPct)}%` : '';
+  const stats: { label: string; value: string }[] = [
+    ...(next?.date ? [{ label: tr('set.nextPay'), value: `${fmt(next.date)}${Number.isFinite(nextTotal) ? ` · ${money(nextTotal, next.currency ?? undefined)}` : ''}` }] : []),
+    ...(bal && bal.SMS != null ? [{ label: tr('set.smsLeft'), value: String(bal.SMS) }] : []),
+    ...(bal && bal.WHATSAPP != null ? [{ label: tr('set.waLeft'), value: String(bal.WHATSAPP) }] : []),
+    ...(commission ? [{ label: tr('set.commission'), value: commission }] : []),
+  ];
+  return (
+    <View>
+      <View style={{ backgroundColor: t.surface, borderRadius: 20, padding: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="crown" size={22} color={t.vtext} /></View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <T k="h2" lines={1}>{hasPlan ? planName : tr('set.noPlan')}</T>
+            {hasPlan && priceLine ? <T k="t2" lines={1} color={t.muted}>{priceLine}</T> : null}
+          </View>
+          {hasPlan ? <Pill text={pill.text} tone={pill.tone} /> : null}
+        </View>
+        {hasPlan && dateLine ? <T k="t2" lines={1} color={t.muted} style={{ marginTop: 14 }}>{dateLine}</T> : null}
+        {hasPlan && sub?.pastDue ? <T k="t2" lines={2} color={t.gink} style={{ marginTop: 6 }}>{sub.graceUntil ? tr('set.pastDue', { date: fmt(sub.graceUntil) }) : tr('set.stPastDue')}</T> : null}
+        {!hasPlan ? <T k="t2" lines={2} color={t.muted} style={{ marginTop: 12 }}>{tr('set.noPlanBody')}</T> : null}
+        {hasPlan && lines.length ? (
+          <View style={{ marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: t.hair, gap: 10 }}>
+            {lines.map((x, i) => (
+              <View key={`${i}-${x}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon name="check" size={16} color={t.ok} />
+                <T k="t2" lines={2} color={t.ink} style={{ flex: 1 }}>{x}</T>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+      {stats.length ? (
+        <SetGroup title={tr('set.usage')}>
+          {stats.map((r, i) => <InfoRow key={r.label} first={i === 0} label={r.label} value={r.value} />)}
+        </SetGroup>
+      ) : null}
+      <View style={{ marginTop: 18, backgroundColor: t.surface, borderRadius: 16, padding: 16, gap: 12 }}>
+        <T k="t2" lines={2} color={t.muted}>{tr('set.webOnly')}</T>
+        <KButton kind="fl" icon="globe" label={tr('set.openBilling')} onPress={() => { Linking.openURL(`${WEB_BASE}/manage`).catch(() => {}); }} />
+      </View>
+    </View>
+  );
+}
+
+/** Abunəlik page (opened from Settings): header + the content above. */
+export function SubscriptionPage({ onBack }: { onBack: () => void }) {
+  return (
+    <Screen>
+      <Header title={tr('sub.title')} onBack={onBack} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 6, paddingBottom: 56 }}>
+        <SubscriptionCard />
+      </ScrollView>
     </Screen>
   );
 }

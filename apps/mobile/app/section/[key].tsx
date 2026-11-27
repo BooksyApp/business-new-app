@@ -23,7 +23,8 @@ import { Sales } from '@/screens/Sales';
 import { Services } from '@/screens/Services';
 import { GiftCards } from '@/screens/GiftCards';
 import { Settings } from '@/screens/Settings';
-import { NotifTextsEditor, ResourceTypes, RevenuePlan } from '@/screens/HubExtras';
+import { ResourceTypes, RevenuePlan } from '@/screens/HubExtras';
+import { NotifTextsScreen } from '@/screens/NotifTexts';
 import { HoursEditor } from '@/screens/SettingsMore';
 import { Team } from '@/screens/Team';
 import { t as tr, type StringKey } from '@/i18n';
@@ -70,7 +71,7 @@ export default function Section() {
     case 'resources': return <ResourceTypes onBack={back} />;
     case 'plan': return <RevenuePlan onBack={back} />;
     case 'loyaltycards': return <Marketing onBack={back} initialView="loyalty" />;
-    case 'texts': return <NotifTextsEditor onBack={back} />;
+    case 'texts': return <NotifTextsScreen onBack={back} />;
     case 'hours': return <HoursEditor onBack={back} />;
     default: {
       const k = ICONS[key] ? key : 'views';

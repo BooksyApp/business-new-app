@@ -10,8 +10,8 @@ import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { useApp } from '@/lib/app';
 import { apiO } from '@/lib/api-onboard';
 import { toast } from '@/lib/toast';
-import { HoursEditor, NotifEditor, PushPrefsEditor, SetGroup, SubscriptionCard } from '@/screens/SettingsMore';
-import { usePushPerm } from '@/lib/push';
+import { HoursEditor, NotificationsEditor, SetGroup, SubscriptionPage } from '@/screens/SettingsMore';
+import { NotifTextsScreen } from '@/screens/NotifTexts';
 import { useTheme } from '@/theme/ThemeContext';
 
 /** Ayarlar (basics): salon details, language, push notifications, account, version. Editing the salon stays in the web panel. */
@@ -19,13 +19,13 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const { t, mode, setMode } = useTheme();
   const router = useRouter();
   const { user, salon, signOut } = useApp();
-  const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'pp'>('main');
-  const { perm: pushPerm, enable: enableNow } = usePushPerm(user?.userId);
-  const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'sub' | 'pw' | 'del'>(null);
+  const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'subscription' | 'texts'>('main');
+  const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'pw' | 'del'>(null);
   const [curPw, setCurPw] = useState(''); const [newPw, setNewPw] = useState(''); const [pwBusy, setPwBusy] = useState(false); const [pwErr, setPwErr] = useState('');
   if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
-  if (sub === 'notif') return <NotifEditor onBack={() => setSub('main')} />;
-  if (sub === 'pp') return <PushPrefsEditor onBack={() => setSub('main')} />;
+  if (sub === 'notif') return <NotificationsEditor onBack={() => setSub('main')} />;
+  if (sub === 'subscription') return <SubscriptionPage onBack={() => setSub('main')} />;
+  if (sub === 'texts') return <NotifTextsScreen onBack={() => setSub('main')} />;
   const lead = (icon: string, danger?: boolean) => <Icon name={icon} size={20} color={danger ? t.gink : t.ink} />;
   const chev = <Icon name="chev" size={14} color={t.ink3} />;
   const langName = SUPPORTED.find((l) => l.code === getLocale())?.endonym ?? '';
@@ -38,17 +38,12 @@ export function Settings({ onBack }: { onBack: () => void }) {
         <SetGroup title={tr('set.salon')}>
           <KListItem first title={tr('v3.salonInfo')} sub={salon?.name} lead={lead('store')} right={chev} onPress={() => router.push('/section/profile')} />
           <KListItem title={tr('hr.title')} lead={lead('clock')} right={chev} onPress={() => setSub('hours')} />
-          <KListItem title={tr('hx.textsTitle')} lead={lead('paper')} right={chev} onPress={() => router.push('/section/texts')} />
-          <KListItem title={tr('sub.title')} lead={lead('crown')} right={chev} onPress={() => setSheet('sub')} />
-        </SetGroup>
-        <SetGroup title={tr('set.notifications')}>
-          <KListItem first title={tr('pp.title')} lead={lead('bell')} right={chev} onPress={() => setSub('pp')} />
-          <KListItem title={tr('ns.title')} lead={lead('mail')} right={chev} onPress={() => setSub('notif')} />
-          <KListItem title={tr('v3.pushRow')} sub={pushPerm === 'granted' ? tr('notifications.pushEnabled') : pushPerm === 'unavailable' ? tr('notifications.pushFailed') : undefined} lead={lead('bell')}
-            right={pushPerm === 'granted' ? <Icon name="check" size={18} color={t.ok} /> : pushPerm === 'unavailable' || pushPerm === 'checking' ? undefined : <KButton size="sm" kind="fl" label={pushPerm === 'settings' ? tr('push.settings') : tr('push.allow')} onPress={() => void enableNow()} />} />
+          <KListItem title={tr('hx.textsTitle')} lead={lead('paper')} right={chev} onPress={() => setSub('texts')} />
+          <KListItem title={tr('sub.title')} lead={lead('crown')} right={chev} onPress={() => setSub('subscription')} />
         </SetGroup>
         <SetGroup title={tr('set.app')}>
-          <KListItem first title={tr('more.language')} sub={langName} lead={lead('globe')} right={chev} onPress={() => setSheet('lang')} />
+          <KListItem first title={tr('set.notifications')} lead={lead('bell')} right={chev} onPress={() => setSub('notif')} />
+          <KListItem title={tr('more.language')} sub={langName} lead={lead('globe')} right={chev} onPress={() => setSheet('lang')} />
           <KListItem title={tr('set.theme')} sub={themeName} lead={lead('moon')} right={chev} onPress={() => setSheet('theme')} />
           <KListItem title={tr('v3.support')} lead={lead('help')} right={chev} onPress={() => router.push('/section/support')} />
         </SetGroup>
@@ -87,10 +82,6 @@ export function Settings({ onBack }: { onBack: () => void }) {
         <KV icon="phone" label={tr('create.phone')} value={salon?.phone ?? '-'} />
         <KV icon="wallet" label={tr('set.currency')} value={salon?.currency ?? '-'} />
         <T k="sm" color={t.muted} style={{ marginTop: 10, marginBottom: 10 }}>{tr('set.webHint')}</T>
-      </BottomSheet>
-      <BottomSheet open={sheet === 'sub'} onClose={() => setSheet(null)}>
-        <T k="h1" style={{ marginBottom: 10 }}>{tr('sub.title')}</T>
-        <SubscriptionCard />
       </BottomSheet>
     </Screen>
   );
