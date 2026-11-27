@@ -61,7 +61,7 @@ export default function StoryView() {
   const sticker = cur?.caption?.includes('·');
   return (
     <View style={{ flex: 1, backgroundColor: '#000' }} {...pan.panHandlers}>
-      {cur ? <Photo src={cur.url} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} /> : null}
+      {cur ? <Photo src={cur.url} fit="contain" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000' }} /> : null}
       <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,.45)', 'rgba(0,0,0,0)']} style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 150 }} />
       <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0)', 'rgba(0,0,0,.5)']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 180 }} />
       <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, flexDirection: 'row' }}>

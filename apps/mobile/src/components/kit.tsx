@@ -163,12 +163,12 @@ export function ChipRow({ children, style }: { children: React.ReactNode; style?
 }
 
 /** Photo with cover fit; `src` is an API path, an http URL, "demo:<key>" or a bundled asset. Shows the soft fill while empty. */
-export function Photo({ src, style, children, label }: { src?: string | number | null; style?: StyleProp<ImageStyle>; children?: React.ReactNode; label?: string }) {
+export function Photo({ src, style, children, label, fit = 'cover' }: { src?: string | number | null; style?: StyleProp<ImageStyle>; children?: React.ReactNode; label?: string; /** 'contain' shows the whole picture (nothing cropped) */ fit?: 'cover' | 'contain' }) {
   const { t } = useTheme();
   const s = photoSource(src);
   return (
     <View style={[{ overflow: 'hidden', backgroundColor: t.fill }, style as StyleProp<ViewStyle>]} accessible={!!label} accessibilityLabel={label} accessibilityRole={label ? 'image' : undefined}>
-      {s ? <Image source={s} resizeMode="cover" accessibilityIgnoresInvertColors style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} /> : null}
+      {s ? <Image source={s} resizeMode={fit} accessibilityIgnoresInvertColors style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} /> : null}
       {children}
     </View>
   );

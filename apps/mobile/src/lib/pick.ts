@@ -10,7 +10,7 @@ type Asset = { uri: string; fileName?: string | null; mimeType?: string | null; 
 async function toJpeg(a: Asset): Promise<Asset> {
   try {
     const wide = (a.width ?? 0) > 2048;
-    const r = await ImageManipulator.manipulateAsync(a.uri, wide ? [{ resize: { width: 2048 } }] : [], { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG });
+    const r = await ImageManipulator.manipulateAsync(a.uri, wide ? [{ resize: { width: 2048 } }] : [], { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG });
     return { uri: r.uri, fileName: 'photo.jpg', mimeType: 'image/jpeg', width: r.width };
   } catch { return a; }
 }
@@ -25,7 +25,7 @@ const part = (a: Asset, fallback: string): Picked => {
 /** Library and camera both go through our own rationale sheet first (once; 'limited' counts as granted), then the OS prompt.
  *  The system library picker needs no permission, so a refusal never blocks it; only a dismissed sheet cancels. A refused camera cancels. */
 async function launch(source: 'library' | 'camera', allowsEditing: boolean): Promise<Asset | null> {
-  const opts = { mediaTypes: ['images'] as ('images')[], quality: 0.85, allowsEditing };
+  const opts = { mediaTypes: ['images'] as ('images')[], quality: 1, allowsEditing }; // untouched here: toJpeg() below is the only compression
   const ask = await askWithIntro(source === 'camera' ? 'camera' : 'photos');
   if (ask === 'skipped') return null;
   if (source === 'camera' && ask !== 'granted') return null;

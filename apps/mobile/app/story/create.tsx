@@ -84,7 +84,7 @@ export default function StoryCreate() {
     );
     return (
       <View style={{ flex: 1, backgroundColor: '#000' }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-        <Photo src={sel.src} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
+        <Photo src={sel.src} fit="contain" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000' }} />
         <View style={{ position: 'absolute', left: 14, top: ins.top + 10, zIndex: 20, elevation: 20 }}>
           <Pressable onPress={() => { setSel(null); setSvc(null); setWho(null); setText(''); setStep('pick'); }} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('v2.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={22} color="#fff" /></Pressable>
         </View>
