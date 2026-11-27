@@ -81,7 +81,7 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
       giftCardCode: method === 'GIFT_CARD' ? gift.trim().toUpperCase() : undefined,
       splitCashAmount: method === 'SPLIT' ? Math.round((total - card) * 100) / 100 : undefined, splitCardAmount: method === 'SPLIT' ? card : undefined,
       payments: multi ? tenders.filter((x) => (num(x.amount) || 0) > 0).map((x) => ({ method: x.method, amount: num(x.amount) || 0, ...(x.method === 'GIFT_CARD' ? { giftCardCode: x.code.trim().toUpperCase() } : {}) })) : undefined,
-      appointmentId: appt?.id, idempotencyKey: `${sid}-${appt?.id ?? 'walkin'}-${total}-${Date.now()}`,
+      appointmentId: appt?.id, idempotencyKey: `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
     };
     setBusy(true);
     try {

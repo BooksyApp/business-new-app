@@ -421,7 +421,8 @@ export const api = {
       body: {
         ...cleanBooking(body),
         ...(override ? { override: { confirm: true } } : null),
-        idempotencyKey: `${body.businessId}-${body.staffId}-${body.appointmentDate}-${body.startTime}-${Date.now()}`,
+        // appointments.idempotency_key is VARCHAR(100): ids are UUIDs, so never concatenate them (that was ~107 chars and every booking failed)
+        idempotencyKey: `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
       },
     }),
   /** PUT /api/bookings/{id} — full body (reschedule). */
