@@ -24,7 +24,8 @@ export function series(appts: Appointment[], end: Date, days: number, staffCount
     const d = toDay(addDays(end, -i));
     const day = appts.filter((a) => a.appointmentDate.slice(0, 10) === d && live(a));
     const mins = day.reduce((s, a) => s + len(a), 0);
-    out.push({ revenue: day.reduce((s, a) => s + (a.price ?? 0), 0), bookings: day.length, occ: staffCount ? Math.min(1, mins / (staffCount * SHIFT_MIN)) : 0 });
+    // Revenue = money actually collected (paid bookings only), the same rule as Kassa and Reports; booked-but-unpaid is not income yet.
+    out.push({ revenue: day.reduce((s, a) => s + (a.paymentStatus === 'PAID' ? a.price ?? 0 : 0), 0), bookings: day.length, occ: staffCount ? Math.min(1, mins / (staffCount * SHIFT_MIN)) : 0 });
   }
   return out;
 }
