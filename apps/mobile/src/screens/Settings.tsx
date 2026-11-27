@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { Alert, ScrollView } from 'react-native';
 import Constants from 'expo-constants';
 import { Icon } from '@/components/Icon';
-import { Pressable } from '@/components/Pressable';
-import { Text } from '@/components/Text';
 import { Screen } from '@/components/ui';
 import { BottomSheet } from '@/components/BottomSheet';
-import { BackBar, Field as KField, Button as KButton, Card as KCard, KV, ListItem as KListItem, T, Title } from '@/components/kit';
+import { BackBar, Field as KField, Button as KButton, KV, ListItem as KListItem, T, Title } from '@/components/kit';
 import { useRouter } from 'expo-router';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { useApp } from '@/lib/app';
 import { apiO } from '@/lib/api-onboard';
 import { toast } from '@/lib/toast';
-import { HoursEditor, NotifEditor, PushPrefsEditor, SubscriptionCard } from '@/screens/SettingsMore';
+import { HoursEditor, NotifEditor, PushPrefsEditor, SetGroup, SubscriptionCard } from '@/screens/SettingsMore';
 import { usePushPerm } from '@/lib/push';
 import { useTheme } from '@/theme/ThemeContext';
-import { font } from '@/theme/tokens';
 
 /** Ayarlar (basics): salon details, language, push notifications, account, version. Editing the salon stays in the web panel. */
 export function Settings({ onBack }: { onBack: () => void }) {
@@ -25,54 +22,50 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'pp'>('main');
   const { perm: pushPerm, enable: enableNow } = usePushPerm(user?.userId);
   const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'sub' | 'pw' | 'del'>(null);
-  const [curPw, setCurPw] = useState(''); const [newPw, setNewPw] = useState(''); const [pwBusy, setPwBusy] = useState(false);
+  const [curPw, setCurPw] = useState(''); const [newPw, setNewPw] = useState(''); const [pwBusy, setPwBusy] = useState(false); const [pwErr, setPwErr] = useState('');
   if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
   if (sub === 'notif') return <NotifEditor onBack={() => setSub('main')} />;
   if (sub === 'pp') return <PushPrefsEditor onBack={() => setSub('main')} />;
-  const lead = (icon: string, danger?: boolean) => <Icon name={icon} size={22} color={danger ? t.gink : t.ink} />;
-  const chev = <Icon name="chev" size={16} color={t.ink3} />;
+  const lead = (icon: string, danger?: boolean) => <Icon name={icon} size={20} color={danger ? t.gink : t.ink} />;
+  const chev = <Icon name="chev" size={14} color={t.ink3} />;
   const langName = SUPPORTED.find((l) => l.code === getLocale())?.endonym ?? '';
   const themeName = tr(mode === 'light' ? 'set.themeLight' : mode === 'dark' ? 'set.themeDark' : 'set.themeSystem');
-  const val = (v: string) => <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><T k="body" color={t.muted}>{v}</T>{chev}</View>;
-  const head = (s2: string) => <T k="sm" color={t.muted} style={{ fontFamily: font.b, marginTop: 18, marginBottom: 8, marginLeft: 4 }}>{s2}</T>;
   return (
     <Screen>
       <BackBar label={tr('v2.tabMore')} onBack={onBack} />
       <Title style={{ paddingBottom: 4 }}>{tr('sections.settings')}</Title>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 56 }} showsVerticalScrollIndicator={false}>
-        {head(tr('set.notifications'))}
-        <KCard style={{ paddingHorizontal: 18 }}>
+        <SetGroup title={tr('set.salon')}>
+          <KListItem first title={tr('v3.salonInfo')} sub={salon?.name} lead={lead('store')} right={chev} onPress={() => router.push('/section/profile')} />
+          <KListItem title={tr('hr.title')} lead={lead('clock')} right={chev} onPress={() => setSub('hours')} />
+          <KListItem title={tr('hx.textsTitle')} lead={lead('paper')} right={chev} onPress={() => router.push('/section/texts')} />
+          <KListItem title={tr('sub.title')} lead={lead('crown')} right={chev} onPress={() => setSheet('sub')} />
+        </SetGroup>
+        <SetGroup title={tr('set.notifications')}>
           <KListItem first title={tr('pp.title')} lead={lead('bell')} right={chev} onPress={() => setSub('pp')} />
           <KListItem title={tr('ns.title')} lead={lead('mail')} right={chev} onPress={() => setSub('notif')} />
           <KListItem title={tr('v3.pushRow')} sub={pushPerm === 'granted' ? tr('notifications.pushEnabled') : pushPerm === 'unavailable' ? tr('notifications.pushFailed') : undefined} lead={lead('bell')}
-            right={pushPerm === 'granted' ? <Icon name="check" size={20} color={t.ok} /> : pushPerm === 'unavailable' || pushPerm === 'checking' ? undefined : <KButton size="sm" kind="fl" label={pushPerm === 'settings' ? tr('push.settings') : tr('push.allow')} onPress={() => void enableNow()} />} />
-        </KCard>
-        {head(tr('set.salon'))}
-        <KCard style={{ paddingHorizontal: 18 }}>
-          <KListItem first title={tr('v3.salonInfo')} sub={salon?.name} lead={lead('store')} right={chev} onPress={() => router.push('/section/profile')} />
-          <KListItem title={tr('hx.textsTitle')} lead={lead('paper')} right={chev} onPress={() => router.push('/section/texts')} />
-          <KListItem title={tr('hr.title')} lead={lead('clock')} right={chev} onPress={() => setSub('hours')} />
-          <KListItem title={tr('sub.title')} lead={lead('crown')} right={chev} onPress={() => setSheet('sub')} />
-        </KCard>
-        {head(tr('set.account'))}
-        <KCard style={{ paddingHorizontal: 18 }}>
-          <KListItem first title={tr('more.language')} lead={lead('globe')} right={val(langName)} onPress={() => setSheet('lang')} />
-          <KListItem title={tr('set.theme')} lead={lead('moon')} right={val(themeName)} onPress={() => setSheet('theme')} />
-          <KListItem title={tr('ob.pwChange')} lead={lead('lock')} right={chev} onPress={() => setSheet('pw')} />
-          <KListItem title={tr('ob.delTitle')} lead={lead('trash', true)} right={chev} onPress={() => setSheet('del')} />
+            right={pushPerm === 'granted' ? <Icon name="check" size={18} color={t.ok} /> : pushPerm === 'unavailable' || pushPerm === 'checking' ? undefined : <KButton size="sm" kind="fl" label={pushPerm === 'settings' ? tr('push.settings') : tr('push.allow')} onPress={() => void enableNow()} />} />
+        </SetGroup>
+        <SetGroup title={tr('set.app')}>
+          <KListItem first title={tr('more.language')} sub={langName} lead={lead('globe')} right={chev} onPress={() => setSheet('lang')} />
+          <KListItem title={tr('set.theme')} sub={themeName} lead={lead('moon')} right={chev} onPress={() => setSheet('theme')} />
           <KListItem title={tr('v3.support')} lead={lead('help')} right={chev} onPress={() => router.push('/section/support')} />
-        </KCard>
-        <KCard style={{ paddingHorizontal: 18, marginTop: 14 }}>
-          <KListItem first title={tr('more.signOut')} lead={lead('out', true)} onPress={() => Alert.alert(tr('more.signOutConfirm'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('more.signOut'), style: 'destructive', onPress: () => void signOut() }])} />
-        </KCard>
-        <T k="xs" color={t.ink3} style={{ textAlign: 'center', marginTop: 18 }}>{user?.fullName ? `${user.fullName} · ` : ''}{tr('more.version')} {Constants.expoConfig?.version}</T>
+        </SetGroup>
+        <SetGroup title={tr('set.account')}>
+          <KListItem first title={tr('ob.pwChange')} lead={lead('lock')} right={chev} onPress={() => setSheet('pw')} />
+          <KListItem title={tr('ob.delTitle')} lead={lead('trash', true)} right={chev} onPress={() => setSheet('del')} />
+          <KListItem title={tr('more.signOut')} lead={lead('out', true)} onPress={() => Alert.alert(tr('more.signOutConfirm'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('more.signOut'), style: 'destructive', onPress: () => void signOut() }])} />
+        </SetGroup>
+        <T k="xs" lines={1} color={t.ink3} style={{ textAlign: 'center', marginTop: 18 }}>{user?.fullName ? `${user.fullName} · ` : ''}{tr('more.version')} {Constants.expoConfig?.version}</T>
       </ScrollView>
       <BottomSheet open={sheet === 'pw'} onClose={() => setSheet(null)}>
         <T k="h1" style={{ marginBottom: 10 }}>{tr('ob.pwChange')}</T>
         <KField icon="lock" placeholder={tr('ob.pwCurrent')} accessibilityLabel={tr('ob.pwCurrent')} value={curPw} onChangeText={setCurPw} secureTextEntry autoCapitalize="none" style={{ marginBottom: 10 }} boxStyle={{ marginBottom: 10 }} />
         <KField icon="lock" placeholder={tr('ob.newPw')} accessibilityLabel={tr('ob.newPw')} value={newPw} onChangeText={setNewPw} secureTextEntry autoCapitalize="none" textContentType="newPassword" />
         <T k="xs" color={t.ink3} style={{ marginTop: 6, marginLeft: 4 }}>{tr('ob.pwHint')}</T>
-        <KButton label={tr('common.save')} loading={pwBusy} disabled={!curPw || newPw.length < 8} style={{ marginTop: 14 }} onPress={() => { setPwBusy(true); void apiO.changePassword(curPw, newPw).then(() => { toast(tr('ob.pwChanged'), 'success'); setCurPw(''); setNewPw(''); setSheet(null); }).catch((e: Error) => toast(e.message, 'error')).finally(() => setPwBusy(false)); }} />
+        {pwErr ? <T k="t2" color={t.gink} style={{ marginTop: 8, marginLeft: 4 }}>{pwErr}</T> : null}
+        <KButton label={tr('common.save')} loading={pwBusy} disabled={!curPw || newPw.length < 8} style={{ marginTop: 14 }} onPress={() => { setPwErr(''); setPwBusy(true); void apiO.changePassword(curPw, newPw).then(() => { toast(tr('ob.pwChanged'), 'success'); setCurPw(''); setNewPw(''); setSheet(null); }).catch((e: Error) => setPwErr(e.message)).finally(() => setPwBusy(false)); }} />
       </BottomSheet>
       <BottomSheet open={sheet === 'del'} onClose={() => setSheet(null)}>
         <T k="h1" style={{ marginBottom: 6 }}>{tr('ob.delTitle')}</T>

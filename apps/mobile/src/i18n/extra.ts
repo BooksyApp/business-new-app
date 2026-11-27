@@ -24,7 +24,7 @@ export const extraEn = {
     m: { CASH: 'Cash', CARD_TERMINAL: 'Card', CHECK: 'Check', SPLIT: 'Split', MEMBERSHIP: 'Membership', GIFT_CARD: 'Gift card', PACKAGE: 'Package' },
   },
   msg: { empty: 'No messages yet', emptyBody: 'Chats started by clients in the booqi app appear here.', threadEmpty: 'No messages in this chat', reply: 'Write a reply', send: 'Send', unread: '{{n}} unread' },
-  set: { salon: 'Salon', name: 'Name', address: 'Address', currency: 'Currency', webHint: 'Salon details are edited in the web panel.', notifications: 'Notifications', account: 'Account', user: 'Name', role: 'Role', theme: 'Appearance', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark' },
+  set: { salon: 'Salon', name: 'Name', address: 'Address', currency: 'Currency', webHint: 'Salon details are edited in the web panel.', notifications: 'Notifications', account: 'Account', user: 'Name', role: 'Role', theme: 'Appearance', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', app: 'App' },
 };
 
 export const extraAz: typeof extraEn = {
@@ -52,7 +52,7 @@ export const extraAz: typeof extraEn = {
     m: { CASH: 'Nağd', CARD_TERMINAL: 'Kart', CHECK: 'Çek', SPLIT: 'Bölünmüş', MEMBERSHIP: 'Üzvlük', GIFT_CARD: 'Hədiyyə kartı', PACKAGE: 'Paket' },
   },
   msg: { empty: 'Hələ mesaj yoxdur', emptyBody: 'Müştərilərin booqi tətbiqində başlatdığı söhbətlər burada görünür.', threadEmpty: 'Bu söhbətdə mesaj yoxdur', reply: 'Cavab yazın', send: 'Göndər', unread: '{{n}} oxunmamış' },
-  set: { salon: 'Salon', name: 'Ad', address: 'Ünvan', currency: 'Valyuta', webHint: 'Salon məlumatları veb paneldə dəyişdirilir.', notifications: 'Bildirişlər', account: 'Hesab', user: 'Ad', role: 'Rol', theme: 'Görünüş', themeSystem: 'Sistem', themeLight: 'Açıq', themeDark: 'Tünd' },
+  set: { salon: 'Salon', name: 'Ad', address: 'Ünvan', currency: 'Valyuta', webHint: 'Salon məlumatları veb paneldə dəyişdirilir.', notifications: 'Bildirişlər', account: 'Hesab', user: 'Ad', role: 'Rol', theme: 'Görünüş', themeSystem: 'Sistem', themeLight: 'Açıq', themeDark: 'Tünd', app: 'Tətbiq' },
 };
 
 export const extraRu: typeof extraEn = {
@@ -80,5 +80,5 @@ export const extraRu: typeof extraEn = {
     m: { CASH: 'Наличные', CARD_TERMINAL: 'Карта', CHECK: 'Чек', SPLIT: 'Раздельно', MEMBERSHIP: 'Абонемент', GIFT_CARD: 'Подарочная карта', PACKAGE: 'Пакет' },
   },
   msg: { empty: 'Сообщений пока нет', emptyBody: 'Чаты, начатые клиентами в приложении booqi, появятся здесь.', threadEmpty: 'В этом чате нет сообщений', reply: 'Напишите ответ', send: 'Отправить', unread: 'Непрочитанных: {{n}}' },
-  set: { salon: 'Салон', name: 'Название', address: 'Адрес', currency: 'Валюта', webHint: 'Данные салона редактируются в веб-панели.', notifications: 'Уведомления', account: 'Аккаунт', user: 'Имя', role: 'Роль', theme: 'Оформление', themeSystem: 'Системная', themeLight: 'Светлая', themeDark: 'Тёмная' },
+  set: { salon: 'Салон', name: 'Название', address: 'Адрес', currency: 'Валюта', webHint: 'Данные салона редактируются в веб-панели.', notifications: 'Уведомления', account: 'Аккаунт', user: 'Имя', role: 'Роль', theme: 'Оформление', themeSystem: 'Системная', themeLight: 'Светлая', themeDark: 'Тёмная', app: 'Приложение' },
 };
