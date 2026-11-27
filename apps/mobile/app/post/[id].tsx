@@ -13,7 +13,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-type LookX = { id: string | number; photoUrl: string; title?: string | null; serviceName?: string | null; saveCount?: number };
+type LookX = { id: string | number; photoUrl: string; title?: string | null; serviceName?: string | null; staffName?: string | null; saveCount?: number };
 
 /** Post view: header, big photo, counts + "Statistika", caption, service chip and how clients see the booking prompt. */
 export default function PostView() {
@@ -50,7 +50,7 @@ export default function PostView() {
             <Button kind="ghost" size="sm" label={tr('v3.stats')} onPress={() => router.push(`/post-stats/${l.id}`)} style={{ paddingHorizontal: 0 }} />
           </View>
           {l.title ? <T k="body" style={{ paddingHorizontal: 20, marginTop: 4 }}><Text style={{ fontFamily: font.b }}>{(salon?.name ?? '').split(' ')[0].toLowerCase()}</Text> {l.title}</T> : null}
-          {l.serviceName ? <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 10 }}><Pill icon="scissors" text={l.serviceName} /></View> : null}
+          {l.serviceName || l.staffName ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginTop: 10 }}>{l.serviceName ? <Pill icon="scissors" text={l.serviceName} /> : null}{l.staffName ? <Pill icon="user" text={`@${l.staffName.split(' ')[0]}`} /> : null}</View> : null}
           <Card style={{ marginHorizontal: 20, marginTop: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1 }}><T k="xs" color={t.ink3}>{tr('v3.clientsSee')}</T><T k="h3">{tr('v3.bookThisLook')}</T></View>
             <Button size="sm" label={tr('v3.bookCta')} onPress={() => router.push('/booking/new')} />

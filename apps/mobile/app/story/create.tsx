@@ -38,8 +38,8 @@ export default function StoryCreate() {
   const [step, setStep] = useState<'pick' | 'edit'>('pick');
   const [text, setText] = useState('');
   const [editText, setEditText] = useState(false);
-  const [svc, setSvc] = useState<{ name: string; price?: number } | null>(null);
-  const [who, setWho] = useState<{ name: string; avatarUrl?: string } | null>(null);
+  const [svc, setSvc] = useState<{ id?: string | number; name: string; price?: number } | null>(null);
+  const [who, setWho] = useState<{ id?: string | number; name: string; avatarUrl?: string } | null>(null);
   const [sheet, setSheet] = useState<'svc' | 'who' | null>(null);
   const [alsoLooks, setAlsoLooks] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -65,7 +65,7 @@ export default function StoryCreate() {
     try {
       const caption = [text.trim(), svc ? `${svc.name}${svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}` : '', who ? `@${who.name.split(' ')[0]}` : ''].filter(Boolean).join(' · ');
       await postStoryPicked(sid, sel.picked, caption);
-      if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, caption); }
+      if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, caption, { serviceId: svc?.id, staffId: who?.id }); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); setDone(true);
       setTimeout(() => { close(); setTimeout(() => { bump(); toast(tr('cp.ok'), 'success'); }, 350); }, 900);
@@ -137,11 +137,11 @@ export default function StoryCreate() {
         <ToastHost modal />
         <BottomSheet open={sheet === 'svc'} onClose={() => setSheet(null)}>
           <T k="h1" style={{ marginBottom: 8 }}>{tr('v3.addService')}</T>
-          <ScrollView style={{ maxHeight: 360 }}>{(services.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={money(s.price, salon?.currency)} onPress={() => { setSvc({ name: s.name, price: s.price }); setSheet(null); }} />)}</ScrollView>
+          <ScrollView style={{ maxHeight: 360 }}>{(services.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={money(s.price, salon?.currency)} onPress={() => { setSvc({ id: s.id, name: s.name, price: s.price }); setSheet(null); }} />)}</ScrollView>
         </BottomSheet>
         <BottomSheet open={sheet === 'who'} onClose={() => setSheet(null)}>
           <T k="h1" style={{ marginBottom: 8 }}>{tr('v3.addWho')}</T>
-          <ScrollView style={{ maxHeight: 360 }}>{(staff.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={s.position} lead={<Avatar uri={s.avatarUrl} name={s.name} size={40} />} onPress={() => { setWho({ name: s.name, avatarUrl: s.avatarUrl }); setSheet(null); }} />)}</ScrollView>
+          <ScrollView style={{ maxHeight: 360 }}>{(staff.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={s.position} lead={<Avatar uri={s.avatarUrl} name={s.name} size={40} />} onPress={() => { setWho({ id: s.id, name: s.name, avatarUrl: s.avatarUrl }); setSheet(null); }} />)}</ScrollView>
         </BottomSheet>
       </View>
     );

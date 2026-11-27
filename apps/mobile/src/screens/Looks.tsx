@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
+import { api } from '@/lib/api';
 import { pickImage, postStoryPicked, uploadPicked, type Picked } from '@/lib/pick';
 import { useApp } from '@/lib/app';
 import { useLoad } from '@/lib/useLoad';
@@ -31,6 +32,8 @@ export function Looks({ onBack }: { onBack: () => void }) {
   const [pick, setPick] = useState<Picked | null>(null);
   const [cap, setCap] = useState('');
   const [err, setErr] = useState('');
+  const [svcId, setSvcId] = useState<string | number | null>(null);
+  const svcs = useLoad(() => api.services(sid).catch(() => []), [sid]);
   async function choose(src: 'library' | 'camera') {
     try { const p = await pickImage(src); if (p) setPick(p); }
     catch (e) { toast((e as Error).message === 'permission' ? tr('ad.permission') : (e as Error).message, 'error'); }
@@ -40,9 +43,9 @@ export function Looks({ onBack }: { onBack: () => void }) {
     if (!pick) { const m = tr('cp.noPhoto'); setErr(m); toast(m, 'error'); return; }
     setErr(''); setUpBusy(true);
     try {
-      if (tab === 'photos') { const up = await uploadPicked(pick, 'LOOK'); await apiB.createLook(sid, up.id); }
+      if (tab === 'photos') { const up = await uploadPicked(pick, 'LOOK'); await apiB.createLook(sid, up.id, undefined, { serviceId: svcId ?? undefined }); }
       else await postStoryPicked(sid, pick, cap);
-      setSheet(false); setPick(null); setCap(''); bump(); void list.reload();
+      setSheet(false); setPick(null); setCap(''); setSvcId(null); bump(); void list.reload();
       setTimeout(() => toast(tr('cp.ok'), 'success'), 350);
     } catch (e) { const m = `${tr('cp.fail')}: ${(e as Error).message}`; setErr(m); toast(m, 'error'); } finally { setUpBusy(false); }
   }
@@ -75,7 +78,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
         {pick ? (
           <View style={{ gap: 12, paddingBottom: 16 }}>
             <Image source={{ uri: pick.uri }} accessibilityIgnoresInvertColors style={{ width: '100%', aspectRatio: 1, borderRadius: 26, backgroundColor: t.fill }} />
-            {tab === 'stories' ? <Field label={tr('lk.stories')} value={cap} onChangeText={setCap} /> : null}
+            {tab === 'stories' ? <Field label={tr('lk.stories')} value={cap} onChangeText={setCap} /> : (svcs.data ?? []).length ? <ChipRow>{(svcs.data ?? []).map((s) => <KChip key={String(s.id)} label={s.name} on={svcId === s.id} onPress={() => setSvcId(svcId === s.id ? null : s.id)} />)}</ChipRow> : null}
             {err ? <Text style={{ fontFamily: font.s, fontSize: 13.5, color: t.gink, textAlign: 'center' }}>{err}</Text> : null}
             <Btn label={tr('cp.share')} loading={upBusy} onPress={() => void send()} />
             <Pressable onPress={() => { setPick(null); setErr(''); }} disabled={upBusy} accessibilityRole="button" accessibilityLabel={tr('cp.change')} style={{ alignSelf: 'center', paddingVertical: 6 }}><Text style={{ fontFamily: font.s, fontSize: 14.5, color: t.muted }}>{tr('cp.change')}</Text></Pressable>
