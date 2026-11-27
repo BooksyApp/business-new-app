@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Linking, ScrollView, Share, View } from 'react-native';
+import { Alert, Image, Linking, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Choice, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView, photoUrl } from '@/components/ui';
+import { Btn, Card, Chip, ErrorState, Field, Header, Pill, Screen, Skeleton, StateView, photoUrl } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay } from '@/lib/api';
 import { apiH, type NotifTexts } from '@/lib/api-hub';
@@ -96,73 +96,97 @@ export function RevenuePlan({ onBack }: { onBack: () => void }) {
   );
 }
 
-/** Sadiqlik kartları: stamp cards (visits for a reward). Create, end, holders, add a stamp. */
-export function LoyaltyCards({ onBack }: { onBack: () => void }) {
+/** Möhür kartları (stamp cards: visits for a reward). Body only, rendered inside the one Sadiqlik screen of Marketing. Create, end, holders, add a stamp. */
+export function StampCards() {
   const { t } = useTheme();
   const { salon } = useApp();
+  const { height: H } = useWindowDimensions();
   const sid = salon?.id ?? '';
   const q = useLoad(() => apiH.loyaltyCards(sid), [sid]);
   const svc = useLoad(() => api.services(sid), [sid]);
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [serr, setSerr] = useState<string | null>(null);
   const [name, setName] = useState(''); const [visits, setVisits] = useState('10'); const [reward, setReward] = useState(''); const [until, setUntil] = useState('');
   const holders = useLoad(() => (open ? apiH.cardHolders(sid, open) : Promise.resolve([])), [sid, open]);
   const clients = useLoad(() => api.clientsWithStats(sid).catch(() => []), [sid]);
   const [find, setFind] = useState('');
+  const n = Math.round(num(visits));
+  const shown = Number.isFinite(n) ? Math.min(20, Math.max(0, n)) : 0;
+  const rewardName = (svc.data ?? []).find((s) => String(s.id) === reward)?.name;
+  const openAdd = () => { setSerr(null); setAdding(true); };
   async function create() {
-    const v = Math.round(num(visits));
-    if (!name.trim() || !(v >= 2)) { toast(tr('hx.cardBad'), 'error'); return; }
+    if (!name.trim() || !(n >= 2)) { setSerr(tr('hx.cardBad')); return; }
+    setBusy(true); setSerr(null);
     try {
-      const c = await apiH.createCard(sid, { name: name.trim(), visitsRequired: v, rewardServiceId: reward || null, validUntil: /^\d{4}-\d{2}-\d{2}$/.test(until) ? until : null });
+      const c = await apiH.createCard(sid, { name: name.trim(), visitsRequired: n, rewardServiceId: reward || null, validUntil: /^\d{4}-\d{2}-\d{2}$/.test(until) ? until : null });
       setAdding(false); setName(''); setUntil(''); await q.reload(); toast(tr('hx.cardMade', { n: c.assignedTo ?? 0 }), 'success');
-    } catch (e) { err(e); }
+    } catch (e) { setSerr((e as Error).message); } finally { setBusy(false); }
   }
   const found = find.trim().length > 1 ? (clients.data ?? []).filter((c) => `${c.firstName} ${c.lastName ?? ''} ${c.phone ?? ''}`.toLowerCase().includes(find.trim().toLowerCase())).slice(0, 5) : [];
+  const examples = [tr('mk.stEx1'), tr('mk.stEx2'), tr('mk.stEx3')];
   return (
-    <Screen>
-      <Header title={tr('hx.cardsTitle')} subtitle={tr('hx.cardsSub')} onBack={onBack} right={<Pressable onPress={() => setAdding(true)} accessibilityRole="button" accessibilityLabel={tr('hx.cardNew')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.violet, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color="#fff" /></Pressable>} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60, gap: 12 }}>
-        {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={3} height={96} /> : (q.data ?? []).length === 0 ? (
-          <StateView icon="heart" title={tr('hx.cardsEmpty')} body={tr('hx.cardsEmptyBody')} actionLabel={tr('hx.cardNew')} onAction={() => setAdding(true)} />
-        ) : (q.data ?? []).map((c) => (
-          <Card key={String(c.id)} style={{ gap: 8, opacity: c.active ? 1 : 0.6 }}>
-            <Pressable onPress={() => setOpen(open === String(c.id) ? null : String(c.id))} accessibilityRole="button" accessibilityLabel={c.name} noScale style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.x, fontSize: 17, color: t.ink }}>{c.name}</Text>
-                {c.expired ? <Pill text={tr('hx.cardExpired')} tone="muted" /> : !c.active ? <Pill text={tr('hx.cardEnded')} tone="muted" /> : <Pill text={tr('hx.cardVisits', { n: c.visits_required })} />}
+    <View style={{ gap: 10 }}>
+      <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('mk.lyStampsHint')}</Text>
+      <Btn label={tr('hx.cardNew')} icon="plus" variant="secondary" onPress={openAdd} />
+      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={2} height={56} /> : (q.data ?? []).length === 0 ? (
+        <StateView icon="heart" title={tr('hx.cardsEmpty')} body={tr('hx.cardsEmptyBody')} />
+      ) : (q.data ?? []).map((c) => (
+        <Card key={String(c.id)} style={{ gap: 8, opacity: c.active ? 1 : 0.6 }}>
+          <Pressable onPress={() => setOpen(open === String(c.id) ? null : String(c.id))} accessibilityRole="button" accessibilityLabel={c.name} noScale style={{ gap: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.ink }}>{c.name}</Text>
+              {c.expired ? <Pill text={tr('hx.cardExpired')} tone="muted" /> : !c.active ? <Pill text={tr('hx.cardEnded')} tone="muted" /> : <Pill text={tr('hx.cardVisits', { n: c.visits_required })} />}
+            </View>
+            <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{[tr('hx.cardHolders', { n: c.holders }), tr('hx.cardWaiting', { n: c.rewards_waiting })].join(' · ')}</Text>
+          </Pressable>
+          {open === String(c.id) ? (<>
+            {holders.loading && !holders.data ? <Skeleton rows={2} height={44} /> : (holders.data ?? []).map((h) => (
+              <View key={String(h.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48 }}>
+                <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{h.client_name}</Text><Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{h.stamps}/{c.visits_required} · {tr('hx.cardWaiting', { n: h.rewards_available })}</Text></View>
+                <Btn small label="-1" variant="secondary" onPress={() => void apiH.stamp(sid, c.id, h.client_id, -1).then(() => { void holders.reload(); void q.reload(); }).catch(err)} />
+                <Btn small label="+1" icon="plus" onPress={() => void apiH.stamp(sid, c.id, h.client_id, 1).then(() => { void holders.reload(); void q.reload(); }).catch(err)} />
               </View>
-              <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{[c.reward_service_name ? `${tr('hx.cardReward')}: ${c.reward_service_name}` : tr('hx.cardRewardAny'), tr('hx.cardHolders', { n: c.holders }), tr('hx.cardWaiting', { n: c.rewards_waiting })].join(' · ')}</Text>
-            </Pressable>
-            {open === String(c.id) ? (<>
-              {holders.loading && !holders.data ? <Skeleton rows={2} height={44} /> : (holders.data ?? []).map((h) => (
-                <View key={String(h.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48 }}>
-                  <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{h.client_name}</Text><Text style={{ fontFamily: font.m, fontSize: 12.5, color: t.muted }}>{h.stamps}/{c.visits_required} · {tr('hx.cardWaiting', { n: h.rewards_available })}</Text></View>
-                  <Btn small label="-1" variant="secondary" onPress={() => void apiH.stamp(sid, c.id, h.client_id, -1).then(() => { void holders.reload(); void q.reload(); }).catch(err)} />
-                  <Btn small label="+1" icon="plus" onPress={() => void apiH.stamp(sid, c.id, h.client_id, 1).then(() => { void holders.reload(); void q.reload(); }).catch(err)} />
+            ))}
+            {c.active ? (<>
+              <Field label={tr('hx.cardAddHolder')} value={find} onChangeText={setFind} autoCorrect={false} />
+              {found.map((cl) => <Btn key={String(cl.id)} small variant="secondary" icon="plus" label={`${cl.firstName} ${cl.lastName ?? ''}`.trim()} onPress={() => void apiH.addHolder(sid, c.id, cl.id).then(() => { setFind(''); void holders.reload(); void q.reload(); }).catch(err)} />)}
+              <Btn label={tr('hx.cardEnd')} variant="danger" icon="trash" onPress={() => Alert.alert(tr('hx.cardEnd'), tr('hx.cardEndBody'), [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('hx.cardEnd'), style: 'destructive', onPress: () => void apiH.endCard(sid, c.id).then(() => q.reload()).catch(err) }])} />
+            </>) : null}
+          </>) : null}
+        </Card>
+      ))}
+      <BottomSheet open={adding} onClose={() => setAdding(false)}>
+        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 18, color: t.ink, marginBottom: 10 }}>{tr('hx.cardNew')}</Text>
+        <ScrollView style={{ maxHeight: H * 0.55 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <View style={{ backgroundColor: t.violet, borderRadius: 20, padding: 16, gap: 10, marginBottom: 12 }}>
+            <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: '#fff' }}>{name.trim() || tr('mk.stPreviewName')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {Array.from({ length: shown }).map((_, i) => (
+                <View key={i} style={{ width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: i < Math.ceil(shown / 3) ? '#fff' : 'rgba(255,255,255,.25)' }}>
+                  {i < Math.ceil(shown / 3) ? <Icon name="check" size={14} color={t.violet} /> : null}
                 </View>
               ))}
-              {c.active ? (<>
-                <Field label={tr('hx.cardAddHolder')} value={find} onChangeText={setFind} autoCorrect={false} />
-                {found.map((cl) => <Btn key={String(cl.id)} small variant="secondary" icon="plus" label={`${cl.firstName} ${cl.lastName ?? ''}`.trim()} onPress={() => void apiH.addHolder(sid, c.id, cl.id).then(() => { setFind(''); void holders.reload(); void q.reload(); }).catch(err)} />)}
-                <Btn label={tr('hx.cardEnd')} variant="danger" icon="trash" onPress={() => Alert.alert(tr('hx.cardEnd'), tr('hx.cardEndBody'), [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('hx.cardEnd'), style: 'destructive', onPress: () => void apiH.endCard(sid, c.id).then(() => q.reload()).catch(err) }])} />
-              </>) : null}
-            </>) : null}
-          </Card>
-        ))}
-      </ScrollView>
-      <BottomSheet open={adding} onClose={() => setAdding(false)}>
-        <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink, marginBottom: 8 }}>{tr('hx.cardNew')}</Text>
-        <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
+            </View>
+            <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: 'rgba(255,255,255,.85)' }}>{`${tr('hx.cardReward')}: ${rewardName ?? tr('hx.cardRewardAny')}`}</Text>
+          </View>
           <Field label={tr('hx.cardName')} value={name} onChangeText={setName} />
-          <Field label={tr('hx.cardVisitsLabel')} value={visits} onChangeText={setVisits} keyboardType="number-pad" />
-          <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 4 }}>{tr('hx.cardReward')}</Text>
+          <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('mk.stExamples')}</Text>
+          <View style={{ flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {examples.map((x) => <Chip key={x} label={x} active={name === x} onPress={() => setName(x)} />)}
+          </View>
+          <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('mk.stChips')}</Text>
+          <Choice value={String(n)} onChange={setVisits} options={['5', '8', '10', '12'].map((v) => ({ value: v, label: v }))} />
+          <Field label={tr('hx.cardVisitsLabel')} value={visits} onChangeText={setVisits} keyboardType="number-pad" maxLength={2} />
+          <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('hx.cardReward')}</Text>
           <Choice value={reward} onChange={setReward} options={[{ value: '', label: tr('hx.cardRewardAny') }, ...(svc.data ?? []).filter((s) => s.isActive).map((s) => ({ value: String(s.id), label: s.name }))]} />
           <Field label={tr('hx.cardUntil')} value={until} onChangeText={setUntil} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" maxLength={10} />
-          <Text style={{ fontFamily: font.m, fontSize: 12.5, color: t.muted, marginTop: 4 }}>{tr('hx.cardHint')}</Text>
         </ScrollView>
-        <Btn label={tr('ob.create')} style={{ marginTop: 12, marginBottom: 12 }} onPress={() => void create()} />
+        {serr ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink, marginTop: 8 }}>{serr}</Text> : null}
+        <Btn label={tr('ob.create')} loading={busy} style={{ marginTop: 10, marginBottom: 12 }} onPress={() => void create()} />
       </BottomSheet>
-    </Screen>
+    </View>
   );
 }
 

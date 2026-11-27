@@ -1,15 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from '@/lib/toast';
-import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
 import { Choice, Line, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Btn, Card, ErrorState, Field, Header, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
+import { Btn, Card, Chip, ErrorState, Field, Header, Screen, Skeleton, StateView, Toggle } from '@/components/ui';
 import { Button, EmptyState, ListItem, Pill as KPill } from '@/components/kit';
 import { PromoteSheet } from '@/components/PromoteSheet';
+import { LoyaltyView } from '@/screens/Loyalty';
 import { t as tr } from '@/i18n';
 import { apiB, type Automation } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
@@ -20,17 +21,20 @@ import { font } from '@/theme/tokens';
 
 const SEGMENTS = ['ALL_CLIENTS', 'LAPSED_60D', 'LAPSED_90D', 'TOP_SPENDERS', 'BIRTHDAY_THIS_MONTH'] as const;
 type View_ = 'home' | 'campaigns' | 'promos' | 'auto' | 'members' | 'loyalty' | 'refs';
-type Sheet_ = null | 'camp' | 'promo' | 'member' | 'tier';
+type Sheet_ = null | 'camp' | 'promo' | 'member';
+const CH_MAX = { EMAIL: 1000, SMS: 160 } as const;
 
 /**
  * Marketinq. Two levels only: a landing list of tools, then one flat screen per tool (its list + one "Yeni ..." button).
  * Creating opens exactly one BottomSheet with the needed fields and one Save; its errors are shown inline.
  */
-export function Marketing({ onBack }: { onBack: () => void }) {
+export function Marketing({ onBack, initialView }: { onBack: () => void; initialView?: View_ }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? '';
-  const [view, setView] = useState<View_>('home');
+  const { height: H } = useWindowDimensions();
+  const [view, setView] = useState<View_>(initialView ?? 'home');
+  const [when, setWhen] = useState<'now' | 'draft'>('now');
   const [sheet, setSheet] = useState<Sheet_>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,13 +46,8 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   useEffect(() => { if (auto.data) setAu(auto.data); }, [auto.data]);
   const mem = useLoad(() => (view === 'members' ? apiB.memberships(sid).catch(() => []) : Promise.resolve([])), [sid, view]);
   const refs = useLoad(() => (view === 'refs' ? Promise.all([apiB.refCodes(sid).catch(() => []), apiB.refStats(sid).catch(() => null)]) : Promise.resolve(null)), [sid, view]);
-  const loy = useLoad(() => (view === 'loyalty' ? apiB.loyaltySettings(sid).catch(() => null) : Promise.resolve(null)), [sid, view]);
-  const tiers = useLoad(() => (view === 'loyalty' ? apiB.tiers(sid).catch(() => []) : Promise.resolve([])), [sid, view]);
-  const [lp, setLp] = useState(''); const [lv, setLv] = useState('');
-  useEffect(() => { if (loy.data) { setLp(loy.data.pointsPerUnit != null ? String(loy.data.pointsPerUnit) : ''); setLv(loy.data.visitsForReward != null ? String(loy.data.visitsForReward) : ''); } }, [loy.data]);
-  const [tn, setTn] = useState(''); const [tpts, setTpts] = useState(''); const [tb, setTb] = useState('');
   const [mn, setMn] = useState(''); const [mp, setMp] = useState(''); const [mm, setMm] = useState('1'); const [md, setMd] = useState('0'); const [ms, setMs] = useState('0');
-  const [name, setName] = useState(''); const [channel, setChannel] = useState<'EMAIL' | 'SMS'>('EMAIL'); const [seg, setSeg] = useState<(typeof SEGMENTS)[number]>('ALL_CLIENTS');
+  const [channel, setChannel] = useState<'EMAIL' | 'SMS'>('EMAIL'); const [seg, setSeg] = useState<(typeof SEGMENTS)[number]>('ALL_CLIENTS');
   const [subject, setSubject] = useState(''); const [body, setBody] = useState('');
   const [code, setCode] = useState(''); const [ptype, setPtype] = useState<'PERCENT' | 'FIXED'>('PERCENT'); const [value, setValue] = useState(''); const [uses, setUses] = useState('');
   const aud = useLoad(() => (sheet === 'camp' ? apiB.audience(sid, seg, channel).catch(() => null) : Promise.resolve(null)), [sid, sheet, seg, channel]);
@@ -62,12 +61,20 @@ export function Marketing({ onBack }: { onBack: () => void }) {
   };
   const confirmSend = (c: { id: string | number; name: string }) => Alert.alert(tr('mk.sendConfirm'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('mk.send'), onPress: () => void run(() => apiB.queueCampaign(sid, c.id as never), () => void camps.reload()) }]);
   const tile = (icon: string) => <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={22} color={t.ink} /></View>;
-  const goBack = () => { if (view === 'home') onBack(); else setView('home'); };
+  const goBack = () => { if (view === 'home' || view === initialView) onBack(); else setView('home'); };
   const activePromos = (promos.data ?? []).filter((p) => p.active).length;
   const pad = { paddingHorizontal: 20, paddingBottom: 40, gap: 10 } as const;
   const sub15 = { fontFamily: font.s, fontSize: 15, color: t.ink } as const;
   const newBtn = (label: string, onPress: () => void) => <Button kind="pr" icon="plus" label={label} onPress={onPress} block style={{ marginBottom: 6 }} />;
   const errLine = err ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink, marginBottom: 8 }}>{err}</Text> : null;
+  const lbl = (s: string) => <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink, marginBottom: 6 }}>{s}</Text>;
+  const sendCampaign = () => {
+    if (!body.trim() || body.length > CH_MAX[channel]) { setErr(tr('mk.cNeedBody')); return; }
+    void run(async () => {
+      const c = await apiB.createCampaign(sid, { name: `${tr(`mk.seg.${seg}` as 'mk.seg.ALL_CLIENTS')} · ${new Date().toLocaleDateString()}`, channel, segment: seg, subject: channel === 'EMAIL' ? (subject.trim() || tr('mk.cSubjectDef', { name: salon?.name ?? '' })) : undefined, body: body.trim() });
+      if (when === 'now') await apiB.queueCampaign(sid, c.id as never);
+    }, () => { closeSheet(); setBody(''); setSubject(''); void camps.reload(); });
+  };
   const sheetTitle = (s: string) => <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 20, color: t.ink, marginBottom: 14 }}>{s}</Text>;
 
   const title = view === 'campaigns' ? tr('mk.campaigns') : view === 'promos' ? tr('mk.promos') : view === 'auto' ? tr('mk.auto') : view === 'members' ? tr('x3.memberships') : view === 'loyalty' ? tr('x3.loyalty') : view === 'refs' ? tr('x3.referrals') : tr('mk.title');
@@ -152,27 +159,23 @@ export function Marketing({ onBack }: { onBack: () => void }) {
         )} />
     );
   } else if (view === 'loyalty') {
-    content = (
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={pad}>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}><Field label={tr('x3.pointsPerUnit')} value={lp} onChangeText={setLp} keyboardType="decimal-pad" /></View>
-          <View style={{ flex: 1 }}><Field label={tr('x3.visitsForReward')} value={lv} onChangeText={setLv} keyboardType="number-pad" /></View>
-        </View>
-        <Btn label={tr('common.save')} loading={busy} onPress={() => void run(() => apiB.saveLoyalty(sid, { pointsPerUnit: lp.trim() ? num(lp) : null, visitsForReward: lv.trim() ? Math.round(num(lv)) : null }), () => void loy.reload())} />
-        <View style={{ height: 8 }} />
-        {newBtn(tr('mk.newTier'), () => openSheet('tier'))}
-        {(tiers.data ?? []).map((x, i) => (
-          <ListItem key={i} first={i === 0} title={x.name} sub={`${x.minPoints} · +${x.bonusPercent}%`} lead={tile('star')}
-            right={<Pressable onPress={() => void run(() => apiB.saveTiers(sid, (tiers.data ?? []).filter((_, j) => j !== i)), () => void tiers.reload())} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>} />
-        ))}
-      </ScrollView>
-    );
+    content = <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 60 }}><LoyaltyView /></ScrollView>;
   } else {
+    const st = refs.data?.[1];
+    const codes = refs.data?.[0] ?? [];
+    const stText = (x: string) => (x === 'ACTIVE' || x === 'INACTIVE' || x === 'EXPIRED' ? tr(`mk.rfStatus.${x}` as 'mk.rfStatus.ACTIVE') : x);
     content = (
       <ScrollView contentContainerStyle={pad}>
-        {refs.data?.[1] ? <Card><Line label={tr('x3.codes')} value={`${refs.data[1].activeReferralCodes}/${refs.data[1].totalReferralCodes}`} /><Line label={tr('x3.uses')} value={`${refs.data[1].successfulUsages}/${refs.data[1].totalUsages}`} /><Line label={tr('x3.rewards')} value={money(refs.data[1].totalRewardsGiven, salon?.currency)} bold /></Card> : null}
-        {(refs.data?.[0] ?? []).map((c, i) => <ListItem key={String(c.id)} first={i === 0} title={c.code} sub={`${c.status} · ${c.currentUses}${c.maxUses ? `/${c.maxUses}` : ''} · ${money(c.rewardAmount, salon?.currency)}`} lead={tile('share')} />)}
-        {(refs.data?.[0] ?? []).length === 0 ? <StateView icon="share" title={tr('x3.noRefs')} /> : null}
+        <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('mk.rfHow')}</Text>
+        {st ? <Card><Line label={tr('x3.codes')} value={`${st.activeReferralCodes}/${st.totalReferralCodes}`} /><Line label={tr('x3.uses')} value={`${st.successfulUsages}/${st.totalUsages}`} /><Line label={tr('x3.rewards')} value={money(st.totalRewardsGiven, salon?.currency)} bold /></Card> : null}
+        {codes.map((c, i) => (
+          <ListItem key={String(c.id)} first={i === 0} title={c.code} sub={`${tr('mk.rfReward', { m: money(c.rewardAmount, salon?.currency) })} · ${tr('mk.rfUses', { n: c.currentUses })}`} lead={tile('share')}
+            right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <KPill text={stText(c.status)} tone={c.status === 'ACTIVE' ? 'ok' : 'fl'} />
+              <Pressable onPress={() => void Share.share({ message: tr('mk.rfShareMsg', { salon: salon?.name ?? '', code: c.code }) }).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('mk.rfShare')} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}><Icon name="share" size={20} color={t.ink} /></Pressable>
+            </View>} />
+        ))}
+        {codes.length === 0 ? <StateView icon="share" title={tr('x3.noRefs')} /> : null}
       </ScrollView>
     );
   }
@@ -185,15 +188,24 @@ export function Marketing({ onBack }: { onBack: () => void }) {
         {sheet === 'camp' ? (
           <>
             {sheetTitle(tr('mk.add'))}
-            <Field label={tr('sx.name')} value={name} onChangeText={setName} />
-            <Choice value={channel} onChange={setChannel} options={[{ value: 'EMAIL' as const, label: 'E-mail' }, { value: 'SMS' as const, label: 'SMS' }]} />
-            <View style={{ maxHeight: 90 }}><Choice value={seg} onChange={setSeg} options={SEGMENTS.map((s) => ({ value: s, label: tr(`mk.seg.${s}` as 'mk.seg.ALL_CLIENTS') }))} /></View>
-            {aud.data ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 8 }}>{tr('mk.audience', { n: aud.data.reachable, m: aud.data.segmentSize })}</Text> : null}
-            {channel === 'EMAIL' ? <Field label={tr('mk.subject')} value={subject} onChangeText={setSubject} /> : null}
-            <Field label={tr('mk.body')} value={body} onChangeText={setBody} multiline style={{ minHeight: 90, paddingTop: 14, textAlignVertical: 'top' }} />
+            <ScrollView style={{ maxHeight: H * 0.55 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {lbl(tr('mk.cWho'))}
+              <Choice value={seg} onChange={setSeg} options={SEGMENTS.map((s) => ({ value: s, label: tr(`mk.seg.${s}` as 'mk.seg.ALL_CLIENTS') }))} />
+              {aud.data ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginTop: -4, marginBottom: 10 }}>{tr('mk.audience', { n: aud.data.reachable, m: aud.data.segmentSize })}</Text> : null}
+              {lbl(tr('mk.cChannel'))}
+              <Choice value={channel} onChange={(c) => { setChannel(c); setBody((b) => b.slice(0, CH_MAX[c])); }} options={[{ value: 'EMAIL' as const, label: 'E-mail' }, { value: 'SMS' as const, label: 'SMS' }]} />
+              {lbl(tr('mk.cMsg'))}
+              {channel === 'EMAIL' ? <Field label={tr('mk.subject')} value={subject} onChangeText={setSubject} /> : null}
+              <Field label={`${tr('mk.body')} · ${body.length}/${CH_MAX[channel]}`} value={body} onChangeText={(v) => setBody(v.slice(0, CH_MAX[channel]))} multiline maxLength={CH_MAX[channel]} style={{ minHeight: 90, paddingTop: 14, textAlignVertical: 'top' }} />
+              <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('mk.cEx')}</Text>
+              <View style={{ gap: 8, marginBottom: 12 }}>
+                {[tr('mk.cEx1'), tr('mk.cEx2'), tr('mk.cEx3')].map((x) => <Chip key={x} label={x.length > 44 ? `${x.slice(0, 43)}…` : x} active={body === x} onPress={() => setBody(x.slice(0, CH_MAX[channel]))} />)}
+              </View>
+              {lbl(tr('mk.cWhen'))}
+              <Choice value={when} onChange={setWhen} options={[{ value: 'now' as const, label: tr('mk.cNow') }, { value: 'draft' as const, label: tr('mk.cDraft') }]} />
+            </ScrollView>
             {errLine}
-            <Btn label={tr('common.save')} loading={busy} disabled={!name.trim() || !body.trim()} onPress={() => void run(() => apiB.createCampaign(sid, { name: name.trim(), channel, segment: seg, subject: subject.trim() || undefined, body: body.trim() }), () => { closeSheet(); setName(''); setBody(''); void camps.reload(); })} />
-          </>
+            <Btn label={when === 'draft' ? tr('mk.cDraftBtn') : aud.data ? tr('mk.cSendN', { n: aud.data.reachable }) : tr('mk.cSendAll')} loading={busy} onPress={sendCampaign} />
         ) : sheet === 'promo' ? (
           <>
             {sheetTitle(tr('mk.addPromo'))}
@@ -220,17 +232,6 @@ export function Marketing({ onBack }: { onBack: () => void }) {
             </View>
             {errLine}
             <Btn label={tr('common.save')} loading={busy} disabled={!mn.trim() || !(num(mp) >= 0)} onPress={() => void run(() => apiB.createMembership(sid, { name: mn.trim(), price: num(mp), billingPeriodMonths: Math.max(1, Math.round(num(mm)) || 1), discountPercent: Math.min(100, Math.max(0, Math.round(num(md)) || 0)), includedSessions: Math.max(0, Math.round(num(ms)) || 0) }), () => { closeSheet(); setMn(''); setMp(''); void mem.reload(); })} />
-          </>
-        ) : sheet === 'tier' ? (
-          <>
-            {sheetTitle(tr('mk.newTier'))}
-            <Field label={tr('x3.tier')} value={tn} onChangeText={setTn} />
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}><Field label={tr('x3.minPoints')} value={tpts} onChangeText={setTpts} keyboardType="number-pad" /></View>
-              <View style={{ flex: 1 }}><Field label="+%" value={tb} onChangeText={setTb} keyboardType="number-pad" /></View>
-            </View>
-            {errLine}
-            <Btn label={tr('common.save')} loading={busy} disabled={!tn.trim() || !(num(tpts) >= 0) || !(num(tb) >= 0)} onPress={() => void run(() => apiB.saveTiers(sid, [...(tiers.data ?? []), { name: tn.trim(), minPoints: Math.round(num(tpts)), bonusPercent: Math.round(num(tb)) }]), () => { closeSheet(); setTn(''); setTpts(''); setTb(''); void tiers.reload(); })} />
           </>
         ) : null}
         <View style={{ height: 16 }} />
