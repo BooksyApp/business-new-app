@@ -77,11 +77,11 @@ export default function ClientCard() {
   async function saveNote(nid: string | number) {
     if (!salon) return;
     setBusy(true);
-    try { await api.updateClientNote(salon.id, nid, editBody.trim()); setEditId(null); await rec.reload(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
+    try { await api.updateClientNote(salon.id, String(nid), editBody.trim()); setEditId(null); await rec.reload(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   async function delNote(nid: string | number) {
     if (!salon) return;
-    try { await api.deleteClientNote(salon.id, nid); await rec.reload(); } catch (e) { toast((e as Error).message, 'error'); }
+    try { await api.deleteClientNote(salon.id, String(nid)); await rec.reload(); } catch (e) { toast((e as Error).message, 'error'); }
   }
   async function refresh() { await Promise.all([loaded.reload(), rec.reload()]); bump(); }
 
