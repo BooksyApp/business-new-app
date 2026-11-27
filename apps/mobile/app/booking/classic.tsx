@@ -8,7 +8,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Avatar, ServiceThumb, Btn, Chip, ErrorState, Field, Skeleton, StateView } from '@/components/ui';
 import { DayStrip } from '@/components/calendar';
-import { BackBar, IconBtn } from '@/components/kit';
+import { BackBar, IconBtn, T } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import { api, ApiError, toDay, validId, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
@@ -68,9 +68,10 @@ export default function NewBooking() {
   const back = () => (step === 0 ? router.back() : setStep(step - 1));
   const can = [!!client, picked.length > 0, (!!master || !!combo) && !!time, true][step];
 
+  const [submitErr, setSubmitErr] = useState('');
   async function bookCombo() {
     if (busy || !client || !combo || !time) return;
-    setBusy(true);
+    setBusy(true); setSubmitErr('');
     const body = { businessId: sid, serviceId: combo.serviceId, partySize: party, guestNames: guests.slice(0, Math.max(0, party - 1)).map((g) => g.trim()), ...(validId(client.id) ? { clientId: client.id } : null), clientName: client.name, ...(client.phone ? { clientPhone: client.phone } : null), appointmentDate: toDay(date), startTime: time };
     try {
       try { await apiM.bookCombo(body); }
@@ -81,10 +82,11 @@ export default function NewBooking() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); router.back();
-    } catch (e) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); toast((e as Error).message, 'error'); } finally { setBusy(false); }
+    } catch (e) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); setSubmitErr((e as Error).message); toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
 
   async function book() {
+    setSubmitErr('');
     if (combo) { await bookCombo(); return; }
     if (busy || !client || !service || !master || !time) return;
     if (toMin(time) + totalMin > 24 * 60) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {}); Alert.alert(tr('create.pastMidnight')); return; }
@@ -123,6 +125,7 @@ export default function NewBooking() {
       if (created) bump();
       if (failed.length) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        setSubmitErr(failed[0] ?? '');
         Alert.alert(tr('create.partial', { ok: created, bad: failed.length }), failed.slice(0, 6).join('\n'), [{ text: tr('common.close'), onPress: () => { if (created) router.back(); } }]);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -179,6 +182,7 @@ export default function NewBooking() {
           ) : null}
         </View>
       </View>
+      {submitErr ? <T k="sm" color={t.gink} style={{ position: 'absolute', left: 20, right: 20, bottom: Math.max(ins.bottom, 20) + 86, textAlign: 'center' }}>{submitErr}</T> : null}
       {/* `.bsk` dark bar with the running summary and a white action button */}
       <View style={{ position: 'absolute', left: 16, right: 16, bottom: Math.max(ins.bottom, 20), borderRadius: 24, backgroundColor: barBg(t.dark), padding: 14, paddingLeft: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, minWidth: 0 }}>

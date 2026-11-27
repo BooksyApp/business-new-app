@@ -17,6 +17,7 @@ import { firstName } from '@/lib/day';
 import { addDays, dayMonth, fromIso, fromMin, money, sameDay, startOfWeek, toMin, weekdayLong, weekdayMini } from '@/lib/format';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { toast } from '@/lib/toast';
+import { ToastHost } from '@/components/ToastHost';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { cardShadow, font } from '@/theme/tokens';
@@ -88,12 +89,13 @@ export default function NewBooking() {
   const back = () => (step === 1 ? router.back() : setStep(step - 1));
   const next = () => { if (step < 4) { setStep(step + 1); if (step === 3 && !client) setPicker(true); } };
 
+  const [submitErr, setSubmitErr] = useState('');
   async function create() {
     if (!svc || !slot || !assigned) return;
     if (!client) { setPicker(true); return; }
     const len = svc.durationMinutes ?? 30;
     const body = { businessId: sid, staffId: assigned.id, clientId: client.id, clientName: client.name, clientPhone: client.phone ?? undefined, clientEmail: client.email ?? undefined, serviceId: svc.id, appointmentDate: toDay(date), startTime: slot, endTime: fromMin(toMin(slot) + len), price: svc.price };
-    setBusy(true);
+    setBusy(true); setSubmitErr('');
     try {
       try { await api.createAppointment(body); }
       catch (e) {
@@ -106,7 +108,7 @@ export default function NewBooking() {
       setDone({ client: client.name, service: svc.name, when: `${sameDay(date, new Date()) ? tr('v2.today') : `${weekdayLong(date)}, ${dayMonth(date)}`}, ${slot}`, who: firstName(assigned.name) });
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      toast((e as Error).message, 'error');
+      const m = (e as Error).message || tr('common.error'); setSubmitErr(m); toast(m, 'error');
     } finally { setBusy(false); }
   }
 
@@ -251,6 +253,8 @@ export default function NewBooking() {
           </View>
         ) : null}
       </ScrollView>
+      {submitErr && step === 4 ? <T k="sm" color={t.gink} style={{ position: 'absolute', left: 20, right: 20, bottom: 96 + ins.bottom, textAlign: 'center' }}>{submitErr}</T> : null}
+      <ToastHost modal />
       <CtaBar>
         {step < 4 ? <Button label={tr('v2.next')} style={{ flex: 1 }} disabled={!can} onPress={next} />
           : <Button kind="dk" icon="check" label={tr('v2.createBooking')} style={{ flex: 1 }} loading={busy} onPress={() => void create()} />}
