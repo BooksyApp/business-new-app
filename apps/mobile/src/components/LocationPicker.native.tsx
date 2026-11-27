@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, Modal, Platform, ScrollView, View } from 'react-native';
-import MapView, { Marker, UrlTile, type Region } from 'react-native-maps';
+import { ActivityIndicator, Keyboard, Modal, ScrollView, View, type NativeSyntheticEvent } from 'react-native';
+import { Camera, Map as MapLibre, Marker, type CameraRef, type StyleSpecification, type ViewStateChangeEvent, type PressEvent, type PressEventWithFeatures } from '@maplibre/maplibre-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { askWithIntro } from '@/components/PermissionIntro';
@@ -8,38 +8,48 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Button, Field, T } from '@/components/kit';
 import { t as tr } from '@/i18n';
+import { MAP_BG, mapStyle } from '@/lib/mapStyle';
 import { BAKU, geo, round6, validPin, type Pin, type PinMeta, type PinResult, type Place } from '@/lib/geo';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-const delta = (zoomed: boolean) => (zoomed ? 0.006 : 0.05);
-const region = (p: Pin, zoomed: boolean): Region => ({ ...p, latitudeDelta: delta(zoomed), longitudeDelta: delta(zoomed) });
+/** Zoom levels: neighbourhood (a saved or searched pin) and city (nothing chosen yet). */
+const zoomOf = (zoomed: boolean) => (zoomed ? 15 : 12);
+const lngLat = (p: Pin): [number, number] => [p.longitude, p.latitude];
 
 /**
- * One map for the whole product: the same OpenStreetMap tiles the customer site and the salon web panel draw, so a pin set here
- * lands on exactly the same street picture the customer sees. Android hides the Google base map (no API key needed); iOS draws the
- * tiles over Apple Maps and replaces its content.
+ * One map for the whole product: MapLibre Native drawing the same OpenFreeMap "positron" vector tiles, recoloured with the same
+ * palette as the customer site (src/lib/mapStyle.ts), so a pin set here sits on exactly the street picture the customer sees.
+ * No Google or Apple base map.
  */
-const OSM = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-const MAP_BG = '#f4f2ee';
-/** Light everywhere: no dark Apple base and no black Android canvas while the tiles arrive. */
-const osmMapProps = Platform.OS === 'android'
-  ? { mapType: 'none' as const, loadingEnabled: true, loadingBackgroundColor: MAP_BG, loadingIndicatorColor: '#6f52ed' }
-  : { mapType: 'mutedStandard' as const, userInterfaceStyle: 'light' as const, showsPointsOfInterest: false, showsBuildings: false, showsTraffic: false };
-function OsmTiles() { return <UrlTile urlTemplate={OSM} maximumZ={19} shouldReplaceMapContent tileSize={256} zIndex={-1} tileCacheMaxAge={60 * 60 * 24 * 7} />; }
+/** Frozen per mounted map (a fresh object would restyle an open map): the bundled tuned copy, or the live one if already fetched. */
+const useStyle = () => useState(() => mapStyle() as unknown as StyleSpecification)[0];
 function OsmCredit({ top }: { top?: number }) {
-  return <View pointerEvents="none" style={{ position: 'absolute', right: 6, ...(top != null ? { top } : { bottom: 4 }), backgroundColor: 'rgba(255,255,255,.8)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}><Text style={{ fontSize: 9.5, color: '#4a4458' }}>© OpenStreetMap · CARTO</Text></View>;
+  return <View pointerEvents="none" style={{ position: 'absolute', right: 6, ...(top != null ? { top } : { bottom: 4 }), backgroundColor: 'rgba(255,255,255,.8)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}><Text style={{ fontSize: 9.5, color: '#4a4458' }}>© OpenStreetMap · OpenFreeMap</Text></View>;
+}
+/** The brand pin: violet disc with a white ring and a short stem; the stem's tip is the anchor point. */
+function SalonPin({ violet }: { violet: string }) {
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: violet, borderWidth: 3, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 14px -4px rgba(29,23,48,.45)' } as object}>
+        <Icon name="pin" size={20} color="#fff" />
+      </View>
+      <View style={{ width: 3, height: 10, borderRadius: 2, backgroundColor: violet }} />
+    </View>
+  );
 }
 
 /** Non-interactive preview of the saved pin (Salon profili, create flows). */
 export function MiniMap({ value, height = 150 }: { value: Pin; height?: number }) {
   const { t } = useTheme();
+  const STYLE = useStyle();
   return (
     <View style={{ height, borderRadius: 24, overflow: 'hidden', backgroundColor: MAP_BG }} pointerEvents="none">
-      <MapView style={{ flex: 1, backgroundColor: MAP_BG }} region={region(value, true)} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} toolbarEnabled={false} {...osmMapProps}>
-        <OsmTiles />
-        <Marker coordinate={value} tracksViewChanges={false} />
-      </MapView>
+      <MapLibre style={{ flex: 1, backgroundColor: MAP_BG }} mapStyle={STYLE} androidView="texture" attribution={false} logo={false} compass={false}
+        dragPan={false} touchZoom={false} doubleTapZoom={false} doubleTapHoldZoom={false} touchRotate={false} touchPitch={false}>
+        <Camera initialViewState={{ center: lngLat(value), zoom: zoomOf(true) }} center={lngLat(value)} zoom={zoomOf(true)} duration={0} />
+        <Marker lngLat={lngLat(value)} anchor="bottom"><SalonPin violet={t.violet} /></Marker>
+      </MapLibre>
       <OsmCredit />
     </View>
   );
@@ -52,7 +62,8 @@ export function MiniMap({ value, height = 150 }: { value: Pin; height?: number }
 export function LocationPicker({ open, onClose, value, onConfirm, query }: { open: boolean; onClose: () => void; value: Pin | null; onConfirm: (r: PinResult) => void; query?: string }) {
   const { t } = useTheme();
   const ins = useSafeAreaInsets();
-  const map = useRef<MapView>(null);
+  const STYLE = useStyle();
+  const camera = useRef<CameraRef>(null);
   const [pin, setPin] = useState<Pin>(value ?? BAKU);
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<Place[]>([]);
@@ -75,7 +86,7 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
     return () => clearTimeout(h);
   }, [q, open]);
 
-  const go = (p: Pin, zoomed = true) => { setPin(p); map.current?.animateToRegion(region(p, zoomed), 350); };
+  const go = (p: Pin, zoomed = true) => { setPin(p); camera.current?.easeTo({ center: lngLat(p), zoom: zoomOf(zoomed), duration: 350 }); };
   async function mine() {
     const ok = await askWithIntro('location');
     if (ok !== 'granted') return;
@@ -99,20 +110,15 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: t.canvas }}>
-        <MapView ref={map} style={{ flex: 1, backgroundColor: MAP_BG }} initialRegion={region(pin, !!value)} showsUserLocation={false} toolbarEnabled={false} rotateEnabled={false} pitchEnabled={false}
-          onRegionChangeComplete={(r) => setPin({ latitude: round6(r.latitude), longitude: round6(r.longitude) })}
-          onPress={(e) => go({ latitude: round6(e.nativeEvent.coordinate.latitude), longitude: round6(e.nativeEvent.coordinate.longitude) }, true)} {...osmMapProps}>
-          <OsmTiles />
-        </MapView>
+        <MapLibre style={{ flex: 1, backgroundColor: MAP_BG }} mapStyle={STYLE} androidView="texture" attribution={false} logo={false} compass={false} touchRotate={false} touchPitch={false}
+          onRegionDidChange={(e: NativeSyntheticEvent<ViewStateChangeEvent>) => { const [lng, lat] = e.nativeEvent.center; setPin({ latitude: round6(lat), longitude: round6(lng) }); }}
+          onPress={(e: NativeSyntheticEvent<PressEvent | PressEventWithFeatures>) => { const [lng, lat] = e.nativeEvent.lngLat; go({ latitude: round6(lat), longitude: round6(lng) }); }}>
+          <Camera ref={camera} initialViewState={{ center: lngLat(pin), zoom: zoomOf(!!value) }} />
+        </MapLibre>
         <OsmCredit top={120} />
         {/* fixed centre pin: its tip sits on the map centre */}
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ marginBottom: 44, alignItems: 'center' }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.violet, borderWidth: 3, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 14px -4px rgba(29,23,48,.45)' } as object}>
-              <Icon name="pin" size={20} color="#fff" />
-            </View>
-            <View style={{ width: 3, height: 10, borderRadius: 2, backgroundColor: t.violet }} />
-          </View>
+          <View style={{ marginBottom: 50 }}><SalonPin violet={t.violet} /></View>
         </View>
 
         <View style={{ position: 'absolute', left: 16, right: 16, top: ins.top + 8, gap: 8 }}>

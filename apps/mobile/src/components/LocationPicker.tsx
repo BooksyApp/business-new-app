@@ -6,7 +6,7 @@ import { t as tr } from '@/i18n';
 import { BAKU, round6, validPin, type Pin, type PinResult } from '@/lib/geo';
 import { useTheme } from '@/theme/ThemeContext';
 
-/** Web fallback (react-native-maps has no web build; the native screen is LocationPicker.native.tsx): plain latitude/longitude fields. */
+/** Web fallback (MapLibre Native has no web build; the native screen is LocationPicker.native.tsx): plain latitude/longitude fields. */
 export function MiniMap({ value, height = 150 }: { value: Pin; height?: number }) {
   const { t } = useTheme();
   return (
