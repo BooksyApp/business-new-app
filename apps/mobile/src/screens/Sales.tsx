@@ -13,7 +13,7 @@ import { Btn, Card, Circ, ErrorState, Field, Header, Hero, Pill, Screen, Skeleto
 import { t as tr, type StringKey } from '@/i18n';
 import { api } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { addDays, dateLabel, hhmm, money, sameDay } from '@/lib/format';
+import { addDays, dateLabel, fromIso, hhmm, money, sameDay } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -24,9 +24,10 @@ const METHODS = ['CASH', 'CARD_TERMINAL', 'CHECK', 'SPLIT', 'MEMBERSHIP', 'GIFT_
 export function Sales({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon, version } = useApp();
-  const [date, setDate] = useState(() => new Date());
+  const { appt, date: dateParam, time: timeParam } = useLocalSearchParams<{ appt?: string; date?: string; time?: string }>();
+  // opened from a booking: show that booking's day, not today
+  const [date, setDate] = useState(() => (typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateParam) ? fromIso(dateParam) : new Date()));
   const list = useLoad(() => api.sales(salon?.id ?? '', date), [salon?.id, date.toDateString(), version]);
-  const { appt } = useLocalSearchParams<{ appt?: string }>();
   const [adding, setAdding] = useState(typeof appt === 'string' && !!appt);
   const [refund, setRefund] = useState<{ id: string | number; total: number } | null>(null);
   const [amt, setAmt] = useState('');
@@ -47,7 +48,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
     try { await apiX.refundSale(String(refund.id), { amount: a, reason: why.trim() || undefined }); setRefund(null); toast(tr('sl.refunded'), 'success'); void list.reload(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
-  if (adding) return <NewSale apptId={typeof appt === 'string' ? appt : undefined} onClose={() => setAdding(false)} onDone={() => { setAdding(false); void list.reload(); }} />;
+  if (adding) return <NewSale apptId={typeof appt === 'string' ? appt : undefined} apptDate={date} apptTime={typeof timeParam === 'string' ? timeParam : undefined} onClose={() => setAdding(false)} onDone={() => { setAdding(false); void list.reload(); }} />;
   const addBtn = <Circ icon="plus" violet label={tr('sl.add')} onPress={() => setAdding(true)} />;
   return (
     <Screen>

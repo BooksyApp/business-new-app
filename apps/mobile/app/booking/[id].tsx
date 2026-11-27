@@ -139,9 +139,9 @@ export default function BookingDetail() {
           <Button kind="ol" label={tr('v2.reject')} style={{ flex: 1 }} onPress={() => setPanel('cancel')} />
           <Button label={tr('v2.confirm')} style={{ flex: 2 }} loading={busy} onPress={() => void run(() => api.confirmAppointment(a.id))} />
         </>) : a.status === 'COMPLETED' ? (
-          <Button kind="dk" icon="receipt" label={tr('v2.receipt')} style={{ flex: 1 }} onPress={() => router.push('/section/sales')} />
+          <Button kind="dk" icon="receipt" label={tr('v2.receipt')} style={{ flex: 1 }} onPress={() => router.push({ pathname: '/section/sales', params: { date: a.appointmentDate.slice(0, 10) } })} />
         ) : open ? (<>
-          <Button kind="ol" label={tr('v2.till')} style={{ flex: 1 }} onPress={() => router.push({ pathname: '/section/sales', params: a.paymentStatus === 'PAID' ? {} : { appt: String(a.id) } })} />
+          <Button kind="ol" label={tr('v2.till')} style={{ flex: 1 }} onPress={() => router.push({ pathname: '/section/sales', params: a.paymentStatus === 'PAID' ? { date: a.appointmentDate.slice(0, 10) } : { appt: String(a.id), date: a.appointmentDate.slice(0, 10), time: `${hhmm(a.startTime)}–${hhmm(a.endTime)}` } })} />
           {arrived
             ? <Button icon="check" label={tr('v2.stDone')} style={{ flex: 2 }} loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} />
             : <Button icon="check" label={tr('v2.arrived')} style={{ flex: 2 }} loading={busy} onPress={arrive} />}

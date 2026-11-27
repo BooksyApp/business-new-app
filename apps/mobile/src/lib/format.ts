@@ -9,7 +9,8 @@ const az = () => getLocale() === 'az';
 export const weekdayLong = (d: Date) => (az() ? AZ_DAYS_L[d.getDay()] : new Intl.DateTimeFormat(intlLocale(), { weekday: 'long' }).format(d));
 
 /** "09:00:00" -> "09:00". */
-export const hhmm = (s: string | undefined | null) => (s ?? '').slice(0, 5);
+/** HH:mm from '10:00', '10:00:00' or an ISO datetime; '' when there is none. */
+export const hhmm = (s: string | undefined | null) => (s ?? '').match(/(\d{2}):(\d{2})/)?.slice(1, 3).join(':') ?? '';
 
 export const toMin = (s: string) => {
   const [h, m] = hhmm(s).split(':').map(Number);

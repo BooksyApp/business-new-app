@@ -13,7 +13,7 @@ import { api } from '@/lib/api';
 import { apiX, type SaleBody } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
-import { money } from '@/lib/format';
+import { dateLabel, fromIso, hhmm, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -23,7 +23,7 @@ type Tender = { key: number; method: 'CASH' | 'CARD_TERMINAL' | 'GIFT_CARD'; amo
 const METHODS = ['CASH', 'CARD_TERMINAL', 'SPLIT', 'GIFT_CARD', 'MEMBERSHIP', 'PACKAGE'] as const;
 
 /** Till: pick services (or a custom item), staff, discount, tip, payment method (cash, card, gift card ...) and record the sale. */
-export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDone: () => void; apptId?: string }) {
+export function NewSale({ onClose, onDone, apptId, apptDate, apptTime }: { onClose: () => void; onDone: () => void; apptId?: string; apptDate?: Date; apptTime?: string }) {
   const { t } = useTheme();
   const { salon, bump } = useApp();
   const sid = salon?.id ?? '';
@@ -47,14 +47,17 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
   const [splitCard, setSplitCard] = useState('');
   // Checkout of a booking: the till opens with its service, master and client and settles it (appointmentId), as the hub does.
   const [appt, setAppt] = useState<{ id: string; clientId?: string } | null>(null);
+  const [when, setWhen] = useState<string>(() => [apptDate ? dateLabel(apptDate) : '', apptTime ?? ''].filter(Boolean).join(' · '));
+  const [loadErr, setLoadErr] = useState('');
   useEffect(() => {
     if (!apptId) return;
     void api.appointment(apptId).then((a) => {
       setAppt({ id: String(a.id), clientId: a.clientId != null ? String(a.clientId) : undefined });
+      if (a.appointmentDate) setWhen([dateLabel(fromIso(a.appointmentDate)), a.startTime ? `${hhmm(a.startTime)}${a.endTime ? `–${hhmm(a.endTime)}` : ''}` : ''].filter(Boolean).join(' · '));
       setLines([{ key: 1, serviceId: a.serviceId, name: a.serviceName ?? '', price: a.price ?? 0, qty: 1 }]);
       if (a.staffId != null) setMaster(String(a.staffId));
       if (a.clientName) setClientName(a.clientName);
-    }).catch(() => undefined);
+    }).catch((e) => { const m = (e as Error).message || tr('common.error'); setLoadErr(m); toast(m, 'error'); });
   }, [apptId]);
   const sub = lines.reduce((n, l) => n + l.price * l.qty, 0);
   const disc = Math.min(sub, Math.max(0, num(discount) || 0));
@@ -100,7 +103,8 @@ export function NewSale({ onClose, onDone, apptId }: { onClose: () => void; onDo
   return (
     <Screen>
       <BackBar label={tr('v2.back')} onBack={onClose} right={<KPill icon="receipt" text={tr('v3.saleNo')} />} />
-      <Title sub={salon?.name} style={{ paddingBottom: 10 }}>{tr('v3.till')}</Title>
+      <Title sub={[when, salon?.name].filter(Boolean).join(' · ')} style={{ paddingBottom: 10 }}>{tr('v3.till')}</Title>
+      {loadErr ? <T k="sm" color={t.gink} style={{ paddingHorizontal: 20, paddingBottom: 8 }}>{loadErr}</T> : null}
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 170 }} showsVerticalScrollIndicator={false}>
         <KCard style={{ padding: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 10 }}>
