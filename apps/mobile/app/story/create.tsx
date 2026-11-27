@@ -121,7 +121,7 @@ export default function StoryCreate() {
   }
   if (step === 'edit' && sel) {
     const tool = (icon: string, label: string, on: () => void, txt?: string) => (
-      <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}>
+      <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} hitSlop={8} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}>
         {txt ? <Text style={{ fontFamily: font.b, fontSize: 16, color: '#fff' }}>{txt}</Text> : <Icon name={icon} size={22} color="#fff" />}
       </Pressable>
     );
@@ -130,11 +130,6 @@ export default function StoryCreate() {
         <Photo src={sel.src} fit="contain" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#000' }} />
         <View style={{ position: 'absolute', left: 14, top: ins.top + 10, zIndex: 20, elevation: 20 }}>
           <Pressable onPress={() => { if (orig) { setStep('crop'); return; } setSel(null); setSvc(null); setWho(null); setText(''); setStep('pick'); }} hitSlop={10} accessibilityRole="button" accessibilityLabel={orig ? tr('common.back') : tr('v2.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}><Icon name={orig ? 'back' : 'x'} size={22} color="#fff" /></Pressable>
-        </View>
-        <View style={{ position: 'absolute', right: 14, top: ins.top + 10, gap: 10, zIndex: 20, elevation: 20 }}>
-          {tool('', tr('v3.addText'), () => setEditText(true), 'Aa')}
-          {tool('tag', tr('v3.addService'), () => setSheet('svc'))}
-          {tool('user', tr('v3.addWho'), () => setSheet('who'))}
         </View>
         {text || editText ? (
           <View style={{ position: 'absolute', left: 24, right: 80, top: '34%' }}>
@@ -173,6 +168,12 @@ export default function StoryCreate() {
             <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: '#1d1730' }}>{busy ? tr('cp.sharing') : tr('cp.share')}</Text>
           </Pressable>
         </View>
+        {/* Tool column: its own layer, rendered after every other overlay (tag layer, text, bottom bar) so it is always the top-most touch target. */}
+        <View pointerEvents="box-none" style={{ position: 'absolute', right: 0, top: ins.top + 10, paddingRight: 14, paddingLeft: 12, paddingBottom: 12, gap: 10, zIndex: 60, elevation: 60 }}>
+          {tool('', tr('v3.addText'), () => setEditText(true), 'Aa')}
+          {tool('tag', tr('v3.addService'), () => setSheet('svc'))}
+          {tool('user', tr('v3.addWho'), () => setSheet('who'))}
+        </View>
         {done ? (
           <View pointerEvents="auto" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 50, elevation: 50, backgroundColor: 'rgba(29,23,48,.72)', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
             <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: '#6f52ed', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={38} color="#fff" /></View>
@@ -182,6 +183,13 @@ export default function StoryCreate() {
         <ToastHost modal />
         <BottomSheet open={sheet === 'svc'} onClose={() => setSheet(null)}>
           <T k="h1" style={{ marginBottom: 8 }}>{tr('v3.addService')}</T>
+          {services.loading && !services.data ? <ActivityIndicator style={{ paddingVertical: 28 }} color={t.vtext} /> : null}
+          {!services.loading && !(services.data ?? []).length ? (
+            <View style={{ paddingVertical: 20, gap: 14, alignItems: 'center' }}>
+              <Text style={{ fontFamily: font.s, fontSize: 15, color: t.muted }}>{tr('v3.noSvc')}</Text>
+              <Button label={tr('v3.toSvc')} kind="ol" onPress={() => { setSheet(null); router.push('/section/services'); }} />
+            </View>
+          ) : null}
           <ScrollView style={{ maxHeight: 360 }}>{(services.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={money(s.price, salon?.currency)} onPress={() => { setSvc({ id: s.id, name: s.name, price: s.price }); setSheet(null); }} />)}</ScrollView>
         </BottomSheet>
         <BottomSheet open={sheet === 'who'} onClose={() => setSheet(null)}>

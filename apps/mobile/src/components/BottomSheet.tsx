@@ -55,6 +55,12 @@ export function BottomSheet({ open, onClose, children, snaps, radius = 30, conte
     if (open) { Haptics.selectionAsync().catch(() => {}); y.value = withSpring(pts ? sheetH - pts[0] : 0, SPRING); }
     else y.value = withTiming(sheetH + 40, { duration: 220 }, (done) => { if (done) runOnJS(unmount)(); });
   }, [open, mounted, sheetH]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Safety net: if the first layout pass never reports a height (seen as an invisible sheet on device), slide in anyway instead of staying off-screen.
+  useEffect(() => {
+    if (!open || !mounted || sheetH) return;
+    const id2 = setTimeout(() => { y.value = withSpring(0, SPRING); }, 350);
+    return () => clearTimeout(id2);
+  }, [open, mounted, sheetH]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!open && mounted && !sheetH) unmount(); }, [open, mounted, sheetH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pan = Gesture.Pan().activeOffsetY([-12, 12]).failOffsetX([-24, 24])
