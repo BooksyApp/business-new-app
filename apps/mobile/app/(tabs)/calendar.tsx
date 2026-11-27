@@ -74,7 +74,7 @@ export default function Calendar() {
 
   return (
     <Screen style={{ paddingTop: ins.top }}>
-      <TopBar title={tr('calendar.title')} sub={`${weekdayLong(date)}, ${dayMonth(date)}${phoneZoneDiffers() ? ` · ${tr('n4.salonTime', { city: salonCity(), t: hhmm(`${String(salonNow().getHours()).padStart(2, '0')}:${String(salonNow().getMinutes()).padStart(2, '0')}`) })}` : ''}`}
+      <TopBar title={tr('calendar.title')} sub={`${weekdayLong(date)}, ${dayMonth(date)}`}
         right={<>
           <Pressable onPress={() => setOverview(true)} accessibilityRole="button" accessibilityLabel={tr('n4.overview')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 12, borderRadius: 18, backgroundColor: t.vsoft }}>
             <Icon name="grid" size={18} color={t.vtext} /><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14, color: t.vtext }}>{tr('n4.overviewShort')}</Text>
@@ -82,6 +82,11 @@ export default function Calendar() {
           <IconBtn icon="plus" label={tr('v2.newBooking')} onPress={() => newBooking()} />
           <IconBtn icon="dots" label={tr('v2.tabMore')} onPress={() => setMenu(true)} />
         </>} />
+      {phoneZoneDiffers() ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginLeft: 20, marginBottom: 8, height: 26, paddingHorizontal: 10, borderRadius: 13, backgroundColor: t.fill }}>
+          <Icon name="clock" size={13} color={t.muted} /><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12, color: t.muted }}>{tr('n4.salonTime', { city: salonCity(), t: hhmm(`${String(salonNow().getHours()).padStart(2, '0')}:${String(salonNow().getMinutes()).padStart(2, '0')}`) })}</Text>
+        </View>
+      ) : null}
       <View style={{ paddingHorizontal: 20, marginTop: 4, marginBottom: 12 }}>
         <Segmented items={[{ k: 'day', label: tr('v2.day') }, { k: 'month', label: tr('v2.month') }]} value={mode} onChange={(m) => { setMode(m); setLayout('summary'); }} />
       </View>
