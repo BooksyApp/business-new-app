@@ -467,8 +467,7 @@ export const api = {
   slots: (b: Id, serviceId: Id, date: Date, staffId?: Id, extraMinutes?: number) =>
     request<{ availableSlots: string[]; durationMinutes: number; slotIntervalMinutes?: number; nextAvailableDate?: string | null }>(
       `/public/studios/${b}/services/${serviceId}/slots?date=${day(date)}${staffId ? `&staffId=${staffId}` : ''}${extraMinutes ? `&extraMinutes=${extraMinutes}` : ''}`,
-      { auth: false },
-    ),
+    ), // signed in on purpose: the server drops the online minimum notice for the salon's own team
 
   /** GET /api/bookings/business/{id}/clients (with stats) */
   clientsWithStats: (b: Id) =>
