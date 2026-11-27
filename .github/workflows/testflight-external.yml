@@ -1,0 +1,26 @@
+name: TestFlight external testers
+# Sends an already uploaded iOS build to the external TestFlight groups and submits it for Beta App Review.
+# Runs by hand (cheap: Linux, about a minute) and is also called at the end of every iOS release.
+on:
+  workflow_dispatch:
+    inputs:
+      build: { description: 'Build number (empty = newest uploaded build)', required: false, default: '' }
+      notes: { description: 'What to test (optional)', required: false, default: '' }
+permissions: { contents: read }
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Attach to external groups and submit for Beta App Review
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUNDLE_ID: az.booqi.business
+          BUILD_NUMBER: ${{ inputs.build }}
+          WHATS_NEW: ${{ inputs.notes }}
+        run: node apps/mobile/scripts/asc-testflight.js

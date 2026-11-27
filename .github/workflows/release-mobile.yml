@@ -239,6 +239,17 @@ jobs:
           rm -f "$KEY"
           echo "IOS_FILES=" >> "$GITHUB_ENV"
           echo "IOS_NOTE=Build $GITHUB_RUN_NUMBER uploaded to TestFlight (private, no IPA attached). App Store Connect > Apps > booqi Business > TestFlight." >> "$GITHUB_ENV"
+      - name: Send the build to external TestFlight testers (Beta App Review)
+        if: env.SIGNED == 'true'
+        continue-on-error: true
+        working-directory: apps/mobile
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUNDLE_ID: az.booqi.business
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: node scripts/asc-testflight.js
       - name: Remove throw-away development certificates created by automatic signing
         if: always() && env.SIGNED == 'true'
         continue-on-error: true
