@@ -61,6 +61,7 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
   useEffect(() => {
     if (!open) return;
     const my = ++seq.current;
+    setAddr(null); // the old spot's address must never be confirmed for a new pin
     const h = setTimeout(() => { void geo.reverse(pin).then((r) => { if (my === seq.current) setAddr(r); }); }, 500);
     return () => clearTimeout(h);
   }, [pin, open]);
@@ -81,6 +82,14 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
       go({ latitude: round6(pos.coords.latitude), longitude: round6(pos.coords.longitude) });
     } catch { /* no fix: the map stays where it is */ } finally { setLocating(false); }
   }
+  // The address always follows the pin: if the lookup for the current spot has not come back yet, wait for it before closing.
+  const [confirming, setConfirming] = useState(false);
+  const confirm = async () => {
+    if (confirming) return;
+    let a = addr;
+    if (!a) { setConfirming(true); a = await geo.reverse(pin).catch(() => null); setConfirming(false); }
+    onConfirm({ ...pin, address: a?.address, city: a?.city });
+  };
   const pick = (p: Place) => { Keyboard.dismiss(); setHits([]); setQ(p.label); go({ latitude: p.latitude, longitude: p.longitude }); setAddr({ address: p.address, city: p.city }); };
 
   return (
@@ -127,7 +136,7 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
           </Pressable>
           <View style={{ borderRadius: 24, backgroundColor: t.surface, padding: 14, gap: 10, boxShadow: '0 8px 28px -10px rgba(29,23,48,.35)' } as object}>
             <T k="sm" color={t.muted} lines={1}>{[addr?.address, addr?.city].filter(Boolean).join(', ') || tr('lp.hint')}</T>
-            <Button label={tr('lp.confirm')} size="lg" block onPress={() => onConfirm({ ...pin, address: addr?.address, city: addr?.city })} />
+            <Button label={tr('lp.confirm')} size="lg" block loading={confirming} onPress={() => void confirm()} />
           </View>
         </View>
       </View>

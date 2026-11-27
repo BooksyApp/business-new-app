@@ -56,9 +56,9 @@ export default function CreateBusiness() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {cats.map((c) => <Chip key={c.slug} label={c.label} on={cat === c.name} onPress={() => setCat(c.name)} />)}
           </View>
+          <LocationField value={pin} query={[address, city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); if (r.address) setAddress(r.address); if (r.city) setCity(r.city); }} />
           <Field icon="pin" placeholder={tr('ob.city')} accessibilityLabel={tr('ob.city')} value={city} onChangeText={setCity} />
           <Field icon="pin" placeholder={tr('ob.street')} accessibilityLabel={tr('ob.street')} value={address} onChangeText={setAddress} />
-          <LocationField value={pin} query={[address, city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); if (!address.trim() && r.address) setAddress(r.address); if (!city.trim() && r.city) setCity(r.city); }} />
           <Field icon="phone" placeholder={`${tr('ob.bizPhone')} (${tr('ob.optional')})`} accessibilityLabel={tr('ob.bizPhone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         </ScrollView>
       </KeyboardAvoidingView>
