@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Keyboard, Modal, Platform, ScrollView, View } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import MapView, { Marker, UrlTile, type Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { askWithIntro } from '@/components/PermissionIntro';
@@ -15,14 +15,28 @@ import { font } from '@/theme/tokens';
 const delta = (zoomed: boolean) => (zoomed ? 0.006 : 0.05);
 const region = (p: Pin, zoomed: boolean): Region => ({ ...p, latitudeDelta: delta(zoomed), longitudeDelta: delta(zoomed) });
 
+/**
+ * One map for the whole product: the same OpenStreetMap tiles the customer site and the salon web panel draw, so a pin set here
+ * lands on exactly the same street picture the customer sees. Android hides the Google base map (no API key needed); iOS draws the
+ * tiles over Apple Maps and replaces its content.
+ */
+const OSM = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const osmMapProps = { mapType: (Platform.OS === 'android' ? 'none' : 'standard') as 'none' | 'standard' };
+function OsmTiles() { return <UrlTile urlTemplate={OSM} maximumZ={19} shouldReplaceMapContent tileSize={256} zIndex={-1} />; }
+function OsmCredit({ top }: { top?: number }) {
+  return <View pointerEvents="none" style={{ position: 'absolute', right: 6, ...(top != null ? { top } : { bottom: 4 }), backgroundColor: 'rgba(255,255,255,.8)', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}><Text style={{ fontSize: 9.5, color: '#4a4458' }}>© OpenStreetMap</Text></View>;
+}
+
 /** Non-interactive preview of the saved pin (Salon profili, create flows). */
 export function MiniMap({ value, height = 150 }: { value: Pin; height?: number }) {
   const { t } = useTheme();
   return (
     <View style={{ height, borderRadius: 24, overflow: 'hidden', backgroundColor: t.fill }} pointerEvents="none">
-      <MapView style={{ flex: 1 }} region={region(value, true)} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} toolbarEnabled={false} liteMode={Platform.OS === 'android'}>
+      <MapView style={{ flex: 1 }} region={region(value, true)} scrollEnabled={false} zoomEnabled={false} rotateEnabled={false} pitchEnabled={false} toolbarEnabled={false} {...osmMapProps}>
+        <OsmTiles />
         <Marker coordinate={value} tracksViewChanges={false} />
       </MapView>
+      <OsmCredit />
     </View>
   );
 }
@@ -74,7 +88,10 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
       <View style={{ flex: 1, backgroundColor: t.canvas }}>
         <MapView ref={map} style={{ flex: 1 }} initialRegion={region(pin, !!value)} showsUserLocation={false} toolbarEnabled={false} rotateEnabled={false} pitchEnabled={false}
           onRegionChangeComplete={(r) => setPin({ latitude: round6(r.latitude), longitude: round6(r.longitude) })}
-          onPress={(e) => go({ latitude: round6(e.nativeEvent.coordinate.latitude), longitude: round6(e.nativeEvent.coordinate.longitude) }, true)} />
+          onPress={(e) => go({ latitude: round6(e.nativeEvent.coordinate.latitude), longitude: round6(e.nativeEvent.coordinate.longitude) }, true)} {...osmMapProps}>
+          <OsmTiles />
+        </MapView>
+        <OsmCredit top={120} />
         {/* fixed centre pin: its tip sits on the map centre */}
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ marginBottom: 44, alignItems: 'center' }}>
