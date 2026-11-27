@@ -43,7 +43,7 @@ export default function More() {
   const tiles: [string, string, string][] = [['receipt', tr('v2.till'), 'sales'], ['wallet', L('rp.title'), 'reports'], ['scissors', L('sections.services'), 'services'], ['users', L('sections.team'), 'team'], ['star', L('sections.reviews'), 'reviews'], ['box', L('inv.title'), 'inventory']];
   const salonRows: Row[] = [
     { k: 'marketing', icon: 'send', title: L('mk.title') },
-    { k: 'settings', icon: 'clock', title: tr('v2.hoursRow') },
+    { k: 'hours', icon: 'clock', title: tr('v2.hoursRow') },
     { k: 'link', icon: 'share', title: tr('v2.salonLink'), sub: salonShareLink(salon).replace(/^https?:\/\//, '').replace(/\?.*$/, '') },
   ];
   const rest: Row[] = [
