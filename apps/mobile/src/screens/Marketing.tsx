@@ -167,7 +167,7 @@ export function Marketing({ onBack, initialView }: { onBack: () => void; initial
     content = (
       <ScrollView contentContainerStyle={pad}>
         <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{tr('mk.rfHow')}</Text>
-        {st ? <Card><Line label={tr('x3.codes')} value={`${st.activeReferralCodes}/${st.totalReferralCodes}`} /><Line label={tr('x3.uses')} value={`${st.successfulUsages}/${st.totalUsages}`} /><Line label={tr('x3.rewards')} value={money(st.totalRewardsGiven, salon?.currency)} bold /></Card> : null}
+        {st ? <Card><Line label={tr('x3.codes')} value={`${st.activeReferralCodes ?? 0}/${st.totalReferralCodes ?? 0}`} /><Line label={tr('x3.uses')} value={`${st.successfulUsages ?? 0}/${st.totalUsages ?? 0}`} /><Line label={tr('x3.rewards')} value={money(st.totalRewardsGiven ?? 0, salon?.currency)} bold /></Card> : null}
         {codes.map((c, i) => (
           <ListItem key={String(c.id)} first={i === 0} title={c.code} sub={`${tr('mk.rfReward', { m: money(c.rewardAmount, salon?.currency) })} · ${tr('mk.rfUses', { n: c.currentUses })}`} lead={tile('share')}
             right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -191,7 +191,7 @@ export function Marketing({ onBack, initialView }: { onBack: () => void; initial
             <ScrollView style={{ maxHeight: H * 0.55 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               {lbl(tr('mk.cWho'))}
               <Choice value={seg} onChange={setSeg} options={SEGMENTS.map((s) => ({ value: s, label: tr(`mk.seg.${s}` as 'mk.seg.ALL_CLIENTS') }))} />
-              {aud.data ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginTop: -4, marginBottom: 10 }}>{tr('mk.audience', { n: aud.data.reachable, m: aud.data.segmentSize })}</Text> : null}
+              {aud.data?.reachable != null ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted, marginTop: -4, marginBottom: 10 }}>{tr('mk.audience', { n: aud.data.reachable, m: aud.data.segmentSize })}</Text> : null}
               {lbl(tr('mk.cChannel'))}
               <Choice value={channel} onChange={(c) => { setChannel(c); setBody((b) => b.slice(0, CH_MAX[c])); }} options={[{ value: 'EMAIL' as const, label: 'E-mail' }, { value: 'SMS' as const, label: 'SMS' }]} />
               {lbl(tr('mk.cMsg'))}
@@ -205,7 +205,7 @@ export function Marketing({ onBack, initialView }: { onBack: () => void; initial
               <Choice value={when} onChange={setWhen} options={[{ value: 'now' as const, label: tr('mk.cNow') }, { value: 'draft' as const, label: tr('mk.cDraft') }]} />
             </ScrollView>
             {errLine}
-            <Btn label={when === 'draft' ? tr('mk.cDraftBtn') : aud.data ? tr('mk.cSendN', { n: aud.data.reachable }) : tr('mk.cSendAll')} loading={busy} onPress={sendCampaign} />
+            <Btn label={when === 'draft' ? tr('mk.cDraftBtn') : aud.data?.reachable != null ? tr('mk.cSendN', { n: aud.data.reachable }) : tr('mk.cSendAll')} loading={busy} onPress={sendCampaign} />
           </>
         ) : sheet === 'promo' ? (
           <>

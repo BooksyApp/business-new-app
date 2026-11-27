@@ -38,7 +38,14 @@ export function NotifTextsScreen({ onBack }: { onBack: () => void }) {
   const [dl, setDl] = useState<Loc>('az');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { if (q.data) setV(q.data); }, [q.data]);
+  // The backend omits a message (or a language) that was never written: fill the gaps so every row and the editor always have a string.
+  useEffect(() => {
+    if (!q.data) return;
+    const d = q.data as Partial<Record<Kind, Partial<Record<Loc, string>>>>;
+    const full = {} as NotifTexts;
+    for (const k of KINDS) full[k] = { az: d[k]?.az ?? '', en: d[k]?.en ?? '', ru: d[k]?.ru ?? '' };
+    setV(full);
+  }, [q.data]);
   function openKind(k: Kind) {
     if (!v) return;
     setDraft({ az: v[k].az ?? '', en: v[k].en ?? '', ru: v[k].ru ?? '' });
