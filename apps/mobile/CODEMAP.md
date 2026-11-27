@@ -27,6 +27,9 @@ tsc: symlink customer-new-app/node_modules into apps/mobile (gitignored, remove 
 - BookingSheet embeds CheckoutBody as a step (no nested Modal). booking/[id]?checkout=1|reject=1 auto-opens checkout / reject sheet.
 - Manual confirmation setting: Profile.tsx radio cards -> apiB.bookingSettings/saveConfirmation (GET/PUT /businesses/{b}/settings requireConfirmation). Today pending card + notifications.tsx 'Yeni rezerv təsdiq gözləyir'.
 - Looks header 'Saxlayanlar': apiX.favoritesSummary (GET /businesses/{b}/favorites/summary).
+- Slot step: Profile.tsx 'Onlayn rezerv' chips 5..30 -> apiB.saveSlotInterval (PUT /settings slotIntervalMinutes). Cleanup time = Services.tsx paddingAfter field (bookingInterval field removed); add-on duration in ServiceExtras.tsx Addons.
+- Slot pills = backend availableSlots as-is (no device generation): new.tsx (merged per-staff) + classic.tsx TimeStep; empty -> n4.noFree + 'Növbəti boş gün' button from nextAvailableDate.
+- 409 friendly text: src/lib/booking-errors.ts `bookingErrorText(e)` (codes/conflict types -> n4.c* keys in v4.ts); override Alert (askOverride) kept.
 - i18n for wave 4: src/i18n/v4.ts (namespace n4).
 
 ## screens/ (section keys in app/section/[key].tsx)

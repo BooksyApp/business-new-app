@@ -45,7 +45,6 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [visible, setVisible] = useState(service?.isVisible ?? true);
   const [padB, setPadB] = useState(String(service?.paddingBefore ?? 0));
   const [padA, setPadA] = useState(String(service?.paddingAfter ?? 0));
-  const [interval, setInterval_] = useState(String(service?.bookingInterval ?? 0));
   const [parallel, setParallel] = useState(String(service?.parallelClients ?? 1));
   const [mobile, setMobile] = useState(service?.mobileService ?? false);
   const [isClass, setIsClass] = useState(service?.isClass ?? false);
@@ -82,7 +81,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
     const body: ServiceBody = {
       name: name.trim(), description: desc.trim() || undefined, categoryId: cat || undefined, price: p, durationMinutes: d, priceType: ptype,
       staffIds: ids, isVisible: visible, paddingBefore: Math.max(0, Math.round(num(padB)) || 0), paddingAfter: Math.max(0, Math.round(num(padA)) || 0),
-      bookingInterval: Math.max(0, Math.round(num(interval)) || 0), parallelClients: Math.max(0, Math.round(num(parallel)) || 0),
+      parallelClients: Math.max(0, Math.round(num(parallel)) || 0),
       mobileService: mobile, messageToClient: msg.trim() || null, depositPercent: dep ?? (service ? -1 : undefined),
       taxRate: taxRate.trim() === '' ? null : num(taxRate),
       isClass, maxParticipants: isClass ? Math.max(1, Math.round(num(maxP)) || 1) : undefined,
@@ -206,8 +205,7 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
         {tab === 'settings' ? (
           <>
             <Field label={tr('sx.padBefore')} value={padB} onChangeText={setPadB} keyboardType="number-pad" />
-            <Field label={tr('sx.padAfter')} value={padA} onChangeText={setPadA} keyboardType="number-pad" />
-            <Field label={tr('sx.interval')} value={interval} onChangeText={setInterval_} keyboardType="number-pad" />
+            <Field label={`${tr('n4.cleanup')} (${tr('common.min')})`} value={padA} onChangeText={setPadA} keyboardType="number-pad" />
             <Field label={tr('sx.parallel')} value={parallel} onChangeText={setParallel} keyboardType="number-pad" />
             <Field label={tr('pa.procDuring')} value={procD} onChangeText={setProcD} keyboardType="number-pad" />
             <Field label={tr('pa.procAfter')} value={procA} onChangeText={setProcA} keyboardType="number-pad" />

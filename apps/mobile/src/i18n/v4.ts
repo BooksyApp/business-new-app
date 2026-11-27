@@ -11,6 +11,12 @@ export const v4En = {
     payCash: 'Cash', payCard: 'Card', payGift: 'Gift card', giftCode: 'Gift card code', total: 'Total', confirmPay: 'Confirm',
     paidDone: 'Paid and finished', ready: 'Done',
     savers: 'Saved by', saversNew: '+{{n}} this month',
+    slotStep: 'Time step', slotStepHint: 'Clients pick times at this step: {{a}}, {{b}}...', noFree: 'No free times', nextFree: 'Next free day: {{d}}',
+    cleanup: 'Cleanup time', addonDur: 'Duration (min)', stepWith: 'with',
+    cSlotTaken: 'This time is already taken, pick another one.', cBuffer: "This time falls into the previous booking's cleanup time.",
+    cHours: 'This time is outside working hours.', cClosed: 'The salon is closed on this day.', cNotWorking: 'The specialist is not working at this time.',
+    cTimeOff: 'The specialist is off at this time (leave or break).', cLead: 'Too late for this time - minimum notice applies.',
+    cMaxAdv: 'This date is too far ahead to book.', cOffGrid: 'This start time does not match the salon time step.', cNotAssigned: 'The specialist does not perform this service.',
   },
 };
 export const v4Az: typeof v4En = {
@@ -25,6 +31,12 @@ export const v4Az: typeof v4En = {
     payCash: 'Nağd', payCard: 'Kart', payGift: 'Hədiyyə kartı', giftCode: 'Hədiyyə kartının kodu', total: 'Cəmi', confirmPay: 'Təsdiqlə',
     paidDone: 'Ödəniş qəbul edildi', ready: 'Hazırdır',
     savers: 'Saxlayanlar', saversNew: 'bu ay yeni +{{n}}',
+    slotStep: 'Vaxt addımı', slotStepHint: 'Müştərilər bu addımla vaxt seçir: {{a}}, {{b}}...', noFree: 'Boş vaxt yoxdur', nextFree: 'Növbəti boş gün: {{d}}',
+    cleanup: 'Təmizlik vaxtı', addonDur: 'Müddət (dəq)', stepWith: 'ilə',
+    cSlotTaken: 'Bu vaxt artıq tutulub, başqa vaxt seçin.', cBuffer: 'Bu vaxt əvvəlki rezervin təmizlik vaxtına düşür.',
+    cHours: 'Bu vaxt iş saatlarından kənardır.', cClosed: 'Salon bu gün bağlıdır.', cNotWorking: 'Usta bu vaxt işləmir.',
+    cTimeOff: 'Usta bu vaxt işdə deyil (məzuniyyət/fasilə).', cLead: 'Bu vaxt üçün çox gecdir - minimum xəbərdarlıq müddəti.',
+    cMaxAdv: 'Bu tarix rezerv üçün çox uzaqdır.', cOffGrid: 'Bu başlanğıc vaxtı salonun vaxt addımına uyğun gəlmir.', cNotAssigned: 'Bu usta həmin xidməti göstərmir.',
   },
 };
 export const v4Ru: typeof v4En = {
@@ -39,5 +51,11 @@ export const v4Ru: typeof v4En = {
     payCash: 'Наличные', payCard: 'Карта', payGift: 'Подарочная карта', giftCode: 'Код подарочной карты', total: 'Итого', confirmPay: 'Подтвердить',
     paidDone: 'Оплата принята', ready: 'Готово',
     savers: 'Сохранили', saversNew: '+{{n}} за месяц',
+    slotStep: 'Шаг времени', slotStepHint: 'Клиенты выбирают время с этим шагом: {{a}}, {{b}}...', noFree: 'Нет свободного времени', nextFree: 'Ближайший свободный день: {{d}}',
+    cleanup: 'Время на уборку', addonDur: 'Длительность (мин)', stepWith: 'с',
+    cSlotTaken: 'Это время уже занято, выберите другое.', cBuffer: 'Это время попадает на уборку после предыдущей записи.',
+    cHours: 'Это время вне рабочих часов.', cClosed: 'В этот день салон закрыт.', cNotWorking: 'Мастер в это время не работает.',
+    cTimeOff: 'Мастер в это время отсутствует (отпуск/перерыв).', cLead: 'Слишком поздно для этого времени - действует минимальный срок записи.',
+    cMaxAdv: 'Эта дата слишком далеко для записи.', cOffGrid: 'Это время не совпадает с шагом времени салона.', cNotAssigned: 'Мастер не выполняет эту услугу.',
   },
 };

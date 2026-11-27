@@ -22,7 +22,7 @@ export interface Profit { months: { month: string; revenue: number | string; exp
 export interface Tax { totals: { count: number | string; net: number | string; tax: number | string; gross: number | string }; byRate: { rate: number | string; net: number | string; tax: number | string }[] }
 export interface ApiKey { id: string; name: string; prefix: string; scopes: string[]; revokedAt: string | null; lastUsedAt: string | null }
 export interface Webhook { id: string; url: string; events: string[]; active: boolean; failedDeliveries: number }
-export interface Addon { id: Id; name: string; price?: number; priceType?: string; isActive: boolean }
+export interface Addon { id: Id; name: string; price?: number; priceType?: string; duration?: number; isActive: boolean }
 export interface PeakRule { weekday: number; startTime: string; endTime: string; percent: number }
 export interface Pkg { id: Id; name: string; service_id: Id | null; sessions_total: number; price: number; active: boolean }
 export interface GiftCard { id: Id; code: string; amount: number; balance: number; status?: string }
@@ -70,8 +70,9 @@ export const apiB = {
   saveSlotOffers: (b: Id, offers: SlotOffer[]) => requestList<SlotOffer>(`/bookings/business/${b}/slot-discounts`, { method: 'PUT', body: offers }),
   branches: (from?: string, to?: string) => requestList<BranchRow>(`/analytics/owner/branch-comparison${rng(from, to).replace('from=', 'startDate=').replace('to=', 'endDate=')}`),
   /** GET/PUT /api/businesses/{b}/settings: booking rules. requireConfirmation = the salon confirms online bookings by hand. */
-  bookingSettings: (b: Id) => request<{ requireConfirmation: boolean; allowOnlineBooking: boolean }>(`${B(b)}/settings`),
+  bookingSettings: (b: Id) => request<{ requireConfirmation: boolean; allowOnlineBooking: boolean; slotIntervalMinutes?: number }>(`${B(b)}/settings`),
   saveConfirmation: (b: Id, requireConfirmation: boolean) => request<{ requireConfirmation: boolean }>(`${B(b)}/settings`, { method: 'PUT', body: { requireConfirmation } }),
+  saveSlotInterval: (b: Id, slotIntervalMinutes: number) => request<{ slotIntervalMinutes?: number }>(`${B(b)}/settings`, { method: 'PUT', body: { slotIntervalMinutes } }),
   onlineSales: (b: Id) => request<OnlineSales>(`${B(b)}/online-sales`),
   saveOnlineSales: (b: Id, body: Partial<OnlineSales>) => request<OnlineSales>(`${B(b)}/online-sales`, { method: 'PUT', body }),
   setShift: (b: Id, shift: { staffId: Id; date: string; start: string; end: string }) => request<unknown>(`${B(b)}/rota/shifts`, { method: 'PUT', body: shift }),
@@ -150,7 +151,7 @@ export const apiB = {
   testWebhook: (b: Id, id: string) => request<void>(`${B(b)}/webhooks/${id}/test`, { method: 'POST', body: {} }),
 
   addons: (b: Id) => requestList<Addon>(`/addons/business/${b}`),
-  createAddon: (b: Id, body: { name: string; price?: number; priceType?: string }) => request<Addon>(`/addons/business/${b}`, { method: 'POST', body }),
+  createAddon: (b: Id, body: { name: string; price?: number; priceType?: string; duration?: number }) => request<Addon>(`/addons/business/${b}`, { method: 'POST', body }),
   deleteAddon: (b: Id, id: Id) => request<void>(`/addons/${id}/business/${b}`, { method: 'DELETE' }),
   peak: (b: Id, s: Id) => requestList<PeakRule>(`/bookings/business/${b}/services/${s}/peak-pricing`),
   savePeak: (b: Id, s: Id, rules: PeakRule[]) => requestList<PeakRule>(`/bookings/business/${b}/services/${s}/peak-pricing`, { method: 'PUT', body: rules }),

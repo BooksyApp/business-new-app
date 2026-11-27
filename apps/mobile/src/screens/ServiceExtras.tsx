@@ -76,13 +76,13 @@ export function Addons({ onBack }: { onBack: () => void }) {
   const sid = salon?.id ?? '';
   const list = useLoad(() => apiB.addons(sid), [sid]);
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(''); const [price, setPrice] = useState('');
+  const [name, setName] = useState(''); const [price, setPrice] = useState(''); const [dur, setDur] = useState('');
   const [busy, setBusy] = useState(false);
   async function save() {
     const p = num(price);
     if (!name.trim() || !(p >= 0)) { toast(tr('sx.needName'), 'error'); return; }
     setBusy(true);
-    try { await apiB.createAddon(sid, { name: name.trim(), price: p, priceType: 'FIXED' }); setOpen(false); setName(''); setPrice(''); void list.reload(); }
+    try { await apiB.createAddon(sid, { name: name.trim(), price: p, priceType: 'FIXED', duration: Math.max(0, Math.round(num(dur)) || 0) }); setOpen(false); setName(''); setPrice(''); setDur(''); void list.reload(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   return (
@@ -94,7 +94,7 @@ export function Addons({ onBack }: { onBack: () => void }) {
           renderItem={({ item: a }) => (
             <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 84 }}>
               <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color={t.vtext} /></View>
-              <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{a.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(a.price, salon?.currency)}</Text></View>
+              <View style={{ flex: 1 }}><Text style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{a.name}</Text><Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{money(a.price, salon?.currency)}{a.duration ? ` · ${a.duration} ${tr('common.min')}` : ''}</Text></View>
               <Pressable onPress={() => Alert.alert(tr('lk.confirmDelete'), a.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => { void apiB.deleteAddon(sid, a.id).then(() => list.reload()).catch((e: Error) => toast(e.message, 'error')); } }])} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
             </Card>
           )} />
@@ -103,6 +103,7 @@ export function Addons({ onBack }: { onBack: () => void }) {
         <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tr('ad.addAddon')}</Text>
         <Field label={tr('sx.name')} value={name} onChangeText={setName} />
         <Field label={tr('sl.price')} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+        <Field label={tr('n4.addonDur')} value={dur} onChangeText={setDur} keyboardType="number-pad" />
         <Btn label={tr('common.save')} loading={busy} onPress={() => void save()} />
         <View style={{ height: 16 }} />
       </BottomSheet>

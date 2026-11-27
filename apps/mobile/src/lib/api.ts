@@ -464,9 +464,9 @@ export const api = {
   replyConversation: (b: Id, c: string, body: string) =>
     request<InboxMessage>(`/businesses/${b}/messages/conversations/${encodeURIComponent(c)}/messages`, { method: 'POST', body: { body } }),
   /** GET /api/public/studios/{b}/services/{s}/slots?date&staffId -> { availableSlots: string[] } */
-  slots: (b: Id, serviceId: Id, date: Date, staffId?: Id) =>
-    request<{ availableSlots: string[]; durationMinutes: number }>(
-      `/public/studios/${b}/services/${serviceId}/slots?date=${day(date)}${staffId ? `&staffId=${staffId}` : ''}`,
+  slots: (b: Id, serviceId: Id, date: Date, staffId?: Id, extraMinutes?: number) =>
+    request<{ availableSlots: string[]; durationMinutes: number; slotIntervalMinutes?: number; nextAvailableDate?: string | null }>(
+      `/public/studios/${b}/services/${serviceId}/slots?date=${day(date)}${staffId ? `&staffId=${staffId}` : ''}${extraMinutes ? `&extraMinutes=${extraMinutes}` : ''}`,
       { auth: false },
     ),
 

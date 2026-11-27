@@ -8,7 +8,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { Avatar, ServiceThumb, Btn, Chip, ErrorState, Field, Skeleton, StateView } from '@/components/ui';
 import { DayStrip } from '@/components/calendar';
-import { BackBar, IconBtn, T } from '@/components/kit';
+import { BackBar, Button, IconBtn, T } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import * as Haptics from 'expo-haptics';
 import { api, ApiError, toDay, validId, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
@@ -17,6 +17,7 @@ import { recallClient } from '@/lib/client-cache';
 import { apiM, type Combo } from '@/lib/api-more';
 import { addDays, dateLabel, fromIso, fromMin, hhmm, money, monthLabel, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
+import { bookingErrorText } from '@/lib/booking-errors';
 import { useTheme } from '@/theme/ThemeContext';
 import { barBg, brandInk, circShadow, cardShadow, font } from '@/theme/tokens';
 
@@ -82,7 +83,7 @@ export default function NewBooking() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); router.back();
-    } catch (e) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); setSubmitErr((e as Error).message); toast((e as Error).message, 'error'); } finally { setBusy(false); }
+    } catch (e) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); setSubmitErr(bookingErrorText(e)); toast(bookingErrorText(e), 'error'); } finally { setBusy(false); }
   }
 
   async function book() {
@@ -115,7 +116,7 @@ export default function NewBooking() {
             }
             created++;
           } catch (e) {
-            failed.push(`${dateLabel(day)} ${fromMin(at)}: ${(e as Error).message}`);
+            failed.push(`${dateLabel(day)} ${fromMin(at)}: ${bookingErrorText(e)}`);
             if (e instanceof ApiError && e.status === 0) { offline = true; break; } // no network: stop instead of N identical failures
           }
           at += len;
@@ -352,7 +353,10 @@ function TimeStep({ sid, service, picked, combo, party, setParty, guests, setGue
           <DayStrip date={date} onChange={(d) => setDate(d < new Date(new Date().setHours(0, 0, 0, 0)) ? addDays(new Date(), 0) : d)} />
           <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink, marginTop: 20, marginBottom: 8 }}>{tr('create.freeTimes')}</Text>
           {slots.loading ? <ActivityIndicator color={t.violet} /> : list.length === 0 ? (
-            <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('create.noSlots')}</Text>
+            <View style={{ gap: 12 }}>
+              <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('n4.noFree')}</Text>
+              {slots.data?.nextAvailableDate ? <Button kind="ol" label={tr('n4.nextFree', { d: dateLabel(fromIso(slots.data.nextAvailableDate)) })} onPress={() => { setDate(fromIso(slots.data!.nextAvailableDate!)); setTime(''); }} /> : null}
+            </View>
           ) : (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {list.map((s) => {

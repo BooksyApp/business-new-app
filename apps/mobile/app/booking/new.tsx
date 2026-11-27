@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from '@/lib/insets';
 import { toast } from '@/lib/toast';
 import { ToastHost } from '@/components/ToastHost';
 import { useLoad } from '@/lib/useLoad';
+import { bookingErrorText } from '@/lib/booking-errors';
 import { useTheme } from '@/theme/ThemeContext';
 import { cardShadow, font } from '@/theme/tokens';
 
@@ -70,18 +71,16 @@ export default function NewBooking() {
     const who = pro === ANY ? able : master ? [master] : [];
     const res = await Promise.all(who.map(async (s) => ({ s, r: await api.slots(sid, svc.id, date, s.id).catch(() => null) })));
     const by = new Map<string, Staff>();
-    for (const { s, r } of res) for (const x of r?.availableSlots ?? []) if (!by.has(x.slice(0, 5))) by.set(x.slice(0, 5), s);
-    return by;
+    let next: string | null = null;
+    for (const { s, r } of res) {
+      for (const x of r?.availableSlots ?? []) if (!by.has(x.slice(0, 5))) by.set(x.slice(0, 5), s);
+      if (r?.nextAvailableDate && (!next || r.nextAvailableDate < next)) next = r.nextAvailableDate;
+    }
+    return { by, next };
   }, [svc?.id, pro, date.toDateString(), step >= 3, able.length]);
-  const free = slots.data ?? new Map<string, Staff>();
-  const grid = useMemo(() => {
-    const keys = [...free.keys()].sort();
-    if (!keys.length) return [] as string[];
-    const lo = toMin(keys[0]); const hi = toMin(keys[keys.length - 1]); const out: string[] = [];
-    for (let m = lo; m <= hi; m += 30) out.push(fromMin(m));
-    for (const k of keys) if (!out.includes(k)) out.push(k);
-    return out.sort();
-  }, [free]);
+  const free = slots.data?.by ?? new Map<string, Staff>();
+  const nextDay = slots.data?.next ?? null;
+  const grid = useMemo(() => [...free.keys()].sort(), [free]);
   const assigned = slot ? (pro === ANY ? free.get(slot) ?? null : master) : master;
 
   const titles = [tr('v2.pickService'), tr('v2.pickPro'), tr('v2.pickTime'), tr('v2.confirmStep')];
@@ -108,7 +107,7 @@ export default function NewBooking() {
       setDone({ client: client.name, service: svc.name, when: `${sameDay(date, new Date()) ? tr('v2.today') : `${weekdayLong(date)}, ${dayMonth(date)}`}, ${slot}`, who: firstName(assigned.name) });
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      const m = (e as Error).message || tr('common.error'); setSubmitErr(m); toast(m, 'error');
+      const m = bookingErrorText(e); setSubmitErr(m); toast(m, 'error');
     } finally { setBusy(false); }
   }
 
@@ -209,7 +208,10 @@ export default function NewBooking() {
               <T k="h2">{dayMonth(date)}</T><T k="sm" color={t.muted}>{svc.durationMinutes ?? 30} {tr('v2.min')}</T>
             </View>
             {slots.loading ? <Skeleton blocks={[{ h: 44 }, { h: 44 }, { h: 44 }]} /> : grid.length === 0 ? (
-              <T k="body" color={t.muted} style={{ paddingHorizontal: 20 }}>{tr('v2.noSlots')}</T>
+              <View style={{ paddingHorizontal: 20, gap: 12 }}>
+                <T k="body" color={t.muted}>{tr('n4.noFree')}</T>
+                {nextDay ? <Button kind="ol" label={tr('n4.nextFree', { d: dayMonth(fromIso(nextDay)) })} onPress={() => { setDate(fromIso(nextDay)); setSlot(null); }} /> : null}
+              </View>
             ) : (
               <>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20 }}>

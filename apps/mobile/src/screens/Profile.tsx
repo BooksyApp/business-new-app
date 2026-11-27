@@ -22,6 +22,7 @@ import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
 /** Salon profili: name, contact, address, online booking rules, deposit, logo. */
+const fromMinText = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 export function Profile({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon, bump } = useApp();
@@ -37,7 +38,15 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [parallel, setParallel] = useState(false);
   const conf = useLoad(() => apiB.bookingSettings(sid).catch(() => null), [sid]);
   const [manual, setManual] = useState(false);
-  useEffect(() => { if (conf.data) setManual(!!conf.data.requireConfirmation); }, [conf.data]);
+  const [step, setStep] = useState(15);
+  useEffect(() => { if (conf.data) { setManual(!!conf.data.requireConfirmation); setStep(conf.data.slotIntervalMinutes ?? 15); } }, [conf.data]);
+  async function pickStep(v: number) {
+    if (v === step) return;
+    const prev = step;
+    setStep(v);
+    try { await apiB.saveSlotInterval(sid, v); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); toast(tr('n4.modeSaved'), 'success'); }
+    catch (e) { setStep(prev); toast((e as Error).message, 'error'); }
+  }
   async function pickMode(v: boolean) {
     if (v === manual) return;
     setManual(v);
@@ -125,6 +134,16 @@ export function Profile({ onBack }: { onBack: () => void }) {
                 </View>
               </Pressable>
             ))}
+            <SectionTitle>{`${tr('n4.slotStep')} (${tr('common.min')})`}</SectionTitle>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[5, 10, 15, 20, 25, 30].map((v) => (
+                <Pressable key={v} onPress={() => void pickStep(v)} accessibilityRole="radio" accessibilityState={{ selected: step === v }} accessibilityLabel={`${v} ${tr('common.min')}`}
+                  style={{ flex: 1, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: step === v ? t.violet : t.hair, backgroundColor: step === v ? t.vsoft : t.surface }}>
+                  <Text style={{ fontFamily: font.b, fontSize: 15, color: step === v ? t.vtext : t.ink }}>{v}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={{ fontFamily: font.r, fontSize: 13, color: t.muted }}>{tr('n4.slotStepHint', { a: '09:00', b: fromMinText(540 + step) })}</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}><Field label={tr('pf.notice')} value={f.notice ?? ''} onChangeText={set('notice')} keyboardType="number-pad" /></View>
               <View style={{ flex: 1 }}><Field label={tr('pf.ahead')} value={f.ahead ?? ''} onChangeText={set('ahead')} keyboardType="number-pad" /></View>
