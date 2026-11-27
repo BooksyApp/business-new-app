@@ -169,10 +169,10 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, ic
   const inner = (
     <>
       {loading ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={18} color={fg} /> : null}
-      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: small ? 13.5 : 15, color: fg, flexShrink: 1 }}>{label}</Text>
+      <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.s, fontSize: small ? 13.5 : 15, color: fg, flexShrink: 1, textAlign: 'center' }}>{label}</Text>
     </>
   );
-  const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: small ? 40 : 48, borderRadius: small ? 20 : 24, paddingHorizontal: small ? 14 : 20 };
+  const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: small ? 40 : 48, borderRadius: small ? 20 : 24, paddingVertical: 6, paddingHorizontal: small ? 16 : 20 };
   return (
     <Pressable onPress={onPress} disabled={off} haptic accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!off, busy: !!loading }} style={[{ opacity: off && !loading ? 0.5 : 1 }, style]}>
       {variant === 'primary' ? (
@@ -420,12 +420,13 @@ export function Section({ title, hint, children }: { title: string; hint?: strin
 export function StickyCta({ label, onPress, loading, disabled, secondary }: { label: string; onPress: () => void; loading?: boolean; disabled?: boolean; secondary?: { label: string; onPress: () => void; danger?: boolean } }) {
   const { t } = useTheme();
   const ins = useSafeAreaInsets();
+  const stack = !!secondary && label.length + secondary.label.length > 26; // two long labels: one under the other instead of squeezed
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
       <LinearGradient pointerEvents="none" colors={t.dark ? ['rgba(20,17,29,0)', 'rgba(20,17,29,.96)'] : ['rgba(251,247,242,0)', 'rgba(251,247,242,.96)']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: -30 }} />
-      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 8, paddingBottom: Math.max(ins.bottom, 18) }}>
-        {secondary ? <Btn label={secondary.label} variant={secondary.danger ? 'danger' : 'secondary'} onPress={secondary.onPress} style={{ flex: 1 }} /> : null}
-        <Btn label={label} onPress={onPress} loading={loading} disabled={disabled} style={{ flex: secondary ? 1.4 : 1 }} />
+      <View style={{ flexDirection: stack ? 'column-reverse' : 'row', gap: 10, paddingHorizontal: 20, paddingTop: 8, paddingBottom: Math.max(ins.bottom, 18) }}>
+        {secondary ? <Btn label={secondary.label} variant={secondary.danger ? 'danger' : 'secondary'} onPress={secondary.onPress} style={stack ? undefined : { flex: 1, minWidth: 0 }} /> : null}
+        <Btn label={label} onPress={onPress} loading={loading} disabled={disabled} style={stack ? undefined : { flex: secondary ? 1.4 : 1, minWidth: 0 }} />
       </View>
     </View>
   );

@@ -1,5 +1,5 @@
 import type { Id } from '@booqi/business-shared';
-import { request, toDay } from '@/lib/api';
+import { request, requestList, toDay } from '@/lib/api';
 
 /** Endpoints beyond the calendar core, same paths and bodies as the web hub (old-web-before-reset services). */
 
@@ -65,32 +65,32 @@ export const apiX = {
   // client tags and custom fields (ClientTagController)
   /** GET /api/clients/{id}/export: everything held about the client (GDPR data export). */
   exportClient: (id: Id) => request<unknown>(`/clients/${id}/export`),
-  clientTags: (b: Id) => request<ClientTag[]>(`${BZ(b)}/client-tags`),
+  clientTags: (b: Id) => requestList<ClientTag>(`${BZ(b)}/client-tags`),
   createClientTag: (b: Id, name: string) => request<ClientTag>(`${BZ(b)}/client-tags`, { method: 'POST', body: { name } }),
   clientCrm: (b: Id, c: Id) => request<{ tags: ClientTag[]; blocked: boolean; blockReason: string | null }>(`${BZ(b)}/clients/${c}/crm`),
   setClientTags: (b: Id, c: Id, tagIds: Id[]) => request<unknown>(`${BZ(b)}/clients/${c}/tags`, { method: 'PUT', body: { tagIds } }),
-  clientFields: (b: Id, c: Id) => request<ClientField[]>(`${BZ(b)}/clients/${c}/fields`),
+  clientFields: (b: Id, c: Id) => requestList<ClientField>(`${BZ(b)}/clients/${c}/fields`),
   setClientFields: (b: Id, c: Id, values: Record<string, string>) => request<unknown>(`${BZ(b)}/clients/${c}/fields`, { method: 'PUT', body: { values } }),
   // categories
-  categories: (b: Id) => request<Category[]>(`/categories/business/${b}`),
+  categories: (b: Id) => requestList<Category>(`/categories/business/${b}`),
   createCategory: (b: Id, body: { name: string; description?: string; color?: string }) => request<Category>(`/categories/business/${b}`, { method: 'POST', body }),
   updateCategory: (b: Id, id: Id, body: { name?: string; isVisible?: boolean }) => request<Category>(`/categories/${id}/business/${b}`, { method: 'PUT', body }),
   deleteCategory: (b: Id, id: Id) => request<void>(`/categories/${id}/business/${b}`, { method: 'DELETE' }),
   // services
-  servicesFull: (b: Id) => request<ServiceFull[]>(`/services/business/${b}`),
+  servicesFull: (b: Id) => requestList<ServiceFull>(`/services/business/${b}`),
   createService: (b: Id, body: ServiceBody) => request<ServiceFull>(`/services/business/${b}`, { method: 'POST', body }),
   updateServiceFull: (b: Id, id: Id, body: ServiceBody) => request<ServiceFull>(`/services/${id}/business/${b}`, { method: 'PUT', body }),
   archiveService: (b: Id, id: Id) => request<void>(`/services/${id}/business/${b}`, { method: 'DELETE' }),
-  archivedServices: (b: Id) => request<ServiceFull[]>(`/services/business/${b}/archived`),
+  archivedServices: (b: Id) => requestList<ServiceFull>(`/services/business/${b}/archived`),
   restoreService: (b: Id, id: Id) => request<ServiceFull>(`/services/${id}/business/${b}/restore`, { method: 'PUT', body: {} }),
-  packages: (b: Id) => request<{ id: Id; name?: string; serviceName?: string; sessions?: number; price?: number; active?: boolean }[]>(`/packages/business/${b}`),
+  packages: (b: Id) => requestList<{ id: Id; name?: string; serviceName?: string; sessions?: number; price?: number; active?: boolean }>(`/packages/business/${b}`),
   // staff
-  staffFull: (b: Id) => request<StaffFull[]>(`/staff/business/${b}`),
+  staffFull: (b: Id) => requestList<StaffFull>(`/staff/business/${b}`),
   createStaff: (b: Id, body: StaffBody) => request<StaffFull>(`/staff/business/${b}`, { method: 'POST', body }),
   updateStaff: (b: Id, id: Id, body: StaffBody) => request<StaffFull>(`/staff/${id}/business/${b}`, { method: 'PUT', body }),
   /** GET/PUT /api/services/assignments/business/{b}/staff/{s}: the services a specialist performs (StaffCreateRequest has no serviceIds, the hub saves them here). */
-  staffServiceIds: (b: Id, s: Id) => request<Id[]>(`/services/assignments/business/${b}/staff/${s}`),
-  setStaffServiceIds: (b: Id, s: Id, serviceIds: Id[]) => request<Id[]>(`/services/assignments/business/${b}/staff/${s}`, { method: 'PUT', body: { serviceIds } }),
+  staffServiceIds: (b: Id, s: Id) => requestList<Id>(`/services/assignments/business/${b}/staff/${s}`),
+  setStaffServiceIds: (b: Id, s: Id, serviceIds: Id[]) => requestList<Id>(`/services/assignments/business/${b}/staff/${s}`, { method: 'PUT', body: { serviceIds } }),
   inviteStaff: (id: Id) => request<void>(`/staff/${id}/invite`, { method: 'POST', body: {} }),
   /** PUT /api/staff/{id}/role {roleId}: one of the salon's roles (what the hub does). The {role} tier form still works for OWNER / MANAGER / STAFF. */
   setStaffRoleId: (id: Id, roleId: Id) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { roleId } }),
@@ -102,35 +102,35 @@ export const apiX = {
   offerWaitlist: (b: Id, id: Id, slots: { staffId: Id; date: string; startTime: string }[]) => request<void>(`/waitlist/business/${b}/${id}/offer`, { method: 'POST', body: { slots } }),
   // clients
   updateClient: (id: Id, body: ClientBody) => request<unknown>(`/clients/${id}`, { method: 'PUT', body }),
-  consentForms: (b: Id) => request<ConsentForm[]>(`/consent-forms/business/${b}`),
-  clientConsents: (id: Id) => request<{ id: Id; formName?: string; signedAt?: string; createdAt?: string }[]>(`/clients/${id}/consent-submissions`),
+  consentForms: (b: Id) => requestList<ConsentForm>(`/consent-forms/business/${b}`),
+  clientConsents: (id: Id) => requestList<{ id: Id; formName?: string; signedAt?: string; createdAt?: string }>(`/clients/${id}/consent-submissions`),
   // sales
   /** POST /api/payment-confirmation: what the hub till calls (spends the gift card, covers lines by membership / package, settles the booking, books commissions). POST /sales does none of that. */
   confirmPayment: (body: SaleBody) => request<{ saleId: Id; totalAmount: number; appointmentUpdated: boolean }>('/payment-confirmation', { method: 'POST', body }),
   refundSummary: (id: Id) => request<SaleRefund>(`/sales/${id}/refunds`),
   refundSale: (id: Id, body: { amount: number; reason?: string }) => request<unknown>(`/sales/${id}/refunds`, { method: 'POST', body }),
-  salesRange: (b: Id, from: Date, to: Date) => request<{ total: number; tipAmount?: number; paymentMethod: string }[]>(`/sales/business/${b}?${q({ startDate: toDay(from), endDate: toDay(to) })}`),
+  salesRange: (b: Id, from: Date, to: Date) => requestList<{ total: number; tipAmount?: number; paymentMethod: string }>(`/sales/business/${b}?${q({ startDate: toDay(from), endDate: toDay(to) })}`),
   // reviews
-  reviews: (b: Id) => request<Review[]>(`/reviews/business/${b}`),
-  reviewSummary: (b: Id) => request<{ count: number; average: number | null }>(`/reviews/business/${b}/summary`),
+  reviews: (b: Id) => requestList<Review>(`/reviews/business/${b}`),
+  reviewSummary: (b: Id) => request<{ count?: number; average?: number | string | null } | null>(`/reviews/business/${b}/summary`).then((r) => ({ count: Number(r?.count) || 0, average: r?.average == null || !Number.isFinite(Number(r.average)) ? null : Number(r.average) })),
   replyReview: (b: Id, id: Id, reply: string) => request<Review>(`/businesses/${b}/reviews/${id}/reply`, { method: 'PUT', body: { reply } }),
   reportReview: (b: Id, id: Id, reason: string, comment: string) => request<{ status: string }>(`/businesses/${b}/reviews/${id}/report`, { method: 'POST', body: { reason, comment } }),
   // analytics
-  dashboard: (b: Id, from: Date, to: Date) => request<Dashboard>(`/analytics/business/${b}/dashboard?${q({ startDate: toDay(from), endDate: toDay(to) })}`),
+  dashboard: (b: Id, from: Date, to: Date) => request<Partial<Dashboard> | null>(`/analytics/business/${b}/dashboard?${q({ startDate: toDay(from), endDate: toDay(to) })}`).then((r): Dashboard => ({ ...r, kpis: r?.kpis ?? {}, topServices: Array.isArray(r?.topServices) ? r!.topServices! : [], staff: Array.isArray(r?.staff) ? r!.staff! : [], sources: Array.isArray(r?.sources) ? r!.sources! : [], series: Array.isArray(r?.series) ? r!.series : undefined })),
   // settings
-  hours: (b: Id) => request<HoursRow[]>(`/business-hours/business/${b}`),
-  saveHours: (b: Id, rows: { dayOfWeek: string; enabled: boolean; startTime: string; endTime: string }[]) => request<HoursRow[]>(`/business-hours/business/${b}`, { method: 'PUT', body: rows }),
+  hours: (b: Id) => requestList<HoursRow>(`/business-hours/business/${b}`),
+  saveHours: (b: Id, rows: { dayOfWeek: string; enabled: boolean; startTime: string; endTime: string }[]) => requestList<HoursRow>(`/business-hours/business/${b}`, { method: 'PUT', body: rows }),
   hoursExceptions: (b: Id) => request<{ id: Id; startDate: string; endDate: string; closed: boolean; openTime?: string | null; closeTime?: string | null; notes: string | null }[]>(`/business-hours-exceptions/business/${b}`),
   addHoursException: (b: Id, startDate: string, endDate: string, notes: string, hours?: { open: string; close: string }) => request<unknown>('/business-hours-exceptions', { method: 'POST', body: { businessId: b, startDate, endDate, closed: !hours, openTime: hours?.open ?? null, closeTime: hours?.close ?? null, notes: notes || null } }),
   removeHoursException: (b: Id, id: Id) => request<void>(`/business-hours-exceptions/${id}?businessId=${b}`, { method: 'DELETE' }),
-  hubEvents: (b: Id) => request<{ unread: number; events: { id: string; type: string; at: string; who?: string | null; what?: string | null; date?: string | null; time?: string | null; rating?: number | null; unread: boolean }[] }>(`/businesses/${b}/hub-events`),
+  hubEvents: (b: Id) => request<null | { unread: number; events: { id: string; type: string; at: string; who?: string | null; what?: string | null; date?: string | null; time?: string | null; rating?: number | null; unread: boolean }[] }>(`/businesses/${b}/hub-events`).then((r) => ({ unread: Number(r?.unread) || 0, events: Array.isArray(r?.events) ? r.events : [] })),
   readHubEvents: (b: Id) => request<{ unread: number }>(`/businesses/${b}/hub-events/read`, { method: 'POST', body: {} }),
   notifSettings: (b: Id) => request<NotifSettings>(`/businesses/${b}/notification-settings`),
   saveNotifSettings: (b: Id, body: NotifSettings) => request<NotifSettings>(`/businesses/${b}/notification-settings`, { method: 'PUT', body }),
   subscription: (b: Id) => request<SubStatus>(`/businesses/${b}/subscription`),
   // looks & stories
-  looks: (b: Id) => request<Look[]>(`/businesses/${b}/looks`),
+  looks: (b: Id) => requestList<Look>(`/businesses/${b}/looks`),
   deleteLook: (b: Id, id: Id) => request<void>(`/businesses/${b}/looks/${id}`, { method: 'DELETE' }),
-  stories: (b: Id) => request<Story[]>(`/businesses/${b}/stories`),
+  stories: (b: Id) => requestList<Story>(`/businesses/${b}/stories`),
   deleteStory: (b: Id, id: Id) => request<void>(`/businesses/${b}/stories/${id}`, { method: 'DELETE' }),
 };

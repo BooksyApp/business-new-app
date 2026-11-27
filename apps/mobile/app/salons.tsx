@@ -39,3 +39,5 @@ export default function Salons() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

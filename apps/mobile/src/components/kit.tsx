@@ -136,10 +136,10 @@ export function Button({ label, onPress, kind = 'pr', size = 'md', icon, loading
   const off = disabled || loading;
   return (
     <Pressable onPress={onPress} disabled={off} haptic accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!off, busy: !!loading }}
-      style={[{ height: h, borderRadius: h / 2, paddingHorizontal: size === 'sm' ? 14 : 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: bg, opacity: off && !loading ? 0.5 : 1 },
+      style={[{ minHeight: h, minWidth: 0, borderRadius: h / 2, paddingVertical: 6, paddingHorizontal: size === 'sm' ? 16 : 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: bg, opacity: off && !loading ? 0.5 : 1 },
         kind === 'pr' ? ctaShadow : null, kind === 'ol' ? { borderWidth: 1.5, borderColor: t.hair } : null, block ? { alignSelf: 'stretch' } : null, style]}>
       {loading ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={18} color={fg} /> : null}
-      <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: size === 'sm' ? 13.5 : 15, color: fg, flexShrink: 1 }}>{label}</Text>
+      <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.s, fontSize: size === 'sm' ? 13.5 : 15, color: fg, flexShrink: 1, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }
@@ -405,7 +405,7 @@ export function UnderTabs<K extends string>({ items, value, onChange }: { items:
         return (
           <Pressable key={it.k} onPress={() => onChange(it.k)} noScale accessibilityRole="tab" accessibilityState={{ selected: on }} style={{ flex: 1, height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderBottomWidth: 2, borderBottomColor: on ? t.ink : 'transparent', marginBottom: -1 }}>
             {it.icon ? <Icon name={it.icon} size={19} color={on ? t.ink : t.ink3} /> : null}
-            <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, color: on ? t.ink : t.ink3 }}>{it.label}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ fontFamily: font.s, fontSize: 14, color: on ? t.ink : t.ink3, flexShrink: 1 }}>{it.label}</Text>
           </Pressable>
         );
       })}

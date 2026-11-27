@@ -112,3 +112,5 @@ export default function Login() {
     </KeyboardAvoidingView>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

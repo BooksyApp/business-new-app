@@ -296,3 +296,5 @@ function Month({ date, appts, loading, avatarOf, onMonth, onPick, onOpenDay, onO
     </View>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

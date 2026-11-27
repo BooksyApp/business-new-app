@@ -199,3 +199,5 @@ function ago(d: Date) {
   if (days <= 0) return tr('v2.today').toLowerCase();
   return tr('v2.daysAgo', { n: days });
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

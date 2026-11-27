@@ -10,7 +10,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ErrorState } from '@/components/ui';
 import { t as tr } from '@/i18n';
-import { api, ApiError, toDay, type ClientWithStats, type Service, type Staff } from '@/lib/api';
+import { api, ApiError, toDay, validId, type ClientWithStats, type Service, type Staff } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { rememberClients } from '@/lib/client-cache';
 import { firstName } from '@/lib/day';
@@ -21,7 +21,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { cardShadow, font } from '@/theme/tokens';
 
-type Who = { id: string; name: string; avatarUrl?: string | null } | null;
+type Who = { id: string; name: string; avatarUrl?: string | null; phone?: string | null; email?: string | null } | null;
 const ANY = '__any';
 const askOverride = (msg: string) => new Promise<boolean>((res) => Alert.alert(tr('appt.conflict'), msg, [
   { text: tr('common.cancel'), style: 'cancel', onPress: () => res(false) }, { text: tr('common.confirm'), onPress: () => res(true) },
@@ -61,7 +61,7 @@ export default function NewBooking() {
   const master = team.find((s) => String(s.id) === pro) ?? null;
   const cats = useMemo(() => [...new Set(list.map((s) => s.categoryName).filter(Boolean) as string[])], [list]);
   const shown = cat ? list.filter((s) => s.categoryName === cat) : list;
-  const cl = client ? (clients.data ?? []).find((c) => String(c.id) === client.id) : undefined;
+  const cl = client && client.id ? (clients.data ?? []).find((c) => String(c.id) === client.id) : undefined;
 
   // Slots: one specialist, or "İlk boş" = every able specialist merged (first one free at each time gets the booking).
   const slots = useLoad(async () => {
@@ -92,7 +92,7 @@ export default function NewBooking() {
     if (!svc || !slot || !assigned) return;
     if (!client) { setPicker(true); return; }
     const len = svc.durationMinutes ?? 30;
-    const body = { businessId: sid, staffId: assigned.id, clientId: client.id, clientName: client.name, serviceId: svc.id, appointmentDate: toDay(date), startTime: slot, endTime: fromMin(toMin(slot) + len), price: svc.price };
+    const body = { businessId: sid, staffId: assigned.id, clientId: client.id, clientName: client.name, clientPhone: client.phone ?? undefined, clientEmail: client.email ?? undefined, serviceId: svc.id, appointmentDate: toDay(date), startTime: slot, endTime: fromMin(toMin(slot) + len), price: svc.price };
     setBusy(true);
     try {
       try { await api.createAppointment(body); }
@@ -285,7 +285,7 @@ function Big({ on, uri, name, label, sub, onPress }: { on: boolean; uri?: string
 }
 
 /** Client picker sheet: search, list, quick "new client" (first name, phone). */
-function ClientPicker({ open, sid, list, onClose, onPick, onCreated }: { open: boolean; sid: string; list: ClientWithStats[]; onClose: () => void; onPick: (c: { id: string; name: string }) => void; onCreated: () => void }) {
+function ClientPicker({ open, sid, list, onClose, onPick, onCreated }: { open: boolean; sid: string; list: ClientWithStats[]; onClose: () => void; onPick: (c: NonNullable<Who>) => void; onCreated: () => void }) {
   const { t } = useTheme();
   const { height: H } = useWindowDimensions();
   const [q, setQ] = useState('');
@@ -298,7 +298,7 @@ function ClientPicker({ open, sid, list, onClose, onPick, onCreated }: { open: b
     try {
       const [f, ...l] = first.trim().split(/\s+/);
       const c = await api.createClient(sid, { firstName: f, lastName: l.join(' ') || undefined, phone: phone.trim() || undefined });
-      onCreated(); onPick({ id: String(c?.id ?? `new-${Date.now()}`), name: first.trim() }); setAdding(false); setFirst(''); setPhone('');
+      onCreated(); onPick({ id: validId(c?.id) ?? '', name: first.trim(), phone: phone.trim() || null }); setAdding(false); setFirst(''); setPhone('');
     } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
   }
   const input = { height: 48, borderRadius: 14, backgroundColor: t.fill, paddingHorizontal: 14, fontFamily: font.r, fontSize: 15, color: t.ink, outlineStyle: 'none' } as object;
@@ -323,7 +323,7 @@ function ClientPicker({ open, sid, list, onClose, onPick, onCreated }: { open: b
             </View>
             <FlatList data={rows} keyExtractor={(c) => String(c.id)} keyboardShouldPersistTaps="handled" style={{ marginTop: 8 }}
               renderItem={({ item: c, index }) => (
-                <Pressable onPress={() => onPick({ id: String(c.id), name: `${c.firstName} ${c.lastName ?? ''}`.trim() })} noScale accessibilityRole="button"
+                <Pressable onPress={() => onPick({ id: validId(c.id) ?? '', name: `${c.firstName} ${c.lastName ?? ''}`.trim(), phone: c.phone, email: c.email })} noScale accessibilityRole="button"
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: index ? 1 : 0, borderTopColor: t.hair }}>
                   <Avatar uri={c.avatarUrl} name={c.firstName} size={40} />
                   <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{c.firstName} {c.lastName ?? ''}</Text><T k="t2" color={t.muted}>{c.phone ?? ''}</T></View>
@@ -335,3 +335,5 @@ function ClientPicker({ open, sid, list, onClose, onPick, onCreated }: { open: b
     </BottomSheet>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

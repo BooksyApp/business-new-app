@@ -77,7 +77,11 @@ export function createApi({ baseUrl, getToken, renew, onUnauthorized }: ApiOptio
     }
     if (!res.ok) {
       const d = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
-      throw new ApiError(str(d.detail) ?? str(d.message) ?? str(d.error) ?? `HTTP ${res.status}`, res.status, data);
+      // Validation answers name the field ("clientId: must be positive"); a bare "Malformed or invalid request" gets the status so it is traceable.
+      const fe = Array.isArray(d.fieldErrors) ? d.fieldErrors : Array.isArray(d.errors) ? d.errors : [];
+      const hint = fe.map((e) => (e && typeof e === "object" ? `${str((e as Record<string, unknown>).field) ?? ""} ${str((e as Record<string, unknown>).message) ?? str((e as Record<string, unknown>).defaultMessage) ?? ""}`.trim() : str(e) ?? "")).filter(Boolean).join("; ");
+      const base = str(d.detail) ?? str(d.message) ?? str(d.error) ?? `HTTP ${res.status}`;
+      throw new ApiError(hint && !base.includes(hint) ? `${base} (${hint})` : res.status === 400 && /malformed|invalid request/i.test(base) ? `${base} (HTTP 400)` : base, res.status, data);
     }
     return data as T;
   }

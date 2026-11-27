@@ -109,3 +109,5 @@ export default function StoryView() {
     </View>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

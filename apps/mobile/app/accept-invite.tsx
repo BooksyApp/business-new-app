@@ -66,3 +66,5 @@ export default function AcceptInvite() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

@@ -120,3 +120,5 @@ export default function TabsLayout() {
   // lazy mount on first visit, then stay mounted (state preserved); no unmount on blur.
   return <Tabs tabBar={(p) => <TabBar {...p} />} screenOptions={{ headerShown: false, lazy: true, animation: 'none' }}>{ITEMS.map((i) => <Tabs.Screen key={i.name} name={i.name} />)}</Tabs>;
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

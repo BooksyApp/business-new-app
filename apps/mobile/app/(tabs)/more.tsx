@@ -129,3 +129,5 @@ export default function More() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

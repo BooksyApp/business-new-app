@@ -201,6 +201,7 @@ export interface CreateAppointmentBody {
   clientId?: Id;
   clientName?: string;
   clientPhone?: string;
+  clientEmail?: string;
   serviceId: Id;
   appointmentDate: string;
   startTime: string;
@@ -310,6 +311,16 @@ export async function request<T>(path: string, opts?: Parameters<typeof core.req
   }
 }
 
+/**
+ * List endpoints: always an array. A live server may answer `null`/empty body, a paged `{content|items|data|results|keys: []}` or
+ * an error-shaped object; the screens only ever see `T[]` with no null rows (".map of undefined" cannot happen).
+ */
+export async function requestList<T>(path: string, opts?: Parameters<typeof core.request>[1]): Promise<T[]> {
+  const r = await request<unknown>(path, opts);
+  const arr = Array.isArray(r) ? r : r && typeof r === 'object' ? (['content', 'items', 'data', 'results', 'keys', 'rows'].map((k) => (r as Record<string, unknown>)[k]).find(Array.isArray) as unknown[] | undefined) ?? [] : [];
+  return arr.filter((x) => x != null) as T[];
+}
+
 /** Multipart upload (RN FormData with {uri,name,type} file parts). One token renewal on 401, 60s timeout. */
 export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
   const go = async (tok: string | null) => {
@@ -327,6 +338,38 @@ export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
   if (!res.ok) { const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>; throw new ApiError(String(d.detail ?? d.message ?? d.error ?? `HTTP ${res.status}`), res.status, data); }
   setOnline(true);
   return data as T;
+}
+
+/** A public id the server accepts: UUID string or positive number. Anything else ("null", "0", "__none", "new-123") is a 400. */
+export const validId = (v: unknown): string | null => {
+  const s = v == null ? '' : String(v).trim();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) return s;
+  return /^[1-9]\d*$/.test(s) ? s : null;
+};
+const hhmmOk = (v: unknown) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(v) ? v : undefined);
+/**
+ * Booking body exactly as BookingController.BookingRequest wants it: ids only when real (a walk-in or guest with no client row is
+ * sent by name/phone/email, staffId 0 = unassigned), price a number, times HH:mm inside the day, empty optionals dropped.
+ */
+export function cleanBooking(b: CreateAppointmentBody & { clientEmail?: string }) {
+  const price = Number(b.price);
+  const email = (b.clientEmail ?? '').trim();
+  const clientId = validId(b.clientId);
+  return {
+    businessId: b.businessId,
+    staffId: validId(b.staffId) ?? 0,
+    ...(clientId ? { clientId } : null),
+    ...(b.clientName?.trim() ? { clientName: b.clientName.trim().slice(0, 255) } : null),
+    ...(b.clientPhone?.trim() ? { clientPhone: b.clientPhone.trim().slice(0, 50) } : null),
+    ...(email.includes('@') ? { clientEmail: email } : null),
+    serviceId: b.serviceId,
+    appointmentDate: b.appointmentDate,
+    startTime: hhmmOk(b.startTime) ?? b.startTime,
+    ...(hhmmOk(b.endTime) ? { endTime: b.endTime } : null),
+    ...(Number.isFinite(price) && price >= 0 && b.price != null ? { price } : null),
+    ...(b.notes?.trim() ? { notes: b.notes.trim().slice(0, 2000) } : null),
+    ...(b.visitId ? { visitId: b.visitId } : null),
+  };
 }
 
 const day = (d: Date) =>
@@ -349,19 +392,19 @@ export const api = {
     if (u.role.toUpperCase() === 'STAFF' && u.businessId) {
       return [await request<Business>(`/businesses/${u.businessId}`)];
     }
-    return (await request<Business[]>(`/businesses/owner/${u.userId}`)) ?? [];
+    return (await requestList<Business>(`/businesses/owner/${u.userId}`)) ?? [];
   },
 
   /** GET /api/bookings/business/{id}?startDate&endDate */
   appointments: (b: Id, from: Date, to: Date = from) =>
-    request<Appointment[]>(`/bookings/business/${b}?startDate=${day(from)}&endDate=${day(to)}`),
+    requestList<Appointment>(`/bookings/business/${b}?startDate=${day(from)}&endDate=${day(to)}`),
   appointment: (id: string) => request<Appointment>(`/bookings/${id}`),
   /** POST /api/bookings (`override.confirm` accepts a reported conflict, same shape as the reschedule PUT). */
   createAppointment: (body: CreateAppointmentBody, override?: boolean) =>
     request<Appointment>('/bookings', {
       method: 'POST',
       body: {
-        ...body,
+        ...cleanBooking(body),
         ...(override ? { override: { confirm: true } } : null),
         idempotencyKey: `${body.businessId}-${body.staffId}-${body.appointmentDate}-${body.startTime}-${Date.now()}`,
       },
@@ -370,7 +413,7 @@ export const api = {
   updateAppointment: (id: string, body: CreateAppointmentBody, override?: boolean) =>
     request<Appointment>(`/bookings/${id}`, {
       method: 'PUT',
-      body: override ? { ...body, override: { confirm: true } } : body,
+      body: override ? { ...cleanBooking(body), override: { confirm: true } } : cleanBooking(body),
     }),
   confirmAppointment: (id: string) =>
     request<Appointment>(`/bookings/${id}/confirm`, { method: 'PUT', body: {} }),
@@ -382,25 +425,25 @@ export const api = {
     request<void>(`/bookings/${id}/cancel`, { method: 'PUT', body: { reason } }),
 
   /** GET /api/staff/business/{id} */
-  staff: (b: Id) => request<Staff[]>(`/staff/business/${b}`),
+  staff: (b: Id) => requestList<Staff>(`/staff/business/${b}`),
   /** GET /api/services/business/{id} */
-  services: (b: Id) => request<Service[]>(`/services/business/${b}`),
+  services: (b: Id) => requestList<Service>(`/services/business/${b}`),
   /** PUT /api/services/{id}/business/{b} - partial update (isActive, price, durationMinutes). */
   updateService: (b: Id, id: Id, body: { isActive?: boolean; price?: number; durationMinutes?: number }) =>
     request<Service>(`/services/${id}/business/${b}`, { method: 'PUT', body }),
 
   /** GET /api/time-off/business/{id}/date/{date} */
-  timeOffOn: (b: Id, d: Date) => request<TimeOff[]>(`/time-off/business/${b}/date/${day(d)}`),
+  timeOffOn: (b: Id, d: Date) => requestList<TimeOff>(`/time-off/business/${b}/date/${day(d)}`),
   /** POST /api/time-off (same body as the hub; owner/manager blocks are approved on creation). */
   createTimeOff: (body: { businessId: Id; staffId: Id; startDate: string; endDate: string; startTime?: string; endTime?: string; isFullDay: boolean; reason?: string }) =>
     request<TimeOff>('/time-off', { method: 'POST', body: { ...body, isRecurring: false, isApproved: true } }),
   deleteTimeOff: (id: Id) => request<void>(`/time-off/${id}`, { method: 'DELETE' }),
 
   /** GET /api/sales/business/{id}?date= */
-  sales: (b: Id, d: Date) => request<Sale[]>(`/sales/business/${b}?date=${day(d)}`),
+  sales: (b: Id, d: Date) => requestList<Sale>(`/sales/business/${b}?date=${day(d)}`),
 
   /** GET/POST /api/businesses/{b}/messages/conversations */
-  conversations: (b: Id) => request<InboxSummary[]>(`/businesses/${b}/messages/conversations`),
+  conversations: (b: Id) => requestList<InboxSummary>(`/businesses/${b}/messages/conversations`),
   conversation: (b: Id, c: string) => request<InboxThread>(`/businesses/${b}/messages/conversations/${encodeURIComponent(c)}`),
   replyConversation: (b: Id, c: string, body: string) =>
     request<InboxMessage>(`/businesses/${b}/messages/conversations/${encodeURIComponent(c)}/messages`, { method: 'POST', body: { body } }),
@@ -413,9 +456,9 @@ export const api = {
 
   /** GET /api/bookings/business/{id}/clients (with stats) */
   clientsWithStats: (b: Id) =>
-    request<ClientWithStats[]>(`/bookings/business/${b}/clients?limit=1000&offset=0`),
+    requestList<ClientWithStats>(`/bookings/business/${b}/clients?limit=1000&offset=0`),
   /** GET /api/clients/business/{id} */
-  clients: (b: Id) => request<Client[]>(`/clients/business/${b}`),
+  clients: (b: Id) => requestList<Client>(`/clients/business/${b}`),
   /** POST /api/clients/business/{id} */
   createClient: (b: Id, body: { firstName: string; lastName?: string; phone?: string; email?: string; allowMarketingEmails?: boolean; allowSmsNotifications?: boolean }) =>
     request<Client>(`/clients/business/${b}`, { method: 'POST', body }),
@@ -428,10 +471,10 @@ export const api = {
     }),
 
   /** GET /api/waitlist/business/{id} */
-  waitlist: (b: Id) => request<WaitlistEntry[]>(`/waitlist/business/${b}`),
+  waitlist: (b: Id) => requestList<WaitlistEntry>(`/waitlist/business/${b}`),
   /** GET /api/businesses/{id}/day-sheet?date= */
   daySheet: (b: Id, date: Date) =>
-    request<DaySheet>(`/businesses/${b}/day-sheet?date=${day(date)}`),
+    request<Partial<DaySheet> | null>(`/businesses/${b}/day-sheet?date=${day(date)}`).then((r): DaySheet => ({ date: r?.date ?? day(date), totals: { bookings: Number(r?.totals?.bookings) || 0, expected: Number(r?.totals?.expected) || 0, already_paid: Number(r?.totals?.already_paid) || 0 } })),
 
   /** POST /api/notifications/device-tokens - platform must be IOS | ANDROID | WEB. */
   registerDeviceToken: (token: string) =>

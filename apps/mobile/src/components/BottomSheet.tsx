@@ -6,6 +6,16 @@ import Animated, { interpolate, runOnJS, useAnimatedKeyboard, useAnimatedStyle, 
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/theme/ThemeContext';
 
+/**
+ * iOS silently drops a <Modal> that is presented while another Modal is still dismissing, so a sheet that opens in the same tick as the
+ * sheet that launched it ("+" -> Vaxtı blokla, menu -> Vaxtı blokla) never appeared on a real phone. Sheets that are closing are
+ * counted here; an opening sheet waits until none is left (plus a short settle) before it mounts.
+ */
+const closing = new Set<number>();
+const waiters = new Set<() => void>();
+let nextId = 1;
+const notify = () => { if (!closing.size) { const w = [...waiters]; waiters.clear(); w.forEach((f) => f()); } };
+
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
 
 /** v2 Sheet (artifact .sheet): 30 radius, 38x5 grabber, near-white surface, scrim .38. */
@@ -18,6 +28,7 @@ export function BottomSheet({ open, onClose, children, snaps, radius = 30, conte
 }) {
   const { t } = useTheme(); const { height: H } = useWindowDimensions();
   const [mounted, setMounted] = useState(open);
+  const id = React.useRef(nextId++).current;
   const [ch, setCh] = useState(0);
   const pts = snaps?.map((s) => (s <= 1 ? s * H : s)).sort((a, b) => a - b);
   const sh = useSharedValue(H); const y = useSharedValue(H); const start = useSharedValue(0);
@@ -26,16 +37,24 @@ export function BottomSheet({ open, onClose, children, snaps, radius = 30, conte
   const sorted = useSharedValue<number[]>(pts ?? []);
   useEffect(() => { sh.value = sheetH || H; sorted.value = pts ?? []; });
 
-  const unmount = useCallback(() => setMounted(false), []);
+  const unmount = useCallback(() => { setMounted(false); setTimeout(() => { closing.delete(id); notify(); }, 160); }, [id]);
   useEffect(() => {
-    if (open) setMounted(true);
-  }, [open]);
+    if (!open) return;
+    if (!closing.size || closing.has(id)) { closing.delete(id); setMounted(true); return; }
+    let live = true;
+    const go = () => { if (live) setMounted(true); };
+    waiters.add(go);
+    const guard = setTimeout(() => { waiters.delete(go); go(); }, 900); // never wait forever
+    return () => { live = false; waiters.delete(go); clearTimeout(guard); };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!open && mounted) closing.add(id); }, [open, mounted, id]);
+  useEffect(() => () => { closing.delete(id); notify(); }, [id]);
   useEffect(() => {
     if (!mounted || !sheetH) return;
     if (open) { Haptics.selectionAsync().catch(() => {}); y.value = withSpring(pts ? sheetH - pts[0] : 0, SPRING); }
     else y.value = withTiming(sheetH + 40, { duration: 220 }, (done) => { if (done) runOnJS(unmount)(); });
   }, [open, mounted, sheetH]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!open && mounted && !sheetH) setMounted(false); }, [open, mounted, sheetH]);
+  useEffect(() => { if (!open && mounted && !sheetH) unmount(); }, [open, mounted, sheetH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pan = Gesture.Pan().activeOffsetY([-12, 12]).failOffsetX([-24, 24])
     .onStart(() => { start.value = y.value; })

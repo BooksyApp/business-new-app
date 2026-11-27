@@ -153,3 +153,5 @@ export default function StoryCreate() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

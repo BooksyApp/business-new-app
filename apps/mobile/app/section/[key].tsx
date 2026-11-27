@@ -81,3 +81,5 @@ export default function Section() {
     }
   }
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

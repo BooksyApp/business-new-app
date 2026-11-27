@@ -6,11 +6,12 @@
  */
 import { t as tr } from '@/i18n';
 import { toast } from '@/lib/toast';
+import { liveHit } from './live';
 import { buildDemo, type Hit, type Route } from './fixtures';
 
 let on = false;
 let routes: Route[] = [];
-let mode: '' | 'empty' | 'error' | 'slow' = '';
+let mode: '' | 'empty' | 'error' | 'slow' | 'live' = '';
 let lastToast = 0;
 const subs = new Set<(v: boolean) => void>();
 
@@ -55,6 +56,7 @@ export function installDemoFetch() {
     if (mode === 'empty' && !EMPTY_KEEP.test(path)) {
       return ok(/day-sheet|summary|dashboard|unread/.test(path) ? { date: '', totals: { bookings: 0, expected: 0, already_paid: 0 }, count: 0, average: null, unread: 0, kpis: {}, topServices: [], staff: [], sources: [] } : []);
     }
+    if (mode === 'live') { const hit = liveHit(method, path); if (hit) return hit; }
     for (const [re, h] of routes) if (re.test(path)) return ok(typeof h === 'function' ? (h as Hit)(method, path, q, null) : h);
     return ok([]);
   }) as typeof fetch;

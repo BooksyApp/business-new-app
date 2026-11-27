@@ -1,5 +1,5 @@
 import type { Id } from '@booqi/business-shared';
-import { request } from '@/lib/api';
+import { request, requestList } from '@/lib/api';
 
 /** Endpoints of the hub-parity pass: resource types, staff portfolio, chair rent, calendar feed, loyalty cards, revenue plan, notification texts. Paths and bodies as in business-new-app/apps/web services and booksy-backend controllers. */
 const B = (b: Id) => `/businesses/${b}`;
@@ -14,19 +14,19 @@ export type NotifTexts = Record<'CONFIRMATION' | 'REMINDER' | 'CANCELLATION', Re
 
 export interface SalonPhoto { id: Id; url: string }
 export const apiH = {
-  salonPhotos: (b: Id) => request<SalonPhoto[]>(`${B(b)}/photos`),
+  salonPhotos: (b: Id) => requestList<SalonPhoto>(`${B(b)}/photos`),
   addSalonPhoto: (b: Id, upload: string) => request<SalonPhoto>(`${B(b)}/photos`, { method: 'POST', body: { upload } }),
   deleteSalonPhoto: (b: Id, id: Id) => request<void>(`${B(b)}/photos/${id}`, { method: 'DELETE' }),
   exportClient: (id: Id) => request<unknown>(`/clients/${id}/export`),
-  resourceTypes: (b: Id) => request<ResourceType[]>(`/resource-types/business/${b}`),
+  resourceTypes: (b: Id) => requestList<ResourceType>(`/resource-types/business/${b}`),
   addResourceType: (b: Id, name: string, quantity: number) => request<ResourceType>(`/resource-types/business/${b}`, { method: 'POST', body: { businessId: b, name, quantity } }),
   deleteResourceType: (b: Id, id: Id) => request<void>(`/resource-types/business/${b}/${id}`, { method: 'DELETE' }),
 
-  portfolio: (b: Id, s: Id) => request<PortfolioPhoto[]>(`${B(b)}/staff/${s}/portfolio`),
+  portfolio: (b: Id, s: Id) => requestList<PortfolioPhoto>(`${B(b)}/staff/${s}/portfolio`),
   addPortfolio: (b: Id, s: Id, upload: string, caption?: string, serviceId?: Id | null) => request<PortfolioPhoto>(`${B(b)}/staff/${s}/portfolio`, { method: 'POST', body: { upload, caption: caption?.trim() || null, serviceId: serviceId || null } }),
   updatePortfolio: (b: Id, s: Id, id: Id, caption: string, serviceId: Id | null) => request<PortfolioPhoto>(`${B(b)}/staff/${s}/portfolio/${id}`, { method: 'PUT', body: { caption: caption.trim() || null, serviceId: serviceId || null } }),
   removePortfolio: (b: Id, s: Id, id: Id) => request<void>(`${B(b)}/staff/${s}/portfolio/${id}`, { method: 'DELETE' }),
-  reorderPortfolio: (b: Id, s: Id, ids: Id[]) => request<PortfolioPhoto[]>(`${B(b)}/staff/${s}/portfolio/order`, { method: 'PUT', body: { ids } }),
+  reorderPortfolio: (b: Id, s: Id, ids: Id[]) => requestList<PortfolioPhoto>(`${B(b)}/staff/${s}/portfolio/order`, { method: 'PUT', body: { ids } }),
 
   chairRent: (b: Id, s: Id) => request<ChairLedger>(`/staff/business/${b}/${s}/chair-rent`),
   saveChairRent: (b: Id, s: Id, t: { renter: boolean; period?: 'WEEKLY' | 'MONTHLY'; amount?: number; dueDay?: number; startsOn?: string }) => request<ChairLedger>(`/staff/business/${b}/${s}/chair-rent`, { method: 'PUT', body: t }),
@@ -35,14 +35,14 @@ export const apiH = {
   feedPath: (s: Id) => request<{ feedPath: string }>(`/calendar/staff/${s}/token`).then((r) => r.feedPath),
   newFeedPath: (s: Id) => request<{ feedPath: string }>(`/calendar/staff/${s}/token/regenerate`, { method: 'POST', body: {} }).then((r) => r.feedPath),
 
-  loyaltyCards: (b: Id) => request<LoyaltyCard[]>(`${B(b)}/loyalty-cards`),
+  loyaltyCards: (b: Id) => requestList<LoyaltyCard>(`${B(b)}/loyalty-cards`),
   createCard: (b: Id, body: { name: string; visitsRequired: number; rewardServiceId?: Id | null; validUntil?: string | null; colorFrom?: string; colorTo?: string }) => request<LoyaltyCard & { assignedTo: number }>(`${B(b)}/loyalty-cards`, { method: 'POST', body }),
   endCard: (b: Id, id: Id) => request<void>(`${B(b)}/loyalty-cards/${id}`, { method: 'DELETE' }),
-  cardHolders: (b: Id, id: Id) => request<CardHolder[]>(`${B(b)}/loyalty-cards/${id}/holders`),
+  cardHolders: (b: Id, id: Id) => requestList<CardHolder>(`${B(b)}/loyalty-cards/${id}/holders`),
   addHolder: (b: Id, id: Id, clientId: Id) => request<unknown>(`${B(b)}/loyalty-cards/${id}/holders/${clientId}`, { method: 'POST', body: {} }),
   stamp: (b: Id, id: Id, clientId: Id, delta = 1) => request<unknown>(`${B(b)}/loyalty-cards/${id}/holders/${clientId}/stamp`, { method: 'POST', body: { delta } }),
 
-  plan: (b: Id, year: number) => request<PlanMonth[]>(`${B(b)}/revenue-plan?year=${year}`),
+  plan: (b: Id, year: number) => requestList<PlanMonth>(`${B(b)}/revenue-plan?year=${year}`),
   setPlan: (b: Id, month: string, amount: number) => request<void>(`${B(b)}/revenue-plan/${month}`, { method: 'PUT', body: { amount } }),
 
   texts: (b: Id) => request<NotifTexts>(`${B(b)}/settings/notification-texts`),

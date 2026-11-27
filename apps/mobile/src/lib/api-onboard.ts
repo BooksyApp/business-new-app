@@ -1,7 +1,7 @@
 import type { Id } from '@booqi/business-shared';
 import { Platform } from 'react-native';
 import { businessAudience } from '@booqi/business-shared';
-import { request, type AuthResponse, type Business } from '@/lib/api';
+import { request, requestList, type AuthResponse, type Business } from '@/lib/api';
 import { TERMS_VERSION } from '@/lib/config';
 
 /** First-run endpoints: sign-up, password reset, team invite, additional salon, setup readiness. Paths and bodies verified against booksy-backend (see API-CONTRACT.md). */
@@ -29,14 +29,14 @@ export const apiO = {
   /** POST /api/auth/change-password (signed in). Other devices are signed out by the server. */
   changePassword: (currentPassword: string, newPassword: string) => request<{ changed: boolean }>('/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } }),
   /** GET /api/public/business-categories?locale=: `name` is the stable key to send, `label` is the display name. */
-  categories: (locale: string) => request<BizCategory[]>(`/public/business-categories?locale=${encodeURIComponent(locale)}`, { auth: false }),
+  categories: (locale: string) => requestList<BizCategory>(`/public/business-categories?locale=${encodeURIComponent(locale)}`, { auth: false }),
   /** GET /api/public/platform: business sign-ups can be closed by the platform. */
   platform: () => request<PlatformFlags>('/public/platform', { auth: false }),
   /** POST /api/businesses: an additional salon under the signed-in owner. category is required (400 otherwise). */
   createBusiness: (body: { ownerId: Id; name: string; category: string; address?: string; city?: string; country?: string; phone?: string }) =>
     request<Business>('/businesses', { method: 'POST', body }),
   /** GET /api/businesses/{id}/readiness: what is still missing before customers can book. */
-  readiness: (b: Id) => request<Readiness>(`/businesses/${b}/readiness`),
+  readiness: (b: Id) => request<Partial<Readiness> | null>(`/businesses/${b}/readiness`).then((r): Readiness => ({ bookable: r?.bookable !== false, missing: Array.isArray(r?.missing) ? r!.missing! : [], recommended: Array.isArray(r?.recommended) ? r!.recommended! : [] })),
   /** GET /api/public/staff-invites/{token}. */
   invitePreview: (token: string) => request<InvitePreview>(`/public/staff-invites/${encodeURIComponent(token)}`, { auth: false }),
   /** POST /api/public/staff-invites/{token}/accept: creates the account (or checks the password of an existing one). 409 when it is a customer account. */

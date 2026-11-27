@@ -45,3 +45,5 @@ export default function Bookings() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

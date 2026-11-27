@@ -11,7 +11,7 @@ import { DayStrip } from '@/components/calendar';
 import { BackBar, IconBtn } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import { api, ApiError, toDay, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
+import { api, ApiError, toDay, validId, type Client, type ClientWithStats, type Service, type Staff } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { recallClient } from '@/lib/client-cache';
 import { apiM, type Combo } from '@/lib/api-more';
@@ -20,7 +20,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { barBg, brandInk, circShadow, cardShadow, font } from '@/theme/tokens';
 
-type Pick = { id: string; name: string };
+type Pick = { id: string; name: string; phone?: string | null; email?: string | null };
 type Repeat = 'none' | 'weekly' | 'biweekly' | 'monthly';
 const REPEATS: { k: Repeat; label: 'create.repeatNone' | 'create.repeatWeekly' | 'create.repeatBiweekly' | 'create.repeatMonthly' }[] = [
   { k: 'none', label: 'create.repeatNone' }, { k: 'weekly', label: 'create.repeatWeekly' }, { k: 'biweekly', label: 'create.repeatBiweekly' }, { k: 'monthly', label: 'create.repeatMonthly' },
@@ -71,7 +71,7 @@ export default function NewBooking() {
   async function bookCombo() {
     if (busy || !client || !combo || !time) return;
     setBusy(true);
-    const body = { businessId: sid, serviceId: combo.serviceId, partySize: party, guestNames: guests.slice(0, Math.max(0, party - 1)).map((g) => g.trim()), clientId: client.id, clientName: client.name, appointmentDate: toDay(date), startTime: time };
+    const body = { businessId: sid, serviceId: combo.serviceId, partySize: party, guestNames: guests.slice(0, Math.max(0, party - 1)).map((g) => g.trim()), ...(validId(client.id) ? { clientId: client.id } : null), clientName: client.name, ...(client.phone ? { clientPhone: client.phone } : null), appointmentDate: toDay(date), startTime: time };
     try {
       try { await apiM.bookCombo(body); }
       catch (e) {
@@ -100,7 +100,7 @@ export default function NewBooking() {
         for (const sv of picked) {
           const len = sv.durationMinutes ?? 30;
           const body = {
-            businessId: sid, staffId: master.id, clientId: client.id, clientName: client.name, serviceId: sv.id,
+            businessId: sid, staffId: master.id, clientId: client.id, clientName: client.name, clientPhone: client.phone ?? undefined, clientEmail: client.email ?? undefined, serviceId: sv.id,
             appointmentDate: toDay(day), startTime: fromMin(at), endTime: fromMin(at + len), price: sv.price,
           };
           try {
@@ -181,12 +181,12 @@ export default function NewBooking() {
       </View>
       {/* `.bsk` dark bar with the running summary and a white action button */}
       <View style={{ position: 'absolute', left: 16, right: 16, bottom: Math.max(ins.bottom, 20), borderRadius: 24, backgroundColor: barBg(t.dark), padding: 14, paddingLeft: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, color: 'rgba(255,255,255,.8)' }}>{time ? `${dateLabel(date)} · ${time}` : client?.name ?? tr(STEPS[step])}</Text>
           <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17, color: '#fff' }}>{service ? `${picked.length > 1 ? `${service.name} +${picked.length - 1}` : service.name}${master ? ` · ${master.name}` : ''}` : tr('create.title')}</Text>
         </View>
-        <Pressable onPress={() => (step === 3 ? void book() : setStep(step + 1))} disabled={!can || busy} accessibilityRole="button" style={{ height: 48, paddingHorizontal: 20, borderRadius: 24, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', gap: 6, opacity: can ? 1 : 0.5 }}>
-          {busy ? <ActivityIndicator color={brandInk} /> : <Text style={{ fontFamily: font.b, fontSize: 14.5, color: brandInk }}>{step === 3 ? tr('create.book') : tr('create.next')}</Text>}
+        <Pressable onPress={() => (step === 3 ? void book() : setStep(step + 1))} disabled={!can || busy} accessibilityRole="button" style={{ minHeight: 48, flexShrink: 0, maxWidth: '62%', paddingHorizontal: 18, paddingVertical: 6, borderRadius: 24, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: can ? 1 : 0.5 }}>
+          {busy ? <ActivityIndicator color={brandInk} /> : <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.b, fontSize: 14.5, color: brandInk, flexShrink: 1, textAlign: 'center' }}>{step === 3 ? tr('create.book') : tr('create.next')}</Text>}
           {step < 3 && !busy ? <Icon name="chev" size={18} color={brandInk} /> : null}
         </Pressable>
       </View>
@@ -227,7 +227,7 @@ function ClientStep({ sid, sel, onPick }: { sid: string; sel: Pick | null; onPic
     setBusy(true);
     try {
       const c = await api.createClient(sid, { firstName: first.trim(), lastName: last.trim() || undefined, phone: phone.trim() || undefined });
-      onPick({ id: c.id, name: `${c.firstName} ${c.lastName ?? ''}`.trim() });
+      onPick({ id: validId(c.id) ?? '', name: `${c.firstName} ${c.lastName ?? ''}`.trim(), phone: c.phone, email: c.email });
       setAdding(false);
     } catch (e) {
       toast((e as Error).message, 'error');
@@ -262,7 +262,7 @@ function ClientStep({ sid, sel, onPick }: { sid: string; sel: Pick | null; onPic
         <FlatList data={rows} keyExtractor={(c, i) => String(c.id ?? i)} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 2, paddingBottom: 140 }}
           renderItem={({ item: c }) => {
             const name = `${c.firstName} ${c.lastName ?? ''}`.trim();
-            return <Row uri={(recallClient(String(c.id)) as { avatarUrl?: string | null } | undefined)?.avatarUrl} name={name} sub={c.phone ?? undefined} on={sel?.id === c.id} onPress={() => onPick({ id: c.id, name })} />;
+            return <Row uri={(recallClient(String(c.id)) as { avatarUrl?: string | null } | undefined)?.avatarUrl} name={name} sub={c.phone ?? undefined} on={!!sel?.id && sel.id === c.id} onPress={() => onPick({ id: validId(c.id) ?? '', name, phone: c.phone, email: c.email })} />;
           }} />
       )}
     </View>
@@ -367,3 +367,5 @@ function TimeStep({ sid, service, picked, combo, party, setParty, guests, setGue
     </ScrollView>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

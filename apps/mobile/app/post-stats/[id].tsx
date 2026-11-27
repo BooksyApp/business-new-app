@@ -64,3 +64,5 @@ export default function PostStats() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

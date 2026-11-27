@@ -61,3 +61,5 @@ export default function CreateBusiness() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

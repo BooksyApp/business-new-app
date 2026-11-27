@@ -116,3 +116,5 @@ export default function LooksTab() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

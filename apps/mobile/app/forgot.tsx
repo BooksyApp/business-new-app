@@ -56,3 +56,5 @@ export default function Forgot() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

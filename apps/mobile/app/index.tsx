@@ -9,3 +9,5 @@ export default function Index() {
   const { status } = useApp();
   return <Redirect href={status === 'in' ? '/today' : '/login'} />;
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

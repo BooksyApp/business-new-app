@@ -208,3 +208,5 @@ export default function ClientCard() {
     </Screen>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

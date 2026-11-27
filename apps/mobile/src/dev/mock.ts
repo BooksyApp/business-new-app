@@ -14,7 +14,7 @@ export function install() {
   installDemoFetch();
   const search = typeof location !== 'undefined' ? location.search : '';
   const v = /mock=(\w+)/.exec(search)?.[1] ?? '';
-  setDemoVariant(v === 'empty' || v === 'error' || v === 'slow' ? v : '');
+  setDemoVariant(v === 'empty' || v === 'error' || v === 'slow' || v === 'live' ? v : '');
   const out = /signedout/.test(search);
   (globalThis as { __BOOQI_AUTODEMO__?: boolean }).__BOOQI_AUTODEMO__ = !out;
   if (out) void AsyncStorage.clear();

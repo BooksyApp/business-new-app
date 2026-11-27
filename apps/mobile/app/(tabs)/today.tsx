@@ -212,3 +212,5 @@ function Hero({ a, c, staff, onOpen, onArrived }: { a: Appointment; c?: ClientWi
     </View>
   );
 }
+
+export { ScreenErrorBoundary as ErrorBoundary } from '@/components/ScreenError';

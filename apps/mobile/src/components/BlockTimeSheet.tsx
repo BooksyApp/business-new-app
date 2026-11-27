@@ -51,12 +51,14 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
   const [weeks, setWeeks] = useState(8);
   useEffect(() => { if (open) { setStaffId(String(preset ?? masters[0]?.id ?? '')); setFull(false); setFrom(12 * 60); setTo(13 * 60); setReason(''); setRep(''); setWeeks(8); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const usable = masters.filter((m) => m.id !== '__none');
+  const who = staffId || String(usable[0]?.id ?? ''); // masters may arrive after the sheet opened (live: staff list still loading)
   async function create() {
-    if (!salon || !staffId) return;
+    if (!salon || !who) return;
     setBusy(true);
     try {
-      if (rep) await apiM.createRecurringTimeOff({ businessId: salon.id, staffId, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined, recurrencePattern: rep, recurrenceEndDate: toDay(addDays(date, weeks * 7)) });
-      else await api.createTimeOff({ businessId: salon.id, staffId, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined });
+      if (rep) await apiM.createRecurringTimeOff({ businessId: salon.id, staffId: who, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined, recurrencePattern: rep, recurrenceEndDate: toDay(addDays(date, weeks * 7)) });
+      else await api.createTimeOff({ businessId: salon.id, staffId: who, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onDone();
     } catch (e) {
@@ -85,13 +87,13 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
       </BottomSheet>
     );
   }
-  const valid = !!staffId && (full || to > from);
+  const valid = !!who && (full || to > from);
   return (
     <BottomSheet open={open} onClose={onClose}>
       <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink }}>{tr('block.new')}</Text>
       <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted, marginTop: 2, marginBottom: 12 }}>{dateLabel(date)}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
-        {masters.filter((m) => m.id !== '__none').map((m) => <Chip key={m.id} label={m.name} active={staffId === String(m.id)} onPress={() => setStaffId(String(m.id))} />)}
+        {usable.map((m) => <Chip key={m.id} label={m.name} active={who === String(m.id)} onPress={() => setStaffId(String(m.id))} />)}
       </ScrollView>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
         <Text style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{tr('block.fullDay')}</Text>

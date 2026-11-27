@@ -1,5 +1,5 @@
 import type { Id } from '@booqi/business-shared';
-import { request } from '@/lib/api';
+import { request, requestList } from '@/lib/api';
 
 /** Endpoints for group classes, client packages, WhatsApp reminders, CSV import, combos, promotion, suppliers and stock count (same paths/bodies as the old web hub). */
 const B = (b: Id) => `/businesses/${b}`;
@@ -24,7 +24,7 @@ export interface StockLevel { id: Id; name: string; sku?: string | null; quantit
 
 export const apiM = {
   // client packages (prepaid sessions)
-  clientPackages: (clientId: Id) => request<ClientPackage[]>(`/packages/client/${clientId}`),
+  clientPackages: (clientId: Id) => requestList<ClientPackage>(`/packages/client/${clientId}`),
   buyPackage: (b: Id, clientId: Id, packageId: Id) => request<ClientPackage>(`/packages/business/${b}/buy`, { method: 'POST', body: { clientId, packageId } }),
   // client delete + import
   deleteClient: (id: Id) => request<void>(`/clients/${id}`, { method: 'DELETE' }),
@@ -34,7 +34,7 @@ export const apiM = {
   waList: (b: Id, date?: string) => request<{ date: string; rows: WaRow[] }>(`${B(b)}/whatsapp-reminders${date ? `?date=${encodeURIComponent(date)}` : ''}`),
   waMark: (b: Id, appointmentId: string, sent: boolean) => request<void>(`${B(b)}/whatsapp-reminders/${appointmentId}`, { method: 'PUT', body: { sent } }),
   // combos (visit packages)
-  combos: (b: Id) => request<Combo[]>(`/services/business/${b}/packages`),
+  combos: (b: Id) => requestList<Combo>(`/services/business/${b}/packages`),
   saveCombo: (serviceId: Id, businessId: Id, maxPartySize: number, steps: { serviceId: Id; staffId?: Id | null; parallel?: boolean }[]) =>
     request<Combo | { serviceId: Id; steps: [] }>(`/services/${serviceId}/package`, { method: 'PUT', body: { businessId, maxPartySize, steps } }),
   comboSlots: (b: Id, serviceId: Id, date: string, partySize: number) => request<PackageSlots>(`/bookings/package/slots?businessId=${encodeURIComponent(String(b))}&serviceId=${encodeURIComponent(String(serviceId))}&date=${date}&partySize=${partySize}`),
@@ -42,7 +42,7 @@ export const apiM = {
     request<{ visitId: string; partySize: number; price: number; startTime: string; endTime: string }>('/bookings/package', { method: 'POST', body: override ? { ...body, override: { confirm: true } } : body }),
   // marketplace promotion
   promoQuote: (b: Id) => request<PromoQuote>(`${B(b)}/promotion`),
-  promoHistory: (b: Id) => request<PromoRow[]>(`${B(b)}/promotion/history`),
+  promoHistory: (b: Id) => requestList<PromoRow>(`${B(b)}/promotion/history`),
   promoBuy: (b: Id, packageId: Id) => request<{ id: Id; amount: number; currency: string | null; endsAt: string }>(`${B(b)}/promotion`, { method: 'POST', body: { packageId } }),
   promoCheckout: (b: Id, id: Id, successUrl: string, cancelUrl: string) => request<{ checkoutUrl: string }>(`${B(b)}/promotion/${id}/checkout`, { method: 'POST', body: { successUrl, cancelUrl } }),
   promoPause: (b: Id, id: Id) => request<unknown>(`${B(b)}/promotion/${id}/pause`, { method: 'POST', body: {} }),
@@ -50,16 +50,16 @@ export const apiM = {
   promoDiscard: (b: Id, id: Id) => request<unknown>(`${B(b)}/promotion/${id}/discard`, { method: 'POST', body: {} }),
   marketplace: (b: Id) => request<{ promoted: boolean; daily: { date: string; bookings: number }[] }>(`${B(b)}/marketplace-promotion`),
   // suppliers + stock count
-  suppliers: (b: Id) => request<Supplier[]>(`${B(b)}/suppliers`),
+  suppliers: (b: Id) => requestList<Supplier>(`${B(b)}/suppliers`),
   saveSupplier: (b: Id, id: Id | null, body: { name: string; contactName?: string; email?: string; phone?: string; accountNumber?: string; notes?: string; isActive?: boolean }) =>
     request<Supplier>(id == null ? `${B(b)}/suppliers` : `${B(b)}/suppliers/${id}`, { method: id == null ? 'POST' : 'PUT', body }),
-  orders: (b: Id) => request<PurchaseOrder[]>(`${B(b)}/purchase-orders`),
-  orderSuggest: (b: Id) => request<SuggestLine[]>(`${B(b)}/purchase-orders/suggest`),
+  orders: (b: Id) => requestList<PurchaseOrder>(`${B(b)}/purchase-orders`),
+  orderSuggest: (b: Id) => requestList<SuggestLine>(`${B(b)}/purchase-orders/suggest`),
   order: (b: Id, id: Id) => request<PurchaseOrder & { lines: OrderLine[] }>(`${B(b)}/purchase-orders/${id}`),
   orderCreate: (b: Id, body: { supplierId: Id | null; reference?: string; lines: { productId: Id; quantity: number; unitCost: number }[] }) => request<PurchaseOrder>(`${B(b)}/purchase-orders`, { method: 'POST', body }),
   orderMark: (b: Id, id: Id) => request<PurchaseOrder>(`${B(b)}/purchase-orders/${id}/order`, { method: 'POST', body: {} }),
   orderReceive: (b: Id, id: Id, lines: { lineId: Id; quantity: number }[]) => request<PurchaseOrder>(`${B(b)}/purchase-orders/${id}/receive`, { method: 'POST', body: { lines } }),
-  stockLevels: (b: Id) => request<StockLevel[]>(`${B(b)}/stock/levels`),
+  stockLevels: (b: Id) => requestList<StockLevel>(`${B(b)}/stock/levels`),
   stockCount: (b: Id, productId: Id, counted: number, note?: string) => request<unknown>(`${B(b)}/stock/count`, { method: 'POST', body: { productId, counted, note } }),
   // time off with recurrence
   createRecurringTimeOff: (body: { businessId: Id; staffId: Id; startDate: string; endDate: string; startTime?: string; endTime?: string; isFullDay: boolean; reason?: string; recurrencePattern: 'DAILY' | 'WEEKLY' | 'BIWEEKLY'; recurrenceEndDate: string }) =>
