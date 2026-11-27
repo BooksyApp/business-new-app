@@ -435,9 +435,9 @@ export function BarRow({ label, value, ratio }: { label: string; value: string; 
   const { t } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 7 }}>
-      <T k="body" lines={1} style={{ width: 92 }}>{label}</T>
+      <T k="body" lines={2} style={{ width: 96 }}>{label}</T>
       <View style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: t.track, overflow: 'hidden' }}><View style={{ width: `${Math.max(3, Math.min(100, ratio * 100))}%`, height: 8, borderRadius: 4, backgroundColor: t.violet }} /></View>
-      <Text style={{ fontFamily: font.b, fontSize: 13.5, color: t.ink, minWidth: 64, textAlign: 'right' }}>{value}</Text>
+      <Text style={{ fontFamily: font.b, fontSize: 13.5, color: t.ink, minWidth: 64, flexShrink: 0, textAlign: 'right' }}>{value}</Text>
     </View>
   );
 }

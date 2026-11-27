@@ -41,8 +41,24 @@ export interface Dashboard {
   topServices: { name: string; bookings: number; revenue: number }[];
   staff: { name: string; visits: number; revenue: number; utilization: number | null }[];
   sources: { source: string; bookings: number }[];
-  /** optional daily revenue series (newest last); the chart shows only when the API sends it */
+  /** daily revenue (oldest first), from the API's revenueTrend */
   series?: number[];
+}
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : 0);
+const arr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === 'object') : []);
+/** Live /analytics/business/{id}/dashboard returns kpis{key:{value,previous}} (percent KPIs are already 0-100), revenueTrend[{date,revenue,previous}], topServices, staff, sources[{source,bookings}]; any of them can be null or missing. */
+export function normDashboard(r: Record<string, unknown> | null): Dashboard {
+  const kr = (r?.kpis && typeof r.kpis === 'object' ? r.kpis : {}) as Record<string, { value?: unknown; previous?: unknown } | null>;
+  const kpis: Dashboard['kpis'] = {};
+  for (const k of Object.keys(kr)) kpis[k] = { value: num(kr[k]?.value), previous: num(kr[k]?.previous) };
+  const trend = arr(r?.revenueTrend).map((x) => num(x.revenue));
+  return {
+    kpis,
+    topServices: arr(r?.topServices).map((x) => ({ name: String(x.name ?? '—'), bookings: num(x.bookings), revenue: num(x.revenue) })),
+    staff: arr(r?.staff).map((x) => ({ name: String(x.name ?? '—'), visits: num(x.visits), revenue: num(x.revenue), utilization: x.utilization == null ? null : num(x.utilization) })),
+    sources: arr(r?.sources).map((x) => ({ source: String(x.source ?? 'other'), bookings: num(x.bookings) })),
+    series: trend.length > 1 ? trend : undefined,
+  };
 }
 export interface HoursRow { dayOfWeek: string; enabled: boolean; startTime: string | null; endTime: string | null }
 export interface NotifSettings {
@@ -116,7 +132,7 @@ export const apiX = {
   replyReview: (b: Id, id: Id, reply: string) => request<Review>(`/businesses/${b}/reviews/${id}/reply`, { method: 'PUT', body: { reply } }),
   reportReview: (b: Id, id: Id, reason: string, comment: string) => request<{ status: string }>(`/businesses/${b}/reviews/${id}/report`, { method: 'POST', body: { reason, comment } }),
   // analytics
-  dashboard: (b: Id, from: Date, to: Date) => request<Partial<Dashboard> | null>(`/analytics/business/${b}/dashboard?${q({ startDate: toDay(from), endDate: toDay(to) })}`).then((r): Dashboard => ({ ...r, kpis: r?.kpis ?? {}, topServices: Array.isArray(r?.topServices) ? r!.topServices! : [], staff: Array.isArray(r?.staff) ? r!.staff! : [], sources: Array.isArray(r?.sources) ? r!.sources! : [], series: Array.isArray(r?.series) ? r!.series : undefined })),
+  dashboard: (b: Id, from: Date, to: Date) => request<Record<string, unknown> | null>(`/analytics/business/${b}/dashboard?${q({ startDate: toDay(from), endDate: toDay(to), timezone: 'Asia/Baku' })}`).then(normDashboard),
   // settings
   hours: (b: Id) => requestList<HoursRow>(`/business-hours/business/${b}`),
   saveHours: (b: Id, rows: { dayOfWeek: string; enabled: boolean; startTime: string; endTime: string }[]) => requestList<HoursRow>(`/business-hours/business/${b}`, { method: 'PUT', body: rows }),
