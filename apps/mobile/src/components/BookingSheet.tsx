@@ -44,7 +44,6 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
   const [reason, setReason] = useState('');
   const cur = salon?.currency;
   const open = a.status === 'PENDING' || a.status === 'CONFIRMED';
-  const [menu, setMenu] = useState(false);
   const paid = a.paymentStatus === 'PAID';
   const phone = a.clientPhone;
 
@@ -132,31 +131,30 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
             </View>
           ) : null}
           {a.status === 'CONFIRMED' ? (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {paid
-                ? <Btn label={tr('n4.finish')} icon="check-badge" loading={busy} style={{ flex: 1 }} onPress={() => void run(() => api.completeAppointment(a.id), true)} />
-                : <Btn label={tr('n4.finishPay')} icon="wallet" style={{ flex: 1 }} onPress={() => setStep('checkout')} />}
-              <Pressable onPress={() => setMenu((m) => !m)} accessibilityRole="button" accessibilityLabel={tr('v2.tabMore')} style={{ width: 52, borderRadius: 16, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, alignItems: 'center', justifyContent: 'center' }}><Icon name="dots" size={22} color={t.ink} /></Pressable>
-            </View>
+            paid
+              ? <Btn label={tr('n4.finish')} icon="check-badge" loading={busy} onPress={() => void run(() => api.completeAppointment(a.id), true)} />
+              : <Btn label={tr('n4.finishPay')} icon="wallet" onPress={() => setStep('checkout')} />
           ) : null}
-          {a.status === 'CONFIRMED' && paid ? <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('n4.paid')}</Text> : null}
-          {a.status === 'CONFIRMED' && menu && !paid ? <Btn label={tr('n4.finishFree')} variant="secondary" loading={busy} onPress={() => void run(() => api.completeAppointment(a.id), true)} /> : null}
-          {open ? <Btn label={tr('appt.move')} icon="repeat" variant="secondary" onPress={() => setStep('reschedule')} /> : null}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
-            {phone ? (
-              <Pressable onPress={() => setStep('wa')} accessibilityRole="button" accessibilityLabel={tr('ux.waRemind')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 }}>
-                <Icon name="chat" size={20} color={t.vtext} />
-                <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{open ? tr('ux.waRemind') : tr('appt.messageClient')}</Text>
+          {/* One calm row of round icon actions instead of a stack of text buttons. */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingTop: 4 }}>
+            {([
+              phone ? ['phone', tr('n4.aCall'), () => void Linking.openURL(`tel:${phone}`), false] : null,
+              phone ? ['chat', tr('n4.aMsg'), () => setStep('wa'), false] : null,
+              open ? ['clock', tr('n4.aMove'), () => setStep('reschedule'), false] : null,
+              open && a.status === 'CONFIRMED' ? ['user', tr('n4.aNoShow'), () => void run(() => api.noShow(a.id)), false] : null,
+              open && a.status === 'CONFIRMED' ? ['x', tr('n4.aCancel'), () => setStep('cancel'), true] : null,
+            ].filter(Boolean) as [string, string, () => void, boolean][]).map(([ic, label, on, danger]) => (
+              <Pressable key={label} onPress={on} disabled={busy} accessibilityRole="button" accessibilityLabel={label} style={{ alignItems: 'center', gap: 6, minWidth: 56 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: danger ? t.gsoft : t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name={ic} size={21} color={danger ? t.gink : t.ink} /></View>
+                <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12, color: danger ? t.gink : t.muted }}>{label}</Text>
               </Pressable>
-            ) : <View />}
-            {open ? (
-              <View style={{ flexDirection: 'row', gap: 18 }}>
-                <Pressable onPress={() => void run(() => api.noShow(a.id))} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted }}>{tr('appt.noShow')}</Text></Pressable>
-                <Pressable onPress={() => setStep('cancel')} accessibilityRole="button"><Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.gink }}>{tr('appt.cancel')}</Text></Pressable>
-              </View>
-            ) : null}
+            ))}
           </View>
-          {phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" onPress={() => void Linking.openURL(`tel:${phone}`)} /> : null}
+          {a.status === 'CONFIRMED' && !paid ? (
+            <Pressable onPress={() => void run(() => api.completeAppointment(a.id), true)} disabled={busy} accessibilityRole="button" style={{ alignSelf: 'center', minHeight: 36, justifyContent: 'center' }}>
+              <Text style={{ fontFamily: font.s, fontSize: 13, color: t.ink3 }}>{tr('n4.finishFree')}</Text>
+            </Pressable>
+          ) : null}
         </>
       ) : null}
 
