@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Icon } from '@/components/Icon';
-import { Avatar, BackBar, Button, Card, IconBtn, Photo, Pill, Skeleton, T } from '@/components/kit';
+import { Avatar, BackBar, Button, Card, IconBtn, Photo, Skeleton, T } from '@/components/kit';
 import { Text } from '@/components/Text';
 import { ErrorState, Screen } from '@/components/ui';
 import { t as tr } from '@/i18n';
@@ -36,21 +36,19 @@ export default function PostView() {
             <Avatar uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} size={36} />
             <View style={{ flex: 1 }}><T k="h3" lines={1}>{salon?.name}</T>{l.serviceName ? <T k="xs" color={t.muted}>{l.serviceName}</T> : null}</View>
           </View>
-          <Photo src={l.photoUrl} style={{ width: W, height: W * 1.2 }} label={l.title ?? undefined} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <Icon name="heart" size={26} color={t.ink} />
-              <Icon name="chat" size={26} color={t.ink} />
-              <Icon name="send" size={26} color={t.ink} />
-            </View>
-            <Icon name="bookmark" size={26} color={t.ink} />
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 6 }}>
+          <Photo src={l.photoUrl} style={{ width: W, height: W * 1.2 }} label={l.title ?? undefined}>
+            {l.serviceName || l.staffName ? (
+              <View style={{ position: 'absolute', left: 12, right: 12, bottom: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {l.serviceName ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, height: 32, paddingHorizontal: 12, maxWidth: '75%' }}><Icon name="tag" size={14} color="#5b3fd6" /><Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{l.serviceName}</Text></View> : null}
+                {l.staffName ? <View style={{ backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, height: 32, paddingHorizontal: 12, justifyContent: 'center' }}><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>@{l.staffName.split(' ')[0]}</Text></View> : null}
+              </View>
+            ) : null}
+          </Photo>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 10 }}>
             <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{l.saveCount != null ? `${l.saveCount} ${tr('v3.likesWord')}` : tr('v3.noCounts')}</Text>
             <Button kind="ghost" size="sm" label={tr('v3.stats')} onPress={() => router.push(`/post-stats/${l.id}`)} style={{ paddingHorizontal: 0 }} />
           </View>
           {l.title ? <T k="body" style={{ paddingHorizontal: 20, marginTop: 4 }}><Text style={{ fontFamily: font.b }}>{(salon?.name ?? '').split(' ')[0].toLowerCase()}</Text> {l.title}</T> : null}
-          {l.serviceName || l.staffName ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 20, marginTop: 10 }}>{l.serviceName ? <Pill icon="scissors" text={l.serviceName} /> : null}{l.staffName ? <Pill icon="user" text={`@${l.staffName.split(' ')[0]}`} /> : null}</View> : null}
           <Card style={{ marginHorizontal: 20, marginTop: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1 }}><T k="xs" color={t.ink3}>{tr('v3.clientsSee')}</T><T k="h3">{tr('v3.bookThisLook')}</T></View>
             <Button size="sm" label={tr('v3.bookCta')} onPress={() => router.push('/booking/new')} />

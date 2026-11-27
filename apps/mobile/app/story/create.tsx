@@ -72,7 +72,7 @@ export default function StoryCreate() {
     } catch (e) { const m = `${tr('cp.fail')}: ${(e as Error).message}`; setErr(m); toast(m, 'error'); } finally { setBusy(false); }
   }
 
-  const bounds = { w: box.w, h: box.h, top: ins.top + 72, bottom: Math.max(ins.bottom, 14) + 10 + 54 + 10 + 38 + 10 + 44, toolX: box.w - 70, toolBottom: ins.top + 172 };
+  const bounds = { w: box.w, h: box.h, top: ins.top + 72, bottom: Math.max(ins.bottom, 14) + 10 + 54 + 10 + 58 + 10 + 44, toolX: box.w - 70, toolBottom: ins.top + 172 };
   if (step === 'edit' && sel) {
     const tool = (icon: string, label: string, on: () => void, txt?: string) => (
       <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}>
@@ -82,8 +82,8 @@ export default function StoryCreate() {
     return (
       <View style={{ flex: 1, backgroundColor: '#000' }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <Photo src={sel.src} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
-        <View style={{ position: 'absolute', left: 8, top: ins.top + 10, zIndex: 20, elevation: 20 }}>
-          <Pressable onPress={() => setStep('pick')} accessibilityRole="button" accessibilityLabel={tr('v2.back')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="back" size={24} color="#fff" /></Pressable>
+        <View style={{ position: 'absolute', left: 14, top: ins.top + 10, zIndex: 20, elevation: 20 }}>
+          <Pressable onPress={() => { setSel(null); setSvc(null); setWho(null); setText(''); setStep('pick'); }} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('v2.close')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={22} color="#fff" /></Pressable>
         </View>
         <View style={{ position: 'absolute', right: 14, top: ins.top + 10, gap: 10, zIndex: 20, elevation: 20 }}>
           {tool('', tr('v3.addText'), () => setEditText(true), 'Aa')}
@@ -114,14 +114,14 @@ export default function StoryCreate() {
           </>
         ) : null}
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: Math.max(ins.bottom, 14) + 10, gap: 10, paddingHorizontal: 16, zIndex: 20, elevation: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <View style={{ flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(29,23,48,.6)', borderRadius: 20, paddingHorizontal: 12, height: 38 }}>
-              <Icon name="eye" size={16} color="#fff" /><Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.s, fontSize: 12.5, color: '#fff' }}>{tr('v3.seenIn')}</Text>
+          <Pressable onPress={() => setAlsoLooks((v) => !v)} accessibilityRole="switch" accessibilityState={{ checked: alsoLooks }} accessibilityLabel={tr('v3.keepTitle')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(29,23,48,.62)', borderRadius: 20, paddingHorizontal: 14, height: 58 }}>
+            <Icon name="grid" size={20} color="#fff" />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14, color: '#fff' }}>{tr('v3.keepTitle')}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 12, color: 'rgba(255,255,255,.78)' }}>{alsoLooks ? tr('v3.keepOn') : tr('v3.keepOff')}</Text>
             </View>
-            <Pressable onPress={() => setAlsoLooks((v) => !v)} accessibilityRole="button" accessibilityState={{ selected: alsoLooks }} accessibilityLabel={tr('v3.alsoLooks')} style={{ flexShrink: 0, height: 38, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, borderRadius: 19, backgroundColor: alsoLooks ? 'rgba(111,82,237,.9)' : 'rgba(29,23,48,.6)' }}>
-              {alsoLooks ? <Icon name="check" size={14} color="#fff" /> : null}<Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 12.5, color: '#fff' }}>{tr('v3.alsoLooks')}</Text>
-            </Pressable>
-          </View>
+            <View style={{ width: 46, height: 28, borderRadius: 14, backgroundColor: alsoLooks ? '#12a36a' : 'rgba(255,255,255,.3)', padding: 3, alignItems: alsoLooks ? 'flex-end' : 'flex-start' }}><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} /></View>
+          </Pressable>
           {err ? <View style={{ alignSelf: 'center', backgroundColor: 'rgba(232,62,99,.95)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 }}><Text style={{ fontFamily: font.s, fontSize: 13, color: '#fff', textAlign: 'center' }}>{err}</Text></View> : null}
           <Pressable onPress={() => void share()} disabled={busy} accessibilityRole="button" accessibilityLabel={tr('cp.share')} style={{ height: 54, borderRadius: 27, alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', opacity: busy ? 0.85 : 1 }}>
             {busy ? <ActivityIndicator color="#1d1730" /> : null}

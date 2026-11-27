@@ -54,7 +54,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
   } }]);
   return (
     <Screen>
-      <BackBar label={tr('v2.tabMore')} onBack={onBack} right={<IconBtn icon="plus" label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} onPress={() => { if (tab === 'stories') router.push('/story/create'); else { setPick(null); setErr(''); setSheet(true); } }} />} />
+      <BackBar label={tr('v2.tabMore')} onBack={onBack} right={<IconBtn icon="plus" label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} onPress={() => { router.push('/story/create'); }} />} />
       <Title sub={salon?.name} style={{ paddingBottom: 12 }}>{tr('sections.views')}</Title>
       <ChipRow style={{ marginBottom: 12 }}>
         <KChip label={tr('lk.photos')} on={tab === 'photos'} onPress={() => setTab('photos')} />
@@ -63,7 +63,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <KSkel blocks={[{ h: 160, r: 0 }, { h: 160, r: 0 }]} /> : (
         <FlatList data={list.data ?? []} numColumns={3} keyExtractor={(x) => String(x.id)} columnWrapperStyle={{ gap: 2 }} contentContainerStyle={{ paddingBottom: 60, gap: 2 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListEmptyComponent={<EmptyState photo="demo:f03" title={tr('lk.empty')} body={tr('v2.firstWorkBody')} action={{ label: tab === 'photos' ? tr('ad.upload') : tr('ad.story'), icon: 'plus', onPress: () => { if (tab === 'stories') router.push('/story/create'); else { setPick(null); setErr(''); setSheet(true); } } }} />}
+          ListEmptyComponent={<EmptyState photo="demo:f03" title={tr('lk.empty')} body={tr('v2.firstWorkBody')} action={{ label: tab === 'photos' ? tr('ad.upload') : tr('ad.story'), icon: 'plus', onPress: () => { router.push('/story/create'); } }} />}
           renderItem={({ item: x, index }) => (
             <Pressable onPress={() => (tab === 'photos' ? router.push(`/post/${x.id}`) : router.push(`/story/view?mode=own&i=${index}`))} onLongPress={() => del(x.id)} noScale accessibilityRole="imagebutton" accessibilityLabel={x.cap || tr('lk.photos')} style={{ flex: 1 / 3 }}>
               <KPhoto src={x.url} style={{ width: '100%', aspectRatio: 0.8 }}>

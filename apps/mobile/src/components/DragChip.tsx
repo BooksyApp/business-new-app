@@ -46,7 +46,7 @@ export function DragChip({ bounds, slot, label, onPress, onRemove, children }: {
       x.value = Math.min(maxX, Math.max(8, sx.value + e.translationX));
       y.value = ny;
     });
-  const tap = Gesture.Tap().maxDistance(8).runOnJS(true).onEnd((_e, ok) => { if (ok) onPress(); });
+  const tap = Gesture.Tap().maxDistance(8).runOnJS(true).onEnd((e, ok) => { if (!ok) return; if (e.x > cw.value - 40) onRemove(); else onPress(); });
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }] }));
 
   return (

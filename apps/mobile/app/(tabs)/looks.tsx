@@ -39,8 +39,9 @@ export default function LooksTab() {
   const manage = () => router.push('/section/views');
   const addStory = () => router.push('/story/create');
   const openStory = () => router.push('/story/view?mode=own');
-  const cats = [...new Set((services.data ?? []).map((s) => s.categoryName).filter(Boolean) as string[])].slice(0, 5);
-  const hl = cats.map((c, i) => ({ c, photo: (services.data ?? []).find((s) => s.categoryName === c && (s as { imageUrl?: string }).imageUrl) as { imageUrl?: string } | undefined, i }));
+  // Highlights = only the services actually tagged on a look (one bubble per service, with that look's photo).
+  const hl = [...new Map(list.filter((l) => l.serviceName).map((l) => [l.serviceName as string, { c: l.serviceName as string, photo: l.photoUrl, id: l.id }])).values()].slice(0, 8);
+  const cats = [...new Set((services.data ?? []).map((s) => s.categoryName).filter(Boolean) as string[])];
   const cell = (W - 4) / 3;
   const savers = fav.data?.favoriteCount ?? 0;
   const newSavers = fav.data?.newFavoritesThisMonth ?? 0;
@@ -71,35 +72,24 @@ export default function LooksTab() {
             <Button size="sm" kind="fl" label={tr('v2.storyAdd')} style={{ flex: 1, height: 38 }} onPress={addStory} />
           </View>
         </View>
-        {list.length ? (
+        {hl.length ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingHorizontal: 20, paddingTop: 14 }}>
             {hl.map((h) => (
-              <Pressable key={h.c} onPress={manage} accessibilityRole="button" accessibilityLabel={h.c} style={{ width: 62, alignItems: 'center' }}>
+              <Pressable key={h.c} onPress={() => router.push(`/post/${h.id}`)} accessibilityRole="button" accessibilityLabel={h.c} style={{ width: 62, alignItems: 'center' }}>
                 <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: 1, borderColor: t.hair, padding: 3, backgroundColor: t.canvas }}>
-                  <Avatar uri={h.photo?.imageUrl ?? list[h.i % list.length]?.photoUrl} name={h.c} size={54} />
+                  <Avatar uri={h.photo} name={h.c} size={54} />
                 </View>
                 <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 11.5, color: t.ink, marginTop: 5 }}>{h.c}</Text>
               </Pressable>
             ))}
-            <Pressable onPress={manage} accessibilityRole="button" accessibilityLabel={tr('v2.newHl')} style={{ width: 62, alignItems: 'center' }}>
-              <View style={{ width: 62, height: 62, borderRadius: 31, borderWidth: 1, borderColor: t.hair, alignItems: 'center', justifyContent: 'center' }}><Icon name="plus" size={22} color={t.ink} /></View>
-              <Text style={{ fontFamily: font.r, fontSize: 11.5, color: t.ink, marginTop: 5 }}>{tr('v2.newHl')}</Text>
-            </Pressable>
           </ScrollView>
         ) : null}
-        <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: t.hair, marginTop: 14 }}>
-          {['grid', 'tag', 'bookmark'].map((i, k) => (
-            <View key={i} style={{ flex: 1, height: 46, alignItems: 'center', justifyContent: 'center', borderBottomWidth: k === 0 ? 1.5 : 0, borderBottomColor: t.ink, marginBottom: -1 }}>
-              <Icon name={i} size={22} color={k === 0 ? t.ink : t.ink3} />
-            </View>
-          ))}
-        </View>
+        <View style={{ height: 1, backgroundColor: t.hair, marginTop: 14 }} />
         {looks.error ? <ErrorState error={looks.error} onRetry={() => void looks.reload()} /> : looks.loading && !looks.data ? <Skeleton blocks={[{ h: cell * 1.25, r: 0 }, { h: cell * 1.25, r: 0 }]} /> : list.length ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
             {list.map((l, i) => (
               <Pressable key={String(l.id)} onPress={() => router.push(`/post/${l.id}`)} noScale accessibilityRole="imagebutton" accessibilityLabel={l.title ?? l.serviceName ?? ''}>
                 <Photo src={l.photoUrl} style={{ width: cell, height: cell * 1.25 }}>
-                  {i % 4 === 1 ? <View style={{ position: 'absolute', top: 7, right: 7 }}><Icon name="img" filled size={16} color="#fff" /></View> : null}
                 </Photo>
               </Pressable>
             ))}
