@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
 import { BottomSheet } from '@/components/BottomSheet';
 import { BookingSheet } from '@/components/BookingSheet';
 import { CalendarOverview } from '@/components/CalendarOverview';
-import { Timeline, WeekView } from '@/components/calendar';
+import { Timeline, WeekView, lanes } from '@/components/calendar';
 import { Icon } from '@/components/Icon';
 import { Avatar, Button, EmptyState, IconBtn, ListItem, LoadRing, Pill, Segmented, Skeleton, T, TopBar } from '@/components/kit';
 import { Pressable } from '@/components/Pressable';
@@ -198,6 +198,10 @@ function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint
   const lo = Math.min(9, ...list.map((a) => Math.floor(toMin(a.startTime) / 60)));
   const hi = Math.max(20, ...list.map((a) => Math.ceil(toMin(a.endTime) / 60)));
   const y = (m: number) => ((m - lo * 60) / 60) * hourPx;
+  // Overlapping bookings of the same specialist share the row side by side instead of hiding each other.
+  const { width: winW } = useWindowDimensions();
+  const colW = winW - 20 - 66;
+  const lane = lanes(list);
   const isToday = sameDay(date, salonNow());
   const n = nowMin();
   return (
@@ -218,17 +222,18 @@ function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint
       })}
       {list.map((a) => {
         const top = y(toMin(a.startTime)); const h = Math.max(48, y(toMin(a.endTime)) - top - 4);
+        const ln = lane.get(a.id) ?? { lane: 0, n: 1 }; const lw = colW / ln.n;
         const pend = a.status === 'PENDING'; const done = a.status === 'COMPLETED';
         return (
           <Pressable key={a.id} onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${a.clientName}, ${hhmm(a.startTime)}`}
-            style={{ position: 'absolute', left: 66, right: 0, top: top + 2, height: h, borderRadius: 16, paddingVertical: 9, paddingHorizontal: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start', overflow: 'hidden', opacity: done ? 0.55 : 1,
+            style={{ position: 'absolute', left: 66 + ln.lane * lw, width: lw - (ln.n > 1 ? 3 : 0), top: top + 2, height: h, borderRadius: 16, paddingVertical: 9, paddingHorizontal: ln.n > 1 ? 8 : 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start', overflow: 'hidden', opacity: done ? 0.55 : 1,
               backgroundColor: pend ? t.surface : evTint[TINT[tint % TINT.length]], borderWidth: pend ? 1.5 : 0, borderColor: 'rgba(232,62,99,.35)' }}>
-            <Avatar uri={a.clientId != null ? avatarOf.get(String(a.clientId)) : null} name={a.clientName} size={30} />
+            {ln.n > 1 ? null : <Avatar uri={a.clientId != null ? avatarOf.get(String(a.clientId)) : null} name={a.clientName} size={30} />}
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, lineHeight: 19, color: '#1d1730' }}>{a.clientName}</Text>
               <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13, color: '#6b6158' }}>{hhmm(a.startTime)}–{hhmm(a.endTime)} · {a.serviceName}</Text>
             </View>
-            {pend ? <Pill tone="g" text={tr('status.PENDING')} /> : null}
+            {pend && ln.n === 1 ? <Pill tone="g" text={tr('status.PENDING')} /> : null}
           </Pressable>
         );
       })}
