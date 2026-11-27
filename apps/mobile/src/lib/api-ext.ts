@@ -66,7 +66,8 @@ export interface NotifSettings {
   salonAlerts?: boolean; reminderHoursBefore: number; smsEnabled: boolean; pushEnabled: boolean; whatsappEnabled?: boolean; smsAvailable?: boolean; pushAvailable?: boolean; whatsappAvailable?: boolean;
   senderName: string | null; replyTo: string | null;
 }
-export interface Look { id: Id; photoUrl: string; title?: string | null; serviceName?: string | null; status: string }
+/** saveCount: how many customers saved the look (saved_looks); the API sends no view count for looks. */
+export interface Look { id: Id; photoUrl: string; title?: string | null; serviceName?: string | null; status: string; saveCount?: number }
 export interface Story { id: Id; url: string; caption?: string | null; viewCount: number; expiresAt: string }
 export interface ConsentForm { id: Id; name?: string; title?: string; isActive?: boolean }
 export interface SubStatus { plan?: string; status?: string; trialEndsAt?: string | null; currentPeriodEnd?: string | null }

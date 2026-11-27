@@ -25,7 +25,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
   const { salon } = useApp();
   const sid = salon?.id ?? '';
   const [tab, setTab] = useState<'photos' | 'stories'>('photos');
-  const list = useLoad(async () => (tab === 'photos' ? (await apiX.looks(sid)).map((l) => ({ id: l.id, url: l.photoUrl, cap: l.title ?? l.serviceName ?? '', tag: l.status, views: null as number | null })) : (await apiX.stories(sid)).map((s) => ({ id: s.id, url: s.url, cap: s.caption ?? '', tag: '', views: s.viewCount }))), [sid, tab]);
+  const list = useLoad(async () => (tab === 'photos' ? (await apiX.looks(sid)).map((l) => ({ id: l.id, url: l.photoUrl, cap: l.title ?? l.serviceName ?? '', tag: l.status, views: l.saveCount ?? null, ico: 'bookmark' })) : (await apiX.stories(sid)).map((s) => ({ id: s.id, url: s.url, cap: s.caption ?? '', tag: '', views: s.viewCount, ico: 'eye' }))), [sid, tab]);
   const [upBusy, setUpBusy] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [pick, setPick] = useState<Picked | null>(null);
@@ -65,7 +65,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
             <Pressable onPress={() => (tab === 'photos' ? router.push(`/post/${x.id}`) : router.push(`/story/view?mode=own&i=${index}`))} onLongPress={() => del(x.id)} noScale accessibilityRole="imagebutton" accessibilityLabel={x.cap || tr('lk.photos')} style={{ flex: 1 / 3 }}>
               <KPhoto src={x.url} style={{ width: '100%', aspectRatio: 0.8 }}>
                 {x.tag && !/approved|live|published/i.test(x.tag) ? <View style={{ position: 'absolute', left: 6, top: 6 }}><KPill tone={/rejected/i.test(x.tag) ? 'g' : 'wh'} text={tr(`lk.${/rejected/i.test(x.tag) ? 'rejected' : 'pending'}` as 'lk.pending')} /></View> : null}
-                {x.views != null ? <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}><Icon name="eye" size={14} color="#fff" /><Text style={{ fontFamily: font.b, fontSize: 12, color: '#fff' }}>{x.views}</Text></View> : null}
+                {x.views != null ? <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}><Icon name={x.ico} size={14} color="#fff" /><Text style={{ fontFamily: font.b, fontSize: 12, color: '#fff' }}>{x.views}</Text></View> : null}
               </KPhoto>
             </Pressable>
           )} />

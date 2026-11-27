@@ -41,7 +41,7 @@ export default function LooksTab() {
   const cats = [...new Set((services.data ?? []).map((s) => s.categoryName).filter(Boolean) as string[])].slice(0, 5);
   const hl = cats.map((c, i) => ({ c, photo: (services.data ?? []).find((s) => s.categoryName === c && (s as { imageUrl?: string }).imageUrl) as { imageUrl?: string } | undefined, i }));
   const cell = (W - 4) / 3;
-  const views = list.reduce((n, l) => n + ((l as { views?: number }).views ?? 0), 0);
+  const views = list.reduce((n, l) => n + ((l as { saveCount?: number }).saveCount ?? 0), 0);
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace('.', ',')}K` : String(n));
 
   return (

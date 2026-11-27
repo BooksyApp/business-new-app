@@ -13,7 +13,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-type LookX = { id: string | number; photoUrl: string; title?: string | null; serviceName?: string | null; likes?: number; views?: number };
+type LookX = { id: string | number; photoUrl: string; title?: string | null; serviceName?: string | null; saveCount?: number };
 
 /** Post view: header, big photo, counts + "Statistika", caption, service chip and how clients see the booking prompt. */
 export default function PostView() {
@@ -46,7 +46,7 @@ export default function PostView() {
             <Icon name="bookmark" size={26} color={t.ink} />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginTop: 6 }}>
-            <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{l.likes != null ? `${l.likes} ${tr('v3.likesWord')}` : tr('v3.noCounts')}</Text>
+            <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{l.saveCount != null ? `${l.saveCount} ${tr('v3.likesWord')}` : tr('v3.noCounts')}</Text>
             <Button kind="ghost" size="sm" label={tr('v3.stats')} onPress={() => router.push(`/post-stats/${l.id}`)} style={{ paddingHorizontal: 0 }} />
           </View>
           {l.title ? <T k="body" style={{ paddingHorizontal: 20, marginTop: 4 }}><Text style={{ fontFamily: font.b }}>{(salon?.name ?? '').split(' ')[0].toLowerCase()}</Text> {l.title}</T> : null}
