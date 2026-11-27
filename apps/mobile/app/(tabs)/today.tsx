@@ -49,6 +49,8 @@ export default function Today() {
   const staff = useLoad<Staff[]>(() => api.staff(sid), [sid, version]);
   const clients = useLoad(async () => { const r = await api.clientsWithStats(sid).catch(() => [] as ClientWithStats[]); rememberClients(r); return r; }, [sid, version]);
   const stories = useLoad(() => apiX.stories(sid).catch(() => []), [sid, version]);
+  // The salon's collected revenue for today comes from the same report the Reports screen shows, so the two numbers always agree.
+  const dash = useLoad(() => apiX.dashboard(sid, now, now).catch(() => null), [sid, version]);
 
   const all = range.data ?? [];
   const todayKey = toDay(now);
@@ -67,7 +69,7 @@ export default function Today() {
   const avg = (k: 'revenue' | 'bookings' | 'occ') => (prev.length ? prev.reduce((n, d) => n + d[k], 0) / prev.length : 0);
   const pct = (v: number, b: number) => (b > 0 ? `${v >= b ? '+' : ''}${Math.round(((v - b) / b) * 100)}%` : '');
   const kpis = [
-    { l: tr('v2.revenue'), v: money(td.revenue, salon?.currency), d: pct(td.revenue, avg('revenue')), s: s7.map((d) => d.revenue) },
+    { l: tr('v2.revenue'), v: money(dash.data?.kpis.revenue?.value ?? td.revenue, salon?.currency), d: pct(td.revenue, avg('revenue')), s: s7.map((d) => d.revenue) },
     { l: tr('v2.bookings'), v: String(td.bookings), d: prev.length ? `${td.bookings >= avg('bookings') ? '+' : ''}${Math.round(td.bookings - avg('bookings'))}` : '', s: s7.map((d) => d.bookings) },
     { l: tr('v2.occupancy'), v: `${Math.round(td.occ * 100)}%`, d: prev.length ? `${td.occ >= avg('occ') ? '+' : ''}${Math.round((td.occ - avg('occ')) * 100)}%` : '', s: s7.map((d) => d.occ) },
   ];

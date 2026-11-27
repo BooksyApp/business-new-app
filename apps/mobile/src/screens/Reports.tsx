@@ -60,6 +60,15 @@ export function Reports({ onBack }: { onBack: () => void }) {
                 </View>
                 <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 20, color: t.vtext }}>{fmt('revenue', exp?.value ?? 0)}</Text>
               </View>
+              {(d.data?.renterRevenue ?? 0) > 0 ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8, backgroundColor: t.fill, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <T k="t1" style={{ fontFamily: font.m }} lines={1}>{tr('n4.renters')}</T>
+                    <T k="xs" color={t.muted} lines={1}>{tr('n4.rentersSub')}</T>
+                  </View>
+                  <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 20, color: t.ink }}>{fmt('revenue', d.data?.renterRevenue ?? 0)}</Text>
+                </View>
+              ) : null}
               {series ? <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ marginTop: 14 }}><Spark data={series} width={w} height={96} /></View> : null}
             </View>
           ) : null}

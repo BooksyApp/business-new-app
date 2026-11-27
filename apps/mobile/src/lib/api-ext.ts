@@ -41,6 +41,8 @@ export interface Dashboard {
   topServices: { name: string; bookings: number; revenue: number }[];
   staff: { name: string; visits: number; revenue: number; utilization: number | null }[];
   sources: { source: string; bookings: number }[];
+  /** chair renters' takings in the period: theirs, never part of the salon's revenue */
+  renterRevenue?: number;
   /** daily revenue (oldest first), from the API's revenueTrend */
   series?: number[];
 }
@@ -58,6 +60,7 @@ export function normDashboard(r: Record<string, unknown> | null): Dashboard {
     staff: arr(r?.staff).map((x) => ({ name: String(x.name ?? '—'), visits: num(x.visits), revenue: num(x.revenue), utilization: x.utilization == null ? null : num(x.utilization) })),
     sources: arr(r?.sources).map((x) => ({ source: String(x.source ?? 'other'), bookings: num(x.bookings) })),
     series: trend.length > 1 ? trend : undefined,
+    renterRevenue: num(r?.renterRevenue),
   };
 }
 export interface HoursRow { dayOfWeek: string; enabled: boolean; startTime: string | null; endTime: string | null }
