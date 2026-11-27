@@ -4,7 +4,7 @@ import { isDemo } from '@/demo';
 /** Map pin of a salon. Backend fields on POST /businesses and PUT /businesses/{id}: `latitude`, `longitude` (Double). A salon without both never shows on the customer map. */
 export type Pin = { latitude: number; longitude: number };
 /** What the reverse lookup knows about a spot; every part is optional. */
-export type PinMeta = { address?: string; city?: string; state?: string; zip?: string; country?: string };
+export type PinMeta = { /** street only */ address?: string; /** house / building number */ building?: string; city?: string; zip?: string; country?: string };
 export type PinResult = Pin & PinMeta;
 /** Default view: Baku centre. */
 export const BAKU: Pin = { latitude: 40.4093, longitude: 49.8671 };
@@ -25,9 +25,9 @@ export type Place = PinResult & { label: string };
 
 function parts(a: Record<string, string> | undefined, display?: string): PinMeta {
   if (!a) return { address: display?.split(',').slice(0, 2).join(',').trim() || undefined };
-  const street = [a.road || a.pedestrian || a.neighbourhood || a.suburb, a.house_number].filter(Boolean).join(' ');
+  const street = a.road || a.pedestrian || a.neighbourhood || a.suburb || '';
   const city = a.city || a.town || a.village || a.municipality || a.city_district || a.county || a.state || undefined;
-  return { address: street || undefined, city, state: a.state || a.region || a.county || undefined, zip: a.postcode || undefined, country: a.country || undefined };
+  return { address: street || undefined, building: a.house_number || undefined, city, zip: a.postcode || undefined, country: a.country || undefined };
 }
 
 const DEMO_PLACES: Place[] = [
@@ -48,7 +48,7 @@ export const geo = {
   },
   /** GET /api/public/geocode/reverse?lat=&lon=. null when the lookup is unavailable (503): the person types the address by hand. */
   reverse: async (p: Pin): Promise<PinMeta | null> => {
-    if (isDemo()) return { address: 'Nizami küç. 52', city: 'Bakı', state: 'Bakı', zip: 'AZ1000', country: 'Azərbaycan' };
+    if (isDemo()) return { address: 'Nizami küç.', building: '52', city: 'Bakı', zip: 'AZ1000', country: 'Azərbaycan' };
     const r = await request<Raw | null>(`/public/geocode/reverse?lat=${p.latitude}&lon=${p.longitude}`, { auth: false }).catch(() => null);
     return r && (r.address || r.display_name) ? parts(r.address, r.display_name) : null;
   },

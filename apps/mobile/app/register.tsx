@@ -178,7 +178,7 @@ export default function Register() {
               {cats.length === 0 ? <T k="sm" color={t.muted}>{tr('common.loading')}</T> : null}
             </View>
             {label(tr('set.address'))}
-            <LocationField value={pin} error={pinMiss && !pin} query={[address, city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); if (r.address) setAddress(r.address); if (r.city) setCity(r.city); }} />
+            <LocationField value={pin} error={pinMiss && !pin} query={[address, city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); if (r.address) setAddress([r.address, r.building].filter(Boolean).join(' ')); if (r.city) setCity(r.city); }} />
             <Field icon="pin" placeholder={tr('ob.city')} accessibilityLabel={tr('ob.city')} value={city} onChangeText={setCity} />
             <Field icon="pin" placeholder={tr('ob.street')} accessibilityLabel={tr('ob.street')} value={address} onChangeText={setAddress} />
             <Field icon="phone" placeholder={`${tr('ob.bizPhone')} (${tr('ob.optional')})`} accessibilityLabel={tr('ob.bizPhone')} value={bizPhone} onChangeText={setBizPhone} keyboardType="phone-pad" />

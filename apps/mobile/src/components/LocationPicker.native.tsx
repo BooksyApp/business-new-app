@@ -105,7 +105,7 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
     if (!a) { setConfirming(true); a = await geo.reverse(pin).catch(() => null); setConfirming(false); }
     onConfirm({ ...pin, ...(a ?? {}) });
   };
-  const pick = (p: Place) => { Keyboard.dismiss(); setHits([]); setQ(p.label); go({ latitude: p.latitude, longitude: p.longitude }); setAddr({ address: p.address, city: p.city, state: p.state, zip: p.zip, country: p.country }); };
+  const pick = (p: Place) => { Keyboard.dismiss(); setHits([]); setQ(p.label); go({ latitude: p.latitude, longitude: p.longitude }); setAddr({ address: p.address, building: p.building, city: p.city, zip: p.zip, country: p.country }); };
 
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
@@ -145,7 +145,7 @@ export function LocationPicker({ open, onClose, value, onConfirm, query }: { ope
             <Text style={{ fontFamily: font.b, fontSize: 14, color: t.vtext }}>{tr('lp.mine')}</Text>
           </Pressable>
           <View style={{ borderRadius: 24, backgroundColor: t.surface, padding: 14, gap: 10, boxShadow: '0 8px 28px -10px rgba(29,23,48,.35)' } as object}>
-            <T k="sm" color={t.muted} lines={1}>{[addr?.address, addr?.city].filter(Boolean).join(', ') || tr('lp.hint')}</T>
+            <T k="sm" color={t.muted} lines={1}>{[[addr?.address, addr?.building].filter(Boolean).join(' '), addr?.city].filter(Boolean).join(', ') || tr('lp.hint')}</T>
             <Button label={tr('lp.confirm')} size="lg" block loading={confirming} onPress={() => void confirm()} />
           </View>
         </View>
