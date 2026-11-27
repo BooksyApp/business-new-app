@@ -1,9 +1,19 @@
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { askWithIntro } from '@/components/PermissionIntro';
 import { uploadForm } from '@/lib/api';
 import { t as tr } from '@/i18n';
 
-type Asset = { uri: string; fileName?: string | null; mimeType?: string | null };
+type Asset = { uri: string; fileName?: string | null; mimeType?: string | null; width?: number };
+/** Any picked image (HEIC, WebP, GIF, BMP, PNG...) is re-encoded to a JPEG of at most 2048 px wide, so the server never refuses a photo
+ *  for its format and uploads stay small. If the conversion itself fails the original file is sent as before. */
+async function toJpeg(a: Asset): Promise<Asset> {
+  try {
+    const wide = (a.width ?? 0) > 2048;
+    const r = await ImageManipulator.manipulateAsync(a.uri, wide ? [{ resize: { width: 2048 } }] : [], { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG });
+    return { uri: r.uri, fileName: 'photo.jpg', mimeType: 'image/jpeg', width: r.width };
+  } catch { return a; }
+}
 /** The ONLY shape a React Native FormData file part may have: `{ uri: 'file://...', name, type }` (plain strings, no Blob/File/asset objects).
  *  The picker re-encodes (quality < 1) to JPEG/PNG; a HEIC name or type would make the server reject the part. */
 const part = (a: Asset, fallback: string): Picked => {
@@ -22,7 +32,7 @@ async function launch(source: 'library' | 'camera', allowsEditing: boolean): Pro
   let r: ImagePicker.ImagePickerResult;
   try { r = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts); }
   catch (e) { throw new Error(tr('ad.permission') + ((e as Error).message ? ` (${(e as Error).message})` : '')); }
-  return r.canceled || !r.assets?.[0] ? null : r.assets[0];
+  return r.canceled || !r.assets?.[0] ? null : toJpeg(r.assets[0]);
 }
 
 export type Uploaded = { id: string; url: string };
