@@ -16,7 +16,7 @@ import { salonNow } from '@/lib/salonClock';
 /** Mobile BF02 numbers: hour label column 48 + line from x=58, 144-wide master columns 6 apart, 92 px per hour (`.lt`, `.lt-h`, `.lt-l`). */
 const GUTTER = 58;
 const COL_GAP = 6;
-const HOUR_PX = 100;
+const HOUR_PX = 128;
 
 // Tile palette of the design (.t1-.t4 on --c1..--c4), light and dark.
 const TILE_L: [string, string][] = [['#ece6ff', '#3b2a96'], ['#ffe4ea', '#a02244'], ['#fbecd6', '#7a4a00'], ['#e2f1e9', '#0d5a3b']];
@@ -257,7 +257,7 @@ export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen
 }
 
 const W_GUTTER = 34;
-const W_HOUR = 48;
+const W_HOUR = 64;
 
 /** Həftə: seven day columns on one shared hour scale (staff filter applied by the caller); tapping a header opens that day, a tile opens the booking. */
 export function WeekView({ date, appts, startHour, endHour, refreshing, onRefresh, onOpen, onPickDay }: {

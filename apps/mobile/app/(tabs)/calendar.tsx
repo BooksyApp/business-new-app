@@ -123,7 +123,7 @@ export default function Calendar() {
           {loading ? <Skeleton blocks={[{ h: 64 }, { h: 64 }, { h: 64 }, { h: 64 }]} /> : layout === 'grid' && !focus ? (
             <View style={{ height: 640, marginTop: 8 }}>
               <Timeline date={date} masters={team} appts={dayList} blocks={off.data ?? []} startHour={9} endHour={21} refreshing={false} onRefresh={() => void q.reload()}
-                onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} onPickMaster={(m) => { setFocus(String(m.id)); setLayout('summary'); }} hourPx={dense ? 76 : 104} />
+                onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} onPickMaster={(m) => { setFocus(String(m.id)); setLayout('summary'); }} hourPx={dense ? 96 : 128} />
             </View>
           ) : layout === 'week' ? (
             <View style={{ height: 640, marginTop: 8 }}>
@@ -133,7 +133,7 @@ export default function Calendar() {
           ) : dayList.length === 0 && !(focus && (off.data ?? []).some((b) => String(b.staffId) === focus)) ? (
             <EmptyState photo="demo:p7518700" artHeight={170} style={{ marginTop: 14 }} title={tr('v2.dayEmptyTitle')} body={tr('v2.dayEmptyBody')} action={{ label: tr('v2.addBooking'), icon: 'plus', onPress: () => newBooking() }} />
           ) : focused ? (
-            <DayColumn tint={Math.max(0, team.findIndex((s) => String(s.id) === focus))} date={date} list={dayList.filter((a) => String(a.staffId) === focus)} blocks={(off.data ?? []).filter((b) => String(b.staffId) === focus)} hourPx={dense ? 46 : 62}
+            <DayColumn tint={Math.max(0, team.findIndex((s) => String(s.id) === focus))} date={date} list={dayList.filter((a) => String(a.staffId) === focus)} blocks={(off.data ?? []).filter((b) => String(b.staffId) === focus)} hourPx={dense ? 84 : 116}
               avatarOf={avatarOf} onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} />
           ) : (
             <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
@@ -217,7 +217,7 @@ function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint
         );
       })}
       {list.map((a) => {
-        const top = y(toMin(a.startTime)); const h = Math.max(44, y(toMin(a.endTime)) - top - 4);
+        const top = y(toMin(a.startTime)); const h = Math.max(48, y(toMin(a.endTime)) - top - 4);
         const pend = a.status === 'PENDING'; const done = a.status === 'COMPLETED';
         return (
           <Pressable key={a.id} onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${a.clientName}, ${hhmm(a.startTime)}`}
@@ -225,8 +225,8 @@ function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint
               backgroundColor: pend ? t.surface : evTint[TINT[tint % TINT.length]], borderWidth: pend ? 1.5 : 0, borderColor: 'rgba(232,62,99,.35)' }}>
             <Avatar uri={a.clientId != null ? avatarOf.get(String(a.clientId)) : null} name={a.clientName} size={30} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 14, lineHeight: 17.5, color: '#1d1730' }}>{a.clientName}</Text>
-              <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 12, color: '#6b6158' }}>{hhmm(a.startTime)}–{hhmm(a.endTime)} · {a.serviceName}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, lineHeight: 19, color: '#1d1730' }}>{a.clientName}</Text>
+              <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13, color: '#6b6158' }}>{hhmm(a.startTime)}–{hhmm(a.endTime)} · {a.serviceName}</Text>
             </View>
             {pend ? <Pill tone="g" text={tr('status.PENDING')} /> : null}
           </Pressable>

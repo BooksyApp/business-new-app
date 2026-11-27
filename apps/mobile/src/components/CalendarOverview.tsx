@@ -18,7 +18,7 @@ import { salonNow } from '@/lib/salonClock';
 
 const PALETTE = ['#7c5cff', '#ff7aa2', '#2fbf8a', '#f0a63a', '#3aa0f0', '#c45cff'];
 const GUTTER = 46;
-const HOUR_PX = 60;
+const HOUR_PX = 84;
 const HEAD = 52;
 
 /**
