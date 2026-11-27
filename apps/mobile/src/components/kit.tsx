@@ -163,12 +163,24 @@ export function ChipRow({ children, style }: { children: React.ReactNode; style?
 }
 
 /** Photo with cover fit; `src` is an API path, an http URL, "demo:<key>" or a bundled asset. Shows the soft fill while empty. */
-export function Photo({ src, style, children, label, fit = 'cover' }: { src?: string | number | null; style?: StyleProp<ImageStyle>; children?: React.ReactNode; label?: string; /** 'contain' shows the whole picture (nothing cropped) */ fit?: 'cover' | 'contain' }) {
+export function Photo({ src, style, children, label, fit = 'cover', w }: { src?: string | number | null; style?: StyleProp<ImageStyle>; children?: React.ReactNode; label?: string; /** 'contain' shows the whole picture (nothing cropped) */ fit?: 'cover' | 'contain'; /** ask the server for a lighter copy about this many px wide (320-1800); only for our own uploads */ w?: number }) {
   const { t } = useTheme();
-  const s = photoSource(src);
+  const [tries, setTries] = React.useState(0);
+  React.useEffect(() => { setTries(0); }, [src]);
+  const base = photoSource(src);
+  // Our uploads come in ready-made widths, so a grid cell never downloads the 2048 px original. A download that was cut off
+  // (screen changed mid-load) is asked for again, up to twice, instead of leaving an empty tile.
+  const s = (() => {
+    if (!base || typeof base !== 'object' || Array.isArray(base) || !('uri' in base) || typeof base.uri !== 'string') return base;
+    if (!base.uri.includes('/api/public/uploads/')) return base;
+    const q: string[] = [];
+    if (w) q.push(`w=${[320, 480, 640, 800, 900, 1200, 1600, 1800].find((x) => x >= w) ?? 1800}`);
+    if (tries) q.push(`r=${tries}`);
+    return q.length ? { uri: `${base.uri}${base.uri.includes('?') ? '&' : '?'}${q.join('&')}` } : base;
+  })();
   return (
     <View style={[{ overflow: 'hidden', backgroundColor: t.fill }, style as StyleProp<ViewStyle>]} accessible={!!label} accessibilityLabel={label} accessibilityRole={label ? 'image' : undefined}>
-      {s ? <Image source={s} resizeMode={fit} accessibilityIgnoresInvertColors style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} /> : null}
+      {s ? <Image source={s} resizeMode={fit} accessibilityIgnoresInvertColors onError={() => setTries((n) => (n < 2 ? n + 1 : n))} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} /> : null}
       {children}
     </View>
   );

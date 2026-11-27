@@ -89,7 +89,7 @@ export default function LooksTab() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
             {list.map((l, i) => (
               <Pressable key={String(l.id)} onPress={() => router.push(`/post/${l.id}`)} noScale accessibilityRole="imagebutton" accessibilityLabel={l.title ?? l.serviceName ?? ''}>
-                <Photo src={l.photoUrl} style={{ width: cell, height: cell * 1.25 }}>
+                <Photo src={l.photoUrl} w={480} style={{ width: cell, height: cell * 1.25 }}>
                 </Photo>
               </Pressable>
             ))}

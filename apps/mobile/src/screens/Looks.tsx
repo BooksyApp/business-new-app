@@ -66,7 +66,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
           ListEmptyComponent={<EmptyState photo="demo:f03" title={tr('lk.empty')} body={tr('v2.firstWorkBody')} action={{ label: tab === 'photos' ? tr('ad.upload') : tr('ad.story'), icon: 'plus', onPress: () => { router.push('/story/create'); } }} />}
           renderItem={({ item: x, index }) => (
             <Pressable onPress={() => (tab === 'photos' ? router.push(`/post/${x.id}`) : router.push(`/story/view?mode=own&i=${index}`))} onLongPress={() => del(x.id)} noScale accessibilityRole="imagebutton" accessibilityLabel={x.cap || tr('lk.photos')} style={{ flex: 1 / 3 }}>
-              <KPhoto src={x.url} style={{ width: '100%', aspectRatio: 0.8 }}>
+              <KPhoto src={x.url} w={480} style={{ width: '100%', aspectRatio: 0.8 }}>
                 {x.tag && !/approved|live|published/i.test(x.tag) ? <View style={{ position: 'absolute', left: 6, top: 6 }}><KPill tone={/rejected/i.test(x.tag) ? 'g' : 'wh'} text={tr(`lk.${/rejected/i.test(x.tag) ? 'rejected' : 'pending'}` as 'lk.pending')} /></View> : null}
                 {x.views != null ? <View style={{ position: 'absolute', left: 6, bottom: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}><Icon name={x.ico} size={14} color="#fff" /><Text style={{ fontFamily: font.b, fontSize: 12, color: '#fff' }}>{x.views}</Text></View> : null}
               </KPhoto>
