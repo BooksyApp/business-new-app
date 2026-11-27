@@ -22,10 +22,10 @@ import { font } from '@/theme/tokens';
 export function Looks({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const router = useRouter();
-  const { salon } = useApp();
+  const { salon, version, bump } = useApp();
   const sid = salon?.id ?? '';
   const [tab, setTab] = useState<'photos' | 'stories'>('photos');
-  const list = useLoad(async () => (tab === 'photos' ? (await apiX.looks(sid)).map((l) => ({ id: l.id, url: l.photoUrl, cap: l.title ?? l.serviceName ?? '', tag: l.status, views: l.saveCount ?? null, ico: 'bookmark' })) : (await apiX.stories(sid)).map((s) => ({ id: s.id, url: s.url, cap: s.caption ?? '', tag: '', views: s.viewCount, ico: 'eye' }))), [sid, tab]);
+  const list = useLoad(async () => (tab === 'photos' ? (await apiX.looks(sid)).map((l) => ({ id: l.id, url: l.photoUrl, cap: l.title ?? l.serviceName ?? '', tag: l.status, views: l.saveCount ?? null, ico: 'bookmark' })) : (await apiX.stories(sid)).map((s) => ({ id: s.id, url: s.url, cap: s.caption ?? '', tag: '', views: s.viewCount, ico: 'eye' }))), [sid, tab, version]);
   const [upBusy, setUpBusy] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [pick, setPick] = useState<Picked | null>(null);
@@ -42,7 +42,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
     try {
       if (tab === 'photos') { const up = await uploadPicked(pick, 'LOOK'); await apiB.createLook(sid, up.id); }
       else await postStoryPicked(sid, pick, cap);
-      setSheet(false); setPick(null); setCap(''); void list.reload();
+      setSheet(false); setPick(null); setCap(''); bump(); void list.reload();
       setTimeout(() => toast(tr('cp.ok'), 'success'), 350);
     } catch (e) { const m = `${tr('cp.fail')}: ${(e as Error).message}`; setErr(m); toast(m, 'error'); } finally { setUpBusy(false); }
   }

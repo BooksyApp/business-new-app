@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, TextInput, View, useWindowDimensions } f
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
+import { DragChip } from '@/components/DragChip';
 import { Icon } from '@/components/Icon';
 import { Avatar, BackBar, Button, Chip, ChipRow, CtaBar, ListItem, Photo, T, Title } from '@/components/kit';
 import { Pressable } from '@/components/Pressable';
@@ -42,6 +43,8 @@ export default function StoryCreate() {
   const [sheet, setSheet] = useState<'svc' | 'who' | null>(null);
   const [alsoLooks, setAlsoLooks] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [box, setBox] = useState({ w: 0, h: 0 });
   const [err, setErr] = useState('');
   const services = useLoad(() => api.services(sid).catch(() => []), [sid]);
   const staff = useLoad(() => apiX.staffFull(sid).catch(() => []), [sid]);
@@ -64,10 +67,12 @@ export default function StoryCreate() {
       await postStoryPicked(sid, sel.picked, caption);
       if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, caption); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      bump(); close(); setTimeout(() => toast(tr('cp.ok'), 'success'), 400);
+      bump(); setDone(true);
+      setTimeout(() => { close(); setTimeout(() => { bump(); toast(tr('cp.ok'), 'success'); }, 350); }, 900);
     } catch (e) { const m = `${tr('cp.fail')}: ${(e as Error).message}`; setErr(m); toast(m, 'error'); } finally { setBusy(false); }
   }
 
+  const bounds = { w: box.w, h: box.h, top: ins.top + 72, bottom: Math.max(ins.bottom, 14) + 10 + 54 + 10 + 38 + 10 + 44, toolX: box.w - 70, toolBottom: ins.top + 172 };
   if (step === 'edit' && sel) {
     const tool = (icon: string, label: string, on: () => void, txt?: string) => (
       <Pressable onPress={on} accessibilityRole="button" accessibilityLabel={label} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(29,23,48,.5)', alignItems: 'center', justifyContent: 'center' }}>
@@ -75,12 +80,12 @@ export default function StoryCreate() {
       </Pressable>
     );
     return (
-      <View style={{ flex: 1, backgroundColor: '#000' }}>
+      <View style={{ flex: 1, backgroundColor: '#000' }} onLayout={(e) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <Photo src={sel.src} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
-        <View style={{ position: 'absolute', left: 8, top: ins.top + 10 }}>
+        <View style={{ position: 'absolute', left: 8, top: ins.top + 10, zIndex: 20, elevation: 20 }}>
           <Pressable onPress={() => setStep('pick')} accessibilityRole="button" accessibilityLabel={tr('v2.back')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="back" size={24} color="#fff" /></Pressable>
         </View>
-        <View style={{ position: 'absolute', right: 14, top: ins.top + 10, gap: 10 }}>
+        <View style={{ position: 'absolute', right: 14, top: ins.top + 10, gap: 10, zIndex: 20, elevation: 20 }}>
           {tool('', tr('v3.addText'), () => setEditText(true), 'Aa')}
           {tool('tag', tr('v3.addService'), () => setSheet('svc'))}
           {tool('user', tr('v3.addWho'), () => setSheet('who'))}
@@ -93,26 +98,28 @@ export default function StoryCreate() {
             </View>
           </View>
         ) : null}
-        {svc ? (
-          <Pressable onPress={() => setSvc(null)} accessibilityRole="button" accessibilityLabel={svc.name} style={{ position: 'absolute', left: 24, top: '48%', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, transform: [{ rotate: '-3deg' }] }}>
-            <T k="xs" color="#8c8177">{tr('v3.serviceTag')}</T>
-            <Text style={{ fontFamily: font.b, fontSize: 16, color: '#1d1730' }}>{svc.name}{svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}</Text>
-            <Text style={{ fontFamily: font.b, fontSize: 13, color: '#5b3fd6', marginTop: 2 }}>{tr('v3.bookCta')} ›</Text>
-          </Pressable>
+        {svc || who ? (
+          <>
+            {svc ? (
+              <DragChip bounds={bounds} slot={0} label={svc.name} onPress={() => setSheet('svc')} onRemove={() => setSvc(null)}>
+                <Icon name="tag" size={14} color="#5b3fd6" />
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{svc.name}{svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}</Text>
+              </DragChip>
+            ) : null}
+            {who ? (
+              <DragChip bounds={bounds} slot={svc ? 1 : 0} label={who.name} onPress={() => setSheet('who')} onRemove={() => setWho(null)}>
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>@{who.name.split(' ')[0]}</Text>
+              </DragChip>
+            ) : null}
+          </>
         ) : null}
-        {who ? (
-          <Pressable onPress={() => setWho(null)} accessibilityRole="button" accessibilityLabel={who.name} style={{ position: 'absolute', right: 20, top: '58%', flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 20, paddingLeft: 5, paddingRight: 12, paddingVertical: 5 }}>
-            <Avatar uri={who.avatarUrl} name={who.name} size={28} />
-            <Text style={{ fontFamily: font.b, fontSize: 14, color: '#1d1730' }}>@{who.name.split(' ')[0]}</Text>
-          </Pressable>
-        ) : null}
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: Math.max(ins.bottom, 14) + 10, gap: 10, paddingHorizontal: 16 }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: Math.max(ins.bottom, 14) + 10, gap: 10, paddingHorizontal: 16, zIndex: 20, elevation: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(29,23,48,.6)', borderRadius: 20, paddingHorizontal: 14, height: 38 }}>
-              <Icon name="eye" size={16} color="#fff" /><Text style={{ fontFamily: font.s, fontSize: 13, color: '#fff' }}>{tr('v3.seenIn')}</Text>
+            <View style={{ flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(29,23,48,.6)', borderRadius: 20, paddingHorizontal: 12, height: 38 }}>
+              <Icon name="eye" size={16} color="#fff" /><Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.s, fontSize: 12.5, color: '#fff' }}>{tr('v3.seenIn')}</Text>
             </View>
-            <Pressable onPress={() => setAlsoLooks((v) => !v)} accessibilityRole="button" accessibilityState={{ selected: alsoLooks }} accessibilityLabel={tr('v3.alsoLooks')} style={{ height: 38, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: 19, backgroundColor: alsoLooks ? 'rgba(111,82,237,.9)' : 'rgba(29,23,48,.6)' }}>
-              {alsoLooks ? <Icon name="check" size={14} color="#fff" /> : null}<Text style={{ fontFamily: font.b, fontSize: 13, color: '#fff' }}>{tr('v3.alsoLooks')}</Text>
+            <Pressable onPress={() => setAlsoLooks((v) => !v)} accessibilityRole="button" accessibilityState={{ selected: alsoLooks }} accessibilityLabel={tr('v3.alsoLooks')} style={{ flexShrink: 0, height: 38, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, borderRadius: 19, backgroundColor: alsoLooks ? 'rgba(111,82,237,.9)' : 'rgba(29,23,48,.6)' }}>
+              {alsoLooks ? <Icon name="check" size={14} color="#fff" /> : null}<Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 12.5, color: '#fff' }}>{tr('v3.alsoLooks')}</Text>
             </Pressable>
           </View>
           {err ? <View style={{ alignSelf: 'center', backgroundColor: 'rgba(232,62,99,.95)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 }}><Text style={{ fontFamily: font.s, fontSize: 13, color: '#fff', textAlign: 'center' }}>{err}</Text></View> : null}
@@ -121,6 +128,12 @@ export default function StoryCreate() {
             <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 16, color: '#1d1730' }}>{busy ? tr('cp.sharing') : tr('cp.share')}</Text>
           </Pressable>
         </View>
+        {done ? (
+          <View pointerEvents="auto" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 50, elevation: 50, backgroundColor: 'rgba(29,23,48,.72)', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: '#12704b', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={38} color="#fff" /></View>
+            <Text style={{ fontFamily: font.x, fontSize: 24, color: '#fff' }}>{tr('cp.ok')}</Text>
+          </View>
+        ) : null}
         <ToastHost modal />
         <BottomSheet open={sheet === 'svc'} onClose={() => setSheet(null)}>
           <T k="h1" style={{ marginBottom: 8 }}>{tr('v3.addService')}</T>
