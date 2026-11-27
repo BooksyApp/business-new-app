@@ -1,10 +1,11 @@
 import type { Appointment, ClientWithStats, Staff } from '@/lib/api';
 import { toDay } from '@/lib/api';
 import { addDays, toMin } from '@/lib/format';
+import { salonNowMin } from '@/lib/salonClock';
 
 /** Shared day maths of the v2 screens (Bu gün, Təqvim). */
 export const live = (a: Appointment) => a.status !== 'CANCELLED' && a.status !== 'NO_SHOW';
-export const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
+export const nowMin = salonNowMin; // the salon's clock, not the phone's
 export const firstName = (s?: string | null) => (s ?? '').trim().split(/\s+/)[0] ?? '';
 export const len = (a: Appointment) => Math.max(0, toMin(a.endTime) - toMin(a.startTime));
 /** Working minutes a specialist is planned for in a day (no per-staff shift API on this screen): 8 h. */

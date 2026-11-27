@@ -18,6 +18,7 @@ import { dayMonth, hhmm, money, toMin, weekdayLong } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { circShadow, cardShadow, font } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 /** BF01 "Bu gün": greeting, dark next-client hero, quick actions, the day's numbers and the next bookings. */
 export function TodayHome({ onOpen, onBlock, onCalendar }: { onOpen: (a: Appointment) => void; onBlock: () => void; onCalendar: () => void }) {
@@ -26,7 +27,7 @@ export function TodayHome({ onOpen, onBlock, onCalendar }: { onOpen: (a: Appoint
   const { salon, user, version, bump, badges } = useApp();
   const inset = useDockInset(24);
   const sid = salon?.id ?? '';
-  const now = new Date();
+  const now = salonNow();
   const day = useLoad(() => api.appointments(sid, now), [sid, version]);
   const staff = useLoad(() => api.staff(sid), [sid]);
   const sheet = useLoad(() => api.daySheet(sid, now).catch(() => null), [sid, version]);

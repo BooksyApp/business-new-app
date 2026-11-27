@@ -23,6 +23,7 @@ import { toast } from '@/lib/toast';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 type Panel = null | 'more' | 'cancel' | 'move' | 'wa';
 
@@ -114,7 +115,7 @@ export default function BookingDetail() {
             <Card style={{ paddingVertical: 4, paddingHorizontal: 16 }}>
               <KV first icon="scissors" label={tr('v2.service')} value={a.serviceName ?? '-'} />
               <KV icon="user" label={tr('v2.specialist')} value={m?.name ?? a.staffName ?? '-'} />
-              <KV icon="clock" label={tr('v2.time')} value={`${hhmm(a.startTime)} – ${hhmm(a.endTime)}, ${sameDay(day, new Date()) ? tr('v2.today').toLowerCase() : dateLabel(day)}`} />
+              <KV icon="clock" label={tr('v2.time')} value={`${hhmm(a.startTime)} – ${hhmm(a.endTime)}, ${sameDay(day, salonNow()) ? tr('v2.today').toLowerCase() : dateLabel(day)}`} />
               <KV icon="wallet" label={tr('v2.price')} value={paid ? `${money(a.price, salon?.currency)} · ${tr('n4.paid')}` : `${money(a.price, salon?.currency)} · ${tr('v2.payAtSalon')}`} />
             </Card>
             {answers.length ? (

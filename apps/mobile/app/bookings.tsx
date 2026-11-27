@@ -11,6 +11,7 @@ import { rememberClients } from '@/lib/client-cache';
 import { addDays, dayMonth, sameDay, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
+import { salonNow } from '@/lib/salonClock';
 
 type F = 'all' | 'PENDING' | 'CONFIRMED';
 
@@ -30,7 +31,7 @@ export default function Bookings() {
   return (
     <Screen>
       <Header title={tr('ux.bookingsTitle')} onBack={() => (router.canGoBack() ? router.back() : router.replace('/today'))}
-        subtitle={`${sameDay(date, new Date()) ? tr('common.today') : toDay(date)} · ${dayMonth(date)}`}
+        subtitle={`${sameDay(date, salonNow()) ? tr('common.today') : toDay(date)} · ${dayMonth(date)}`}
         right={<><Circ icon="back" label={tr('calendar.prevWeek')} onPress={() => setDate(addDays(date, -1))} /><Circ icon="chev" label={tr('calendar.nextWeek')} onPress={() => setDate(addDays(date, 1))} /></>} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginBottom: 14 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
         {([['all', tr('ux.fStatusAll')], ['PENDING', tr('ux.fPending')], ['CONFIRMED', tr('ux.fConfirmed')]] as const).map(([k, l]) => <Chip key={k} label={l} active={f === k} onPress={() => setF(k)} />)}

@@ -22,6 +22,7 @@ import { useLoad } from '@/lib/useLoad';
 import { bookingErrorText } from '@/lib/booking-errors';
 import { useTheme } from '@/theme/ThemeContext';
 import { cardShadow, font } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 type Who = { id: string; name: string; avatarUrl?: string | null; phone?: string | null; email?: string | null } | null;
 const ANY = '__any';
@@ -46,7 +47,7 @@ export default function NewBooking() {
   const [cat, setCat] = useState<string | null>(null);
   const [svcId, setSvcId] = useState<string | null>(p.service ?? null);
   const [pro, setPro] = useState<string>(p.staff ?? ANY);
-  const [date, setDate] = useState(() => (p.date ? fromIso(p.date) : new Date()));
+  const [date, setDate] = useState(() => (p.date ? fromIso(p.date) : salonNow()));
   const [slot, setSlot] = useState<string | null>(null);
   const [client, setClient] = useState<Who>(p.clientId ? { id: String(p.clientId), name: p.clientName ?? '' } : null);
   const [picker, setPicker] = useState(false);
@@ -104,7 +105,7 @@ export default function NewBooking() {
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump();
-      setDone({ client: client.name, service: svc.name, when: `${sameDay(date, new Date()) ? tr('v2.today') : `${weekdayLong(date)}, ${dayMonth(date)}`}, ${slot}`, who: firstName(assigned.name) });
+      setDone({ client: client.name, service: svc.name, when: `${sameDay(date, salonNow()) ? tr('v2.today') : `${weekdayLong(date)}, ${dayMonth(date)}`}, ${slot}`, who: firstName(assigned.name) });
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       const m = bookingErrorText(e); setSubmitErr(m); toast(m, 'error');
@@ -191,7 +192,7 @@ export default function NewBooking() {
           <>
             <View style={{ flexDirection: 'row', paddingHorizontal: 14, marginTop: 14 }}>
               {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(date), i)).map((d) => {
-                const on = sameDay(d, date); const past = d < addDays(new Date(), -1) && !sameDay(d, new Date());
+                const on = sameDay(d, date); const past = d < addDays(salonNow(), -1) && !sameDay(d, salonNow());
                 return (
                   <Pressable key={d.toDateString()} disabled={past} onPress={() => { setDate(d); setSlot(null); }} noScale accessibilityRole="button" accessibilityState={{ selected: on, disabled: past }} accessibilityLabel={`${weekdayLong(d)}, ${dayMonth(d)}`}
                     style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: 6, opacity: past ? 0.35 : 1 }}>

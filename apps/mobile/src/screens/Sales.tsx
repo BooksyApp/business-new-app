@@ -17,6 +17,7 @@ import { addDays, dateLabel, fromIso, hhmm, money, sameDay } from '@/lib/format'
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 const METHODS = ['CASH', 'CARD_TERMINAL', 'CHECK', 'SPLIT', 'MEMBERSHIP', 'GIFT_CARD', 'PACKAGE'] as const;
 
@@ -55,7 +56,7 @@ export function Sales({ onBack }: { onBack: () => void }) {
       <Header title={tr('sections.sales')} subtitle={salon?.name} onBack={onBack} right={addBtn} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 10 }}>
         {nav('back', -1, tr('sales.prev'))}
-        <Pressable onPress={() => setDate(new Date())} accessibilityRole="button"><Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink, textTransform: 'capitalize' }}>{sameDay(date, new Date()) ? tr('common.today') : dateLabel(date)}</Text></Pressable>
+        <Pressable onPress={() => setDate(salonNow())} accessibilityRole="button"><Text style={{ fontFamily: font.x, fontSize: 17, color: t.ink, textTransform: 'capitalize' }}>{sameDay(date, salonNow()) ? tr('common.today') : dateLabel(date)}</Text></Pressable>
         {nav('chev', 1, tr('sales.next'))}
       </View>
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <Skeleton rows={5} /> : (

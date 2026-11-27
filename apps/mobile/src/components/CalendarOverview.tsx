@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from '@/lib/insets';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 const PALETTE = ['#7c5cff', '#ff7aa2', '#2fbf8a', '#f0a63a', '#3aa0f0', '#c45cff'];
 const GUTTER = 46;
@@ -66,7 +67,7 @@ function DayGrid({ date, team, appts, W, onOpen }: { date: Date; team: Staff[]; 
   const lo = Math.min(9, ...appts.map((a) => Math.floor(toMin(a.startTime) / 60)));
   const hi = Math.max(20, ...appts.map((a) => Math.ceil(toMin(a.endTime) / 60)));
   const y = (m: number) => ((m - lo * 60) / 60) * HOUR_PX;
-  const isToday = sameDay(date, new Date());
+  const isToday = sameDay(date, salonNow());
   const hRef = useRef<ScrollView>(null);
   const bRef = useRef<ScrollView>(null);
   const sync = (x: number, from: 'h' | 'b') => (from === 'h' ? bRef : hRef).current?.scrollTo({ x, animated: false });
@@ -129,7 +130,7 @@ function WeekGrid({ ws, appts, team, W, onOpen, onPickDay }: { ws: Date; appts: 
       <View style={{ flexDirection: 'row' }}>
         {Array.from({ length: 7 }, (_, i) => addDays(ws, i)).map((d) => {
           const list = appts.filter((a) => a.appointmentDate.slice(0, 10) === toDay(d)).sort((a, b) => toMin(a.startTime) - toMin(b.startTime));
-          const today = sameDay(d, new Date());
+          const today = sameDay(d, salonNow());
           return (
             <View key={d.toDateString()} style={{ width: colW, paddingHorizontal: 2 }}>
               <Pressable onPress={() => onPickDay(d)} accessibilityRole="button" accessibilityLabel={`${weekdayLong(d)}, ${dayMonth(d)}`} style={{ alignItems: 'center', paddingVertical: 6, borderRadius: 12, backgroundColor: today ? t.vsoft : 'transparent' }}>

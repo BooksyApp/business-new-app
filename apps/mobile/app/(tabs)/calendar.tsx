@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from '@/lib/insets';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { evTint, font } from '@/theme/tokens';
+import { phoneZoneDiffers, salonCity, salonNow } from '@/lib/salonClock';
 
 type Mode = 'day' | 'month';
 type Layout = 'summary' | 'grid' | 'week';
@@ -73,7 +74,7 @@ export default function Calendar() {
 
   return (
     <Screen style={{ paddingTop: ins.top }}>
-      <TopBar title={tr('calendar.title')} sub={`${weekdayLong(date)}, ${dayMonth(date)}`}
+      <TopBar title={tr('calendar.title')} sub={`${weekdayLong(date)}, ${dayMonth(date)}${phoneZoneDiffers() ? ` · ${tr('n4.salonTime', { city: salonCity(), t: hhmm(`${String(salonNow().getHours()).padStart(2, '0')}:${String(salonNow().getMinutes()).padStart(2, '0')}`) })}` : ''}`}
         right={<>
           <Pressable onPress={() => setOverview(true)} accessibilityRole="button" accessibilityLabel={tr('n4.overview')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 12, borderRadius: 18, backgroundColor: t.vsoft }}>
             <Icon name="grid" size={18} color={t.vtext} /><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14, color: t.vtext }}>{tr('n4.overviewShort')}</Text>
@@ -133,7 +134,7 @@ export default function Calendar() {
             <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
               {team.map((s, i) => {
                 const { load, hours } = staffLoad(dayList, s);
-                const n = dayList.find((a) => String(a.staffId) === String(s.id) && a.status !== 'COMPLETED' && (!sameDay(date, new Date()) || toMin(a.endTime) > nowMin()));
+                const n = dayList.find((a) => String(a.staffId) === String(s.id) && a.status !== 'COMPLETED' && (!sameDay(date, salonNow()) || toMin(a.endTime) > nowMin()));
                 return (
                   <ListItem key={String(s.id)} first={i === 0} title={firstName(s.name)} onPress={() => setFocus(String(s.id))}
                     lead={<LoadRing value={load} size={56}><Avatar uri={s.avatarUrl} name={s.name} size={46} /></LoadRing>}
@@ -192,7 +193,7 @@ function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint
   const lo = Math.min(9, ...list.map((a) => Math.floor(toMin(a.startTime) / 60)));
   const hi = Math.max(20, ...list.map((a) => Math.ceil(toMin(a.endTime) / 60)));
   const y = (m: number) => ((m - lo * 60) / 60) * hourPx;
-  const isToday = sameDay(date, new Date());
+  const isToday = sameDay(date, salonNow());
   const n = nowMin();
   return (
     <View style={{ marginTop: 8, marginRight: 20, paddingLeft: 64, height: (hi - lo) * hourPx + 20 }}>

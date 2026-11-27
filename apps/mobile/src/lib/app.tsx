@@ -2,6 +2,7 @@ import { AppState as RNAppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api, ApiError, clearSession, loadSession, saveSalon, saveSession, setSignedOutHandler, type AuthResponse, type Business } from '@/lib/api';
 import { loadLocale } from '@/i18n';
+import { setSalonZone } from '@/lib/salonClock';
 import { apiB } from '@/lib/api-biz';
 import { useOnline } from '@/lib/net';
 import { registerIfGranted, unregisterPush } from '@/lib/push';
@@ -71,7 +72,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const list = await api.salonsForUser(s.user);
         if (!alive) return;
         setUser(s.user); setSalons(list);
-        setSalon(list.find((b) => b.id === s.salonId) ?? (list.length === 1 ? list[0] : null));
+        const picked = list.find((b) => b.id === s.salonId) ?? (list.length === 1 ? list[0] : null);
+        setSalonZone((picked as { timezone?: string } | null)?.timezone);   // the salon's clock for "now"
+        setSalon(picked);
         setStatus('in');
       } catch (e) {
         if (!alive) return;

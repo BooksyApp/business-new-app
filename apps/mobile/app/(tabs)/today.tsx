@@ -26,6 +26,7 @@ import { toast } from '@/lib/toast';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font, heroShadow } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 /**
  * Bu gün (artifact "Bu gün"): at most four blocks. Story rail, the next client as a photo card, three small KPI cards
@@ -39,7 +40,7 @@ export default function Today() {
   const inset = useDockInset(24);
   const ins = useSafeAreaInsets();
   const sid = salon?.id ?? '';
-  const now = new Date();
+  const now = salonNow();
   const [quick, setQuick] = useState(false);
   const [link, setLink] = useState(false);
   const [block, setBlock] = useState(false);

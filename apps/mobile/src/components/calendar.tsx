@@ -11,6 +11,7 @@ import { useDockInset } from '@/lib/dock';
 import { addDays, fromMin, hhmm, sameDay, startOfWeek, toMin, weekdayShort } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
 import { ctaShadow, font } from '@/theme/tokens';
+import { salonNow } from '@/lib/salonClock';
 
 /** Mobile BF02 numbers: hour label column 48 + line from x=58, 144-wide master columns 6 apart, 92 px per hour (`.lt`, `.lt-h`, `.lt-l`). */
 const GUTTER = 58;
@@ -128,7 +129,7 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
     const mine = appts.filter((a) => a.status !== 'CANCELLED' && (String(a.staffId) === String(m.id) || (m.id === '__none' && !masters.some((x) => String(x.id) === String(a.staffId)))));
     return { m, mine, lane: lanes(mine) };
   }), [masters, appts]);
-  const now = new Date();
+  const now = salonNow();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const showNow = sameDay(date, now) && nowMin >= startHour * 60 && nowMin <= endHour * 60;
   const nowTop = ((nowMin - startHour * 60) / 60) * hourPx;
@@ -209,7 +210,7 @@ export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen
   const { t } = useTheme();
   const inset = useDockInset(24);
   const list = useMemo(() => [...appts].filter((a) => a.status !== 'CANCELLED').sort((a, b) => toMin(a.startTime) - toMin(b.startTime)), [appts]);
-  const now = new Date(); const nowMin = now.getHours() * 60 + now.getMinutes();
+  const now = salonNow(); const nowMin = now.getHours() * 60 + now.getMinutes();
   const isToday = sameDay(date, now);
   const nextIdx = isToday ? list.findIndex((a) => toMin(a.endTime) > nowMin) : -1;
   return (
