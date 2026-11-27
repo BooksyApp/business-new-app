@@ -73,13 +73,13 @@ export function Profile({ onBack }: { onBack: () => void }) {
   useEffect(() => { const b = q.data; if (!b) return; hydrate(b); setLogo(b.logoUrl ?? null); setCover(b.coverImageUrl ?? null); }, [q.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const set = (k: string) => (v: string) => setF((m) => ({ ...m, [k]: v }));
   const int = (k: string) => { const n = Math.round(num(f[k] ?? '')); return Number.isFinite(n) && n >= 0 ? n : undefined; };
-  async function save() {
+  async function save(keepOpen = false) {
     setErr('');
     if (!pin) { setPinMiss(true); setErr(tr('lp.blocked')); setGrp('address'); return; }
     if (!(f.name ?? '').trim()) { setErr(tr('tm.needName')); setGrp('basics'); return; }
-    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, latitude: pin.latitude, longitude: pin.longitude, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: f.building || undefined, zipCode: f.zip || undefined, state: f.state || undefined, country: f.country || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
+    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, latitude: pin.latitude, longitude: pin.longitude, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: (f.building ?? '').trim(), zipCode: (f.zip ?? '').trim(), country: (f.country ?? '').trim(), apartmentNumber: (f.apartment ?? '').trim(), ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
     setBusy(true);
-    try { await apiB.updateBusiness(sid, body); if ((f.review ?? '') !== (q.data?.googleReviewUrl ?? '')) await apiB.setReviewLink(sid, f.review ? f.review : null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); setGrp(null); void q.reload(); }
+    try { await apiB.updateBusiness(sid, body); if ((f.review ?? '') !== (q.data?.googleReviewUrl ?? '')) await apiB.setReviewLink(sid, f.review ? f.review : null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); if (!keepOpen) setGrp(null); void q.reload(); }
     catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   async function pickLogo() {
@@ -90,6 +90,9 @@ export function Profile({ onBack }: { onBack: () => void }) {
     try { const up = await pickAndUpload('BUSINESS_COVER'); if (up) { await apiB.updateBusiness(sid, { coverImageUrl: up.url }); setCover(up.url); bump(); } }
     catch (e) { toast((e as Error).message, 'error'); }
   }
+  // A confirmed map pin is saved straight away (with the address it brought), so leaving the sheet can never lose it.
+  const [pinSave, setPinSave] = useState(false);
+  useEffect(() => { if (pinSave) { setPinSave(false); void save(true); } }, [pinSave]); // eslint-disable-line react-hooks/exhaustive-deps
   const closeSheet = () => { setGrp(null); setErr(''); setPinMiss(false); if (q.data) hydrate(q.data); };
   const catLabel = (cats.data ?? []).find((c) => c.name === f.category)?.label ?? f.category ?? '';
   const join = (a: (string | undefined | false)[], sep = ' · ') => a.filter(Boolean).join(sep);
@@ -122,7 +125,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
         <Field label="Website" value={f.website ?? ''} onChangeText={set('website')} keyboardType="url" autoCapitalize="none" />
       </>);
       case 'address': return (<>
-        <LocationField value={pin} error={pinMiss && !pin} query={[f.address, f.city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); setErr(''); setF((o) => ({ ...o, ...(r.address ? { address: r.address } : {}), ...(r.city ? { city: r.city } : {}), ...(r.address ? { building: r.building ?? '' } : {}), ...(r.zip ? { zip: r.zip } : {}), ...(r.country ? { country: r.country } : {}) })); }} />
+        <LocationField value={pin} error={pinMiss && !pin} query={[f.address, f.city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); setErr(''); setF((o) => ({ ...o, ...(r.address ? { address: r.address } : {}), ...(r.city ? { city: r.city } : {}), ...(r.address ? { building: r.building ?? '' } : {}), ...(r.zip ? { zip: r.zip } : {}), ...(r.country ? { country: r.country } : {}) })); setPinSave(true); }} />
         <Field label={tr('set.address')} value={f.address ?? ''} onChangeText={set('address')} />
         {two(<Field label={tr('pa.building')} value={f.building ?? ''} onChangeText={set('building')} />, <Field label={`${tr('pa.apartment')} (${tr('ob.optional')})`} value={f.apartment ?? ''} onChangeText={set('apartment')} />)}
         <Field label={tr('ob.city')} value={f.city ?? ''} onChangeText={set('city')} />
