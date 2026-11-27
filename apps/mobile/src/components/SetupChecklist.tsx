@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Share, View } from 'react-native';
+import { View } from 'react-native';
+import { shareAfterSheet } from '@/lib/share';
 import { useRouter } from 'expo-router';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
@@ -54,7 +55,7 @@ export function SetupChecklist() {
     k: 'online', done: !miss.has('onlineBooking'), title: tr('ob.stOnline'), sub: tr('ob.stOnlineSub'),
     on: () => { void apiB.updateBusiness(sid, { onlineBookingEnabled: true }).then(() => { toast(tr('ob.onlineOn'), 'success'); bump(); }).catch((e: Error) => toast(e.message, 'error')); },
   });
-  steps.push({ k: 'share', done: flags.shared, title: tr('ob.stShare'), sub: tr('ob.stShareSub'), on: () => { mark('shared'); void Share.share({ message: `${salon?.name ?? 'booqi'} · ${salonShareLink(salon)}` }).catch(() => {}); } });
+  steps.push({ k: 'share', done: flags.shared, title: tr('ob.stShare'), sub: tr('ob.stShareSub'), on: () => { mark('shared'); shareAfterSheet(`${salon?.name ?? 'booqi'} · ${salonShareLink(salon)}`); } });
   steps.push({ k: 'invite', done: flags.invited, title: tr('ob.stInvite'), sub: tr('ob.stInviteSub'), on: () => { mark('invited'); router.push('/section/team'); } });
   const done = steps.filter((s) => s.done).length;
   if (done === steps.length) return null;

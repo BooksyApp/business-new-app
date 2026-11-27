@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, Share, View, useWindowDimensions } from 'react-native';
+import { RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
+import { shareAfterSheet } from '@/lib/share';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -194,7 +195,7 @@ export default function Today() {
         <View style={{ height: 54, borderRadius: 16, borderWidth: 1, borderColor: t.hair, backgroundColor: t.surface, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
           <Text style={{ flex: 1, fontFamily: font.s, fontSize: 15, color: t.ink }}>{salonUrl(salon)}</Text>
         </View>
-        <Button label={tr('v2.share')} icon="share" onPress={() => { setLink(false); void Share.share({ message: `${salon?.name ?? 'booqi'} · ${salonShareLink(salon)}` }).catch(() => {}); }} style={{ marginTop: 12 }} />
+        <Button label={tr('v2.share')} icon="share" onPress={() => { setLink(false); shareAfterSheet(`${salon?.name ?? 'booqi'} · ${salonShareLink(salon)}`); }} style={{ marginTop: 12 }} />
       </BottomSheet>
 
       <BlockTimeSheet open={block} date={now} masters={team} onClose={() => setBlock(false)} onDone={() => { setBlock(false); bump(); }} />
