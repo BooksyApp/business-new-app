@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { toast } from '@/lib/toast';
-import { Alert, FlatList, TextInput, ScrollView, View } from 'react-native';
+import { FlatList, TextInput, ScrollView, View, useWindowDimensions } from 'react-native';
 import { BottomSheet } from '@/components/BottomSheet';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ToastHost } from '@/components/ToastHost';
 import * as Haptics from 'expo-haptics';
 import { Choice, Line, ToggleRow, num } from '@/components/form';
 import { Icon } from '@/components/Icon';
@@ -13,7 +13,7 @@ import { t as tr } from '@/i18n';
 import { api, toDay } from '@/lib/api';
 import { apiB, type OnlineSales, type SlotOffer, type Thread } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
-import { addDays, dateLabel, fromIso, money, startOfWeek, weekdayShort } from '@/lib/format';
+import { addDays, dateLabel, fromIso, money, sameDay, startOfWeek, weekdayShort } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -90,52 +90,81 @@ export function Offers({ onBack }: { onBack: () => void }) {
   const q = useLoad(() => apiB.slotOffers(sid), [sid]);
   const [rows, setRows] = useState<SlotOffer[]>([]);
   useEffect(() => { if (q.data) setRows(q.data); }, [q.data]);
-  const [kind, setKind] = useState<'QUIET' | 'LAST_MINUTE'>('LAST_MINUTE'); const [pct, setPct] = useState('15'); const [hrs, setHrs] = useState('3');
-  const [wd, setWd] = useState('2'); const [from, setFrom] = useState('10:00'); const [to, setTo] = useState('14:00');
-  const [busy, setBusy] = useState(false);
-  async function save(next: SlotOffer[]) {
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<'QUIET' | 'LAST_MINUTE'>('LAST_MINUTE'); const [pct, setPct] = useState('15'); const [hrs, setHrs] = useState(3);
+  const [wd, setWd] = useState(2); const [from, setFrom] = useState('10:00'); const [to, setTo] = useState('14:00');
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState('');
+  const dayName = (w: number) => weekdayShort(new Date(2024, 0, w));
+  async function save(next: SlotOffer[]): Promise<boolean> {
     setBusy(true);
-    try { setRows(await apiB.saveSlotOffers(sid, next)); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }
-    catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
+    try { setRows(await apiB.saveSlotOffers(sid, next)); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); return true; }
+    catch (e) { setErr((e as Error).message); return false; } finally { setBusy(false); }
   }
-  function add() {
+  function openNew() { setErr(''); setOpen(true); }
+  async function add() {
+    setErr('');
     const p = Math.round(num(pct));
-    if (!(p > 0 && p <= 90)) { Alert.alert(tr('common.error'), tr('x2.pctRange')); return; }
-    if (kind === 'LAST_MINUTE') { const h = Math.round(num(hrs)); if (!(h > 0)) { Alert.alert(tr('common.error'), tr('x2.pctRange')); return; } void save([...rows, { kind, hoursAhead: h, percent: p }]); }
-    else { const w = Number(wd); if (!(w >= 1 && w <= 7) || !/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(to) || to <= from) { toast(tr('hr.badTime'), 'error'); return; } void save([...rows, { kind, weekday: w, startTime: from, endTime: to, percent: p }]); }
+    if (!(p > 0 && p <= 90)) { setErr(tr('x2.pctRange')); return; }
+    let rule: SlotOffer;
+    if (kind === 'LAST_MINUTE') { rule = { kind, hoursAhead: hrs, percent: p }; }
+    else {
+      if (!/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(to) || to <= from) { setErr(tr('hr.badTime')); return; }
+      rule = { kind, weekday: wd, startTime: from, endTime: to, percent: p };
+    }
+    if (await save([...rows, rule])) setOpen(false);
   }
+  const summary = (r: SlotOffer) => r.kind === 'LAST_MINUTE'
+    ? tr('x2.ruleLastSum', { p: r.percent, n: r.hoursAhead ?? 0 })
+    : tr('x2.ruleQuietSum', { p: r.percent, d: dayName(Number(r.weekday ?? 1)), a: (r.startTime ?? '').slice(0, 5), b: (r.endTime ?? '').slice(0, 5) });
   return (
     <Screen>
       <Header title={tr('x2.offers')} subtitle={salon?.name} onBack={onBack} />
       {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={3} /> : (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 10 }}>
+          <Text style={{ fontFamily: font.m, fontSize: 14, lineHeight: 20, color: t.muted, marginBottom: 6 }}>{tr('x2.offersIntro')}</Text>
           {rows.map((r, i) => (
-            <Card key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, minHeight: 88 }}>
-              <LinearGradient colors={['#6f52ed', '#e83e63']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 64, height: 64, borderRadius: 22, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: font.x, fontSize: 22, color: '#fff' }}>-{r.percent}%</Text></LinearGradient>
+            <Card key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingLeft: 14, paddingRight: 4 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center' }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 15, color: t.vtext }}>-{r.percent}%</Text></View>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ fontFamily: font.x, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{r.kind === 'LAST_MINUTE' ? tr('x2.lastMinute') : tr('x2.quiet')}</Text>
-                <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted }}>{r.kind === 'LAST_MINUTE' ? tr('x2.hoursAhead', { n: r.hoursAhead ?? 0 }) : `${r.weekday} · ${(r.startTime ?? '').slice(0, 5)}-${(r.endTime ?? '').slice(0, 5)}`}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 15, color: t.ink }}>{r.kind === 'LAST_MINUTE' ? tr('x2.lastMinute') : tr('x2.quiet')}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{summary(r)}</Text>
               </View>
+              <Pill text={tr('x2.ruleActive')} tone="ok" />
               <Pressable onPress={() => void save(rows.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={20} color={t.gink} /></Pressable>
             </Card>
           ))}
-          {rows.length === 0 ? <StateView icon="tag" title={tr('x2.noOffers')} body={tr('x2.offersBody')} /> : null}
-          <Section title={tr('ad.addRule')}>
-            <Card style={{ gap: 6, padding: 16 }}>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}><Chip soft active={kind === 'LAST_MINUTE'} label={tr('x2.lastMinute')} onPress={() => setKind('LAST_MINUTE')} /><Chip soft active={kind === 'QUIET'} label={tr('x2.quiet')} onPress={() => setKind('QUIET')} /></View>
-          {kind === 'LAST_MINUTE' ? <Field label={tr('x2.hoursAheadLabel')} value={hrs} onChangeText={setHrs} keyboardType="number-pad" /> : (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}><Field label={tr('ad.weekday')} value={wd} onChangeText={setWd} keyboardType="number-pad" maxLength={1} /></View>
-              <View style={{ flex: 1.3 }}><Field label="→" value={from} onChangeText={setFrom} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
-              <View style={{ flex: 1.3 }}><Field label=" " value={to} onChangeText={setTo} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
-            </View>
-          )}
-          <Field label={tr('x2.discountPct')} value={pct} onChangeText={setPct} keyboardType="number-pad" />
-              <Btn label={tr('ad.addRule')} loading={busy} icon="plus" onPress={add} />
-            </Card>
-          </Section>
+          {rows.length === 0 ? <StateView icon="tag" title={tr('x2.noOffers')} body={tr('x2.offersBody')} actionLabel={tr('x2.newOffer')} onAction={openNew} /> : <Btn label={tr('x2.newOffer')} icon="plus" onPress={openNew} />}
         </ScrollView>
       )}
+      <ToastHost modal />
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink, marginBottom: 12 }}>{tr('x2.editOffer')}</Text>
+        <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 8 }}><Chip soft active={kind === 'LAST_MINUTE'} label={tr('x2.lastMinute')} onPress={() => setKind('LAST_MINUTE')} /><Chip soft active={kind === 'QUIET'} label={tr('x2.quiet')} onPress={() => setKind('QUIET')} /></View>
+          <View style={{ gap: 8 }}>
+            <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('x2.discountPct')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{[10, 15, 20, 30].map((p) => <Chip key={p} soft active={pct === String(p)} label={`${p}%`} onPress={() => setPct(String(p))} />)}</View>
+            <Field value={pct} onChangeText={setPct} keyboardType="number-pad" maxLength={2} />
+          </View>
+          {kind === 'LAST_MINUTE' ? (
+            <View style={{ gap: 8 }}>
+              <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('x2.hoursBefore')}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{[1, 2, 3, 6, 12, 24].map((h) => <Chip key={h} soft active={hrs === h} label={String(h)} onPress={() => setHrs(h)} />)}</View>
+            </View>
+          ) : (
+            <View style={{ gap: 8 }}>
+              <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 13, color: t.muted }}>{tr('x2.ruleDay')}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{[1, 2, 3, 4, 5, 6, 7].map((w) => <Chip key={w} soft active={wd === w} label={dayName(w)} onPress={() => setWd(w)} />)}</View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}><Field label={tr('x2.ruleFrom')} value={from} onChangeText={setFrom} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+                <View style={{ flex: 1 }}><Field label={tr('x2.ruleTo')} value={to} onChangeText={setTo} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
+              </View>
+            </View>
+          )}
+          {err ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink }}>{err}</Text> : null}
+          <Btn label={tr('common.save')} loading={busy} onPress={() => void add()} />
+        </ScrollView>
+      </BottomSheet>
     </Screen>
   );
 }
@@ -205,61 +234,103 @@ export function OnlineShop({ onBack }: { onBack: () => void }) {
 export function RotaView({ onBack }: { onBack: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
+  const { width: screenW } = useWindowDimensions();
   const sid = salon?.id ?? '';
-  const [w, setW] = useState(() => startOfWeek(new Date()));
+  const thisWeek = startOfWeek(new Date());
+  const [w, setW] = useState(() => thisWeek);
   const q = useLoad(() => apiB.rota(sid, toDay(w)), [sid, toDay(w)]);
   const staffQ = useLoad(() => api.staff(sid).catch(() => []), [sid]);
   const [sel, setSel] = useState<{ id: string; name: string; date: string } | null>(null);
   const [st, setSt] = useState('09:00'); const [en, setEn] = useState('18:00');
   const [repW, setRepW] = useState(0);
   const [busy, setBusy] = useState(false);
-  const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); setSel(null); void q.reload(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
+  const [err, setErr] = useState('');
+  const run = async (fn: () => Promise<unknown>) => { setBusy(true); setErr(''); try { await fn(); setSel(null); void q.reload(); } catch (e) { if (sel) setErr((e as Error).message); else toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   const okT = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
-  const nav = (icon: string, d: number, l: string) => <Pressable onPress={() => setW(addDays(w, d))} hitSlop={10} accessibilityRole="button" accessibilityLabel={l} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={20} color={t.ink} /></Pressable>;
+  const mins = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));
+  const compact = screenW < 360;
+  const hh = (s: string) => String(Number(s.slice(0, 2)));
+  const isThis = toDay(w) === toDay(thisWeek);
+  const days = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(w, i));
+  const today = new Date();
+  const nav = (icon: string, d: number, l: string) => <Pressable onPress={() => setW(addDays(w, d))} hitSlop={8} accessibilityRole="button" accessibilityLabel={l} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={18} color={t.ink} /></Pressable>;
+  const dot = (c: string, label: string) => <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c }} /><Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 12, color: t.muted }}>{label}</Text></View>;
+  const weekHead = (
+    <View style={{ flexDirection: 'row', gap: 4, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: t.canvas }}>
+      {days.map((d) => { const td = sameDay(d, today); return (
+        <View key={toDay(d)} style={{ flex: 1, alignItems: 'center', gap: 2, paddingVertical: 4, borderRadius: 12, backgroundColor: td ? t.vsoft : 'transparent' }}>
+          <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 11.5, color: td ? t.vtext : t.muted }}>{weekdayShort(d).charAt(0).toUpperCase()}</Text>
+          <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 14, color: td ? t.vtext : t.ink }}>{d.getDate()}</Text>
+        </View>
+      ); })}
+    </View>
+  );
   return (
     <Screen>
       <Header title={tr('x2.rota')} subtitle={salon?.name} onBack={onBack} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 12 }}>{nav('back', -7, tr('calendar.prevWeek'))}<Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{dateLabel(w)} - {dateLabel(addDays(w, 6))}</Text>{nav('chev', 7, tr('calendar.nextWeek'))}</View>
-      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={3} height={120} /> : (
-        <FlatList data={q.data?.staff ?? []} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130, gap: 10 }}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 6 }}>
+        {nav('back', -7, tr('calendar.prevWeek'))}
+        <View style={{ alignItems: 'center', gap: 2 }}>
+          <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{dateLabel(w)} – {dateLabel(addDays(w, 6))}</Text>
+          {!isThis ? <Pressable onPress={() => setW(thisWeek)} hitSlop={8} accessibilityRole="button"><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 13, color: t.vtext }}>{tr('x2.rotaThisWeek')}</Text></Pressable> : null}
+        </View>
+        {nav('chev', 7, tr('calendar.nextWeek'))}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 4, gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>{dot(t.vsoft, tr('x2.rotaLegWork'))}{dot(t.fill, tr('x2.rotaLegOff'))}{dot(t.gsoft, tr('x2.rotaLegTimeOff'))}</View>
+        <Pressable onPress={() => !busy && void run(() => apiB.copyWeek(sid, toDay(addDays(w, -7)), toDay(w)))} hitSlop={8} accessibilityRole="button" accessibilityLabel={tr('x3.copyWeek')} style={{ height: 30, paddingHorizontal: 12, borderRadius: 15, borderWidth: 1, borderColor: t.line, alignItems: 'center', justifyContent: 'center', opacity: busy ? 0.5 : 1 }}>
+          <Text numberOfLines={1} style={{ fontFamily: font.s, fontSize: 12.5, color: t.ink }}>{tr('x3.copyWeek')}</Text>
+        </Pressable>
+      </View>
+      {q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q.loading && !q.data ? <Skeleton rows={3} height={96} /> : (
+        <FlatList data={q.data?.staff ?? []} keyExtractor={(s) => String(s.id)} stickyHeaderIndices={[0]} ListHeaderComponent={weekHead}
+          contentContainerStyle={{ paddingBottom: 60 }}
           ListEmptyComponent={<StateView icon="users" title={tr('rp.empty')} />}
-          renderItem={({ item: s }) => (
-            <Card style={{ gap: 14, padding: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Avatar name={s.name} size={52} uri={(staffQ.data ?? []).find((x) => String(x.id) === String(s.id))?.avatarUrl} />
-                <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 18, letterSpacing: -0.3, color: t.ink }}>{s.name}</Text>{s.position ? <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{s.position}</Text> : null}</View>
+          renderItem={({ item: s }) => {
+            const total = s.days.reduce((a, d) => (d.state === 'OFF' || d.state.startsWith('TIME_OFF') || !d.start || !d.end ? a : a + Math.max(0, mins(d.end) - mins(d.start))), 0) / 60;
+            return (
+              <View style={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderBottomWidth: 1, borderBottomColor: t.hair }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Avatar name={s.name} size={36} uri={(staffQ.data ?? []).find((x) => String(x.id) === String(s.id))?.avatarUrl} />
+                  <View style={{ flex: 1 }}>
+                    <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 15.5, letterSpacing: -0.2, color: t.ink }}>{s.name}</Text>
+                    <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 12.5, color: t.muted }}>{tr('x2.rotaHours', { n: Math.round(total * 10) / 10 })}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {s.days.map((d) => {
+                    const off = d.state === 'OFF'; const to = d.state.startsWith('TIME_OFF');
+                    const bg = off ? t.fill : to ? t.gsoft : t.vsoft; const fg = off ? t.faint : to ? t.gink : t.vtext;
+                    const a = (d.start ?? '').slice(0, 5); const b = (d.end ?? '').slice(0, 5);
+                    return (
+                      <Pressable key={d.date} onPress={() => { setErr(''); setSel({ id: String(s.id), name: s.name, date: d.date }); setSt((d.start ?? '09:00').slice(0, 5)); setEn((d.end ?? '18:00').slice(0, 5)); }} accessibilityRole="button" accessibilityLabel={`${s.name} ${dateLabel(fromIso(d.date))} ${off ? tr('tm.closed') : a ? `${a}-${b}` : ''}`}
+                        style={{ flex: 1, height: 40, borderRadius: 10, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+                        {off ? <Text style={{ fontFamily: font.b, fontSize: 13, color: fg }}>–</Text>
+                          : to ? <Text style={{ fontFamily: font.b, fontSize: 12, color: fg }}>✕</Text>
+                          : compact && a && b ? <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 10.5, color: fg }}>{hh(a)}–{hh(b)}</Text>
+                          : <><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 10.5, lineHeight: 13, color: fg }}>{a}</Text><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 10.5, lineHeight: 13, color: fg }}>{b}</Text></>}
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {s.days.map((d) => {
-                  const off = d.state === 'OFF'; const to = d.state.startsWith('TIME_OFF');
-                  const bg = off ? t.fill : to ? t.gsoft : t.vsoft; const fg = off ? t.ink3 : to ? t.gink : t.vtext;
-                  return (
-                    <Pressable key={d.date} onPress={() => { setSel({ id: String(s.id), name: s.name, date: d.date }); setSt((d.start ?? '09:00').slice(0, 5)); setEn((d.end ?? '18:00').slice(0, 5)); }} accessibilityRole="button" accessibilityLabel={`${dateLabel(fromIso(d.date))} ${off ? tr('tm.closed') : ''}`}
-                      style={{ flex: 1, height: 84, borderRadius: 18, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', gap: 4, borderLeftWidth: 0 }}>
-                      <Text style={{ fontFamily: font.s, fontSize: 12.5, color: fg }}>{weekdayShort(fromIso(d.date))}</Text>
-                      <Text style={{ fontFamily: font.x, fontSize: 16, color: fg }}>{fromIso(d.date).getDate()}</Text>
-                      <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 11.5, color: fg }}>{off ? '–' : to ? '✕' : (d.start ?? '').slice(0, 5)}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </Card>
-          )} />
+            );
+          }} />
       )}
-      <StickyCta label={tr('x3.copyWeek')} loading={busy} onPress={() => void run(() => apiB.copyWeek(sid, toDay(addDays(w, -7)), toDay(w)))} />
       <BottomSheet open={!!sel} onClose={() => setSel(null)}>
-        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{sel?.name}</Text>
-        <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 10 }}>{sel ? dateLabel(fromIso(sel.date)) : ''}</Text>
+        <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 22, letterSpacing: -0.5, lineHeight: 28, color: t.ink, marginBottom: 12 }}>{sel ? `${sel.name} · ${dateLabel(fromIso(sel.date))}` : ''}</Text>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}><Field label={tr('hr.open')} value={st} onChangeText={setSt} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
           <View style={{ flex: 1 }}><Field label={tr('hr.closed')} value={en} onChangeText={setEn} keyboardType="numbers-and-punctuation" maxLength={5} /></View>
         </View>
-        <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted, marginBottom: 8 }}>{tr('ux.repeatShiftWeeks')}</Text>
+        <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted, marginBottom: 8 }}>{tr('ux.repeatShiftWeeks')}</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>{[0, 2, 4, 8].map((n) => <Chip key={n} soft label={n === 0 ? tr('ux.repNone') : tr('ux.repWeeks', { n })} active={repW === n} onPress={() => setRepW(n)} />)}</View>
+        {err ? <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.gink, marginBottom: 10 }}>{err}</Text> : null}
         <View style={{ flexDirection: 'row', gap: 10, paddingBottom: 16 }}>
           <Btn label={tr('tm.closed')} variant="secondary" style={{ flex: 1 }} loading={busy} onPress={() => sel && void run(async () => { for (let i = 0; i <= repW; i++) await apiB.clearShift(sid, sel.id, toDay(addDays(fromIso(sel.date), 7 * i))); })} />
-          <Btn label={tr('common.save')} style={{ flex: 1 }} loading={busy} onPress={() => { if (!sel) return; if (!okT(st) || !okT(en) || en <= st) { toast(tr('hr.badTime'), 'error'); return; } void run(async () => { for (let i = 0; i <= repW; i++) await apiB.setShift(sid, { staffId: sel.id, date: toDay(addDays(fromIso(sel.date), 7 * i)), start: st, end: en }); if (repW) toast(tr('ux.shiftSeries'), 'success'); }); }} />
+          <Btn label={tr('common.save')} style={{ flex: 1 }} loading={busy} onPress={() => { if (!sel) return; if (!okT(st) || !okT(en) || en <= st) { setErr(tr('hr.badTime')); return; } void run(async () => { for (let i = 0; i <= repW; i++) await apiB.setShift(sid, { staffId: sel.id, date: toDay(addDays(fromIso(sel.date), 7 * i)), start: st, end: en }); if (repW) toast(tr('ux.shiftSeries'), 'success'); }); }} />
         </View>
+        <ToastHost modal />
       </BottomSheet>
     </Screen>
   );

@@ -14,7 +14,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-type Tab = 'profit' | 'tax' | 'tips' | 'invoices' | 'drawer' | 'gift';
+type Tab = 'profit' | 'tax' | 'tips' | 'invoices' | 'drawer';
 const N = (v: number | string | null | undefined) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 /** Maliyyə: profit and loss by month, tax summary, tips (and pay-out), invoices (void), cash drawer, gift cards (sell, look up). */
@@ -30,16 +30,16 @@ export function Finance({ onBack }: { onBack: () => void }) {
   const inv = useLoad(() => (tab === 'invoices' ? apiB.invoices(sid, from, to) : Promise.resolve(null)), [sid, tab]);
   const dr = useLoad(() => (tab === 'drawer' ? apiB.drawer(sid) : Promise.resolve(undefined)), [sid, tab]);
   const [float, setFloat] = useState(''); const [counted, setCounted] = useState('');
-  const [gAmt, setGAmt] = useState(''); const [gMail, setGMail] = useState(''); const [gCode, setGCode] = useState('');
+ 
   const [busy, setBusy] = useState(false);
   const run = async (fn: () => Promise<unknown>, after?: () => void) => { setBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after?.(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
-  const q = { profit, tax, tips, invoices: inv, drawer: dr, gift: null }[tab];
+  const q = { profit, tax, tips, invoices: inv, drawer: dr }[tab];
   const m = (v: number | string | null | undefined) => money(N(v), cur);
   const sec = (s: string) => <Text accessibilityRole="header" style={{ fontFamily: font.x, fontSize: 17, color: t.ink, marginTop: 6 }}>{s}</Text>;
   return (
     <Screen>
       <Header title={tr('fn.title')} subtitle={salon?.name} onBack={onBack} />
-      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'profit', label: tr('fn.profit') }, { k: 'tax', label: tr('fn.tax') }, { k: 'tips', label: tr('fn.tips') }, { k: 'invoices', label: tr('fn.invoices') }, { k: 'drawer', label: tr('fn.drawer') }, { k: 'gift', label: tr('fn.gift') }]} />
+      <TabBar value={tab} onChange={setTab} tabs={[{ k: 'profit', label: tr('fn.profit') }, { k: 'tax', label: tr('fn.tax') }, { k: 'tips', label: tr('fn.tips') }, { k: 'invoices', label: tr('fn.invoices') }, { k: 'drawer', label: tr('fn.drawer') }]} />
       {q && q.error && !q.data ? <ErrorState error={q.error} onRetry={() => void q.reload()} /> : q && q.loading && q.data == null ? <Skeleton rows={4} height={72} /> : (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48, gap: 12 }} refreshControl={q ? <RefreshControl refreshing={q.refreshing} onRefresh={() => void q.reload()} tintColor={t.violet} /> : undefined}>
           {tab === 'profit' && profit.data ? (
@@ -96,17 +96,6 @@ export function Finance({ onBack }: { onBack: () => void }) {
                 <Btn label={tr('fn.openDrawer')} loading={busy} disabled={!(num(float) >= 0)} onPress={() => void run(() => apiB.openDrawer(sid, num(float)), () => { setFloat(''); void dr.reload(); })} />
               </>
             )
-          ) : null}
-          {tab === 'gift' ? (
-            <>
-              {sec(tr('fn.sellGift'))}
-              <Field label={`${tr('ex.amount')} (${cur ?? 'AZN'})`} value={gAmt} onChangeText={setGAmt} keyboardType="decimal-pad" />
-              <Field label={tr('cl.email')} value={gMail} onChangeText={setGMail} keyboardType="email-address" autoCapitalize="none" />
-              <Btn label={tr('fn.issue')} loading={busy} disabled={!(num(gAmt) > 0)} onPress={() => void run(async () => { const c = await apiB.issueGiftCard(sid, num(gAmt), gMail.trim()); Alert.alert(tr('fn.giftCode'), `${c.code}\n${m(c.amount)}`); setGAmt(''); setGMail(''); })} />
-              {sec(tr('fn.lookup'))}
-              <Field label={tr('sl.giftCode')} value={gCode} onChangeText={setGCode} autoCapitalize="characters" autoCorrect={false} />
-              <Btn label={tr('fn.check')} variant="secondary" loading={busy} disabled={!gCode.trim()} onPress={() => void run(async () => { const c = await apiB.lookupGiftCard(gCode.trim()); Alert.alert(c.code, `${tr('fn.balance')}: ${m(c.balance)} / ${m(c.amount)}`); })} />
-            </>
           ) : null}
         </ScrollView>
       )}

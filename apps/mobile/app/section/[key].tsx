@@ -21,6 +21,7 @@ import { Reviews } from '@/screens/Reviews';
 import { Messages } from '@/screens/Messages';
 import { Sales } from '@/screens/Sales';
 import { Services } from '@/screens/Services';
+import { GiftCards } from '@/screens/GiftCards';
 import { Settings } from '@/screens/Settings';
 import { LoyaltyCards, NotifTextsEditor, ResourceTypes, RevenuePlan } from '@/screens/HubExtras';
 import { HoursEditor } from '@/screens/SettingsMore';
@@ -64,6 +65,7 @@ export default function Section() {
     case 'team': return <Team onBack={back} />;
     case 'sales': return <Sales onBack={back} />;
     case 'messages': return <Messages onBack={back} />;
+    case 'giftcards': return <GiftCards onBack={back} />;
     case 'settings': return <Settings onBack={back} />;
     case 'resources': return <ResourceTypes onBack={back} />;
     case 'plan': return <RevenuePlan onBack={back} />;
