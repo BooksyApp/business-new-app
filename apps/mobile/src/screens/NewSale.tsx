@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from '@/lib/toast';
-import { Alert, ScrollView, TextInput, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import type { ClientWithStats } from '@/lib/api';
 import * as Haptics from 'expo-haptics';
 import { Choice, ToggleRow, num } from '@/components/form';
@@ -14,7 +14,7 @@ import { api } from '@/lib/api';
 import { apiX, type SaleBody } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
 import { apiM } from '@/lib/api-more';
-import { ItemPicker, ClientSelect, PlanRow, planSub, memberSub, type PickItem } from '@/screens/SalePick';
+import { ItemPicker, ClientSelect, ClientSheet, PlanRow, planSub, memberSub, type PickItem } from '@/screens/SalePick';
 import { useApp } from '@/lib/app';
 import { dateLabel, fromIso, hhmm, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
@@ -56,6 +56,7 @@ export function NewSale({ onClose, onDone, apptId, apptDate, apptTime }: { onClo
   const [lines, setLines] = useState<Line[]>([]);
   const [master, setMaster] = useState('');
   const [clientName, setClientName] = useState('');
+  const [clientOpen, setClientOpen] = useState(false);
   const [discount, setDiscount] = useState('');
   const [tip, setTip] = useState('');
   const [method, setMethod] = useState<(typeof METHODS)[number]>('CASH');
@@ -97,6 +98,7 @@ export function NewSale({ onClose, onDone, apptId, apptDate, apptTime }: { onClo
   const giftOk = giftN > 0 && (!gMin || giftN >= gMin) && (!gMax || giftN <= gMax);
   const otherTotal = kind === 'package' ? pkgPicked?.price ?? 0 : kind === 'gift' ? giftN : 0;
   const clientLabel = (c: ClientWithStats) => `${c.firstName} ${c.lastName ?? ''}`.trim();
+  const shownName = pickClient ? clientLabel(pickClient) : clientName.trim();
   function switchKind(k: Kind) {
     if (k === kind) return;
     const go = () => { setKind(k); setLines([]); setPkgSel(''); setGiftAmt(''); setSubmitErr(''); };
@@ -141,7 +143,7 @@ export function NewSale({ onClose, onDone, apptId, apptDate, apptTime }: { onClo
     if (method === 'SPLIT' && (card <= 0 || card >= total)) { toast(tr('ob.needSplit'), 'error'); return; }
     const cover = method === 'MEMBERSHIP' || method === 'PACKAGE' ? method : undefined;
     const body: SaleBody = {
-      businessId: sid, staffId: master || undefined, clientId: appt?.clientId, clientName: clientName.trim() || undefined,
+      businessId: sid, staffId: master || undefined, clientId: pickClient ? String(pickClient.id) : appt?.clientId, clientName: pickClient ? clientLabel(pickClient) : clientName.trim() || undefined,
       items: lines.map((l, i) => ({ serviceId: l.serviceId != null ? String(l.serviceId) : undefined, productId: l.productId != null ? String(l.productId) : undefined, serviceName: l.name, serviceType: l.productId != null ? 'PRODUCT' : l.serviceId != null ? 'SERVICE' : 'OTHER', quantity: l.qty, unitPrice: l.price, coveredBy: cover, appointmentId: i === 0 ? appt?.id : undefined })),
       discountAmount: disc || undefined, tipAmount: tipN || undefined, paymentMethod: method, paymentAmount: total,
       giftCardCode: method === 'GIFT_CARD' ? gift.trim().toUpperCase() : undefined,
@@ -248,13 +250,16 @@ export function NewSale({ onClose, onDone, apptId, apptDate, apptTime }: { onClo
       {loadErr ? <T k="sm" color={t.gink} style={{ paddingHorizontal: 20, paddingBottom: 8 }}>{loadErr}</T> : null}
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 170 }} showsVerticalScrollIndicator={false}>
         <KCard style={{ padding: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 10 }}>
-            <KAvatar name={clientName || '?'} size={40} />
-            <View style={{ flex: 1 }}>
-              <TextInput value={clientName} onChangeText={setClientName} placeholder={tr('sl.client')} placeholderTextColor={t.ink3} autoCapitalize="words" accessibilityLabel={tr('sl.client')} style={{ fontFamily: font.b, fontSize: 15, color: t.ink, padding: 0, outlineStyle: 'none' } as never} />
-              <T k="xs" color={t.muted}>{(staff.data ?? []).find((x) => String(x.id) === master)?.name ?? tr('sl.master')}</T>
+          <Pressable onPress={() => setClientOpen(true)} disabled={!!appt?.clientId} accessibilityRole="button" accessibilityLabel={tr('sl.client')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 10 }}>
+            {shownName ? <KAvatar name={shownName} size={40} /> : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name="user" size={20} color={t.muted} /></View>}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <T k="h3" lines={1} color={shownName ? t.ink : t.muted}>{shownName || tr('n4.walkIn')}</T>
+              <T k="xs" color={t.muted} lines={1}>{(staff.data ?? []).find((x) => String(x.id) === master)?.name ?? tr('sl.master')}</T>
             </View>
-          </View>
+            {pickClient && !appt?.clientId ? (
+              <Pressable onPress={() => setPickClient(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('n4.clearClient')} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={14} color={t.ink} /></Pressable>
+            ) : !appt?.clientId ? <Icon name="chev" size={16} color={t.muted} /> : null}
+          </Pressable>
           {lines.length === 0 ? <T k="sm" color={t.muted} style={{ paddingVertical: 14, textAlign: 'center', borderTopWidth: 1, borderTopColor: t.hair }}>{tr('sl.pickService')}</T> : null}
           {lines.map((l) => (
             <View key={l.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: t.hair }}>
@@ -320,6 +325,7 @@ export function NewSale({ onClose, onDone, apptId, apptDate, apptTime }: { onClo
         </View>
         {disc > 0 || tipN > 0 ? <T k="xs" color={t.muted} style={{ textAlign: 'right' }}>{[disc > 0 ? `${tr('sl.discount')} -${money(disc, cur)}` : '', tipN > 0 ? `${tr('sl.tip')} +${money(tipN, cur)}` : ''].filter(Boolean).join(' · ')}</T> : null}
       </ScrollView>
+      <ClientSheet open={clientOpen} onClose={() => setClientOpen(false)} sid={sid} clients={clients.data ?? []} value={pickClient} onChange={setPickClient} onCreated={() => void clients.reload()} />
       <CtaBar><View style={{ flex: 1 }}>{submitErr ? <T k="sm" color={t.gink} style={{ paddingBottom: 6 }}>{submitErr}</T> : null}<KButton kind="dk" size="lg" block label={busy ? '…' : `${tr('sl.charge')} · ${money(total, cur)}`} disabled={!lines.length} loading={busy} onPress={() => void submit()} /></View></CtaBar>
     </Screen>
   );

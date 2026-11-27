@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
-import { Chip, ChipRow, Segmented, T } from '@/components/kit';
-import { SearchBar, ServiceThumb } from '@/components/ui';
+import { Avatar, Button, Chip, ChipRow, Segmented, T } from '@/components/kit';
+import { Field, SearchBar, ServiceThumb } from '@/components/ui';
 import { t as tr } from '@/i18n';
-import type { ClientWithStats, Service } from '@/lib/api';
+import { api, type ClientWithStats, type Service } from '@/lib/api';
 import type { Membership, Product } from '@/lib/api-biz';
 import type { Pkg } from '@/lib/api-biz';
 import { money } from '@/lib/format';
@@ -116,6 +117,79 @@ export function ClientSelect({ clients, value, onChange }: { clients: ClientWith
         </Pressable>
       ))}
     </View>
+  );
+}
+
+/** Receipt client sheet: search the salon's clients, tap to pick, "x" back to walk-in, quick-add (name + phone). Errors stay inline (toasts hide under native modals). */
+export function ClientSheet({ open, onClose, sid, clients, value, onChange, onCreated }: {
+  open: boolean; onClose: () => void; sid: string; clients: ClientWithStats[]; value: ClientWithStats | null; onChange: (c: ClientWithStats | null) => void; onCreated?: () => void;
+}) {
+  const { t } = useTheme();
+  const [q, setQ] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const nm = (c: ClientWithStats) => `${c.firstName} ${c.lastName ?? ''}`.trim();
+  const needle = q.trim().toLowerCase();
+  const list = (needle ? clients.filter((c) => nm(c).toLowerCase().includes(needle) || (c.phone ?? '').includes(needle)) : clients).slice(0, 30);
+  const pick = (c: ClientWithStats | null) => { onChange(c); setQ(''); setAdding(false); setErr(''); onClose(); };
+  async function save() {
+    const full = name.trim();
+    if (!full || !sid) return;
+    const [first, ...rest] = full.split(/\s+/);
+    setBusy(true); setErr('');
+    try {
+      const c = await api.createClient(sid, { firstName: first, lastName: rest.join(' ') || undefined, phone: phone.trim() || undefined });
+      onCreated?.();
+      setName(''); setPhone('');
+      pick({ ...c, lastName: c.lastName ?? null, email: c.email ?? null, phone: c.phone ?? (phone.trim() || null), notes: c.notes ?? null, totalVisits: 0, totalSpent: null, lastVisitDate: null });
+    } catch (e) {
+      setErr((e as Error).message || tr('common.error'));
+    } finally { setBusy(false); }
+  }
+  return (
+    <BottomSheet open={open} onClose={onClose}>
+      <T k="h1" lines={1} style={{ fontSize: 22, marginBottom: 12 }}>{adding ? tr('n4.newClient') : tr('n4.pickClientTitle')}</T>
+      {adding ? (
+        <View style={{ gap: 4, paddingBottom: 12 }}>
+          <Field label={tr('n4.clientName')} value={name} onChangeText={setName} autoCapitalize="words" returnKeyType="next" />
+          <Field label={tr('n4.clientPhone')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          {err ? <T k="sm" color={t.gink} style={{ paddingBottom: 6 }}>{err}</T> : null}
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Button kind="fl" label={tr('common.cancel')} onPress={() => { setAdding(false); setErr(''); }} style={{ flex: 1 }} />
+            <Button label={tr('n4.saveClient')} loading={busy} disabled={!name.trim()} onPress={() => void save()} style={{ flex: 2 }} />
+          </View>
+        </View>
+      ) : (
+        <View style={{ gap: 10, paddingBottom: 12 }}>
+          <SearchBar value={q} onChangeText={setQ} placeholder={tr('n4.clientSearch')} />
+          <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <Pressable onPress={() => pick(null)} accessibilityRole="button" accessibilityState={{ selected: !value }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 12, borderRadius: 14, backgroundColor: value ? 'transparent' : t.vsoft }}>
+              <Icon name="user" size={20} color={t.muted} />
+              <T k="t1" lines={1} style={{ flex: 1 }}>{tr('n4.walkIn')}</T>
+              {value ? <Icon name="x" size={16} color={t.muted} /> : <Icon name="check" size={18} color={t.vtext} />}
+            </Pressable>
+            {list.map((c) => {
+              const on = !!value && String(value.id) === String(c.id);
+              return (
+                <Pressable key={String(c.id)} onPress={() => pick(c)} accessibilityRole="button" accessibilityState={{ selected: on }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 12, borderRadius: 14, backgroundColor: on ? t.vsoft : 'transparent' }}>
+                  <Avatar name={nm(c)} size={36} uri={c.avatarUrl} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <T k="t1" lines={1}>{nm(c)}</T>
+                    {c.phone ? <T k="xs" color={t.muted} lines={1}>{c.phone}</T> : null}
+                  </View>
+                  {on ? <Icon name="check" size={18} color={t.vtext} /> : null}
+                </Pressable>
+              );
+            })}
+            {!list.length ? <T k="sm" color={t.muted} lines={1} style={{ textAlign: 'center', paddingVertical: 18 }}>{tr('n4.noClientFound')}</T> : null}
+          </ScrollView>
+          <Button kind="fl" icon="plus" label={tr('n4.newClient')} onPress={() => { setName(q.trim()); setAdding(true); }} />
+        </View>
+      )}
+    </BottomSheet>
   );
 }
 

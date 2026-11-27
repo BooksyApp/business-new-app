@@ -16,11 +16,12 @@ import { money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 
-type Method = 'CASH' | 'CARD_TERMINAL' | 'GIFT_CARD';
+type Method = 'CASH' | 'CARD_TERMINAL' | 'SPLIT' | 'GIFT_CARD';
 type Extra = { key: number; name: string; price: number; productId?: string };
 const METHODS: { k: Method; icon: string; label: () => string }[] = [
   { k: 'CASH', icon: 'cash', label: () => tr('n4.payCash') },
   { k: 'CARD_TERMINAL', icon: 'card', label: () => tr('n4.payCard') },
+  { k: 'SPLIT', icon: 'wallet', label: () => tr('sales.m.SPLIT') },
   { k: 'GIFT_CARD', icon: 'gift', label: () => tr('n4.payGift') },
 ];
 
@@ -48,6 +49,7 @@ export function CheckoutBody({ a, onClose, onDone }: { a: Appointment; onClose: 
   const [tipCustom, setTipCustom] = useState('');
   const [method, setMethod] = useState<Method>('CASH');
   const [gift, setGift] = useState('');
+  const [splitCard, setSplitCard] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
@@ -59,6 +61,7 @@ export function CheckoutBody({ a, onClose, onDone }: { a: Appointment; onClose: 
   const tip = tipCustom ? Math.max(0, num(tipCustom) || 0) : Math.round((sub - disc) * tipPct) / 100;
   const total = useMemo(() => Math.max(0, sub - disc) + tip, [sub, disc, tip]);
 
+  const card = Math.min(total, Math.max(0, num(splitCard) || 0));
   function addExtra() {
     const p = num(ePrice) || 0;
     if (!eName.trim() || p <= 0) return;
@@ -67,6 +70,7 @@ export function CheckoutBody({ a, onClose, onDone }: { a: Appointment; onClose: 
   }
   async function confirm() {
     if (method === 'GIFT_CARD' && !gift.trim()) { setErr(tr('sl.needGift')); return; }
+    if (method === 'SPLIT' && (card <= 0 || card >= total)) { setErr(tr('ob.needSplit')); return; }
     setBusy(true); setErr('');
     const body: SaleBody = {
       businessId: sid, staffId: a.staffId != null ? String(a.staffId) : undefined, clientId: a.clientId != null ? String(a.clientId) : undefined, clientName: a.clientName || undefined,
@@ -76,6 +80,7 @@ export function CheckoutBody({ a, onClose, onDone }: { a: Appointment; onClose: 
       ],
       discountAmount: disc || undefined, tipAmount: tip || undefined, paymentMethod: method, paymentAmount: total,
       giftCardCode: method === 'GIFT_CARD' ? gift.trim().toUpperCase() : undefined,
+      splitCashAmount: method === 'SPLIT' ? Math.round((total - card) * 100) / 100 : undefined, splitCardAmount: method === 'SPLIT' ? card : undefined,
       appointmentId: String(a.id), idempotencyKey: `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
     };
     try {
@@ -132,18 +137,25 @@ export function CheckoutBody({ a, onClose, onDone }: { a: Appointment; onClose: 
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {[0, 5, 10, 15].map((p) => <Chip key={p} label={p ? `${p}%` : tr('v3.none')} on={!tipCustom && tipPct === p} onPress={() => { setTipCustom(''); setTipPct(p); }} style={{ flex: 1, justifyContent: 'center' }} />)}
             </View>
+            <Field placeholder={tr('n4.tipCustom')} value={tipCustom} onChangeText={setTipCustom} keyboardType="decimal-pad" />
             <T k="h2">{tr('n4.payMethod')}</T>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {METHODS.map((m) => {
                 const on = method === m.k;
                 return (
                   <Pressable key={m.k} onPress={() => setMethod(m.k)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={m.label()}
-                    style={{ flex: 1, borderRadius: 18, paddingVertical: 14, alignItems: 'center', gap: 6, backgroundColor: on ? t.vsoft : t.surface, borderWidth: 1.5, borderColor: on ? t.violet : t.hair }}>
-                    <Icon name={m.icon} size={22} color={on ? t.vtext : t.ink} /><T k="sm" color={on ? t.vtext : t.ink}>{m.label()}</T>
+                    style={{ width: '48%', flexGrow: 1, borderRadius: 18, paddingVertical: 12, alignItems: 'center', gap: 6, backgroundColor: on ? t.vsoft : t.surface, borderWidth: 1.5, borderColor: on ? t.violet : t.hair }}>
+                    <Icon name={m.icon} size={22} color={on ? t.vtext : t.ink} /><T k="sm" lines={1} color={on ? t.vtext : t.ink}>{m.label()}</T>
                   </Pressable>
                 );
               })}
             </View>
+            {method === 'SPLIT' ? (
+              <View>
+                <Field label={`${tr('sales.m.CARD_TERMINAL')} (${cur ?? 'AZN'})`} value={splitCard} onChangeText={setSplitCard} keyboardType="decimal-pad" />
+                <T k="sm" color={t.muted} lines={1}>{`${tr('sales.m.CASH')}: ${money(Math.max(0, total - card), cur)}`}</T>
+              </View>
+            ) : null}
             {method === 'GIFT_CARD' ? <Field label={tr('n4.giftCode')} value={gift} onChangeText={setGift} autoCapitalize="characters" /> : null}
             <View style={{ borderTopWidth: 1, borderTopColor: t.hair, paddingTop: 6 }}>
               {disc > 0 ? row(tr('sl.discount'), `-${money(disc, cur)}`) : null}
