@@ -55,6 +55,9 @@ export default function Today() {
   const list = useMemo(() => all.filter((a) => a.appointmentDate.slice(0, 10) === todayKey && live(a)).sort((a, b) => toMin(a.startTime) - toMin(b.startTime)), [all, todayKey]);
   const team = (staff.data ?? []).filter((s) => s.isActive !== false);
   const next = nextUp(list);
+  // Several specialists can start at the same minute: every one of those bookings gets its own swipeable card.
+  const nexts = next ? list.filter((a) => a.status !== 'COMPLETED' && a.startTime === next.startTime && toMin(a.endTime) > nowMin()).slice(0, 8) : [];
+  const [page, setPage] = useState(0);
   const byId = useMemo(() => new Map((clients.data ?? []).map((c) => [String(c.id), c])), [clients.data]);
   const pend = all.filter((a) => a.status === 'PENDING' && a.appointmentDate.slice(0, 10) >= todayKey).sort((a, b) => (a.appointmentDate + a.startTime).localeCompare(b.appointmentDate + b.startTime));
   const pendCount = Math.max(pend.length, badges.pending);
@@ -107,6 +110,16 @@ export default function Today() {
 
         {range.error ? <ErrorState error={range.error} onRetry={() => void range.reload()} /> : loading ? (
           <Skeleton blocks={[{ h: 236, r: 26 }, { h: 104, r: 20 }, { h: 60, r: 18 }]} />
+        ) : next && nexts.length > 1 ? (
+          <View>
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setPage(Math.round(e.nativeEvent.contentOffset.x / W))}>
+              {nexts.map((n) => <View key={String(n.id)} style={{ width: W }}><Hero a={n} c={byId.get(String(n.clientId))} staff={team.find((s) => String(s.id) === String(n.staffId))} onOpen={() => router.push(`/booking/${n.id}`)} onAction={() => (n.status === 'PENDING' ? void confirmOne(n) : router.push({ pathname: '/booking/[id]', params: { id: String(n.id), checkout: '1' } }))} /></View>)}
+            </ScrollView>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+              {nexts.map((n, i) => <View key={String(n.id)} style={{ width: i === page ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: i === page ? t.ink : t.fill2 }} />)}
+              <T k="xs" color={t.muted} style={{ marginLeft: 6 }}>{Math.min(page + 1, nexts.length)}/{nexts.length}</T>
+            </View>
+          </View>
         ) : next ? (
           <Hero a={next} c={byId.get(String(next.clientId))} staff={team.find((s) => String(s.id) === String(next.staffId))} onOpen={() => router.push(`/booking/${next.id}`)} onAction={() => (next.status === 'PENDING' ? void confirmOne(next) : router.push({ pathname: '/booking/[id]', params: { id: String(next.id), checkout: '1' } }))} />
         ) : (
