@@ -122,12 +122,12 @@ export default function Calendar() {
 
           {loading ? <Skeleton blocks={[{ h: 64 }, { h: 64 }, { h: 64 }, { h: 64 }]} /> : layout === 'grid' && !focus ? (
             <View style={{ height: 640, marginTop: 8 }}>
-              <Timeline date={date} masters={team} appts={dayList} blocks={off.data ?? []} startHour={9} endHour={21} refreshing={false} onRefresh={() => void q.reload()}
+              <Timeline date={date} masters={team} appts={dayList} blocks={off.data ?? []} startHour={hoursOf(dayList, sameDay(date, salonNow()))[0]} endHour={hoursOf(dayList, sameDay(date, salonNow()))[1]} refreshing={false} onRefresh={() => void q.reload()}
                 onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} onPickMaster={(m) => { setFocus(String(m.id)); setLayout('summary'); }} hourPx={dense ? 96 : 128} />
             </View>
           ) : layout === 'week' ? (
             <View style={{ height: 640, marginTop: 8 }}>
-              <WeekView date={date} appts={focus ? all.filter((a) => String(a.staffId) === focus) : all} startHour={9} endHour={21} refreshing={false} onRefresh={() => void q.reload()}
+              <WeekView date={date} appts={focus ? all.filter((a) => String(a.staffId) === focus) : all} startHour={hoursOf(all, true)[0]} endHour={hoursOf(all, true)[1]} refreshing={false} onRefresh={() => void q.reload()}
                 onOpen={open} onPickDay={(d) => { setDate(d); setLayout('summary'); }} />
             </View>
           ) : dayList.length === 0 && !(focus && (off.data ?? []).some((b) => String(b.staffId) === focus)) ? (
@@ -189,14 +189,21 @@ function Pro({ label, uri, name, on, onPress }: { label: string; uri?: string | 
   );
 }
 
+/** Visible hour range: working day by default, stretched to every booking and, on today, to the current hour so the red "now" line is always on screen. */
+function hoursOf(list: Appointment[], today: boolean, end = 21): [number, number] {
+  let lo = Math.min(9, ...list.map((a) => Math.floor(toMin(a.startTime) / 60)));
+  let hi = Math.max(end, ...list.map((a) => Math.ceil(toMin(a.endTime) / 60)));
+  if (today) { const h = Math.floor(nowMin() / 60); lo = Math.min(lo, h); hi = Math.max(hi, h + 1); }
+  return [Math.max(0, lo), Math.min(24, hi)];
+}
+
 /** One specialist's day (`.tl`): hour lines every hourPx, events as tinted cards, pending = white with guava outline, now line. */
 const TINT = [0, 3, 1, 4, 2]; // artifact order: Aysel c1, Nigar c4, Lalə c2, Kamran c5, Rəna c3
 function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint }: {
   tint: number; date: Date; list: Appointment[]; blocks: TimeOff[]; hourPx: number; avatarOf: Map<string, string | null>; onOpen: (a: Appointment) => void; onBlock: (b: TimeOff) => void;
 }) {
   const { t } = useTheme();
-  const lo = Math.min(9, ...list.map((a) => Math.floor(toMin(a.startTime) / 60)));
-  const hi = Math.max(20, ...list.map((a) => Math.ceil(toMin(a.endTime) / 60)));
+  const [lo, hi] = hoursOf(list, sameDay(date, salonNow()), 20);
   const y = (m: number) => ((m - lo * 60) / 60) * hourPx;
   // Overlapping bookings of the same specialist share the row side by side instead of hiding each other.
   const { width: winW } = useWindowDimensions();
@@ -238,7 +245,7 @@ function DayColumn({ date, list, blocks, hourPx, avatarOf, onOpen, onBlock, tint
         );
       })}
       {isToday && n >= lo * 60 && n <= hi * 60 ? (
-        <View pointerEvents="none" style={{ position: 'absolute', left: 58, right: 0, top: y(n), height: 2, backgroundColor: t.guava, zIndex: 3 }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: 58, right: 0, top: y(n), height: 2, backgroundColor: t.guava, zIndex: 30, elevation: 30 }}>
           <View style={{ position: 'absolute', left: -5, top: -4, width: 10, height: 10, borderRadius: 5, backgroundColor: t.guava }} />
         </View>
       ) : null}

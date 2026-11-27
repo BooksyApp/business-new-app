@@ -186,7 +186,7 @@ export function Timeline({ date, masters, appts, blocks = [], startHour, endHour
               );
             }))}
             {showNow ? (
-              <View pointerEvents="none" style={{ position: 'absolute', top: nowTop - 1, left: -10, right: 0, height: 2.5, backgroundColor: t.guava }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: nowTop - 1, left: -10, right: 0, height: 2.5, backgroundColor: t.guava, zIndex: 30, elevation: 30 }}>
                 <View style={{ position: 'absolute', left: -1, top: -5.25, width: 13, height: 13, borderRadius: 7, backgroundColor: t.guava, borderWidth: 4, borderColor: 'rgba(232,62,99,.2)', boxSizing: 'content-box', marginLeft: -4, marginTop: -4 } as any} />
               </View>
             ) : null}

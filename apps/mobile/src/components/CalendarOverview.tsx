@@ -65,8 +65,10 @@ export function CalendarOverview({ date: initial, team, onClose, onOpen }: { dat
 function DayGrid({ date, team, appts, W, onOpen }: { date: Date; team: Staff[]; appts: Appointment[]; W: number; onOpen: (a: Appointment) => void }) {
   const { t } = useTheme();
   const colW = Math.max(96, Math.floor((W - GUTTER - 8) / Math.min(Math.max(team.length, 1), 3.5)));
-  const lo = Math.min(9, ...appts.map((a) => Math.floor(toMin(a.startTime) / 60)));
-  const hi = Math.max(20, ...appts.map((a) => Math.ceil(toMin(a.endTime) / 60)));
+  // On today the range stretches to the current hour, so the red "now" line is always visible.
+  const nowH = Math.floor(nowMin() / 60);
+  const lo = Math.max(0, Math.min(9, sameDay(date, salonNow()) ? nowH : 9, ...appts.map((a) => Math.floor(toMin(a.startTime) / 60))));
+  const hi = Math.min(24, Math.max(20, sameDay(date, salonNow()) ? nowH + 1 : 20, ...appts.map((a) => Math.ceil(toMin(a.endTime) / 60))));
   const y = (m: number) => ((m - lo * 60) / 60) * HOUR_PX;
   const isToday = sameDay(date, salonNow());
   const hRef = useRef<ScrollView>(null);
