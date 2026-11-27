@@ -177,7 +177,7 @@ export const apiB = {
 
   offerWaitlist: (b: Id, id: Id, slots: { staffId: Id; date: string; startTime: string }[]) => request<void>(`/waitlist/business/${b}/${id}/offer`, { method: 'POST', body: { slots } }),
   addPhoto: (b: Id, upload: string) => request<{ id: Id; url: string }>(`${B(b)}/photos`, { method: 'POST', body: { upload } }),
-  createLook: (b: Id, upload: string, title?: string, extra?: { staffId?: Id; serviceId?: Id }) => request<unknown>(`${B(b)}/looks`, { method: 'POST', body: { upload, title: title || undefined, staffId: extra?.staffId, serviceId: extra?.serviceId } }),
+  createLook: (b: Id, upload: string, title?: string, extra?: { staffId?: Id; serviceId?: Id; tags?: string }) => request<unknown>(`${B(b)}/looks`, { method: 'POST', body: { upload, title: title || undefined, staffId: extra?.staffId, serviceId: extra?.serviceId, tags: extra?.tags } }),
   /** A photo already uploaded with purpose LOOK: {upload, caption?} (the multipart variant is only used by the legacy picker). */
   createStory: (b: Id, upload: string, caption?: string) => request<unknown>(`${B(b)}/stories`, { method: 'POST', body: { upload, caption: caption || undefined } }),
 };

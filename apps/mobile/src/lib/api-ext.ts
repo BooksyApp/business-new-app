@@ -67,8 +67,8 @@ export interface NotifSettings {
   senderName: string | null; replyTo: string | null;
 }
 /** saveCount: how many customers saved the look (saved_looks); the API sends no view count for looks. */
-export interface Look { id: Id; photoUrl: string; title?: string | null; serviceName?: string | null; staffName?: string | null; status: string; saveCount?: number }
-export interface Story { id: Id; url: string; caption?: string | null; viewCount: number; expiresAt: string }
+export interface Look { id: Id; photoUrl: string; title?: string | null; serviceName?: string | null; staffName?: string | null; tags?: string | null; status: string; saveCount?: number }
+export interface Story { id: Id; url: string; caption?: string | null; tags?: string | null; viewCount: number; expiresAt: string }
 export interface ConsentForm { id: Id; name?: string; title?: string; isActive?: boolean }
 export interface SubStatus { plan?: string; status?: string; trialEndsAt?: string | null; currentPeriodEnd?: string | null }
 export interface ClientBody { firstName?: string; lastName?: string; phone?: string; email?: string; notes?: string; allowMarketingEmails?: boolean; allowSmsNotifications?: boolean; patchTestDate?: string; vip?: boolean }

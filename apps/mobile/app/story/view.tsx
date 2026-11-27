@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, PanResponder, TextInput, View } from 'react-native';
+import { Alert, PanResponder, TextInput, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar, Photo, T } from '@/components/kit';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
+import { TagLayer, parseTags } from '@/components/TagLayer';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
@@ -24,6 +25,7 @@ const DURATION = 5000;
 export default function StoryView() {
   const router = useRouter();
   const ins = useSafeAreaInsets();
+  const { width: SW, height: SH } = useWindowDimensions();
   const { salon, demo, bump } = useApp();
   const { i, mode = 'own', name, avatar } = useLocalSearchParams<{ i?: string; mode?: string; name?: string; avatar?: string }>();
   const sid = salon?.id ?? '';
@@ -80,6 +82,7 @@ export default function StoryView() {
         {own ? <Pressable onPress={del} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="dots" size={22} color="#fff" /></Pressable> : null}
         <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={tr('v2.close')} hitSlop={8} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="x" size={22} color="#fff" /></Pressable>
       </View>
+      <TagLayer tags={parseTags(cur?.tags)} w={SW} h={SH} top={ins.top + 84} bottom={Math.max(ins.bottom, 12) + 70} />
       {cur?.caption ? (
         <View style={{ position: 'absolute', left: 20, bottom: own ? 110 : 120, maxWidth: '78%', backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, paddingHorizontal: 14, paddingVertical: sticker ? 10 : 8, transform: [{ rotate: '-3deg' }] }}>
           {sticker ? <T k="xs" color="#8c8177">{tr('v2.service')}</T> : null}
@@ -94,8 +97,6 @@ export default function StoryView() {
               <Icon name="eye" size={20} color="#fff" />
               <Text style={{ fontFamily: font.b, fontSize: 14, color: '#fff' }}>{cur?.viewCount ?? 0} {tr('v3.viewsWord')}</Text>
             </View>
-            <Pressable onPress={() => toast(tr('v3.shareSoon'), 'info')} accessibilityRole="button" accessibilityLabel={tr('v2.share')} hitSlop={8}><Icon name="share" size={24} color="#fff" /></Pressable>
-            <Pressable onPress={del} accessibilityRole="button" accessibilityLabel={tr('lk.delete')} hitSlop={8}><Icon name="trash" size={24} color="#fff" /></Pressable>
           </>
         ) : (
           <>

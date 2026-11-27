@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Icon } from '@/components/Icon';
 import { Avatar, BackBar, Button, Card, IconBtn, Photo, Skeleton, T } from '@/components/kit';
 import { Text } from '@/components/Text';
+import { TagLayer, parseTags } from '@/components/TagLayer';
 import { ErrorState, Screen } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
@@ -13,7 +14,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
-type LookX = { id: string | number; photoUrl: string; title?: string | null; serviceName?: string | null; staffName?: string | null; saveCount?: number };
+type LookX = { id: string | number; photoUrl: string; title?: string | null; serviceName?: string | null; staffName?: string | null; tags?: string | null; saveCount?: number };
 
 /** Post view: header, big photo, counts + "Statistika", caption, service chip and how clients see the booking prompt. */
 export default function PostView() {
@@ -37,7 +38,7 @@ export default function PostView() {
             <View style={{ flex: 1 }}><T k="h3" lines={1}>{salon?.name}</T>{l.serviceName ? <T k="xs" color={t.muted}>{l.serviceName}</T> : null}</View>
           </View>
           <Photo src={l.photoUrl} style={{ width: W, height: W * 1.2 }} label={l.title ?? undefined}>
-            {l.serviceName || l.staffName ? (
+            {parseTags(l.tags).length ? <TagLayer tags={parseTags(l.tags)} w={W} h={W * 1.2} /> : l.serviceName || l.staffName ? (
               <View style={{ position: 'absolute', left: 12, right: 12, bottom: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {l.serviceName ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, height: 32, paddingHorizontal: 12, maxWidth: '75%' }}><Icon name="tag" size={14} color="#5b3fd6" /><Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{l.serviceName}</Text></View> : null}
                 {l.staffName ? <View style={{ backgroundColor: 'rgba(255,255,255,.96)', borderRadius: 16, height: 32, paddingHorizontal: 12, justifyContent: 'center' }}><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>@{l.staffName.split(' ')[0]}</Text></View> : null}

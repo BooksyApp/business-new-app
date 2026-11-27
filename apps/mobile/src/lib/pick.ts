@@ -56,9 +56,10 @@ export async function uploadPicked(p: Picked, purpose: string): Promise<Uploaded
   form.append('purpose', purpose);
   return uploadForm<Uploaded>('/uploads', form);
 }
-export async function postStoryPicked(businessId: string | number, p: Picked, caption: string): Promise<void> {
+export async function postStoryPicked(businessId: string | number, p: Picked, caption: string, tags?: string): Promise<void> {
   const form = new FormData();
   form.append('file', filePart(p) as unknown as Blob);
   if (caption.trim()) form.append('caption', caption.trim());
+  if (tags) form.append('tags', tags);
   await uploadForm(`/businesses/${businessId}/stories`, form);
 }

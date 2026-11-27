@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 
@@ -11,7 +11,7 @@ export type DragBounds = { w: number; h: number; top: number; bottom: number; /*
  * rect (below the top safe zone, above the bottom controls, clear of the tool column). Tap = change, small x = remove.
  * Positions are visual only: the story/look model has no field for tag coordinates.
  */
-export function DragChip({ bounds, slot, label, onPress, onRemove, children }: { bounds: DragBounds; slot: number; label: string; onPress: () => void; onRemove: () => void; children: React.ReactNode }) {
+export function DragChip({ bounds, slot, label, onPress, onRemove, onMove, children }: { bounds: DragBounds; slot: number; label: string; onPress: () => void; onRemove: () => void; /** final position as 0..1 of the photo box */ onMove?: (x: number, y: number) => void; children: React.ReactNode }) {
   const x = useSharedValue(8);
   const y = useSharedValue(-1000);
   const sx = useSharedValue(0);
@@ -32,6 +32,7 @@ export function DragChip({ bounds, slot, label, onPress, onRemove, children }: {
       x.value = 8;
       y.value = Math.max(bounds.top, bounds.h - bounds.bottom - h - 8 - slot * (h + 8));
       setReady(true);
+      onMove?.(x.value / Math.max(1, bounds.w), y.value / Math.max(1, bounds.h));
     }
   };
 
@@ -45,7 +46,8 @@ export function DragChip({ bounds, slot, label, onPress, onRemove, children }: {
       const maxX = Math.max(8, (ny < tb.value ? tx.value : bw.value - 8) - cw.value);
       x.value = Math.min(maxX, Math.max(8, sx.value + e.translationX));
       y.value = ny;
-    });
+    })
+    .onEnd(() => { 'worklet'; if (onMove) runOnJS(onMove)(x.value / Math.max(1, bw.value), y.value / Math.max(1, bh.value)); });
   const tap = Gesture.Tap().maxDistance(8).runOnJS(true).onEnd((e, ok) => { if (!ok) return; if (e.x > cw.value - 40) onRemove(); else onPress(); });
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }] }));
 

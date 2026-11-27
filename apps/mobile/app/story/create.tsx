@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, TextInput, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -46,6 +46,7 @@ export default function StoryCreate() {
   const [done, setDone] = useState(false);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [err, setErr] = useState('');
+  const pos = useRef<{ svc?: { x: number; y: number }; who?: { x: number; y: number } }>({});
   const services = useLoad(() => api.services(sid).catch(() => []), [sid]);
   const staff = useLoad(() => apiX.staffFull(sid).catch(() => []), [sid]);
   const looks = useLoad(() => (demo ? apiX.looks(sid).catch(() => []) : Promise.resolve([])), [sid, demo]);
@@ -63,9 +64,11 @@ export default function StoryCreate() {
     if (!sid) return refuse(tr('cp.noSalon'));
     setErr(''); setBusy(true);
     try {
-      const caption = [text.trim(), svc ? `${svc.name}${svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}` : '', who ? `@${who.name.split(' ')[0]}` : ''].filter(Boolean).join(' · ');
-      await postStoryPicked(sid, sel.picked, caption);
-      if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, caption, { serviceId: svc?.id != null ? String(svc.id) : undefined, staffId: who?.id != null ? String(who.id) : undefined }); }
+      const svcLabel = svc ? `${svc.name}${svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}` : '';
+      const tagList = [svc ? { k: 'svc', t: svcLabel, ...(pos.current.svc ?? { x: 0.04, y: 0.7 }) } : null, who ? { k: 'who', t: `@${who.name.split(' ')[0]}`, ...(pos.current.who ?? { x: 0.04, y: 0.64 }) } : null].filter(Boolean);
+      const tags = tagList.length ? JSON.stringify(tagList) : undefined;
+      await postStoryPicked(sid, sel.picked, text.trim(), tags);
+      if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, text.trim(), { serviceId: svc?.id != null ? String(svc.id) : undefined, staffId: who?.id != null ? String(who.id) : undefined, tags }); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); setDone(true);
       setTimeout(() => { close(); setTimeout(() => { bump(); toast(tr('cp.ok'), 'success'); }, 350); }, 900);
@@ -101,13 +104,13 @@ export default function StoryCreate() {
         {svc || who ? (
           <>
             {svc ? (
-              <DragChip bounds={bounds} slot={0} label={svc.name} onPress={() => setSheet('svc')} onRemove={() => setSvc(null)}>
+              <DragChip bounds={bounds} slot={0} label={svc.name} onPress={() => setSheet('svc')} onRemove={() => setSvc(null)} onMove={(x, y) => { pos.current.svc = { x, y }; }}>
                 <Icon name="tag" size={14} color="#5b3fd6" />
                 <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{svc.name}{svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}</Text>
               </DragChip>
             ) : null}
             {who ? (
-              <DragChip bounds={bounds} slot={svc ? 1 : 0} label={who.name} onPress={() => setSheet('who')} onRemove={() => setWho(null)}>
+              <DragChip bounds={bounds} slot={svc ? 1 : 0} label={who.name} onPress={() => setSheet('who')} onRemove={() => setWho(null)} onMove={(x, y) => { pos.current.who = { x, y }; }}>
                 <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>@{who.name.split(' ')[0]}</Text>
               </DragChip>
             ) : null}
@@ -115,12 +118,11 @@ export default function StoryCreate() {
         ) : null}
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: Math.max(ins.bottom, 14) + 10, gap: 10, paddingHorizontal: 16, zIndex: 20, elevation: 20 }}>
           <Pressable onPress={() => setAlsoLooks((v) => !v)} accessibilityRole="switch" accessibilityState={{ checked: alsoLooks }} accessibilityLabel={tr('v3.keepTitle')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(29,23,48,.62)', borderRadius: 20, paddingHorizontal: 14, height: 58 }}>
-            <Icon name="grid" size={20} color="#fff" />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14, color: '#fff' }}>{tr('v3.keepTitle')}</Text>
               <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 12, color: 'rgba(255,255,255,.78)' }}>{alsoLooks ? tr('v3.keepOn') : tr('v3.keepOff')}</Text>
             </View>
-            <View style={{ width: 46, height: 28, borderRadius: 14, backgroundColor: alsoLooks ? '#12a36a' : 'rgba(255,255,255,.3)', padding: 3, alignItems: alsoLooks ? 'flex-end' : 'flex-start' }}><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} /></View>
+            <View style={{ width: 46, height: 28, borderRadius: 14, backgroundColor: alsoLooks ? '#6f52ed' : 'rgba(255,255,255,.3)', padding: 3, alignItems: alsoLooks ? 'flex-end' : 'flex-start' }}><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} /></View>
           </Pressable>
           {err ? <View style={{ alignSelf: 'center', backgroundColor: 'rgba(232,62,99,.95)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 }}><Text style={{ fontFamily: font.s, fontSize: 13, color: '#fff', textAlign: 'center' }}>{err}</Text></View> : null}
           <Pressable onPress={() => void share()} disabled={busy} accessibilityRole="button" accessibilityLabel={tr('cp.share')} style={{ height: 54, borderRadius: 27, alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', opacity: busy ? 0.85 : 1 }}>
@@ -130,7 +132,7 @@ export default function StoryCreate() {
         </View>
         {done ? (
           <View pointerEvents="auto" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 50, elevation: 50, backgroundColor: 'rgba(29,23,48,.72)', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
-            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: '#12704b', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={38} color="#fff" /></View>
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: '#6f52ed', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={38} color="#fff" /></View>
             <Text style={{ fontFamily: font.x, fontSize: 24, color: '#fff' }}>{tr('cp.ok')}</Text>
           </View>
         ) : null}
@@ -166,7 +168,6 @@ export default function StoryCreate() {
           </Pressable>
         ))}
       </ScrollView>
-      {!demo ? <View style={{ position: 'absolute', left: 20, right: 20, bottom: Math.max(ins.bottom, 14) + 20 }}><T k="sm" color={t.muted} style={{ textAlign: 'center' }}>{tr('v3.pickHint')}</T></View> : null}
     </Screen>
   );
 }
