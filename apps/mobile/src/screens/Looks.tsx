@@ -43,7 +43,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
     if (!pick) { const m = tr('cp.noPhoto'); setErr(m); toast(m, 'error'); return; }
     setErr(''); setUpBusy(true);
     try {
-      if (tab === 'photos') { const up = await uploadPicked(pick, 'LOOK'); await apiB.createLook(sid, up.id, undefined, { serviceId: svcId ?? undefined }); }
+      if (tab === 'photos') { const up = await uploadPicked(pick, 'LOOK'); await apiB.createLook(sid, up.id, undefined, { serviceId: svcId != null ? String(svcId) : undefined }); }
       else await postStoryPicked(sid, pick, cap);
       setSheet(false); setPick(null); setCap(''); setSvcId(null); bump(); void list.reload();
       setTimeout(() => toast(tr('cp.ok'), 'success'), 350);

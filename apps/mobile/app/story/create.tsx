@@ -65,7 +65,7 @@ export default function StoryCreate() {
     try {
       const caption = [text.trim(), svc ? `${svc.name}${svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}` : '', who ? `@${who.name.split(' ')[0]}` : ''].filter(Boolean).join(' · ');
       await postStoryPicked(sid, sel.picked, caption);
-      if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, caption, { serviceId: svc?.id, staffId: who?.id }); }
+      if (alsoLooks) { const up = await uploadPicked(sel.picked, 'LOOK'); await apiB.createLook(sid, up.id, caption, { serviceId: svc?.id != null ? String(svc.id) : undefined, staffId: who?.id != null ? String(who.id) : undefined }); }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       bump(); setDone(true);
       setTimeout(() => { close(); setTimeout(() => { bump(); toast(tr('cp.ok'), 'success'); }, 350); }, 900);
