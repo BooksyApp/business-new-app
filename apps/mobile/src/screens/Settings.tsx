@@ -8,6 +8,7 @@ import { BackBar, Field as KField, Button as KButton, KV, ListItem as KListItem,
 import { useRouter } from 'expo-router';
 import { SUPPORTED, getLocale, setLocale, t as tr } from '@/i18n';
 import { useApp } from '@/lib/app';
+import { ApiError, type Business } from '@/lib/api';
 import { apiO } from '@/lib/api-onboard';
 import { toast } from '@/lib/toast';
 import { HoursEditor, NotificationsEditor, SetGroup, SubscriptionPage } from '@/screens/SettingsMore';
@@ -18,10 +19,11 @@ import { useTheme } from '@/theme/ThemeContext';
 export function Settings({ onBack }: { onBack: () => void }) {
   const { t, mode, setMode } = useTheme();
   const router = useRouter();
-  const { user, salon, signOut } = useApp();
+  const { user, salon, salons, signOut, demo } = useApp();
   const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'subscription' | 'texts'>('main');
   const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'pw' | 'del'>(null);
   const [curPw, setCurPw] = useState(''); const [newPw, setNewPw] = useState(''); const [pwBusy, setPwBusy] = useState(false); const [pwErr, setPwErr] = useState('');
+  const [delPw, setDelPw] = useState(''); const [delName, setDelName] = useState(''); const [delBusy, setDelBusy] = useState(false); const [delErr, setDelErr] = useState('');
   if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
   if (sub === 'notif') return <NotificationsEditor onBack={() => setSub('main')} />;
   if (sub === 'subscription') return <SubscriptionPage onBack={() => setSub('main')} />;
@@ -29,6 +31,27 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const lead = (icon: string, danger?: boolean) => <Icon name={icon} size={20} color={danger ? t.gink : t.ink} />;
   const chev = <Icon name="chev" size={14} color={t.ink3} />;
   const langName = SUPPORTED.find((l) => l.code === getLocale())?.endonym ?? '';
+  // The server closes every salon this account owns; typing one salon's name (the open one when it is owned) is the confirmation.
+  const isOwner = user?.role === 'BUSINESS_OWNER';
+  const owned = salons.filter((b) => (b as Business & { isOwner?: boolean }).isOwner === true);
+  const target = owned.find((b) => b.id === salon?.id) ?? owned[0] ?? salon;
+  const salonName = target?.name?.trim() ?? '';
+  const otherOwned = owned.filter((b) => b.id !== target?.id).length;
+  const nameOk = !isOwner || (salonName !== '' && delName.trim().toLocaleLowerCase() === salonName.toLocaleLowerCase());
+  const closeSheet = () => { setSheet(null); setDelPw(''); setDelName(''); setDelErr(''); };
+  const deleteAccount = () => {
+    if (demo) { closeSheet(); signOut(); return; } // the sample salon has no account behind it
+    setDelErr(''); setDelBusy(true);
+    void apiO.deleteAccount(delPw)
+      .then((r) => {
+        closeSheet();
+        const lines = [isOwner ? tr('ob.delDoneOwner', { n: r.appointmentsCancelled }) : '', r.billingNote ? tr('ob.delBilling') : ''].filter(Boolean).join('\n\n');
+        // The session is gone on the server, so the app signs out whatever happens. The alert waits for the sheet to finish closing: iOS drops an alert raised over a closing modal.
+        setTimeout(() => Alert.alert(tr('ob.delDoneTitle'), lines || undefined, [{ text: tr('common.close'), onPress: () => signOut() }], { cancelable: false }), 400);
+      })
+      .catch((e: unknown) => setDelErr(e instanceof ApiError && e.status === 403 ? tr('ob.delWrongPw') : (e as Error).message))
+      .finally(() => setDelBusy(false));
+  };
   const themeName = tr(mode === 'light' ? 'set.themeLight' : mode === 'dark' ? 'set.themeDark' : 'set.themeSystem');
   return (
     <Screen>
@@ -62,10 +85,17 @@ export function Settings({ onBack }: { onBack: () => void }) {
         {pwErr ? <T k="t2" color={t.gink} style={{ marginTop: 8, marginLeft: 4 }}>{pwErr}</T> : null}
         <KButton label={tr('common.save')} loading={pwBusy} disabled={!curPw || newPw.length < 8} style={{ marginTop: 14 }} onPress={() => { setPwErr(''); setPwBusy(true); void apiO.changePassword(curPw, newPw).then(() => { toast(tr('ob.pwChanged'), 'success'); setCurPw(''); setNewPw(''); setSheet(null); }).catch((e: Error) => setPwErr(e.message)).finally(() => setPwBusy(false)); }} />
       </BottomSheet>
-      <BottomSheet open={sheet === 'del'} onClose={() => setSheet(null)}>
+      <BottomSheet open={sheet === 'del'} onClose={closeSheet}>
         <T k="h1" style={{ marginBottom: 6 }}>{tr('ob.delTitle')}</T>
-        <T k="body" color={t.muted}>{tr('ob.delBody')}</T>
-        <KButton label={tr('ob.delAction')} icon="send" style={{ marginTop: 14 }} onPress={() => { setSheet(null); router.push('/section/support'); }} />
+        <T k="body" color={t.muted}>{isOwner ? tr('ob.delOwnerBody', { salon: salonName || '-' }) : tr('ob.delStaffBody')}</T>
+        {isOwner && otherOwned > 0 ? <T k="body" color={t.muted} style={{ marginTop: 6 }}>{tr('ob.delOwnerMore', { n: otherOwned })}</T> : null}
+        <KField icon="lock" placeholder={tr('ob.pwCurrent')} accessibilityLabel={tr('ob.pwCurrent')} value={delPw} onChangeText={setDelPw} secureTextEntry autoCapitalize="none" boxStyle={{ marginTop: 14 }} />
+        {isOwner ? <>
+          <T k="xs" color={t.ink3} style={{ marginTop: 10, marginLeft: 4 }}>{tr('ob.delTypeName', { salon: salonName || '-' })}</T>
+          <KField icon="store" placeholder={salonName} accessibilityLabel={tr('ob.delTypeName', { salon: salonName })} value={delName} onChangeText={setDelName} autoCapitalize="none" autoCorrect={false} boxStyle={{ marginTop: 6 }} />
+        </> : null}
+        {delErr ? <T k="t2" color={t.gink} style={{ marginTop: 8, marginLeft: 4 }}>{delErr}</T> : null}
+        <KButton label={tr('ob.delAction')} kind="danger" icon="trash" loading={delBusy} disabled={!delPw || !nameOk || delBusy} style={{ marginTop: 14 }} onPress={deleteAccount} />
       </BottomSheet>
       <BottomSheet open={sheet === 'lang'} onClose={() => setSheet(null)}>
         <T k="h1" style={{ marginBottom: 6 }}>{tr('more.language')}</T>

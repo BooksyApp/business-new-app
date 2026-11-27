@@ -10,6 +10,8 @@ export interface RegisterBody { firstName: string; lastName: string; email: stri
 export interface BizCategory { slug: string; name: string; label: string }
 export interface Readiness { bookable: boolean; missing: ('category' | 'services' | 'staff' | 'hours' | 'onlineBooking' | 'suspended')[]; recommended: ('photos' | 'verification')[] }
 export interface InvitePreview { salonName: string; staffName: string; email: string; accountExists: boolean }
+/** DELETE /api/auth/me: what closing the account did. billingNote is set when support still has to close a paid subscription. */
+export interface AccountDeleted { deleted: boolean; businessesClosed: number; appointmentsCancelled: number; billingNote?: string }
 export interface PlatformFlags { businessSignupsOpen?: boolean; appMaintenance?: boolean; appMaintenanceMessage?: string }
 
 export const apiO = {
@@ -28,6 +30,8 @@ export const apiO = {
   reset: (token: string, newPassword: string) => request<{ reset: boolean }>('/public/auth/password/reset', { method: 'POST', auth: false, body: { token, newPassword } }),
   /** POST /api/auth/change-password (signed in). Other devices are signed out by the server. */
   changePassword: (currentPassword: string, newPassword: string) => request<{ changed: boolean }>('/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } }),
+  /** DELETE /api/auth/me {password}: deletes the account; for an owner it also closes every salon they own (403 = wrong password). */
+  deleteAccount: (password: string) => request<AccountDeleted>('/auth/me', { method: 'DELETE', body: { password } }),
   /** GET /api/public/business-categories?locale=: `name` is the stable key to send, `label` is the display name. */
   categories: (locale: string) => requestList<BizCategory>(`/public/business-categories?locale=${encodeURIComponent(locale)}`, { auth: false }),
   /** GET /api/public/platform: business sign-ups can be closed by the platform. */

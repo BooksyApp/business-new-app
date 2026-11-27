@@ -32,7 +32,13 @@ export const obEn = {
     needSplit: 'Enter how much goes on card (less than the total).',
     noAccessTitle: 'Not available for your role', noAccessBody: 'Ask the salon owner to change your role if you need this.',
     secTitle: 'Security', pwChange: 'Change password', pwCurrent: 'Current password', pwChanged: 'Password changed. Other devices were signed out.',
-    delTitle: 'Close my account', delBody: 'Account deletion for salon owners is handled by our team so your salon data and bookings are handled safely. Send us a request.', delAction: 'Send request',
+    delTitle: 'Close my account', delAction: 'Delete my account for good',
+    delOwnerBody: 'Your account will be deleted and {{salon}} will be removed from booqi: clients will no longer find it or book it. Every upcoming booking will be cancelled and the clients will be notified. Your team will lose access to the salon. Past bookings, sales and invoices are kept without your name, as the legal record. This cannot be undone.',
+    delOwnerMore: 'The other salons you own ({{n}}) will be closed the same way.',
+    delStaffBody: 'Your account will be deleted and you will lose access to the salon. The work you did stays in the salon\'s history without your name. This cannot be undone.',
+    delTypeName: 'To confirm, type the salon name: {{salon}}', delWrongPw: 'The password is incorrect.',
+    delDoneTitle: 'Account deleted', delDoneOwner: '{{n}} upcoming bookings were cancelled and the clients were notified.',
+    delBilling: 'Your paid subscription is still active. booqi support will close the billing; you do not need to do anything.',
   },
 };
 export const obAz = {
@@ -68,7 +74,13 @@ export const obAz = {
     needSplit: 'Karta düşən məbləği yaz (cəmdən az olmalıdır).',
     noAccessTitle: 'Rolun üçün əlçatan deyil', noAccessBody: 'Buna ehtiyacın varsa, salon sahibindən rolunu dəyişməyi xahiş et.',
     secTitle: 'Təhlükəsizlik', pwChange: 'Şifrəni dəyiş', pwCurrent: 'Hazırkı şifrə', pwChanged: 'Şifrə dəyişdi. Digər cihazlardan çıxış edildi.',
-    delTitle: 'Hesabımı bağla', delBody: 'Salon sahiblərinin hesabını komandamız bağlayır ki, salon məlumatları və rezervlər təhlükəsiz idarə olunsun. Bizə sorğu göndər.', delAction: 'Sorğu göndər',
+    delTitle: 'Hesabımı bağla', delAction: 'Hesabı birdəfəlik sil',
+    delOwnerBody: 'Hesabın silinəcək və {{salon}} booqi-dən çıxarılacaq: müştərilər onu artıq tapa və rezerv edə bilməyəcək. Gələcək bütün rezervlər ləğv olunacaq və müştərilərə bildiriş gedəcək. Komandanın salona girişi bağlanacaq. Keçmiş rezervlər, satışlar və hesab-fakturalar qanuni qeyd kimi adın olmadan saxlanılır. Bunu geri qaytarmaq olmur.',
+    delOwnerMore: 'Sahibi olduğun digər salonlar da ({{n}}) eyni qaydada bağlanacaq.',
+    delStaffBody: 'Hesabın silinəcək və salona girişin bağlanacaq. Gördüyün işlər salonun tarixçəsində adın olmadan qalır. Bunu geri qaytarmaq olmur.',
+    delTypeName: 'Təsdiq üçün salonun adını yaz: {{salon}}', delWrongPw: 'Şifrə yanlışdır.',
+    delDoneTitle: 'Hesab silindi', delDoneOwner: '{{n}} gələcək rezerv ləğv olundu, müştərilərə bildiriş göndərildi.',
+    delBilling: 'Ödənişli abunəliyin hələ aktivdir. Ödənişi booqi dəstəyi bağlayacaq, səndən əlavə addım tələb olunmur.',
   },
 };
 export const obRu = {
@@ -104,6 +116,12 @@ export const obRu = {
     needSplit: 'Укажите сумму на карту (меньше итога).',
     noAccessTitle: 'Недоступно для вашей роли', noAccessBody: 'Если это нужно, попросите владельца салона изменить вашу роль.',
     secTitle: 'Безопасность', pwChange: 'Сменить пароль', pwCurrent: 'Текущий пароль', pwChanged: 'Пароль изменён. На других устройствах выполнен выход.',
-    delTitle: 'Закрыть мой аккаунт', delBody: 'Аккаунты владельцев салонов закрывает наша команда, чтобы данные салона и записи были обработаны безопасно. Отправьте нам запрос.', delAction: 'Отправить',
+    delTitle: 'Закрыть мой аккаунт', delAction: 'Удалить аккаунт навсегда',
+    delOwnerBody: 'Ваш аккаунт будет удалён, а {{salon}} исчезнет из booqi: клиенты больше не смогут его найти и записаться. Все предстоящие записи будут отменены, клиенты получат уведомление. Команда потеряет доступ к салону. Прошлые записи, продажи и счета сохраняются без вашего имени как юридическая запись. Это действие необратимо.',
+    delOwnerMore: 'Другие ваши салоны ({{n}}) будут закрыты так же.',
+    delStaffBody: 'Ваш аккаунт будет удалён, и вы потеряете доступ к салону. Ваша работа останется в истории салона без вашего имени. Это действие необратимо.',
+    delTypeName: 'Для подтверждения введите название салона: {{salon}}', delWrongPw: 'Неверный пароль.',
+    delDoneTitle: 'Аккаунт удалён', delDoneOwner: 'Отменено предстоящих записей: {{n}}. Клиенты получили уведомление.',
+    delBilling: 'Платная подписка ещё активна. Поддержка booqi закроет оплату, от вас ничего не требуется.',
   },
 };
