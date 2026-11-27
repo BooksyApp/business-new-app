@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { lanes } from '@/components/calendar';
 import { Icon } from '@/components/Icon';
 import { IconBtn, Segmented, Skeleton, T } from '@/components/kit';
 import { Pressable } from '@/components/Pressable';
@@ -97,18 +98,20 @@ function DayGrid({ date, team, appts, W, onOpen }: { date: Date; team: Staff[]; 
               {Array.from({ length: hi - lo }, (_, i) => <View key={i} style={{ position: 'absolute', left: 0, right: 0, top: 8 + i * HOUR_PX, borderTopWidth: 1, borderTopColor: t.hair }} />)}
               {team.map((s, i) => (
                 <View key={String(s.id)} style={{ position: 'absolute', left: i * colW, width: colW, top: 0, bottom: 0, borderLeftWidth: i ? 1 : 0, borderLeftColor: t.hair }}>
-                  {appts.filter((a) => String(a.staffId) === String(s.id)).map((a) => {
+                  {((mine) => { const ln = lanes(mine); return mine.map((a) => {
                     const c = PALETTE[i % PALETTE.length];
+                    const l = ln.get(a.id) ?? { lane: 0, n: 1 };
+                    const lw = (colW - 6) / l.n;
                     const top = 8 + y(toMin(a.startTime));
                     const h = Math.max(30, y(toMin(a.endTime)) - y(toMin(a.startTime)) - 2);
                     return (
                       <Pressable key={a.id} onPress={() => onOpen(a)} accessibilityRole="button" accessibilityLabel={`${hhmm(a.startTime)} ${a.clientName ?? ''} ${a.serviceName ?? ''}`}
-                        style={{ position: 'absolute', left: 3, right: 3, top, height: h, borderRadius: 10, backgroundColor: `${c}26`, borderLeftWidth: 3, borderLeftColor: c, paddingHorizontal: 6, paddingVertical: 3, overflow: 'hidden', borderWidth: a.status === 'PENDING' ? 1 : 0, borderColor: c }}>
+                        style={{ position: 'absolute', left: 3 + l.lane * lw, width: lw - (l.n > 1 ? 2 : 0), top, height: h, borderRadius: 10, backgroundColor: `${c}26`, borderLeftWidth: 3, borderLeftColor: c, paddingHorizontal: 6, paddingVertical: 3, overflow: 'hidden', borderWidth: a.status === 'PENDING' ? 1 : 0, borderColor: c }}>
                         <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 12, color: t.ink }}>{firstName(a.clientName) || '-'}</Text>
                         <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 11, color: t.muted }}>{a.serviceName}</Text>
                       </Pressable>
                     );
-                  })}
+                  }); })(appts.filter((a) => String(a.staffId) === String(s.id)))}
                 </View>
               ))}
               {isToday && nowMin() >= lo * 60 && nowMin() <= hi * 60 ? <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 8 + y(nowMin()), height: 2, backgroundColor: t.guava }} /> : null}

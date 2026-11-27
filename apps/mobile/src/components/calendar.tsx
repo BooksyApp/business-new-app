@@ -40,7 +40,7 @@ export function markersOf(a: Appointment): Marker[] {
 }
 
 /** Overlapping bookings of one master sit side by side. */
-function lanes(list: Appointment[]) {
+export function lanes(list: Appointment[]) {
   const sorted = [...list].sort((a, b) => toMin(a.startTime) - toMin(b.startTime) || toMin(a.endTime) - toMin(b.endTime));
   const out = new Map<string, { lane: number; n: number }>();
   let cluster: Appointment[] = [];
