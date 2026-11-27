@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
 import { Opening } from '@/components/Opening';
 import { ToastHost } from '@/components/ToastHost';
+import { PermissionIntro } from '@/components/PermissionIntro';
 import { OfflineBanner, Screen, Skeleton, StateView } from '@/components/ui';
 import { loadNotifications, routeOf } from '@/lib/push';
 import { CrashScreen, installGlobalHandler, RootErrorBoundary } from '@/lib/crash';
@@ -103,6 +104,7 @@ export default function Root() {
             <Shell key={locale} />
             <Opening />
             <ToastHost />
+            <PermissionIntro />
           </AppProvider>
         </ThemeProvider>
       </SafeAreaProvider>

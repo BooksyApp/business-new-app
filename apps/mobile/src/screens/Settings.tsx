@@ -13,7 +13,7 @@ import { useApp } from '@/lib/app';
 import { apiO } from '@/lib/api-onboard';
 import { toast } from '@/lib/toast';
 import { HoursEditor, NotifEditor, PushPrefsEditor, SubscriptionCard } from '@/screens/SettingsMore';
-import { enablePush } from '@/lib/push';
+import { usePushPerm } from '@/lib/push';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
@@ -23,7 +23,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const router = useRouter();
   const { user, salon, signOut } = useApp();
   const [sub, setSub] = useState<'main' | 'hours' | 'notif' | 'pp'>('main');
-  const [push, setPush] = useState<'idle' | 'on' | 'failed'>('idle');
+  const { perm: pushPerm, enable: enableNow } = usePushPerm(user?.userId);
   const [sheet, setSheet] = useState<null | 'lang' | 'theme' | 'salon' | 'sub' | 'pw' | 'del'>(null);
   const [curPw, setCurPw] = useState(''); const [newPw, setNewPw] = useState(''); const [pwBusy, setPwBusy] = useState(false);
   if (sub === 'hours') return <HoursEditor onBack={() => setSub('main')} />;
@@ -44,8 +44,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
         <KCard style={{ paddingHorizontal: 18 }}>
           <KListItem first title={tr('pp.title')} lead={lead('bell')} right={chev} onPress={() => setSub('pp')} />
           <KListItem title={tr('ns.title')} lead={lead('mail')} right={chev} onPress={() => setSub('notif')} />
-          <KListItem title={tr('v3.pushRow')} sub={push === 'on' ? tr('notifications.pushEnabled') : push === 'failed' ? tr('notifications.pushFailed') : undefined} lead={lead('bell')}
-            right={push === 'on' ? <Icon name="check" size={20} color={t.ok} /> : <KButton size="sm" kind="fl" label={tr('push.allow')} onPress={async () => setPush((await enablePush(user?.userId)) ? 'on' : 'failed')} />} />
+          <KListItem title={tr('v3.pushRow')} sub={pushPerm === 'granted' ? tr('notifications.pushEnabled') : pushPerm === 'unavailable' ? tr('notifications.pushFailed') : undefined} lead={lead('bell')}
+            right={pushPerm === 'granted' ? <Icon name="check" size={20} color={t.ok} /> : pushPerm === 'unavailable' || pushPerm === 'checking' ? undefined : <KButton size="sm" kind="fl" label={pushPerm === 'settings' ? tr('push.settings') : tr('push.allow')} onPress={() => void enableNow()} />} />
         </KCard>
         {head(tr('set.salon'))}
         <KCard style={{ paddingHorizontal: 18 }}>

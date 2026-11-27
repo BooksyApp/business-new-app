@@ -1,5 +1,7 @@
 import Constants from 'expo-constants';
-import { Alert, Platform } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, Linking, Platform } from 'react-native';
+import { askWithIntro } from '@/components/PermissionIntro';
 import { t as tr } from '@/i18n';
 import { getItem, setItem, removeItem } from '@/lib/secureStorage';
 import { api, request, ApiError } from '@/lib/api';
@@ -111,11 +113,8 @@ export async function registerIfGranted(userId: string | number): Promise<void> 
       return;
     }
     if (!p.canAskAgain || (await getItem(ASKED))) return;
-    await setItem(ASKED, '1');
-    Alert.alert(tr('push.title'), tr('push.body'), [
-      { text: tr('push.later'), style: 'cancel' },
-      { text: tr('push.allow'), onPress: () => { void enablePush(uid); } },
-    ]);
+    await setItem(ASKED, '1'); // asked once, ever: our rationale sheet first, then the OS prompt
+    if ((await askWithIntro('push')) === 'granted') void enablePush(uid);
   } catch {
     /* push is best effort */
   }
@@ -129,4 +128,31 @@ export function routeOf(data: unknown): string {
   if (typeof id === 'string' || typeof id === 'number') return `/booking/${String(id)}`;
   if (d.productId != null) return '/section/inventory';
   return '/notifications';
+}
+
+/** Live notification permission for cards/rows: granted never shows an ask card; undetermined asks; denied for good sends to Settings. */
+export type PushPerm = 'checking' | 'granted' | 'ask' | 'settings' | 'unavailable';
+export function usePushPerm(userId?: string | null): { perm: PushPerm; enable: () => Promise<boolean> } {
+  const [perm, setPerm] = useState<PushPerm>('checking');
+  const refresh = useCallback(async () => {
+    if (Platform.OS === 'web' || Constants.appOwnership === 'expo') { setPerm('unavailable'); return; }
+    try {
+      const N = loadNotifications();
+      if (!N) { setPerm('unavailable'); return; }
+      const p = await N.getPermissionsAsync();
+      setPerm(p.granted ? 'granted' : p.canAskAgain ? 'ask' : 'settings');
+    } catch { setPerm('unavailable'); }
+  }, []);
+  useEffect(() => {
+    void refresh();
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') void refresh(); });
+    return () => sub.remove();
+  }, [refresh]);
+  const enable = useCallback(async () => {
+    if (perm === 'settings') { Linking.openSettings().catch(() => {}); return false; }
+    const ok = await enablePush(userId);
+    await refresh();
+    return ok;
+  }, [perm, userId, refresh]);
+  return { perm, enable };
 }

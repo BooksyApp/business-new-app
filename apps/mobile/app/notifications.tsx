@@ -13,7 +13,7 @@ import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { useDockInset } from '@/lib/dock';
 import { addDays, dateLabel, fromIso, hhmm } from '@/lib/format';
-import { enablePush } from '@/lib/push';
+import { usePushPerm } from '@/lib/push';
 import { findClient, recallClient } from '@/lib/client-cache';
 import { OfferSheet, WaitlistSheet } from '@/components/WaitlistSheet';
 import { apiX } from '@/lib/api-ext';
@@ -33,7 +33,8 @@ export default function Notifications() {
   const { salon, user, version, bump } = useApp();
   const [busyId, setBusyId] = useState<string | null>(null);
   const inset = useDockInset(16);
-  const [pushState, setPushState] = useState<'idle' | 'on' | 'failed' | 'later'>('idle');
+  const { perm: pushPerm, enable: enableNow } = usePushPerm(user?.userId);
+  const [pushLater, setPushLater] = useState(false);
   const [filter, setFilter] = useState<'all' | 'bookings' | 'reviews' | 'stock'>('all');
   const data = useLoad(async () => {
     const today = new Date();
@@ -87,15 +88,15 @@ export default function Notifications() {
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingTop: 6, paddingBottom: inset }} showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={data.refreshing} onRefresh={() => void data.reload()} tintColor={t.violet} />}>
-          {pushState === 'idle' || pushState === 'failed' ? (
+          {(pushPerm === 'ask' || pushPerm === 'settings') && !pushLater ? (
             <Card style={{ padding: 16, flexDirection: 'row', gap: 14, alignItems: 'flex-start' }}>
               {lead('bell')}
               <View style={{ flex: 1, gap: 4 }}>
                 <T k="h3">{tr('push.title')}</T>
-                <T k="t2" color={t.muted}>{pushState === 'failed' ? tr('notifications.pushFailed') : tr('push.body')}</T>
+                <T k="t2" color={t.muted}>{tr('push.body')}</T>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  <Button size="sm" label={tr('push.allow')} onPress={async () => setPushState((await enablePush(user?.userId)) ? 'on' : 'failed')} />
-                  <Button size="sm" kind="ghost" label={tr('push.later')} onPress={() => setPushState('later')} />
+                  <Button size="sm" label={pushPerm === 'settings' ? tr('push.settings') : tr('push.allow')} onPress={() => void enableNow()} />
+                  <Button size="sm" kind="ghost" label={tr('push.later')} onPress={() => setPushLater(true)} />
                 </View>
               </View>
             </Card>

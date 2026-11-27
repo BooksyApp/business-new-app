@@ -321,21 +321,36 @@ export async function requestList<T>(path: string, opts?: Parameters<typeof core
   return arr.filter((x) => x != null) as T[];
 }
 
-/** Multipart upload (RN FormData with {uri,name,type} file parts). One token renewal on 401, 60s timeout. */
+/** Multipart upload. RN FormData file parts are `{ uri: 'file://...', name, type }` objects. Expo SDK 57 replaced the global `fetch` with expo/fetch,
+ *  which cannot serialise those parts ("Unsupported FormDataPart implementation"), so uploads go through RN's native XMLHttpRequest, which can.
+ *  No Content-Type header on purpose: the multipart boundary is added by the networking layer. One token renewal on 401, 60s timeout. */
+function xhrPost(url: string, form: FormData, tok: string | null): Promise<{ status: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open('POST', url);
+    x.timeout = 60000;
+    x.setRequestHeader('Accept', 'application/json');
+    if (tok) x.setRequestHeader('Authorization', `Bearer ${tok}`);
+    x.onload = () => resolve({ status: x.status, text: x.responseText ?? '' });
+    x.onerror = () => reject(new Error('şəbəkə'));
+    x.ontimeout = () => reject(new Error('vaxt bitdi'));
+    x.send(form as unknown as XMLHttpRequestBodyInit);
+  });
+}
 export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
+  // Demo mode: the wrapped fetch makes writes a no-op (and shows the "demo does not save" toast); XHR would bypass it.
+  if ((require('@/demo') as { isDemo: () => boolean }).isDemo()) { await fetch(`${API_BASE}/api${path}`, { method: 'POST' }).catch(() => null); return { id: 'demo', url: '' } as unknown as T; }
   const go = async (tok: string | null) => {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 60000);
-    try {
-      return await fetch(`${API_BASE}/api${path}`, { method: 'POST', signal: ctl.signal, headers: { Accept: 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) }, body: form });
-    } catch (e) { throw new ApiError(`Yükləmə alınmadı (${(e as Error)?.message || 'şəbəkə'})`, 0); } finally { clearTimeout(timer); }
+    try { return await xhrPost(`${API_BASE}/api${path}`, form, tok); }
+    catch (e) { throw new ApiError(`Yükləmə alınmadı (${(e as Error)?.message || 'şəbəkə'})`, 0); }
   };
   let res = await go(accessToken);
   if (res.status === 401) { const nt = await renew().catch(() => null); if (nt) res = await go(nt); }
-  const text = await res.text();
+  const text = res.text;
+  const okRes = res.status >= 200 && res.status < 300;
   let data: unknown = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-  if (!res.ok) { const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>; throw new ApiError(String(d.detail ?? d.message ?? d.error ?? `HTTP ${res.status}`), res.status, data); }
+  if (!okRes) { const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>; throw new ApiError(String(d.detail ?? d.message ?? d.error ?? `HTTP ${res.status}`), res.status, data); }
   setOnline(true);
   return data as T;
 }
