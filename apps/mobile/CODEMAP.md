@@ -33,7 +33,7 @@ tsc: symlink customer-new-app/node_modules into apps/mobile (gitignored, remove 
 - i18n for wave 4: src/i18n/v4.ts (namespace n4).
 
 ## screens/ (section keys in app/section/[key].tsx)
-Services, Groups, Promotion, Suppliers, Combos, Inventory, Expenses, Marketing, Finance, Payroll, Roles, Integrations,
+Services (categories: none auto-created; register step 3 'Fəaliyyət sahəsi' chips create only picked ones; Editor inline 'Yeni kateqoriya'; Categories manager rename + delete-empty-only), Groups, Promotion, Suppliers, Combos, Inventory, Expenses, Marketing, Finance, Payroll, Roles, Integrations,
 CustomReports, Profile, Support/Offers/Branches/OnlineShop/RotaView (More2.tsx), Reports, Reviews, Messages, Sales (till list),
 Settings (Settings.tsx + SettingsMore.tsx: HoursEditor, NotifEditor, SubscriptionCard, PushPrefsEditor), Team,
 HubExtras.tsx (ResourceTypes, RevenuePlan, LoyaltyCards, NotifTextsEditor, PortfolioSheet, ChairRentSheet, FeedSheet, GallerySheet),

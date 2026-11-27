@@ -27,7 +27,7 @@ const TABS: { k: Tab; label: 'sx.tabMain' | 'sx.tabPrice' | 'sx.tabStaff' | 'sx.
 ];
 
 /** Five-tab service editor (main, price, specialists, online booking, settings); `service` null = create. */
-function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | null; cats: Category[]; onClose: () => void; onSaved: () => void }) {
+function Editor({ service, cats, onClose, onSaved, onCatsChanged }: { service: ServiceFull | null; cats: Category[]; onClose: () => void; onSaved: () => void; onCatsChanged: () => void }) {
   const { t } = useTheme();
   const { salon, bump } = useApp();
   const sid = salon?.id ?? '';
@@ -36,6 +36,12 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
   const [name, setName] = useState(service?.name ?? '');
   const [desc, setDesc] = useState(service?.description ?? '');
   const [cat, setCat] = useState<string>(service?.categoryId != null ? String(service.categoryId) : '');
+  const [newCat, setNewCat] = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+  async function addCategory() {
+    setAddingCat(true);
+    try { const c = await apiX.createCategory(salon?.id ?? '', { name: newCat.trim() }); setNewCat(''); setCat(String(c.id)); onCatsChanged(); } catch (e) { toast((e as Error).message, 'error'); } finally { setAddingCat(false); }
+  }
   const [price, setPrice] = useState(service?.price != null ? String(service.price) : '');
   const [dur, setDur] = useState(service?.durationMinutes != null ? String(service.durationMinutes) : '60');
   const [ptype, setPtype] = useState<'FIXED' | 'FROM' | 'RANGE'>(service?.priceType ?? 'FIXED');
@@ -126,6 +132,10 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
             <Field label={tr('sx.description')} value={desc} onChangeText={setDesc} multiline style={{ minHeight: 84, paddingTop: 14, textAlignVertical: 'top' }} />
             <SectionTitle>{tr('sx.category')}</SectionTitle>
             <Choice value={cat} onChange={setCat} options={[{ value: '', label: tr('sx.noCategory') }, ...cats.map((c) => ({ value: String(c.id), label: c.name }))]} />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+              <View style={{ flex: 1 }}><Field label={tr('sx.newCategory')} value={newCat} onChangeText={setNewCat} autoCapitalize="sentences" /></View>
+              <Btn label={tr('common.save')} loading={addingCat} disabled={!newCat.trim()} onPress={() => void addCategory()} />
+            </View>
             <Field label={`${tr('svc.duration')} (${tr('common.min')})`} value={dur} onChangeText={setDur} keyboardType="number-pad" />
             <SectionTitle>{tr('pa.svcType')}</SectionTitle>
             <Choice value={stype} onChange={setStype} options={[{ value: 'standard', label: tr('pa.typeStandard') }, { value: 'package', label: tr('pa.typePackage') }, { value: 'course', label: tr('pa.typeCourse') }]} />
@@ -231,12 +241,14 @@ function Editor({ service, cats, onClose, onSaved }: { service: ServiceFull | nu
 }
 
 /** Category manager: add, hide/show, delete. */
-function Categories({ cats, onBack, onChanged }: { cats: Category[]; onBack: () => void; onChanged: () => void }) {
+function Categories({ cats, counts, onBack, onChanged }: { cats: Category[]; counts: Record<string, number>; onBack: () => void; onChanged: () => void }) {
   const { t } = useTheme();
   const { salon } = useApp();
   const sid = salon?.id ?? '';
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); onChanged(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } };
   return (
     <Screen>
@@ -246,12 +258,20 @@ function Categories({ cats, onBack, onChanged }: { cats: Category[]; onBack: () 
         <Btn label={tr('common.save')} loading={busy} disabled={!name.trim()} onPress={() => void run(async () => { await apiX.createCategory(sid, { name: name.trim() }); setName(''); })} />
         {cats.map((c) => (
           <Card key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, opacity: c.isVisible ? 1 : 0.6 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{c.name}</Text>
-              {c.serviceCount != null ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{c.serviceCount}</Text> : null}
-            </View>
-            <Pressable onPress={() => void run(() => apiX.updateCategory(sid, c.id, { isVisible: !c.isVisible }))} accessibilityRole="button" accessibilityLabel={c.isVisible ? tr('sx.hide') : tr('sx.show')}><Icon name={c.isVisible ? 'eye' : 'eyeoff'} size={22} color={t.vtext} /></Pressable>
-            <Pressable onPress={() => Alert.alert(tr('sx.delCategory'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => void run(() => apiX.deleteCategory(sid, c.id)) }])} accessibilityRole="button" accessibilityLabel={tr('sx.delCategory')}><Icon name="trash" size={22} color={t.gink} /></Pressable>
+            {editId === String(c.id) ? (
+              <View style={{ flex: 1 }}><Field value={editName} onChangeText={setEditName} autoCapitalize="sentences" autoFocus /></View>
+            ) : (
+              <Pressable style={{ flex: 1 }} onPress={() => { setEditId(String(c.id)); setEditName(c.name); }} accessibilityRole="button" accessibilityLabel={tr('sx.renameCategory')}>
+                <Text style={{ fontFamily: font.x, fontSize: 16, color: t.ink }}>{c.name}</Text>
+                <Text style={{ fontFamily: font.m, fontSize: 13, color: t.muted }}>{counts[String(c.id)] ?? 0}</Text>
+              </Pressable>
+            )}
+            {editId === String(c.id) ? (
+              <Pressable disabled={!editName.trim()} onPress={() => void run(async () => { await apiX.updateCategory(sid, c.id, { name: editName.trim() }); setEditId(null); })} accessibilityRole="button" accessibilityLabel={tr('common.save')}><Icon name="check" size={22} color={t.vtext} /></Pressable>
+            ) : (
+              <Pressable onPress={() => void run(() => apiX.updateCategory(sid, c.id, { isVisible: !c.isVisible }))} accessibilityRole="button" accessibilityLabel={c.isVisible ? tr('sx.hide') : tr('sx.show')}><Icon name={c.isVisible ? 'eye' : 'eyeoff'} size={22} color={t.vtext} /></Pressable>
+            )}
+            <Pressable onPress={() => { if ((counts[String(c.id)] ?? 0) > 0) { toast(tr('sx.catNotEmpty'), 'info'); return; } Alert.alert(tr('sx.delCategory'), c.name, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => void run(() => apiX.deleteCategory(sid, c.id)) }]); }} accessibilityRole="button" accessibilityLabel={tr('sx.delCategory')}><Icon name="trash" size={22} color={(counts[String(c.id)] ?? 0) > 0 ? t.ink3 : t.gink} /></Pressable>
           </Card>
         ))}
       </ScrollView>
@@ -271,6 +291,7 @@ export function Services({ onBack }: { onBack: () => void }) {
   const [edit, setEdit] = useState<ServiceFull | null>(null);
   const [filter, setFilter] = useState('');
   const quick = useLoad(() => apiB.quickSale(sid).catch(() => []), [sid]);
+  const counts = useMemo(() => { const m: Record<string, number> = {}; for (const x of list.data ?? []) if (x.categoryId != null) m[String(x.categoryId)] = (m[String(x.categoryId)] ?? 0) + 1; return m; }, [list.data]);
   const [local, setLocal] = useState<Record<string, boolean>>({});
   const archived = useLoad(() => (view === 'archived' ? apiX.archivedServices(sid) : Promise.resolve([] as ServiceFull[])), [sid, view]);
   const rows = useMemo(() => (list.data ?? []).filter((s) => !filter || String(s.categoryId ?? '') === filter).sort((a, b) => (a.categoryName ?? '').localeCompare(b.categoryName ?? '') || a.name.localeCompare(b.name)), [list.data, filter]);
@@ -288,8 +309,8 @@ export function Services({ onBack }: { onBack: () => void }) {
       setLocal((m) => { const { [s.id]: _d, ...rest } = m; return rest; });
     }
   }
-  if (view === 'edit') return <Editor service={edit} cats={cats.data ?? []} onClose={() => setView('list')} onSaved={() => { setView('list'); void list.reload(); }} />;
-  if (view === 'cats') return <Categories cats={cats.data ?? []} onBack={() => { setView('list'); void list.reload(); }} onChanged={() => void cats.reload()} />;
+  if (view === 'edit') return <Editor service={edit} cats={cats.data ?? []} onClose={() => setView('list')} onSaved={() => { setView('list'); void list.reload(); }} onCatsChanged={() => void cats.reload()} />;
+  if (view === 'cats') return <Categories cats={cats.data ?? []} counts={counts} onBack={() => { setView('list'); void list.reload(); }} onChanged={() => void cats.reload()} />;
   if (view === 'packages') return <Packages onBack={() => setView('list')} />;
   if (view === 'addons') return <Addons onBack={() => setView('list')} />;
   if (view === 'archived') {

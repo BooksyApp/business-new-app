@@ -31,6 +31,8 @@ type Team = 'solo' | 'small' | 'big';
  * Account -> salon -> hours -> team + first service. Then the same calls the hub makes after sign-up
  * (PUT business, PUT business-hours, POST service, POST staff + service assignment) and the owner lands on Bu gun with the setup checklist.
  */
+const AREAS = ['aHair', 'aNails', 'aLash', 'aMakeup', 'aBarber', 'aSpa', 'aCosmo', 'aOther'] as const;
+
 export default function Register() {
   const { t } = useTheme();
   const router = useRouter();
@@ -61,6 +63,7 @@ export default function Register() {
   const [rows, setRows] = useState<Record<string, Row>>(() => Object.fromEntries(DAYS.map((d, i) => [d, { on: i < 6, from: '09:00', to: '19:00' }])));
   // 4 team + service
   const [team, setTeam] = useState<Team>('solo');
+  const [areas, setAreas] = useState<string[]>([]);
   const [svcName, setSvcName] = useState('');
   const [svcMin, setSvcMin] = useState('45');
   const [svcPrice, setSvcPrice] = useState('');
@@ -93,10 +96,14 @@ export default function Register() {
       // Same follow-up the hub runs after sign-up. Hours / service / staff are best effort: the checklist on Bu gun shows what is still missing.
       await apiB.updateBusiness(bid, { name: bizName.trim(), category: cat, address: address.trim() || undefined, city: city.trim() || undefined, country: 'Azerbaijan', phone: (bizPhone || phone).trim() || undefined, latitude: pin?.latitude, longitude: pin?.longitude } as never).catch(() => undefined);
       await apiX.saveHours(bid, DAYS.map((d) => ({ dayOfWeek: d, enabled: rows[d].on, startTime: rows[d].from, endTime: rows[d].to }))).catch(() => undefined);
+      // Only the areas the owner ticked become service categories; nothing is created by default.
+      const catIds: Record<string, string> = {};
+      for (const a of areas) { const c = await apiX.createCategory(bid, { name: tr(`ob.${a}` as never) }).catch(() => null); if (c?.id != null) catIds[a] = String(c.id); }
+      const onlyCat = areas.length === 1 ? catIds[areas[0]] : undefined;
       let svcId: string | null = null;
       if (!noService && svcName.trim()) {
         const d = Math.max(5, Math.round(num(svcMin)) || 45); const p = num(svcPrice);
-        const s = await apiX.createService(bid, { name: svcName.trim(), durationMinutes: d, price: Number.isFinite(p) ? p : 0, priceType: 'FIXED', isVisible: true }).catch(() => null);
+        const s = await apiX.createService(bid, { name: svcName.trim(), durationMinutes: d, price: Number.isFinite(p) ? p : 0, priceType: 'FIXED', isVisible: true, categoryId: onlyCat }).catch(() => null);
         svcId = s?.id != null ? String(s.id) : null;
       }
       if (team === 'solo') {
@@ -204,6 +211,11 @@ export default function Register() {
               <Chip label={tr('ob.big')} on={team === 'big'} onPress={() => setTeam('big')} />
             </View>
             <T k="sm" color={t.muted}>{team === 'solo' ? tr('ob.soloHint') : tr('ob.teamHint')}</T>
+            {label(tr('ob.areas'))}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {AREAS.map((a) => <Chip key={a} label={tr(`ob.${a}` as never)} on={areas.includes(a)} onPress={() => setAreas((v) => v.includes(a) ? v.filter((x) => x !== a) : [...v, a])} />)}
+            </View>
+            <T k="xs" color={t.ink3}>{tr('ob.areasHint')}</T>
             {label(tr('ob.firstService'))}
             <Field icon="scissors" placeholder={tr('ob.svcName')} accessibilityLabel={tr('ob.svcName')} value={svcName} onChangeText={setSvcName} />
             <View style={{ flexDirection: 'row', gap: 10 }}>

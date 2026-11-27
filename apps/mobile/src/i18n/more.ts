@@ -7,7 +7,7 @@ export const moreEn = {
     priceType: 'Price type', fixed: 'Fixed', from: 'From', range: 'Range', deposit: 'Deposit % (0 = none, 100 = full prepay)', tax: 'Tax %',
     pickStaff: 'Who performs this service', visible: 'Bookable online', visibleHint: 'Clients can find and book it in the booqi app.', padBefore: 'Buffer before (min)', padAfter: 'Buffer after (min)', interval: 'Step between start times (min)',
     parallel: 'Clients at once (0 = no limit)', mobile: 'Mobile service (at the client)', clientMessage: 'Message to the client after booking', archive: 'Archive', archived: 'Archived', restore: 'Restore', showArchived: 'Archived services',
-    archiveConfirm: 'Archive this service? Existing bookings stay.', needName: 'Enter a name, price and duration.', categories: 'Categories', newCategory: 'New category', hide: 'Hide', show: 'Show', delCategory: 'Delete category', packages: 'Packages', noPackages: 'No packages yet', sessions: '{{n}} sessions',
+    archiveConfirm: 'Archive this service? Existing bookings stay.', needName: 'Enter a name, price and duration.', categories: 'Categories', newCategory: 'New category', renameCategory: 'Rename category', catNotEmpty: 'Move or archive its services first. Only empty categories can be deleted.', hide: 'Hide', show: 'Show', delCategory: 'Delete category', packages: 'Packages', noPackages: 'No packages yet', sessions: '{{n}} sessions',
   },
   tm: {
     add: 'Add specialist', newTitle: 'New specialist', editTitle: 'Edit specialist', name: 'Name', position: 'Position', services: 'Services', schedule: 'Weekly schedule', closed: 'Day off',
@@ -37,7 +37,7 @@ export const moreAz: typeof moreEn = {
     priceType: 'Qiymət növü', fixed: 'Sabit', from: 'Başlayaraq', range: 'Aralıq', deposit: 'Depozit % (0 = yox, 100 = tam ödəniş)', tax: 'Vergi %',
     pickStaff: 'Bu xidməti kim göstərir', visible: 'Onlayn rezerv olunur', visibleHint: 'Müştərilər booqi tətbiqində tapıb rezerv edə bilər.', padBefore: 'Əvvəl fasilə (dəq)', padAfter: 'Sonra fasilə (dəq)', interval: 'Başlama vaxtları arası (dəq)',
     parallel: 'Eyni anda müştəri (0 = limitsiz)', mobile: 'Səyyar xidmət (müştərinin yanında)', clientMessage: 'Rezervdən sonra müştəriyə mesaj', archive: 'Arxivə at', archived: 'Arxivlənib', restore: 'Bərpa et', showArchived: 'Arxivlənmiş xidmətlər',
-    archiveConfirm: 'Bu xidmət arxivə atılsın? Mövcud rezervlər qalır.', needName: 'Ad, qiymət və müddət yazın.', categories: 'Kateqoriyalar', newCategory: 'Yeni kateqoriya', hide: 'Gizlət', show: 'Göstər', delCategory: 'Kateqoriyanı sil', packages: 'Paketlər', noPackages: 'Hələ paket yoxdur', sessions: '{{n}} seans',
+    archiveConfirm: 'Bu xidmət arxivə atılsın? Mövcud rezervlər qalır.', needName: 'Ad, qiymət və müddət yazın.', categories: 'Kateqoriyalar', newCategory: 'Yeni kateqoriya', renameCategory: 'Kateqoriyanın adını dəyiş', catNotEmpty: 'Əvvəl xidmətləri başqa kateqoriyaya keçirin. Yalnız boş kateqoriya silinir.', hide: 'Gizlət', show: 'Göstər', delCategory: 'Kateqoriyanı sil', packages: 'Paketlər', noPackages: 'Hələ paket yoxdur', sessions: '{{n}} seans',
   },
   tm: {
     add: 'Əlavə et', newTitle: 'Yeni mütəxəssis', editTitle: 'Mütəxəssisə düzəliş', name: 'Ad', position: 'Vəzifə', services: 'Xidmətlər', schedule: 'Həftəlik cədvəl', closed: 'İstirahət günü',
@@ -67,7 +67,7 @@ export const moreRu: typeof moreEn = {
     priceType: 'Тип цены', fixed: 'Фиксированная', from: 'От', range: 'Диапазон', deposit: 'Депозит % (0 = нет, 100 = полная предоплата)', tax: 'Налог %',
     pickStaff: 'Кто выполняет услугу', visible: 'Доступна для онлайн-записи', visibleHint: 'Клиенты находят и записываются в приложении booqi.', padBefore: 'Перерыв до (мин)', padAfter: 'Перерыв после (мин)', interval: 'Шаг начала записи (мин)',
     parallel: 'Клиентов одновременно (0 = без лимита)', mobile: 'Выездная услуга (у клиента)', clientMessage: 'Сообщение клиенту после записи', archive: 'В архив', archived: 'В архиве', restore: 'Восстановить', showArchived: 'Архивные услуги',
-    archiveConfirm: 'Отправить услугу в архив? Существующие записи останутся.', needName: 'Введите название, цену и длительность.', categories: 'Категории', newCategory: 'Новая категория', hide: 'Скрыть', show: 'Показать', delCategory: 'Удалить категорию', packages: 'Пакеты', noPackages: 'Пакетов пока нет', sessions: '{{n}} сеансов',
+    archiveConfirm: 'Отправить услугу в архив? Существующие записи останутся.', needName: 'Введите название, цену и длительность.', categories: 'Категории', newCategory: 'Новая категория', renameCategory: 'Переименовать категорию', catNotEmpty: 'Сначала перенесите услуги. Удалить можно только пустую категорию.', hide: 'Скрыть', show: 'Показать', delCategory: 'Удалить категорию', packages: 'Пакеты', noPackages: 'Пакетов пока нет', sessions: '{{n}} сеансов',
   },
   tm: {
     add: 'Новый мастер', newTitle: 'Новый мастер', editTitle: 'Изменить мастера', name: 'Имя', position: 'Должность', services: 'Услуги', schedule: 'График на неделю', closed: 'Выходной',
