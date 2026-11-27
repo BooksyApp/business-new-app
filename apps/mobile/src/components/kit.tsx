@@ -234,14 +234,14 @@ export function ListItem({ lead, title, sub, right, onPress, first, label }: { l
 }
 
 /** Key/value row with a soft icon tile (`.kv`), used in booking detail and confirm cards. */
-export function KV({ icon, label, value, first, right, lead }: { icon?: string; label: string; value: string; first?: boolean; right?: React.ReactNode; lead?: React.ReactNode }) {
+export function KV({ icon, label, value, first, right, lead, lines = 2 }: { icon?: string; label: string; value: string; first?: boolean; right?: React.ReactNode; lead?: React.ReactNode; lines?: number }) {
   const { t } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: first ? 0 : 1, borderTopColor: t.hair }}>
       {lead ?? <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon ?? 'info'} size={19} color={t.ink} /></View>}
       <View style={{ flex: 1, minWidth: 0 }}>
         <T k="xs" color={t.ink3}>{label}</T>
-        <Text numberOfLines={2} style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{value}</Text>
+        <Text numberOfLines={lines} style={{ fontFamily: lines === 1 ? font.s : font.b, fontSize: 14.5, color: t.ink }}>{value}</Text>
       </View>
       {right}
     </View>

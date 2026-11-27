@@ -80,7 +80,7 @@ export default function BookingDetail() {
     <View style={{ flex: 1, backgroundColor: t.canvas }}>
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={{ paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
-        <View style={{ height: 330 }}>
+        <View style={{ height: 250 }}>
           <Photo src={photo} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }}>
             {!photo ? <LinearGradient colors={['#35276b', '#1d1730']} style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }} /> : null}
           </Photo>
@@ -94,8 +94,8 @@ export default function BookingDetail() {
           </View>
           <View style={{ position: 'absolute', left: 20, right: 20, bottom: 24 }}>
             {tags.length ? <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>{tags.map((x) => <Pill key={x} text={x} tone={x === 'VIP' ? 'wh' : 'dk'} icon={x === 'VIP' ? 'crown-f' : undefined} />)}</View> : null}
-            <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 26, lineHeight: 30, letterSpacing: -0.65, color: '#fff' }}>{a.clientName || '-'}</Text>
-            <Text style={{ fontFamily: font.r, fontSize: 14, color: 'rgba(255,255,255,.85)' }}>{visits}</Text>
+            <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 22, lineHeight: 26, letterSpacing: -0.4, color: '#fff' }}>{a.clientName || '-'}</Text>
+            <Text numberOfLines={1} style={{ fontFamily: font.r, fontSize: 13, color: 'rgba(255,255,255,.85)' }}>{visits}</Text>
           </View>
         </View>
 
@@ -113,10 +113,10 @@ export default function BookingDetail() {
 
           <View style={{ paddingHorizontal: 20, marginTop: 14 }}>
             <Card style={{ paddingVertical: 4, paddingHorizontal: 16 }}>
-              <KV first icon="scissors" label={tr('v2.service')} value={a.serviceName ?? '-'} />
-              <KV icon="user" label={tr('v2.specialist')} value={m?.name ?? a.staffName ?? '-'} />
-              <KV icon="clock" label={tr('v2.time')} value={`${hhmm(a.startTime)} – ${hhmm(a.endTime)}, ${sameDay(day, salonNow()) ? tr('v2.today').toLowerCase() : dateLabel(day)}`} />
-              <KV icon="wallet" label={tr('v2.price')} value={paid ? `${money(a.price, salon?.currency)} · ${tr('n4.paid')}` : `${money(a.price, salon?.currency)} · ${tr('v2.payAtSalon')}`} />
+              <KV lines={1} first icon="scissors" label={tr('v2.service')} value={a.serviceName ?? '-'} />
+              <KV lines={1} icon="user" label={tr('v2.specialist')} value={m?.name ?? a.staffName ?? '-'} />
+              <KV lines={1} icon="clock" label={tr('v2.time')} value={`${hhmm(a.startTime)} – ${hhmm(a.endTime)}, ${sameDay(day, salonNow()) ? tr('v2.today').toLowerCase() : dateLabel(day)}`} />
+              <KV lines={1} icon="wallet" label={tr('v2.price')} value={paid ? `${money(a.price, salon?.currency)} · ${tr('n4.paid')}` : `${money(a.price, salon?.currency)} · ${tr('v2.payAtSalon')}`} />
             </Card>
             {answers.length ? (
               <Card style={{ marginTop: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 8 }}>
