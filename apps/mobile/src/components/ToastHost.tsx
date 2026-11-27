@@ -3,22 +3,25 @@ import { Animated, Easing, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { Text } from '@/components/Text';
-import { subscribeToast, type ToastMsg } from '@/lib/toast';
+import { modalCount, subscribeToast, type ToastMsg } from '@/lib/toast';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { font } from '@/theme/tokens';
 import { dockTop } from '@/lib/dock';
 
 /** v2 toast (artifact .toast): ink pill above the dock, green check; error = guava. Stays 2.6 s. */
-export function ToastHost() {
+export function ToastHost({ modal }: { modal?: boolean } = {}) {
   const ins = useSafeAreaInsets();
   const [m, setM] = useState<ToastMsg | null>(null);
   const y = useRef(new Animated.Value(0)).current;
+  useEffect(() => { if (modal) { modalCount.n++; return () => { modalCount.n--; }; } return undefined; }, [modal]);
   useEffect(() => subscribeToast((n) => {
+    if (!modal && modalCount.n > 0) return; // an open modal shows it
+    if (modal && modalCount.n < 1) return;
     setM(n);
     if (n) Haptics.notificationAsync(n.kind === 'error' ? Haptics.NotificationFeedbackType.Error : Haptics.NotificationFeedbackType.Success).catch(() => {});
     y.setValue(0);
     Animated.timing(y, { toValue: 1, duration: 260, easing: Easing.out(Easing.back(1.2)), useNativeDriver: true }).start();
-  }), [y]);
+  }), [y, modal]);
   useEffect(() => {
     if (!m) return;
     const id = setTimeout(() => Animated.timing(y, { toValue: 0, duration: 220, useNativeDriver: true }).start(() => setM(null)), 2600);

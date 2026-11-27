@@ -1,8 +1,7 @@
-import { photoSource } from '@/lib/photo';
 import { useState } from 'react';
+import { photoSource } from '@/lib/photo';
 import { toast } from '@/lib/toast';
-import { Alert, FlatList, Image, RefreshControl, View } from 'react-native';
-import { BottomSheet } from '@/components/BottomSheet';
+import { Alert, FlatList, RefreshControl, View } from 'react-native';
 import { Icon } from '@/components/Icon';
 import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
@@ -11,8 +10,6 @@ import { BackBar, Chip as KChip, ChipRow, EmptyState, IconBtn, Photo as KPhoto, 
 import { useRouter } from 'expo-router';
 import { t as tr } from '@/i18n';
 import { apiX } from '@/lib/api-ext';
-import { apiB } from '@/lib/api-biz';
-import { pickImage, postStoryPicked, uploadPicked, type Picked } from '@/lib/pick';
 import { useApp } from '@/lib/app';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -26,29 +23,13 @@ export function Looks({ onBack }: { onBack: () => void }) {
   const sid = salon?.id ?? '';
   const [tab, setTab] = useState<'photos' | 'stories'>('photos');
   const list = useLoad(async () => (tab === 'photos' ? (await apiX.looks(sid)).map((l) => ({ id: l.id, url: l.photoUrl, cap: l.title ?? l.serviceName ?? '', tag: l.status, views: null as number | null })) : (await apiX.stories(sid)).map((s) => ({ id: s.id, url: s.url, cap: s.caption ?? '', tag: '', views: s.viewCount }))), [sid, tab]);
-  const [upBusy, setUpBusy] = useState(false);
-  const [sheet, setSheet] = useState(false);
-  const [pick, setPick] = useState<Picked | null>(null);
-  const [cap, setCap] = useState('');
-  async function choose(src: 'library' | 'camera') {
-    try { const p = await pickImage(src); if (p) setPick(p); }
-    catch (e) { toast((e as Error).message === 'permission' ? tr('ad.permission') : (e as Error).message, 'error'); }
-  }
-  async function send() {
-    if (!pick) return;
-    setUpBusy(true);
-    try {
-      if (tab === 'photos') { const up = await uploadPicked(pick, 'LOOK'); await apiB.createLook(sid, up.id); }
-      else await postStoryPicked(sid, pick, cap);
-      toast(tr('ad.uploaded'), 'success'); setSheet(false); setPick(null); setCap(''); void list.reload();
-    } catch (e) { toast((e as Error).message, 'error'); } finally { setUpBusy(false); }
-  }
+  const add = () => router.push(tab === 'photos' ? '/story/create?kind=post' : '/story/create?kind=story');
   const del = (id: string | number) => Alert.alert(tr('lk.confirmDelete'), undefined, [{ text: tr('common.cancel'), style: 'cancel' }, { text: tr('lk.delete'), style: 'destructive', onPress: () => {
     void (tab === 'photos' ? apiX.deleteLook(sid, String(id)) : apiX.deleteStory(sid, String(id))).then(() => list.reload()).catch((e: Error) => toast(e.message, 'error'));
   } }]);
   return (
     <Screen>
-      <BackBar label={tr('v2.tabMore')} onBack={onBack} right={<IconBtn icon="plus" label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} onPress={() => { if (tab === 'stories') router.push('/story/create'); else { setPick(null); setSheet(true); } }} />} />
+      <BackBar label={tr('v2.tabMore')} onBack={onBack} right={<IconBtn icon="plus" label={tab === 'photos' ? tr('ad.upload') : tr('ad.story')} onPress={add} />} />
       <Title sub={salon?.name} style={{ paddingBottom: 12 }}>{tr('sections.views')}</Title>
       <ChipRow style={{ marginBottom: 12 }}>
         <KChip label={tr('lk.photos')} on={tab === 'photos'} onPress={() => setTab('photos')} />
@@ -57,7 +38,7 @@ export function Looks({ onBack }: { onBack: () => void }) {
       {list.error && !list.data ? <ErrorState error={list.error} onRetry={() => void list.reload()} /> : list.loading && !list.data ? <KSkel blocks={[{ h: 160, r: 0 }, { h: 160, r: 0 }]} /> : (
         <FlatList data={list.data ?? []} numColumns={3} keyExtractor={(x) => String(x.id)} columnWrapperStyle={{ gap: 2 }} contentContainerStyle={{ paddingBottom: 60, gap: 2 }}
           refreshControl={<RefreshControl refreshing={list.refreshing} onRefresh={() => void list.reload()} tintColor={t.violet} />}
-          ListEmptyComponent={<EmptyState photo="demo:f03" title={tr('lk.empty')} body={tr('v2.firstWorkBody')} action={{ label: tab === 'photos' ? tr('ad.upload') : tr('ad.story'), icon: 'plus', onPress: () => { if (tab === 'stories') router.push('/story/create'); else { setPick(null); setSheet(true); } } }} />}
+          ListEmptyComponent={<EmptyState photo="demo:f03" title={tr('lk.empty')} body={tr('v2.firstWorkBody')} action={{ label: tab === 'photos' ? tr('ad.upload') : tr('ad.story'), icon: 'plus', onPress: add }} />}
           renderItem={({ item: x, index }) => (
             <Pressable onPress={() => (tab === 'photos' ? router.push(`/post/${x.id}`) : router.push(`/story/view?mode=own&i=${index}`))} onLongPress={() => del(x.id)} noScale accessibilityRole="imagebutton" accessibilityLabel={x.cap || tr('lk.photos')} style={{ flex: 1 / 3 }}>
               <KPhoto src={x.url} style={{ width: '100%', aspectRatio: 0.8 }}>
@@ -67,25 +48,6 @@ export function Looks({ onBack }: { onBack: () => void }) {
             </Pressable>
           )} />
       )}
-      <BottomSheet open={sheet} onClose={() => { setSheet(false); setPick(null); }}>
-        <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink, marginBottom: 14 }}>{tab === 'photos' ? tr('ad.upload') : tr('ad.story')}</Text>
-        {pick ? (
-          <View style={{ gap: 12, paddingBottom: 16 }}>
-            <Image source={{ uri: pick.uri }} accessibilityIgnoresInvertColors style={{ width: '100%', aspectRatio: 1, borderRadius: 26, backgroundColor: t.fill }} />
-            {tab === 'stories' ? <Field label={tr('lk.stories')} value={cap} onChangeText={setCap} /> : null}
-            <Btn label={tr('ux.uploadNow')} icon="check" loading={upBusy} onPress={() => void send()} />
-            <Btn label={tr('ux.changePick')} variant="secondary" onPress={() => setPick(null)} />
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', gap: 12, paddingBottom: 20 }}>
-            {([['library', 'img', tr('ux.gallery')], ['camera', 'cam', tr('ux.camera')]] as const).map(([k, ic, label]) => (
-              <Pressable key={k} onPress={() => void choose(k)} accessibilityRole="button" accessibilityLabel={label} style={{ flex: 1, height: 132, borderRadius: 28, backgroundColor: t.vsoft, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                <Icon name={ic} size={34} color={t.vtext} /><Text style={{ fontFamily: font.x, fontSize: 17, color: t.vtext }}>{label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </BottomSheet>
     </Screen>
   );
 }

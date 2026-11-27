@@ -4,6 +4,7 @@ import { Modal, Pressable as RNPressable, StyleProp, StyleSheet, ViewStyle, useW
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { interpolate, runOnJS, useAnimatedKeyboard, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { ToastHost } from '@/components/ToastHost';
 import { useTheme } from '@/theme/ThemeContext';
 
 /**
@@ -90,6 +91,7 @@ export function BottomSheet({ open, onClose, children, snaps, radius = 30, conte
             {children}
           </Animated.View>
         </GestureDetector>
+        <ToastHost modal />
       </GestureHandlerRootView>
     </Modal>
   );
