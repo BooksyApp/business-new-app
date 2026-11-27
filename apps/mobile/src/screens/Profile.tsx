@@ -15,6 +15,8 @@ import { getLocale } from '@/i18n';
 import { Choice, MultiChoice, SectionTitle } from '@/components/form';
 import { useApp } from '@/lib/app';
 import { pickAndUpload } from '@/lib/pick';
+import { LocationField } from '@/components/LocationField';
+import { pinOf, type Pin } from '@/lib/geo';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -35,8 +37,11 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [parallel, setParallel] = useState(false);
   const cats = useLoad(() => apiO.categories(getLocale()).catch(() => []), []);
   const [busy, setBusy] = useState(false);
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [pinMiss, setPinMiss] = useState(false);
   useEffect(() => {
     const b = q.data; if (!b) return;
+    setPin(pinOf(b));
     setF({ name: b.name ?? '', description: b.description ?? '', phone: b.phone ?? '', email: b.email ?? '', website: b.website ?? '', address: b.address ?? '', city: b.city ?? '', notice: String(b.minBookingNoticeMinutes ?? ''), ahead: String(b.maxBookingDaysAhead ?? ''), cancelH: String(b.cancellationWindowHours ?? ''), deposit: String(b.depositPercent ?? ''), review: b.googleReviewUrl ?? '', category: b.category ?? '', building: (b as { buildingNumber?: string }).buildingNumber ?? '', zip: (b as { zipCode?: string }).zipCode ?? '', state: (b as { state?: string }).state ?? '', country: b.country ?? '', apartment: (b as { apartmentNumber?: string }).apartmentNumber ?? '', hsNote: (b as { healthSafetyNote?: string }).healthSafetyNote ?? '', tax: b.taxRate != null ? String(b.taxRate) : '', lateFee: b.lateCancellationFee != null ? String(b.lateCancellationFee) : '', footer: b.receiptFooter ?? '', brand: (b as { brandColor?: string }).brandColor ?? '' });
     setOnline(b.onlineBookingEnabled ?? true); setLogo(b.logoUrl ?? null); setCover(b.coverImageUrl ?? null);
     setAssign((b as { staffAssignmentMode?: string }).staffAssignmentMode ?? 'FAIR_EARNINGS'); setParallel(!!(b as { allowParallelServices?: boolean }).allowParallelServices);
@@ -45,8 +50,9 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const set = (k: string) => (v: string) => setF((m) => ({ ...m, [k]: v }));
   const int = (k: string) => { const n = Math.round(num(f[k] ?? '')); return Number.isFinite(n) && n >= 0 ? n : undefined; };
   async function save() {
+    if (!pin) { setPinMiss(true); toast(tr('lp.blocked'), 'error'); return; }
     if (!(f.name ?? '').trim()) { toast(tr('tm.needName'), 'error'); return; }
-    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: f.building || undefined, zipCode: f.zip || undefined, state: f.state || undefined, country: f.country || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
+    const body: Partial<BizProfile> = { name: f.name.trim(), description: f.description, phone: f.phone, email: f.email, website: f.website, address: f.address, city: f.city, latitude: pin.latitude, longitude: pin.longitude, onlineBookingEnabled: online, minBookingNoticeMinutes: int('notice'), maxBookingDaysAhead: int('ahead'), cancellationWindowHours: int('cancelH'), depositPercent: int('deposit'), category: f.category || undefined, taxRate: f.tax?.trim() ? num(f.tax) : undefined, lateCancellationFee: f.lateFee?.trim() ? num(f.lateFee) : undefined, receiptFooter: f.footer ?? '', acceptedPaymentMethods: pay.join(','), staffAssignmentMode: assign, allowParallelServices: parallel, healthSafetyNote: f.hsNote ?? '', buildingNumber: f.building || undefined, zipCode: f.zip || undefined, state: f.state || undefined, country: f.country || undefined, apartmentNumber: f.apartment || undefined, ...(/^#[0-9a-fA-F]{6}$/.test(f.brand ?? '') ? { brandColor: f.brand } : {}) } as Partial<BizProfile>;
     setBusy(true);
     try { await apiB.updateBusiness(sid, body); if ((f.review ?? '') !== (q.data?.googleReviewUrl ?? '')) await apiB.setReviewLink(sid, f.review ? f.review : null); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); bump(); toast(tr('ns.saved'), 'success'); onBack(); }
     catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
@@ -84,6 +90,7 @@ export function Profile({ onBack }: { onBack: () => void }) {
           <Section title={tr('ux.secAddress')}>
             <Field label={tr('set.address')} value={f.address ?? ''} onChangeText={set('address')} />
             <Field label="City" value={f.city ?? ''} onChangeText={set('city')} />
+            <LocationField value={pin} error={pinMiss && !pin} query={[f.address, f.city].filter(Boolean).join(', ')} onChange={(r) => { setPin({ latitude: r.latitude, longitude: r.longitude }); setPinMiss(false); setF((o) => ({ ...o, ...(!(o.address ?? '').trim() && r.address ? { address: r.address } : {}), ...(!(o.city ?? '').trim() && r.city ? { city: r.city } : {}) })); }} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}><Field label={tr('pa.zip')} value={f.zip ?? ''} onChangeText={set('zip')} /></View>
               <View style={{ flex: 1 }}><Field label={tr('pa.state')} value={f.state ?? ''} onChangeText={set('state')} /></View>

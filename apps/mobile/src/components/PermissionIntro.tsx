@@ -12,7 +12,7 @@ import { useTheme } from '@/theme/ThemeContext';
  * Our own explanation BEFORE the system prompt, asked at the point of use (photos, camera) or once after the first sign-in (push).
  * Already granted (limited counts) = never asked again. Denied for good = the same sheet offers "Ayarları aç".
  */
-export type IntroKind = 'photos' | 'camera' | 'push';
+export type IntroKind = 'photos' | 'camera' | 'push' | 'location';
 /** granted: go ahead. denied/blocked: the OS said no (blocked = only Settings can change it). skipped: the person dismissed our sheet. */
 export type IntroResult = 'granted' | 'denied' | 'blocked' | 'skipped';
 type Req = { kind: IntroKind; blocked: boolean; resolve: (r: IntroResult) => void };
@@ -28,6 +28,11 @@ async function status(kind: IntroKind): Promise<{ granted: boolean; canAskAgain:
       const p = await N.getPermissionsAsync();
       return { granted: p.granted, canAskAgain: p.canAskAgain };
     }
+    if (kind === 'location') {
+      const L = (require('expo-location') as typeof import('expo-location'));
+      const p = await L.getForegroundPermissionsAsync();
+      return { granted: p.granted, canAskAgain: p.canAskAgain };
+    }
     const p = kind === 'camera' ? await ImagePicker.getCameraPermissionsAsync() : await ImagePicker.getMediaLibraryPermissionsAsync();
     return { granted: p.granted, canAskAgain: p.canAskAgain };
   } catch { return { granted: false, canAskAgain: true }; }
@@ -35,6 +40,11 @@ async function status(kind: IntroKind): Promise<{ granted: boolean; canAskAgain:
 async function request(kind: IntroKind): Promise<IntroResult> {
   try {
     if (kind === 'push') return 'granted'; // the caller (enablePush) shows the OS prompt itself
+    if (kind === 'location') {
+      const L = (require('expo-location') as typeof import('expo-location'));
+      const p = await L.requestForegroundPermissionsAsync();
+      return p.granted ? 'granted' : p.canAskAgain ? 'denied' : 'blocked';
+    }
     const p = kind === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
     return p.granted ? 'granted' : p.canAskAgain ? 'denied' : 'blocked';
   } catch { return 'denied'; }
@@ -58,10 +68,10 @@ export function PermissionIntro() {
   useEffect(() => { host = (r) => { setReq(r); setOpen(true); }; return () => { host = null; }; }, []);
   if (!req) return null;
   const { kind, blocked } = req;
-  const icon = kind === 'camera' ? 'cam' : kind === 'push' ? 'bell' : 'img';
-  const title = blocked ? tr(kind === 'camera' ? 'pm.blockedCamera' : kind === 'push' ? 'push.title' : 'pm.blockedPhotos') : tr(kind === 'camera' ? 'pm.cameraTitle' : kind === 'push' ? 'pm.pushTitle' : 'pm.photosTitle');
-  const text = blocked ? tr(kind === 'camera' ? 'pm.blockedCameraText' : kind === 'push' ? 'push.body' : 'pm.blockedPhotosText') : tr(kind === 'camera' ? 'pm.cameraText' : kind === 'push' ? 'push.body' : 'pm.photosText');
-  const hint = tr(kind === 'camera' ? 'pm.hintCamera' : kind === 'push' ? 'pm.hintPush' : 'pm.hintPhotos');
+  const icon = kind === 'camera' ? 'cam' : kind === 'push' ? 'bell' : kind === 'location' ? 'pin' : 'img';
+  const title = blocked ? tr(kind === 'camera' ? 'pm.blockedCamera' : kind === 'push' ? 'push.title' : kind === 'location' ? 'pm.blockedLocation' : 'pm.blockedPhotos') : tr(kind === 'camera' ? 'pm.cameraTitle' : kind === 'push' ? 'pm.pushTitle' : kind === 'location' ? 'pm.locationTitle' : 'pm.photosTitle');
+  const text = blocked ? tr(kind === 'camera' ? 'pm.blockedCameraText' : kind === 'push' ? 'push.body' : kind === 'location' ? 'pm.blockedLocationText' : 'pm.blockedPhotosText') : tr(kind === 'camera' ? 'pm.cameraText' : kind === 'push' ? 'push.body' : kind === 'location' ? 'pm.locationText' : 'pm.photosText');
+  const hint = tr(kind === 'camera' ? 'pm.hintCamera' : kind === 'push' ? 'pm.hintPush' : kind === 'location' ? 'pm.hintLocation' : 'pm.hintPhotos');
   const done = (r: IntroResult) => { setOpen(false); req.resolve(r); };
   const mark = () => { if (kind !== 'push') setItem(SEEN(kind), '1').catch(() => {}); };
   const primary = async () => {

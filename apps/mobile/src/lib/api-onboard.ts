@@ -33,7 +33,7 @@ export const apiO = {
   /** GET /api/public/platform: business sign-ups can be closed by the platform. */
   platform: () => request<PlatformFlags>('/public/platform', { auth: false }),
   /** POST /api/businesses: an additional salon under the signed-in owner. category is required (400 otherwise). */
-  createBusiness: (body: { ownerId: Id; name: string; category: string; address?: string; city?: string; country?: string; phone?: string }) =>
+  createBusiness: (body: { ownerId: Id; name: string; category: string; address?: string; city?: string; country?: string; phone?: string; latitude?: number; longitude?: number }) =>
     request<Business>('/businesses', { method: 'POST', body }),
   /** GET /api/businesses/{id}/readiness: what is still missing before customers can book. */
   readiness: (b: Id) => request<Partial<Readiness> | null>(`/businesses/${b}/readiness`).then((r): Readiness => ({ bookable: r?.bookable !== false, missing: Array.isArray(r?.missing) ? r!.missing! : [], recommended: Array.isArray(r?.recommended) ? r!.recommended! : [] })),

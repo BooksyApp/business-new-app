@@ -12,7 +12,8 @@
       "bundleIdentifier": "az.booqi.business",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Salonun yerini xəritədə göstərmək üçün məkanınızdan istifadə edirik."
       }
     },
     "android": {
@@ -25,13 +26,23 @@
       },
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
       "expo-font",
       "expo-status-bar",
       "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Salonun yerini xəritədə göstərmək üçün məkanınızdan istifadə edirik."
+        }
+      ],
       [
         "expo-notifications",
         {
