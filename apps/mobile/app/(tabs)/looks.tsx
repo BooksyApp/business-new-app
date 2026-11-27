@@ -32,6 +32,7 @@ export default function LooksTab() {
   const looks = useLoad(() => apiX.looks(sid), [sid, version]);
   const stories = useLoad(() => apiX.stories(sid).catch(() => []), [sid, version]);
   const sum = useLoad(() => apiX.reviewSummary(sid).catch(() => null), [sid, version]);
+  const fav = useLoad(() => apiX.favoritesSummary(salon?.id ?? '').catch(() => null), [salon?.id]);
   const services = useLoad(() => api.services(sid).catch(() => []), [sid]);
   const list = looks.data ?? [];
   const own = (stories.data ?? []).length > 0;
@@ -41,7 +42,8 @@ export default function LooksTab() {
   const cats = [...new Set((services.data ?? []).map((s) => s.categoryName).filter(Boolean) as string[])].slice(0, 5);
   const hl = cats.map((c, i) => ({ c, photo: (services.data ?? []).find((s) => s.categoryName === c && (s as { imageUrl?: string }).imageUrl) as { imageUrl?: string } | undefined, i }));
   const cell = (W - 4) / 3;
-  const views = list.reduce((n, l) => n + ((l as { saveCount?: number }).saveCount ?? 0), 0);
+  const savers = fav.data?.favoriteCount ?? 0;
+  const newSavers = fav.data?.newFavoritesThisMonth ?? 0;
   const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace('.', ',')}K` : String(n));
 
   return (
@@ -52,10 +54,11 @@ export default function LooksTab() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22, paddingHorizontal: 20, paddingTop: 6 }}>
           <StoryBubble size={86} uri={(salon as { logoUrl?: string } | null)?.logoUrl} name={salon?.name} label="" add={!own} onPress={own ? openStory : addStory} />
           <View style={{ flex: 1, flexDirection: 'row' }}>
-            {([[String(list.length), tr('v2.posts')], [views ? fmt(views) : '0', tr('v2.viewsMonth')], [sum.data?.average ? String(sum.data.average.toFixed(1)).replace('.', ',') : '–', tr('v2.rating')]] as const).map(([v, l]) => (
+            {([[String(list.length), tr('v2.posts')], [savers ? fmt(savers) : '0', tr('n4.savers')], [sum.data?.average ? String(sum.data.average.toFixed(1)).replace('.', ',') : '–', tr('v2.rating')]] as const).map(([v, l]) => (
               <View key={l} style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={{ fontFamily: font.b, fontSize: 17, color: t.ink, fontVariant: ['tabular-nums'] }}>{v}</Text>
                 <T k="sm" color={t.muted} style={{ fontSize: 12 }}>{l}</T>
+                {l === tr('n4.savers') && newSavers > 0 ? <T k="xs" color={t.ok}>{tr('n4.saversNew', { n: newSavers })}</T> : null}
               </View>
             ))}
           </View>

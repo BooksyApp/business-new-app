@@ -22,7 +22,6 @@ export function BookingRow({ a, staff, onPress }: { a: Appointment; staff?: Staf
   const { t } = useTheme();
   const c = a.clientId != null ? (recallClient(String(a.clientId)) as ClientWithStats | undefined) : undefined;
   const master = staff?.find((s) => String(s.id) === String(a.staffId));
-  const late = (a.lateMinutes ?? 0) > 0;
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${hhmm(a.startTime)} ${a.clientName ?? ''} ${a.serviceName ?? ''}`}
       style={[{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, backgroundColor: t.surface, borderRadius: 26, padding: 16, minHeight: 104 }, cardShadow]}>
@@ -32,7 +31,7 @@ export function BookingRow({ a, staff, onPress }: { a: Appointment; staff?: Staf
         <Text numberOfLines={1} style={{ fontFamily: font.x, fontSize: 17.5, letterSpacing: -0.3, color: t.ink }}>{a.clientName || '-'}</Text>
         <Text numberOfLines={2} style={{ fontFamily: font.m, fontSize: 14.5, lineHeight: 20, color: t.muted }}>{a.serviceName}{a.serviceName ? ' · ' : ''}{durLabel(a)}</Text>
         <View style={{ flexDirection: 'row', marginTop: 6 }}>
-          {late ? <Pill text={`${tr('ux.delay')} · ${a.lateMinutes} ${tr('common.min')}`} tone="guava" /> : <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />}
+          <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />
         </View>
       </View>
       {master ? <Avatar name={master.name} size={30} uri={master.avatarUrl} /> : null}

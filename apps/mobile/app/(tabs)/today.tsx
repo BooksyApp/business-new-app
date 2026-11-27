@@ -14,7 +14,6 @@ import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type ClientWithStats, type Staff } from '@/lib/api';
 import { apiX } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
-import { markArrived } from '@/lib/arrived';
 import { salonShareLink } from '@/lib/config';
 import { SetupChecklist } from '@/components/SetupChecklist';
 import { LocationCard } from '@/components/LocationCard';
@@ -74,12 +73,11 @@ export default function Today() {
   const shortName = (salon?.name ?? '').split(/\s+/)[0] || salon?.name || '';
   const newBooking = () => router.push({ pathname: '/booking/new', params: { date: toDay(now) } });
 
-  async function arrived(a: Appointment) {
+  async function confirmOne(a: Appointment) {
     try {
-      if (a.status === 'PENDING') await api.confirmAppointment(a.id);
-      markArrived(a.id);
+      await api.confirmAppointment(a.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      toast(`${firstName(a.clientName)} · ${tr('v2.arrived')}`, 'success');
+      toast(`${firstName(a.clientName)} · ${tr('n4.confirmedToast')}`, 'success');
       bump();
     } catch (e) { toast((e as Error).message, 'error'); }
   }
@@ -109,7 +107,7 @@ export default function Today() {
         {range.error ? <ErrorState error={range.error} onRetry={() => void range.reload()} /> : loading ? (
           <Skeleton blocks={[{ h: 236, r: 26 }, { h: 104, r: 20 }, { h: 60, r: 18 }]} />
         ) : next ? (
-          <Hero a={next} c={byId.get(String(next.clientId))} staff={team.find((s) => String(s.id) === String(next.staffId))} onOpen={() => router.push(`/booking/${next.id}`)} onArrived={() => void arrived(next)} />
+          <Hero a={next} c={byId.get(String(next.clientId))} staff={team.find((s) => String(s.id) === String(next.staffId))} onOpen={() => router.push(`/booking/${next.id}`)} onAction={() => (next.status === 'PENDING' ? void confirmOne(next) : router.push({ pathname: '/booking/[id]', params: { id: String(next.id), checkout: '1' } }))} />
         ) : (
           <View style={{ marginHorizontal: 20, marginTop: 16 }}>
             <T k="h2" style={{ fontSize: 18 }}>{tr('v2.emptyTodayTitle')}</T>
@@ -136,15 +134,23 @@ export default function Today() {
               ))}
             </View>
             {pendCount > 0 ? (
-              <Pressable onPress={() => router.push('/notifications')} accessibilityRole="button" accessibilityLabel={tr('v2.pendingN', { n: pendCount })}
-                style={{ marginTop: 14, marginHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 18, backgroundColor: t.surface, boxShadow: '0 1px 2px rgba(29,23,48,.04), 0 6px 20px -10px rgba(29,23,48,.14)' } as object}>
-                <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="bell" filled size={19} color={t.guava} /></View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{tr('v2.pendingN', { n: pendCount })}</Text>
-                  <T k="sm" color={t.muted} lines={1}>{pend.slice(0, 2).map((a) => `${firstName(a.clientName)} ${a.appointmentDate.slice(0, 10) === todayKey ? hhmm(a.startTime) : a.appointmentDate.slice(5, 10).split('-').reverse().join('.')}`).join(' · ')}</T>
-                </View>
-                <Icon name="chev" size={18} color={t.ink3} />
-              </Pressable>
+              <View style={{ marginTop: 14, marginHorizontal: 20, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 18, backgroundColor: t.surface, gap: 10, boxShadow: '0 1px 2px rgba(29,23,48,.04), 0 6px 20px -10px rgba(29,23,48,.14)' } as object}>
+                <Pressable onPress={() => router.push('/notifications')} accessibilityRole="button" accessibilityLabel={tr('n4.pendingTitle')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="bell" filled size={19} color={t.guava} /></View>
+                  <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 14.5, color: t.ink }}>{tr('n4.pendingTitle')} · {pendCount}</Text>
+                  <Icon name="chev" size={18} color={t.ink3} />
+                </Pressable>
+                {pend.slice(0, 3).map((a) => (
+                  <View key={a.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Pressable onPress={() => router.push(`/booking/${a.id}`)} accessibilityRole="button" style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{firstName(a.clientName)} · {a.appointmentDate.slice(0, 10) === todayKey ? hhmm(a.startTime) : `${a.appointmentDate.slice(5, 10).split('-').reverse().join('.')} ${hhmm(a.startTime)}`}</Text>
+                      <T k="sm" color={t.muted} lines={1}>{a.serviceName}</T>
+                    </Pressable>
+                    <Button label={tr('n4.reject')} kind="fl" size="sm" onPress={() => router.push({ pathname: '/booking/[id]', params: { id: String(a.id), reject: '1' } })} />
+                    <Button label={tr('v2.confirm')} size="sm" onPress={() => void confirmOne(a)} />
+                  </View>
+                ))}
+              </View>
             ) : null}
           </>
         ) : null}
@@ -184,7 +190,7 @@ const salonUrl = (s: unknown) => salonShareLink(s).replace(/^https?:\/\//, '');
 
 
 /** Next client photo card (`.hero`): 236 high, dark wash, time pills, name 21/700, specialist row, white "Gəldi". */
-function Hero({ a, c, staff, onOpen, onArrived }: { a: Appointment; c?: ClientWithStats; staff?: Staff; onOpen: () => void; onArrived: () => void }) {
+function Hero({ a, c, staff, onOpen, onAction }: { a: Appointment; c?: ClientWithStats; staff?: Staff; onOpen: () => void; onAction: () => void }) {
   const mins = toMin(a.startTime) - nowMin();
   const photo = clientPhoto(c);
   return (
@@ -208,7 +214,7 @@ function Hero({ a, c, staff, onOpen, onArrived }: { a: Appointment; c?: ClientWi
             <Avatar uri={staff?.avatarUrl} name={staff?.name ?? a.staffName} size={26} border="rgba(255,255,255,.8)" />
             <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.r, fontSize: 13, color: '#fff' }}>{a.serviceName} · {firstName(staff?.name ?? a.staffName)}</Text>
           </View>
-          <Button label={tr('v2.arrived')} kind="wh" size="sm" onPress={onArrived} />
+          <Button label={a.status === 'PENDING' ? tr('v2.confirm') : a.paymentStatus === 'PAID' ? tr('n4.paid') : tr('n4.finishPay')} kind="wh" size="sm" onPress={onAction} />
         </View>
       </View>
     </View>

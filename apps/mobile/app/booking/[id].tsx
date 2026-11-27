@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -14,7 +14,7 @@ import { ErrorState, Field } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Appointment, type ClientWithStats, type Staff } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { markArrived, useArrived } from '@/lib/arrived';
+import { CheckoutSheet } from '@/components/CheckoutSheet';
 import { recallClient } from '@/lib/client-cache';
 import { clientPhoto } from '@/lib/day';
 import { dateLabel, fromIso, hhmm, money, sameDay } from '@/lib/format';
@@ -44,7 +44,10 @@ export default function BookingDetail() {
     const cid = q.data?.clientId; if (cid == null) return null;
     return (recallClient(String(cid)) as ClientWithStats | undefined) ?? (await api.clientsWithStats(sid).catch(() => [] as ClientWithStats[])).find((c) => String(c.id) === String(cid)) ?? null;
   }, [q.data?.clientId, sid]);
-  const isArrived = useArrived();
+  const { checkout: coParam, reject: rjParam } = useLocalSearchParams<{ checkout?: string; reject?: string }>();
+  const [co, setCo] = useState(false);
+  const autoDone = useRef(false);
+  useEffect(() => { if (autoDone.current || !q.data) return; if (coParam === '1' && q.data.status === 'CONFIRMED' && q.data.paymentStatus !== 'PAID') { autoDone.current = true; setCo(true); } else if (rjParam === '1' && q.data.status === 'PENDING') { autoDone.current = true; setPanel('cancel'); } }, [q.data, coParam, rjParam]);
   const [panel, setPanel] = useState<Panel>(null);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState('');
@@ -56,8 +59,8 @@ export default function BookingDetail() {
   const c = cl.data;
   const m = (staff.data ?? []).find((s) => String(s.id) === String(a.staffId));
   const answers = (() => { try { const j = a.clientAnswers ? (JSON.parse(a.clientAnswers) as { question?: string; answer?: string }[]) : []; return (Array.isArray(j) ? j : []).filter((r) => r.question && r.answer) as { question: string; answer: string }[]; } catch { return []; } })();
-  const arrived = isArrived(a.id);
-  const step = a.status === 'COMPLETED' ? 4 : arrived ? 3 : a.status === 'PENDING' ? 1 : a.status === 'CONFIRMED' ? 2 : 0;
+  const paid = a.paymentStatus === 'PAID';
+  const step = a.status === 'COMPLETED' ? 3 : a.status === 'PENDING' ? 1 : a.status === 'CONFIRMED' ? 2 : 0;
   const open = a.status === 'PENDING' || a.status === 'CONFIRMED';
   const day = fromIso(a.appointmentDate);
   const tags: string[] = (c as { tags?: string[] } | null)?.tags ?? (c?.vip ? ['VIP'] : []);
@@ -70,7 +73,6 @@ export default function BookingDetail() {
     catch (e) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {}); toast((e as Error).message, 'error'); }
     finally { setBusy(false); }
   }
-  const arrive = () => void run(async () => { if (a.status === 'PENDING') await api.confirmAppointment(a.id); markArrived(a.id); });
   const repeat = () => router.push({ pathname: '/booking/new', params: { date: toDay(new Date()), service: String(a.serviceId), staff: String(a.staffId), ...(a.clientId != null ? { clientId: String(a.clientId), clientName: a.clientName ?? '' } : {}) } });
 
   return (
@@ -99,7 +101,7 @@ export default function BookingDetail() {
         <View style={{ marginTop: -22, backgroundColor: t.canvas, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingTop: 20 }}>
           {step > 0 ? (
             <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 6 }} accessibilityLabel={tr(`status.${a.status}`)}>
-              {[tr('v2.stCreated'), tr('v2.stConfirmed'), tr('v2.stArrived'), tr('v2.stDone')].map((l, i) => (
+              {[tr('v2.stCreated'), tr('v2.stConfirmed'), tr('v2.stDone')].map((l, i) => (
                 <View key={l} style={{ flex: 1, gap: 7 }}>
                   <View style={{ height: 4, borderRadius: 2, backgroundColor: i < step ? t.violet : t.fill2 }} />
                   <Text style={{ fontFamily: font.s, fontSize: 11.5, color: i < step ? t.ink : t.ink3 }}>{l}</Text>
@@ -113,7 +115,7 @@ export default function BookingDetail() {
               <KV first icon="scissors" label={tr('v2.service')} value={a.serviceName ?? '-'} />
               <KV icon="user" label={tr('v2.specialist')} value={m?.name ?? a.staffName ?? '-'} />
               <KV icon="clock" label={tr('v2.time')} value={`${hhmm(a.startTime)} – ${hhmm(a.endTime)}, ${sameDay(day, new Date()) ? tr('v2.today').toLowerCase() : dateLabel(day)}`} />
-              <KV icon="wallet" label={tr('v2.price')} value={a.paymentStatus === 'PAID' ? `${money(a.price, salon?.currency)} · ${tr('appt.paid')}` : `${money(a.price, salon?.currency)} · ${tr('v2.payAtSalon')}`} />
+              <KV icon="wallet" label={tr('v2.price')} value={paid ? `${money(a.price, salon?.currency)} · ${tr('n4.paid')}` : `${money(a.price, salon?.currency)} · ${tr('v2.payAtSalon')}`} />
             </Card>
             {answers.length ? (
               <Card style={{ marginTop: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 8 }}>
@@ -129,7 +131,6 @@ export default function BookingDetail() {
                 <View style={{ flex: 1 }}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{tr('v2.note')}</Text><T k="sm" color={t.muted}>{a.notes || c?.notes}</T></View>
               </Card>
             ) : null}
-            {(a.lateMinutes ?? 0) > 0 ? <Pill tone="g" text={tr('calendar.late', { min: a.lateMinutes ?? 0 })} style={{ marginTop: 12 }} /> : null}
           </View>
         </View>
       </ScrollView>
@@ -141,14 +142,14 @@ export default function BookingDetail() {
         </>) : a.status === 'COMPLETED' ? (
           <Button kind="dk" icon="receipt" label={tr('v2.receipt')} style={{ flex: 1 }} onPress={() => router.push({ pathname: '/section/sales', params: { date: a.appointmentDate.slice(0, 10) } })} />
         ) : open ? (<>
-          <Button kind="ol" label={tr('v2.till')} style={{ flex: 1 }} onPress={() => router.push({ pathname: '/section/sales', params: a.paymentStatus === 'PAID' ? { date: a.appointmentDate.slice(0, 10) } : { appt: String(a.id), date: a.appointmentDate.slice(0, 10), time: `${hhmm(a.startTime)}–${hhmm(a.endTime)}` } })} />
-          {arrived
-            ? <Button icon="check" label={tr('v2.stDone')} style={{ flex: 2 }} loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} />
-            : <Button icon="check" label={tr('v2.arrived')} style={{ flex: 2 }} loading={busy} onPress={arrive} />}
+          {paid ? <Button icon="check" label={tr('n4.finish')} style={{ flex: 1 }} loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} />
+            : <Button icon="wallet" label={tr('n4.finishPay')} style={{ flex: 1 }} onPress={() => setCo(true)} />}
         </>) : (
           <Button kind="ol" icon="repeat" label={tr('v2.repeat')} style={{ flex: 1 }} onPress={repeat} />
         )}
       </CtaBar>
+
+      <CheckoutSheet a={a as Appointment} open={co} onClose={() => setCo(false)} onDone={() => { setCo(false); bump(); void q.reload(); }} />
 
       <BottomSheet open={panel === 'more'} onClose={() => setPanel(null)}>
         <View style={{ paddingBottom: Math.max(ins.bottom, 12) }}>
@@ -157,7 +158,7 @@ export default function BookingDetail() {
             ['repeat', tr('v2.repeat'), () => { setPanel(null); repeat(); }],
             a.clientId != null && ['users', tr('v2.clientProfile'), () => { setPanel(null); router.push(`/client/${a.clientId}`); }],
             a.clientPhone && ['chat', tr('v2.whatsapp'), () => setPanel('wa')],
-            open && ['check', tr('v2.complete'), () => { setPanel(null); void run(() => api.completeAppointment(a.id)); }],
+            open && a.status === 'CONFIRMED' && !paid && ['check', tr('n4.finishFree'), () => { setPanel(null); void run(() => api.completeAppointment(a.id)); }],
             open && ['eyeoff', tr('v2.noShow'), () => { setPanel(null); void run(() => api.noShow(a.id)); }],
           ].filter(Boolean) as [string, string, () => void][]).map(([i, l, go], k) => (
             <Pressable key={l} onPress={go} noScale accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 54, borderTopWidth: k ? 1 : 0, borderTopColor: t.hair }}>

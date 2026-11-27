@@ -2,6 +2,7 @@
 import { uxEn } from './ux';
 import { v2En } from './v2';
 import { v3En } from './v3';
+import { v4En } from './v4';
 import { obEn } from './ob';
 import { parEn } from './par';
 import { extraEn } from './extra';
@@ -226,6 +227,7 @@ export const en = {
   ...uxEn,
   ...v2En,
   ...v3En,
+  ...v4En,
   ...obEn,
   ...parEn,
 };

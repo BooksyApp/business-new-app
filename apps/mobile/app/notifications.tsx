@@ -102,7 +102,7 @@ export default function Notifications() {
             </Card>
           ) : null}
           {data.loading && !data.data ? <Skeleton blocks={[{ h: 130 }, { h: 130 }, { h: 90 }]} /> : null}
-          {showPending && pending.length ? <Group label={tr('ux.waitingConfirm')} /> : null}
+          {showPending && pending.length ? <Group label={tr('n4.newPending')} /> : null}
           {showPending ? pending.map((a) => {
             const c = a.clientId != null ? recallClient(String(a.clientId)) as ClientWithStats | undefined : undefined;
             return (
@@ -113,7 +113,7 @@ export default function Notifications() {
                   <T k="sm" color={t.muted}>{dateLabel(fromIso(a.appointmentDate))}{a.staffName ? ` · ${a.staffName}` : ''}</T>
                   <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                     <Button size="sm" label={tr('v2.confirm')} loading={busyId === a.id} onPress={() => void confirm(a.id)} />
-                    <Button size="sm" kind="fl" label={tr('v3.otherTime')} onPress={() => router.push(`/booking/${a.id}`)} />
+                    <Button size="sm" kind="fl" label={tr('n4.reject')} onPress={() => router.push({ pathname: '/booking/[id]', params: { id: String(a.id), reject: '1' } })} />
                   </View>
                 </View>
                 <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.violet, marginTop: 6 }} />

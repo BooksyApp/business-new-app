@@ -3,6 +3,8 @@ import { RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BlockTimeSheet } from '@/components/BlockTimeSheet';
 import { BottomSheet } from '@/components/BottomSheet';
+import { BookingSheet } from '@/components/BookingSheet';
+import { CalendarOverview } from '@/components/CalendarOverview';
 import { Timeline, WeekView } from '@/components/calendar';
 import { Icon } from '@/components/Icon';
 import { Avatar, Button, EmptyState, IconBtn, ListItem, LoadRing, Pill, Segmented, Skeleton, T, TopBar } from '@/components/kit';
@@ -43,6 +45,8 @@ export default function Calendar() {
   const [focus, setFocus] = useState<string | null>(null);
   const [dense, setDense] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [overview, setOverview] = useState(false);
+  const [sheetAppt, setSheetAppt] = useState<Appointment | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [block, setBlock] = useState<TimeOff | null>(null);
   useEffect(() => { if (params.staff) { setFocus(String(params.staff)); setMode('day'); setLayout('summary'); } }, [params.staff]);
@@ -71,7 +75,9 @@ export default function Calendar() {
     <Screen style={{ paddingTop: ins.top }}>
       <TopBar title={tr('calendar.title')} sub={`${weekdayLong(date)}, ${dayMonth(date)}`}
         right={<>
-          <IconBtn icon="search" label={tr('ux.bookingsTitle')} onPress={() => router.push('/bookings')} />
+          <Pressable onPress={() => setOverview(true)} accessibilityRole="button" accessibilityLabel={tr('n4.overview')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 12, borderRadius: 18, backgroundColor: t.vsoft }}>
+            <Icon name="grid" size={18} color={t.vtext} /><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 14, color: t.vtext }}>{tr('n4.overviewShort')}</Text>
+          </Pressable>
           <IconBtn icon="plus" label={tr('v2.newBooking')} onPress={() => newBooking()} />
           <IconBtn icon="dots" label={tr('v2.tabMore')} onPress={() => setMenu(true)} />
         </>} />
@@ -157,6 +163,8 @@ export default function Calendar() {
           ))}
         </View>
       </BottomSheet>
+      {overview ? <CalendarOverview date={date} team={team} onClose={() => setOverview(false)} onOpen={(a) => setSheetAppt(a)} /> : null}
+      <BookingSheet appt={sheetAppt} onClose={() => { setSheetAppt(null); bump(); }} />
       <BlockTimeSheet open={blockOpen} date={date} masters={team} preset={focus} existing={block} onClose={() => setBlockOpen(false)} onDone={() => { setBlockOpen(false); void off.reload(); bump(); }} />
     </Screen>
   );

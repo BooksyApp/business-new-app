@@ -8,8 +8,8 @@ tsc: symlink customer-new-app/node_modules into apps/mobile (gitignored, remove 
 |---|---|---|---|
 | tabs shell | app/(tabs)/_layout.tsx | tab bar, dock | - |
 | Bu gün | app/(tabs)/today.tsx + components/TodayHome.tsx, SetupChecklist, LocationCard | hero next-booking, pending, stories | api.appointments, confirmAppointment, clientsWithStats, staff, apiX.stories |
-| Təqvim | app/(tabs)/calendar.tsx + components/calendar.tsx (DayStrip, Timeline, Agenda, WeekView, StaffRail, MonthView) | BlockTimeSheet, BookingSheet | api.appointments, clientsWithStats, staff, timeOffOn |
-| Müştərilər | app/(tabs)/clients.tsx | AddClientSheet, ImportSheet, rememberClients | api.clientsWithStats |
+| Təqvim ('Ümumi' header pill -> components/CalendarOverview.tsx: all-staff day grid + Gün/Həftə) | app/(tabs)/calendar.tsx + components/calendar.tsx (DayStrip, Timeline, Agenda, WeekView, StaffRail, MonthView) | BlockTimeSheet, BookingSheet | api.appointments, clientsWithStats, staff, timeOffOn |
+| Müştərilər (one chip row: Hamısı/Yeni/Daimi/İtirilmiş; profile = ONE tab row Rezervlər/Qeydlər/Haqqında; notes add/edit/delete via api.updateClientNote/deleteClientNote; no edit, no delete; block/unblock only; import add-only) | app/(tabs)/clients.tsx | AddClientSheet, ImportSheet, rememberClients | api.clientsWithStats |
 | Looks | app/(tabs)/looks.tsx + screens/Looks.tsx | | api.services, apiX.looks/reviewSummary/stories |
 | Daha çox | app/(tabs)/more.tsx | sections grid, day sheet | api.daySheet, staff |
 | Booking detail | app/booking/[id].tsx | BookingSheet (components/BookingSheet.tsx: BookingSheet, Reschedule, WaReminder) | api.appointment/confirm/complete/noShow/cancel |
@@ -21,6 +21,13 @@ tsc: symlink customer-new-app/node_modules into apps/mobile (gitignored, remove 
 | Auth | login.tsx, register.tsx, forgot.tsx, accept-invite.tsx, create-business.tsx, salons.tsx, index.tsx | | apiO.* (api-onboard.ts) |
 | Stories/posts | story/create.tsx, story/view.tsx, post/[id].tsx, post-stats/[id].tsx | | apiX |
 | Root | app/_layout.tsx | ToastHost, PermissionIntro, Opening, crash boundary, demo | - |
+
+## Booking flow (wave 4)
+- Statuses: PENDING (Təsdiqlə / Rədd et) -> CONFIRMED (primary 'Bitir və ödəniş al' = components/CheckoutSheet.tsx: CheckoutSheet / CheckoutBody -> apiX.confirmPayment, COMPLETED+PAID in one step; '...' = 'Ödənişsiz bitir'; Köçür, Gəlmədi, Ləğv et). No arrived/late states.
+- BookingSheet embeds CheckoutBody as a step (no nested Modal). booking/[id]?checkout=1|reject=1 auto-opens checkout / reject sheet.
+- Manual confirmation setting: Profile.tsx radio cards -> apiB.bookingSettings/saveConfirmation (GET/PUT /businesses/{b}/settings requireConfirmation). Today pending card + notifications.tsx 'Yeni rezerv təsdiq gözləyir'.
+- Looks header 'Saxlayanlar': apiX.favoritesSummary (GET /businesses/{b}/favorites/summary).
+- i18n for wave 4: src/i18n/v4.ts (namespace n4).
 
 ## screens/ (section keys in app/section/[key].tsx)
 Services, Groups, Promotion, Suppliers, Combos, Inventory, Expenses, Marketing, Finance, Payroll, Roles, Integrations,

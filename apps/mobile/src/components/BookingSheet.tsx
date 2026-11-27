@@ -3,6 +3,7 @@ import { toast } from '@/lib/toast';
 import { Alert, Linking, ScrollView, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { BottomSheet } from '@/components/BottomSheet';
+import { CheckoutBody } from '@/components/CheckoutSheet';
 import { Icon } from '@/components/Icon';
 import { Avatar, Btn, Chip, Field, Pill, Skeleton } from '@/components/ui';
 import { Pressable } from '@/components/Pressable';
@@ -17,7 +18,7 @@ import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { cardShadow, font, mesh } from '@/theme/tokens';
 
-type Step = 'view' | 'cancel' | 'reschedule' | 'wa';
+type Step = 'view' | 'cancel' | 'reschedule' | 'wa' | 'checkout';
 const TONE = { PENDING: 'violet', CONFIRMED: 'violet', COMPLETED: 'ok', CANCELLED: 'muted', NO_SHOW: 'guava' } as const;
 
 /** Booking sheet opened from a calendar tile: details, contact, late notice and the status actions (confirm, reschedule, no-show, cancel). */
@@ -43,7 +44,8 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
   const [reason, setReason] = useState('');
   const cur = salon?.currency;
   const open = a.status === 'PENDING' || a.status === 'CONFIRMED';
-  const late = (a.lateMinutes ?? 0) > 0;
+  const [menu, setMenu] = useState(false);
+  const paid = a.paymentStatus === 'PAID';
   const phone = a.clientPhone;
 
   async function run(fn: () => Promise<unknown>, close = false) {
@@ -70,12 +72,7 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
           <View style={{ backgroundColor: t.surface, borderRadius: 24, overflow: 'hidden', ...cardShadow }}>
             <View style={{ padding: 20, paddingVertical: 18, experimental_backgroundImage: mesh } as any}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 }}>
-                {late ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingLeft: 9, paddingRight: 12, borderRadius: 14, backgroundColor: t.gsoft }}>
-                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.guava }} />
-                    <Text style={{ fontFamily: font.x, fontSize: 14, color: t.gink }}>{tr('calendar.late', { min: a.lateMinutes ?? 0 })}</Text>
-                  </View>
-                ) : <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />}
+                <Pill text={tr(`status.${a.status}`)} tone={TONE[a.status] ?? 'violet'} />
                 <Text style={{ fontFamily: font.b, fontSize: 14, color: t.muted }}>№ {String(a.id).slice(0, 6).toUpperCase()}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14 }}>
@@ -128,13 +125,23 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
             </View>
           ) : null}
           {live.loading && !live.data ? <Skeleton rows={1} height={20} /> : null}
-          {open ? (
+          {a.status === 'PENDING' ? (
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              {a.status === 'PENDING' ? <Btn label={tr('appt.arrived')} icon="check" loading={busy} style={{ flex: 1 }} onPress={() => void run(() => api.confirmAppointment(a.id))} /> : null}
-              <Btn label={tr('appt.move')} icon="repeat" variant="secondary" style={{ flex: 1 }} onPress={() => setStep('reschedule')} />
+              <Btn label={tr('v2.reject')} variant="secondary" style={{ flex: 1 }} onPress={() => setStep('cancel')} />
+              <Btn label={tr('v2.confirm')} icon="check" loading={busy} style={{ flex: 2 }} onPress={() => void run(() => api.confirmAppointment(a.id))} />
             </View>
           ) : null}
-          {open ? <Btn label={tr('appt.complete')} icon="check-badge" variant="secondary" loading={busy} onPress={() => void run(() => api.completeAppointment(a.id))} /> : null}
+          {a.status === 'CONFIRMED' ? (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {paid
+                ? <Btn label={tr('n4.finish')} icon="check-badge" loading={busy} style={{ flex: 1 }} onPress={() => void run(() => api.completeAppointment(a.id), true)} />
+                : <Btn label={tr('n4.finishPay')} icon="wallet" style={{ flex: 1 }} onPress={() => setStep('checkout')} />}
+              <Pressable onPress={() => setMenu((m) => !m)} accessibilityRole="button" accessibilityLabel={tr('v2.tabMore')} style={{ width: 52, borderRadius: 16, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, alignItems: 'center', justifyContent: 'center' }}><Icon name="dots" size={22} color={t.ink} /></Pressable>
+            </View>
+          ) : null}
+          {a.status === 'CONFIRMED' && paid ? <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.vtext }}>{tr('n4.paid')}</Text> : null}
+          {a.status === 'CONFIRMED' && menu && !paid ? <Btn label={tr('n4.finishFree')} variant="secondary" loading={busy} onPress={() => void run(() => api.completeAppointment(a.id), true)} /> : null}
+          {open ? <Btn label={tr('appt.move')} icon="repeat" variant="secondary" onPress={() => setStep('reschedule')} /> : null}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
             {phone ? (
               <Pressable onPress={() => setStep('wa')} accessibilityRole="button" accessibilityLabel={tr('ux.waRemind')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44 }}>
@@ -152,6 +159,8 @@ function Body({ initial, onClose }: { initial: Appointment; onClose: () => void 
           {phone ? <Btn label={tr('common.call')} icon="phone" variant="secondary" onPress={() => void Linking.openURL(`tel:${phone}`)} /> : null}
         </>
       ) : null}
+
+      {step === 'checkout' ? <CheckoutBody a={a} onClose={() => setStep('view')} onDone={() => onClose()} /> : null}
 
       {step === 'cancel' ? (
         <>

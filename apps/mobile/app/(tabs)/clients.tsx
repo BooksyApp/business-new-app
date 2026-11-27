@@ -45,7 +45,7 @@ export default function Clients() {
     return all.filter((c) => inSeg(c, seg) && (!s || `${c.firstName} ${c.lastName ?? ''} ${c.phone ?? ''} ${c.email ?? ''}`.toLowerCase().includes(s)));
   }, [q, seg, all]);
   const segs: { k: Seg; label: string }[] = [
-    { k: 'all', label: tr('v2.all') }, { k: 'vip', label: tr('v2.vip') }, { k: 'new', label: tr('v2.newTag') }, { k: 'lapsed', label: tr('v2.lost') }, { k: 'regular', label: tr('cl.segRegular') }, { k: 'never', label: tr('cl.segNever') },
+    { k: 'all', label: tr('v2.all') }, { k: 'new', label: tr('v2.newTag') }, { k: 'regular', label: tr('cl.segRegular') }, { k: 'lapsed', label: tr('v2.lost') },
   ];
   const filtered = q.trim() !== '' || seg !== 'all';
   const empty = !list.loading && !list.error && all.length === 0;

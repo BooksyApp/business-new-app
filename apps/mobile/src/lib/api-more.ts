@@ -27,7 +27,6 @@ export const apiM = {
   clientPackages: (clientId: Id) => requestList<ClientPackage>(`/packages/client/${clientId}`),
   buyPackage: (b: Id, clientId: Id, packageId: Id) => request<ClientPackage>(`/packages/business/${b}/buy`, { method: 'POST', body: { clientId, packageId } }),
   // client delete + import
-  deleteClient: (id: Id) => request<void>(`/clients/${id}`, { method: 'DELETE' }),
   importPreview: (b: Id, rows: ImportRow[]) => request<ImportPlan>(`/clients/business/${b}/import/preview`, { method: 'POST', body: { rows } }),
   importRun: (b: Id, rows: ImportRow[]) => request<ImportPlan>(`/clients/business/${b}/import`, { method: 'POST', body: { rows } }),
   // WhatsApp reminders

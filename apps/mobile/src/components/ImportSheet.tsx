@@ -72,7 +72,12 @@ export function ImportSheet({ open, onClose, onDone }: { open: boolean; onClose:
     setMap(m); setStep('map');
   }
   async function preview() { setBusy(true); try { setPlan(await apiM.importPreview(sid, rows)); setStep('preview'); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } }
-  async function run() { setBusy(true); try { setPlan(await apiM.importRun(sid, rows)); setStep('done'); onDone(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } }
+  async function run() {
+    // Add-only: customers belong to the whole platform, so rows that match an existing customer are skipped, never merged.
+    const base = plan && plan.rows.length ? Math.min(...plan.rows.map((r) => r.row)) : 0;
+    const fresh = new Set((plan?.rows ?? []).filter((r) => r.status === 'NEW').map((r) => r.row));
+    const addOnly = rows.filter((_, i) => fresh.has(i + base));
+    setBusy(true); try { setPlan(await apiM.importRun(sid, addOnly)); setStep('done'); onDone(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); } }
   const c = plan?.counts;
   const title = step === 'pick' ? tr('ux.import') : step === 'map' ? tr('ux.importMap') : step === 'preview' ? tr('ux.importPreview') : tr('ux.importDone');
 
@@ -127,7 +132,7 @@ export function ImportSheet({ open, onClose, onDone }: { open: boolean; onClose:
             {step === 'preview' ? (
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Btn label={tr('common.back')} variant="secondary" style={{ flex: 1 }} onPress={() => setStep('map')} />
-                <Btn label={tr('ux.importRun')} style={{ flex: 1.4 }} loading={busy} disabled={(c?.NEW ?? 0) + (c?.MERGE_EXISTING ?? 0) + (c?.MERGE_IN_FILE ?? 0) === 0} onPress={() => void run()} />
+                <Btn label={tr('ux.importRun')} style={{ flex: 1.4 }} loading={busy} disabled={(c?.NEW ?? 0) === 0} onPress={() => void run()} />
               </View>
             ) : <Btn label={tr('common.close')} onPress={() => { onClose(); reset(); }} />}
           </>

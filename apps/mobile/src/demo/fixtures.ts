@@ -134,6 +134,8 @@ export function buildDemo(): { routes: Route[]; user: Record<string, unknown>; b
     [/^\/bookings\/[^/]+$/, (_m: string, p: string) => appts.find((a) => a.id === p.split('/').pop()) ?? day0[1]],
     [/^\/businesses\/[^/]+\/day-sheet/, { date: D(0), totals: { bookings: todayList.length, expected: todayList.reduce((s, a) => s + (a.price ?? 0), 0), already_paid: 25 } }],
     [/^\/reviews\/business\/[^/]+\/summary/, { count: 312, average: 4.9 }],
+    [/^\/businesses\/[^/]+\/favorites\/summary/, { favoriteCount: 128, newFavoritesThisMonth: 14 }],
+    [/^\/businesses\/[^/]+\/settings$/, { requireConfirmation: false, allowOnlineBooking: true }],
     [/^\/businesses\/[^/]+\/looks/, looks],
     [/^\/businesses\/[^/]+\/stories/, [{ id: 1, url: ph('f01'), caption: 'Kirpik artırma 2D · 60 ₼', viewCount: 318, expiresAt: iso(20) }, { id: 2, url: ph('f02'), caption: 'Bu səhər: yumşaq qıvrımlar', viewCount: 204, expiresAt: iso(22) }, { id: 3, url: ph('f03'), caption: '', viewCount: 96, expiresAt: iso(23) }]],
     [/^\/businesses\/demo[^/]*$/, biz],

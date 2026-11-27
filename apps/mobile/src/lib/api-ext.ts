@@ -118,7 +118,6 @@ export const apiX = {
   removeWaitlist: (b: Id, id: Id) => request<void>(`/waitlist/business/${b}/${id}`, { method: 'DELETE' }),
   offerWaitlist: (b: Id, id: Id, slots: { staffId: Id; date: string; startTime: string }[]) => request<void>(`/waitlist/business/${b}/${id}/offer`, { method: 'POST', body: { slots } }),
   // clients
-  updateClient: (id: Id, body: ClientBody) => request<unknown>(`/clients/${id}`, { method: 'PUT', body }),
   consentForms: (b: Id) => requestList<ConsentForm>(`/consent-forms/business/${b}`),
   clientConsents: (id: Id) => requestList<{ id: Id; formName?: string; signedAt?: string; createdAt?: string }>(`/clients/${id}/consent-submissions`),
   // sales
@@ -129,6 +128,8 @@ export const apiX = {
   salesRange: (b: Id, from: Date, to: Date) => requestList<{ total: number; tipAmount?: number; paymentMethod: string }>(`/sales/business/${b}?${q({ startDate: toDay(from), endDate: toDay(to) })}`),
   // reviews
   reviews: (b: Id) => requestList<Review>(`/reviews/business/${b}`),
+  /** GET /api/businesses/{b}/favorites/summary: how many customers saved the salon (counts only). */
+  favoritesSummary: (b: Id) => request<{ favoriteCount: number; newFavoritesThisMonth: number }>(`/businesses/${b}/favorites/summary`),
   reviewSummary: (b: Id) => request<{ count?: number; average?: number | string | null } | null>(`/reviews/business/${b}/summary`).then((r) => ({ count: Number(r?.count) || 0, average: r?.average == null || !Number.isFinite(Number(r.average)) ? null : Number(r.average) })),
   replyReview: (b: Id, id: Id, reply: string) => request<Review>(`/businesses/${b}/reviews/${id}/reply`, { method: 'PUT', body: { reply } }),
   reportReview: (b: Id, id: Id, reason: string, comment: string) => request<{ status: string }>(`/businesses/${b}/reviews/${id}/report`, { method: 'POST', body: { reason, comment } }),

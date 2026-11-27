@@ -35,7 +35,6 @@ export function markersOf(a: Appointment): Marker[] {
   if (a.guestName) out.push({ key: 'group', icon: 'users', label: 'marker.group' });
   if (a.notes?.trim() || a.clientAlert) out.push({ key: 'note', icon: 'note', label: 'marker.note' });
   if (a.paymentStatus === 'PAID' || a.depositPaid) out.push({ key: 'paid', icon: 'check-badge', label: 'marker.paid' });
-  if ((a.lateMinutes ?? 0) > 0) out.unshift({ key: 'late', icon: 'clock-alert', label: 'calendar.lateHint' });
   return out;
 }
 

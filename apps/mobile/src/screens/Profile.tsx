@@ -35,6 +35,15 @@ export function Profile({ onBack }: { onBack: () => void }) {
   const [pay, setPay] = useState<string[]>(['CASH', 'CARD']);
   const [assign, setAssign] = useState('FAIR_EARNINGS');
   const [parallel, setParallel] = useState(false);
+  const conf = useLoad(() => apiB.bookingSettings(sid).catch(() => null), [sid]);
+  const [manual, setManual] = useState(false);
+  useEffect(() => { if (conf.data) setManual(!!conf.data.requireConfirmation); }, [conf.data]);
+  async function pickMode(v: boolean) {
+    if (v === manual) return;
+    setManual(v);
+    try { await apiB.saveConfirmation(sid, v); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); toast(tr('n4.modeSaved'), 'success'); }
+    catch (e) { setManual(!v); toast((e as Error).message, 'error'); }
+  }
   const cats = useLoad(() => apiO.categories(getLocale()).catch(() => []), []);
   const [busy, setBusy] = useState(false);
   const [pin, setPin] = useState<Pin | null>(null);
@@ -103,6 +112,19 @@ export function Profile({ onBack }: { onBack: () => void }) {
           </Section>
           <Section title={tr('ux.secOnline')}>
             <ToggleRow label={tr('pf.online')} value={online} onChange={setOnline} />
+            <SectionTitle>{tr('n4.confTitle')}</SectionTitle>
+            {([[false, tr('n4.confAuto'), tr('n4.confAutoSub')], [true, tr('n4.confManual'), tr('n4.confManualSub')]] as const).map(([v, label, sub]) => (
+              <Pressable key={String(v)} onPress={() => void pickMode(v)} accessibilityRole="radio" accessibilityState={{ selected: manual === v }} accessibilityLabel={label}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, borderWidth: 1.5, borderColor: manual === v ? t.violet : t.hair, backgroundColor: manual === v ? t.vsoft : t.surface }}>
+                <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: manual === v ? t.violet : t.ink3, alignItems: 'center', justifyContent: 'center' }}>
+                  {manual === v ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.violet }} /> : null}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{label}</Text>
+                  <Text style={{ fontFamily: font.r, fontSize: 13, color: t.muted }}>{sub}</Text>
+                </View>
+              </Pressable>
+            ))}
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}><Field label={tr('pf.notice')} value={f.notice ?? ''} onChangeText={set('notice')} keyboardType="number-pad" /></View>
               <View style={{ flex: 1 }}><Field label={tr('pf.ahead')} value={f.ahead ?? ''} onChangeText={set('ahead')} keyboardType="number-pad" /></View>

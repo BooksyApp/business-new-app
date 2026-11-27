@@ -3,18 +3,15 @@ import { toast } from '@/lib/toast';
 import { Alert, Linking, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { EditClientSheet } from '@/components/EditClientSheet';
 import { ClientPackages } from '@/components/ClientPackages';
-import { BottomSheet } from '@/components/BottomSheet';
 import { Icon } from '@/components/Icon';
-import { apiM } from '@/lib/api-more';
 import { Pressable } from '@/components/Pressable';
 import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
-import { ToggleRow, num } from '@/components/form';
+import { num } from '@/components/form';
 import { Text } from '@/components/Text';
-import { Btn, ErrorState, Field, Row, Screen } from '@/components/ui';
-import { Avatar as KAvatar, BackBar, Button as KButton, Card as KCard, EmptyState, IconBtn, ListItem as KListItem, Photo as KPhoto, Pill as KPill, Skeleton as KSkel, T, UnderTabs } from '@/components/kit';
+import { ErrorState, Field, Row, Screen } from '@/components/ui';
+import { Avatar as KAvatar, BackBar, Button as KButton, Card as KCard, EmptyState, ListItem as KListItem, Photo as KPhoto, Pill as KPill, Skeleton as KSkel, T, UnderTabs } from '@/components/kit';
 import { t as tr } from '@/i18n';
 import { api, type Client, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
@@ -44,7 +41,6 @@ export default function ClientCard() {
   }, [key]);
   const client = loaded.data;
   const rec = useLoad(() => (client?.id ? api.clientRecord(salon?.id ?? '', client.id) : Promise.resolve(null)), [client?.id]);
-  const [editing, setEditing] = useState(false);
   const crm = useLoad(() => (client?.id && salon ? apiB.crm(salon.id, client.id).catch(() => null) : Promise.resolve(null)), [client?.id]);
   const bal = useLoad(() => (client?.id ? apiB.balance(client.id).catch(() => null) : Promise.resolve(null)), [client?.id]);
   const pts = useLoad(() => (client?.id && salon ? apiB.loyalty(salon.id, client.id).catch(() => null) : Promise.resolve(null)), [client?.id]);
@@ -54,8 +50,9 @@ export default function ClientCard() {
   const crmRun = async (fn: () => Promise<unknown>, after: () => void) => { setCrmBusy(true); try { await fn(); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); after(); } catch (e) { toast((e as Error).message, 'error'); } finally { setCrmBusy(false); } };
   const consents = useLoad(() => (client?.id ? apiX.clientConsents(client.id).catch(() => []) : Promise.resolve([])), [client?.id]);
   const [note, setNote] = useState('');
-  const [delOpen, setDelOpen] = useState(false);
-  const [ctab, setCtab] = useState<'overview' | 'visits' | 'notes' | 'photos'>('visits');
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
+  const [ctab, setCtab] = useState<'overview' | 'visits' | 'notes'>('visits');
   const { width: W } = useWindowDimensions();
   const [busy, setBusy] = useState(false);
   const stats = (client ?? {}) as Partial<ClientWithStats>;
@@ -77,6 +74,15 @@ export default function ClientCard() {
       setBusy(false);
     }
   }
+  async function saveNote(nid: string | number) {
+    if (!salon) return;
+    setBusy(true);
+    try { await api.updateClientNote(salon.id, nid, editBody.trim()); setEditId(null); await rec.reload(); } catch (e) { toast((e as Error).message, 'error'); } finally { setBusy(false); }
+  }
+  async function delNote(nid: string | number) {
+    if (!salon) return;
+    try { await api.deleteClientNote(salon.id, nid); await rec.reload(); } catch (e) { toast((e as Error).message, 'error'); }
+  }
   async function refresh() { await Promise.all([loaded.reload(), rec.reload()]); bump(); }
 
   const spent = stats.totalSpent;
@@ -87,7 +93,7 @@ export default function ClientCard() {
   const L = (icon: string, text: string) => <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 6 }}><Icon name={icon} size={18} color={t.ink} /><T k="h2">{text}</T></View>;
   return (
     <Screen>
-      <BackBar label={tr('v2.clientsTitle')} onBack={() => router.back()} right={client ? <IconBtn icon="edit" label={tr('cx.edit')} onPress={() => setEditing(true)} /> : undefined} />
+      <BackBar label={tr('v2.clientsTitle')} onBack={() => router.back()} />
       {loaded.error ? <ErrorState error={loaded.error} onRetry={() => void loaded.reload()} /> : !client && !loaded.loading ? <EmptyState photo="demo:f04" title={tr('state.errorTitle')} action={{ label: tr('state.retry'), onPress: () => void loaded.reload() }} /> : !client ? <KSkel blocks={[{ h: 96 }, { h: 60 }, { h: 200 }]} /> : (
         <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={loaded.refreshing || rec.refreshing} onRefresh={() => void refresh()} tintColor={t.violet} />}>
@@ -117,7 +123,7 @@ export default function ClientCard() {
             {client.phone ? <Pressable onPress={() => void Linking.openURL(`https://wa.me/${digits(client.phone)}`).catch(() => {})} accessibilityRole="button" accessibilityLabel={tr('common.whatsapp')} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name="chat" size={22} color={t.ink} /></Pressable> : null}
           </View>
           <View style={{ marginTop: 18 }}>
-            <UnderTabs value={ctab} onChange={setCtab} items={[{ k: 'visits', label: tr('ux.tabVisits'), icon: 'cal' }, { k: 'notes', label: tr('ux.tabNotes'), icon: 'edit' }, { k: 'photos', label: tr('v3.photosTab'), icon: 'img' }, { k: 'overview', label: tr('v3.moreTab'), icon: 'dots' }]} />
+            <UnderTabs value={ctab} onChange={setCtab} items={[{ k: 'visits', label: tr('ux.tabVisits'), icon: 'cal' }, { k: 'notes', label: tr('ux.tabNotes'), icon: 'edit' }, { k: 'overview', label: tr('n4.aboutTab'), icon: 'user' }]} />
           </View>
           {ctab === 'visits' ? (
             <View style={{ paddingHorizontal: 20, paddingTop: 6 }}>
@@ -133,9 +139,25 @@ export default function ClientCard() {
             <View style={{ paddingHorizontal: 20, paddingTop: 10, gap: 10 }}>
               {client.notes ? <KCard style={{ padding: 14 }}><T k="body">{client.notes}</T></KCard> : null}
               {(rec.data?.notes ?? []).map((n) => (
-                <KCard key={n.id} style={{ padding: 14, gap: 4 }}>
-                  <T k="body">{n.body}</T>
-                  <T k="xs" color={t.muted}>{[n.author_name, n.created_at?.slice(0, 10)].filter(Boolean).join(' · ')}</T>
+                <KCard key={n.id} style={{ padding: 14, gap: 6 }}>
+                  {editId === String(n.id) ? (
+                    <>
+                      <Field value={editBody} onChangeText={setEditBody} multiline style={{ minHeight: 60, paddingTop: 12, textAlignVertical: 'top' }} />
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <KButton kind="fl" label={tr('common.cancel')} style={{ flex: 1 }} onPress={() => setEditId(null)} />
+                        <KButton label={tr('common.save')} style={{ flex: 1 }} disabled={!editBody.trim()} loading={busy} onPress={() => void saveNote(n.id)} />
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <T k="body">{n.body}</T>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                        <T k="xs" color={t.muted} style={{ flex: 1 }}>{[n.author_name, n.created_at?.slice(0, 10)].filter(Boolean).join(' · ')}</T>
+                        <Pressable onPress={() => { setEditId(String(n.id)); setEditBody(n.body); }} accessibilityRole="button"><T k="sm" color={t.vtext}>{tr('n4.edit')}</T></Pressable>
+                        <Pressable onPress={() => void delNote(n.id)} accessibilityRole="button"><T k="sm" color={t.gink}>{tr('lk.delete')}</T></Pressable>
+                      </View>
+                    </>
+                  )}
                 </KCard>
               ))}
               {!client.notes && !(rec.data?.notes ?? []).length ? <T k="body" color={t.muted} style={{ textAlign: 'center', paddingVertical: 14 }}>{tr('clients.noNotes')}</T> : null}
@@ -143,15 +165,9 @@ export default function ClientCard() {
               <KButton label={tr('clients.addNote')} disabled={!note.trim()} loading={busy} onPress={() => void addNote()} />
             </View>
           ) : null}
-          {ctab === 'photos' ? (
-            photosArr.length ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
-                {photosArr.map((p) => <KPhoto key={String(p.id)} src={p.url} style={{ width: (W - 4) / 3, height: (W - 4) / 3 }} />)}
-              </View>
-            ) : <EmptyState photo="demo:f05" artHeight={150} title={tr('v3.noPhotos')} body={tr('v3.noPhotosBody')} />
-          ) : null}
           {ctab === 'overview' && client.id ? (
             <View style={{ paddingHorizontal: 20, gap: 12 }}>
+              {photosArr.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginHorizontal: -20 }}>{photosArr.map((p) => <KPhoto key={String(p.id)} src={p.url} style={{ width: (W - 4) / 3, height: (W - 4) / 3 }} />)}</View> : null}
               {L('wallet', tr('v3.summary'))}
               <KCard style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
                 <Row label={tr('cl.avgCheck')} value={stats.avgPrice != null ? money(stats.avgPrice, salon?.currency) : '—'} />
@@ -161,7 +177,6 @@ export default function ClientCard() {
               </KCard>
               <ClientPackages clientId={String(client.id)} clientName={name} />
               <KCard style={{ padding: 16, gap: 4 }}>
-                <ToggleRow label={tr('ad.vip')} value={!!stats.vip} onChange={(v) => void crmRun(() => apiB.setVip(client.id, v), () => { stale.current = true; void loaded.reload(); })} />
                 {pts.data ? <Row label={tr('ad.points')} value={String(pts.data.pointsBalance ?? pts.data.points_balance ?? 0)} /> : null}
                 {bal.data ? <Row label={bal.data.outstanding > 0 ? tr('ad.owes') : tr('ad.credit')} value={money(bal.data.outstanding > 0 ? bal.data.outstanding : bal.data.credit, salon?.currency)} /> : null}
                 {bal.data && bal.data.outstanding > 0 ? (
@@ -188,23 +203,10 @@ export default function ClientCard() {
                   <Row key={c.id} label={c.formName ?? '-'} value={(c.signedAt ?? c.createdAt ?? '').slice(0, 10)} />
                 ))}
               </KCard>
-              <KButton kind="danger" icon="trash" label={tr('ux.deleteClient')} onPress={() => setDelOpen(true)} style={{ marginTop: 6 }} />
             </View>
           ) : null}
         </ScrollView>
       )}
-      <BottomSheet open={delOpen} onClose={() => setDelOpen(false)}>
-        <View style={{ paddingBottom: 18, gap: 12 }}>
-          <View style={{ width: 64, height: 64, borderRadius: 22, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="trash" size={30} color={t.gink} /></View>
-          <Text style={{ fontFamily: font.x, fontSize: 26, letterSpacing: -0.7, lineHeight: 31, color: t.ink }}>{tr('ux.deleteClient')}</Text>
-          <Text style={{ fontFamily: font.m, fontSize: 16, lineHeight: 23, color: t.muted }}>{name} — {tr('ux.deleteClientBody')}</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Btn label={tr('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={() => setDelOpen(false)} />
-            <Btn label={tr('lk.delete')} variant="danger" style={{ flex: 1 }} loading={crmBusy} onPress={() => { if (!client) return; void crmRun(() => apiM.deleteClient(String(client.id)), () => { setDelOpen(false); toast(tr('ux.deleted'), 'success'); bump(); router.back(); }); }} />
-          </View>
-        </View>
-      </BottomSheet>
-      {client && editing ? <EditClientSheet client={client} open={editing} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); stale.current = true; void loaded.reload(); }} /> : null}
     </Screen>
   );
 }

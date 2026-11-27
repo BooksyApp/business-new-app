@@ -69,6 +69,9 @@ export const apiB = {
   slotOffers: (b: Id) => requestList<SlotOffer>(`/bookings/business/${b}/slot-discounts`),
   saveSlotOffers: (b: Id, offers: SlotOffer[]) => requestList<SlotOffer>(`/bookings/business/${b}/slot-discounts`, { method: 'PUT', body: offers }),
   branches: (from?: string, to?: string) => requestList<BranchRow>(`/analytics/owner/branch-comparison${rng(from, to).replace('from=', 'startDate=').replace('to=', 'endDate=')}`),
+  /** GET/PUT /api/businesses/{b}/settings: booking rules. requireConfirmation = the salon confirms online bookings by hand. */
+  bookingSettings: (b: Id) => request<{ requireConfirmation: boolean; allowOnlineBooking: boolean }>(`${B(b)}/settings`),
+  saveConfirmation: (b: Id, requireConfirmation: boolean) => request<{ requireConfirmation: boolean }>(`${B(b)}/settings`, { method: 'PUT', body: { requireConfirmation } }),
   onlineSales: (b: Id) => request<OnlineSales>(`${B(b)}/online-sales`),
   saveOnlineSales: (b: Id, body: Partial<OnlineSales>) => request<OnlineSales>(`${B(b)}/online-sales`, { method: 'PUT', body }),
   setShift: (b: Id, shift: { staffId: Id; date: string; start: string; end: string }) => request<unknown>(`${B(b)}/rota/shifts`, { method: 'PUT', body: shift }),
@@ -160,7 +163,6 @@ export const apiB = {
   crm: (b: Id, c: Id) => request<Crm>(`${B(b)}/clients/${c}/crm`),
   block: (b: Id, c: Id, reason: string) => request<Crm>(`${B(b)}/clients/${c}/block`, { method: 'PUT', body: { reason } }),
   unblock: (b: Id, c: Id) => request<Crm>(`${B(b)}/clients/${c}/block`, { method: 'DELETE' }),
-  setVip: (c: Id, vip: boolean) => request<unknown>(`/clients/${c}`, { method: 'PUT', body: { vip } }),
   loyalty: (b: Id, c: Id) => request<{ pointsBalance?: number; points_balance?: number }>(`/loyalty/business/${b}/client/${c}`),
 
   audit: (b: Id, limit = 50) => requestList<AuditRow>(`${B(b)}/audit-log?limit=${limit}&offset=0`),

@@ -485,6 +485,12 @@ export const api = {
       method: 'POST',
       body: { kind: 'NOTE', body },
     }),
+  /** PUT /api/businesses/{b}/client-notes/{id}: the salon edits its own private note. */
+  updateClientNote: (b: Id, noteId: Id, body: string) =>
+    request<ClientNote>(`/businesses/${b}/client-notes/${noteId}`, { method: 'PUT', body: { body } }),
+  /** DELETE /api/businesses/{b}/client-notes/{id} */
+  deleteClientNote: (b: Id, noteId: Id) =>
+    request<void>(`/businesses/${b}/client-notes/${noteId}`, { method: 'DELETE' }),
 
   /** GET /api/waitlist/business/{id} */
   waitlist: (b: Id) => requestList<WaitlistEntry>(`/waitlist/business/${b}`),
