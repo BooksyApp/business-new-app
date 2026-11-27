@@ -169,7 +169,7 @@ export function Btn({ label, onPress, variant = 'primary', loading, disabled, ic
   const inner = (
     <>
       {loading ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={18} color={fg} /> : null}
-      <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.s, fontSize: small ? 13.5 : 15, color: fg, flexShrink: 1, textAlign: 'center' }}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.s, fontSize: small ? 13.5 : 15, color: fg, flexShrink: 1, textAlign: 'center' }}>{label}</Text>
     </>
   );
   const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: small ? 40 : 48, borderRadius: small ? 20 : 24, paddingVertical: 6, paddingHorizontal: small ? 16 : 20 };

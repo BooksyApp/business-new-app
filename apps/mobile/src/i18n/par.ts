@@ -1,7 +1,7 @@
 /** Strings for fields and actions added in the hub-parity pass (PARITY-HUB.md). AZ is the native source. */
 export const parEn = {
   hx: {
-    galTitle: 'Salon photos', galEmpty: 'No photos yet. Photos appear on your public page.', export: 'Export client data',
+    galTitle: 'Salon photos', galEmpty: 'No photos yet. Photos appear on your public page.', export: 'Export data',
     resTitle: 'Resources',
     resSub: 'Rooms, chairs and equipment a service needs',
     resEmpty: 'No resources yet',
@@ -66,7 +66,7 @@ export const parEn = {
     feedBody: 'subscribe in Google, Apple or Outlook calendar',
     feedOff: 'Calendar feeds are off on this server.',
     feedShare: 'Share link',
-    feedOpen: 'Open in calendar',
+    feedOpen: 'Open calendar',
     feedNew: 'New link',
     feedNewBody: 'The old link stops working.',
     toolsPortfolio: 'Portfolio',
@@ -76,7 +76,7 @@ export const parEn = {
     ovHint: 'Leave empty to use the service price and time.',
     ovPrice: 'Price',
     ovMin: 'Minutes',
-    tenders: 'Pay with several methods',
+    tenders: 'Split payment',
     tenderAdd: 'Add a payment',
     tenderLeft: 'Left to pay: {{n}}',
     tenderAmount: 'Amount',
@@ -103,7 +103,7 @@ export const parEn = {
 };
 export const parAz = {
   hx: {
-    galTitle: 'Salon şəkilləri', galEmpty: 'Hələ şəkil yoxdur. Şəkillər açıq səhifəndə görünür.', export: 'Müştəri məlumatını ixrac et',
+    galTitle: 'Salon şəkilləri', galEmpty: 'Hələ şəkil yoxdur. Şəkillər açıq səhifəndə görünür.', export: 'İxrac et',
     resTitle: 'Resurslar',
     resSub: 'Xidmətin tələb etdiyi otaq, kreslo və avadanlıq',
     resEmpty: 'Hələ resurs yoxdur',
@@ -162,7 +162,7 @@ export const parAz = {
     rentOver: 'Gecikib',
     rentMark: 'Ödənib say',
     rentOverdue: '{{n}} gecikib',
-    rentStop: 'İcarəni dayandır',
+    rentStop: 'Dayandır',
     rentStart: 'İcarəni başlat',
     feedTitle: 'Təqvim linki',
     feedBody: 'Google, Apple və ya Outlook təqviminə abunə ol',
@@ -178,7 +178,7 @@ export const parAz = {
     ovHint: 'Boş qalsa xidmətin qiyməti və vaxtı istifadə olunur.',
     ovPrice: 'Qiymət',
     ovMin: 'Dəqiqə',
-    tenders: 'Bir neçə üsulla ödə',
+    tenders: 'Bölünmüş ödəniş',
     tenderAdd: 'Ödəniş əlavə et',
     tenderLeft: 'Qalıq: {{n}}',
     tenderAmount: 'Məbləğ',
@@ -205,7 +205,7 @@ export const parAz = {
 };
 export const parRu = {
   hx: {
-    galTitle: 'Фото салона', galEmpty: 'Фото пока нет. Они появятся на публичной странице.', export: 'Экспорт данных клиента',
+    galTitle: 'Фото салона', galEmpty: 'Фото пока нет. Они появятся на публичной странице.', export: 'Экспорт',
     resTitle: 'Ресурсы',
     resSub: 'Комнаты, кресла и оборудование для услуг',
     resEmpty: 'Ресурсов пока нет',
@@ -264,13 +264,13 @@ export const parRu = {
     rentOver: 'Просрочено',
     rentMark: 'Отметить оплату',
     rentOverdue: '{{n}} просрочено',
-    rentStop: 'Остановить аренду',
+    rentStop: 'Остановить',
     rentStart: 'Начать аренду',
     feedTitle: 'Календарь-лента',
     feedBody: 'подписка в Google, Apple или Outlook',
     feedOff: 'Календарные ленты отключены на этом сервере.',
-    feedShare: 'Поделиться ссылкой',
-    feedOpen: 'Открыть в календаре',
+    feedShare: 'Поделиться',
+    feedOpen: 'Открыть',
     feedNew: 'Новая ссылка',
     feedNewBody: 'Старая ссылка перестанет работать.',
     toolsPortfolio: 'Портфолио',
@@ -280,7 +280,7 @@ export const parRu = {
     ovHint: 'Если пусто, берутся цена и время услуги.',
     ovPrice: 'Цена',
     ovMin: 'Минуты',
-    tenders: 'Оплатить несколькими способами',
+    tenders: 'Оплата частями',
     tenderAdd: 'Добавить платёж',
     tenderLeft: 'Осталось: {{n}}',
     tenderAmount: 'Сумма',

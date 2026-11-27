@@ -120,7 +120,7 @@ export const ru: DeepPartial<Strings> = {
     lastVisit: 'Последний визит',
     history: 'История',
     notes: 'Заметки',
-    addNote: 'Добавить заметку',
+    addNote: 'Новая заметка',
     noteHint: 'Напишите заметку о клиенте',
     noNotes: 'Заметок пока нет',
     noHistory: 'Визитов пока нет',

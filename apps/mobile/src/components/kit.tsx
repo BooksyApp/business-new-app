@@ -139,7 +139,7 @@ export function Button({ label, onPress, kind = 'pr', size = 'md', icon, loading
       style={[{ minHeight: h, minWidth: 0, borderRadius: h / 2, paddingVertical: 6, paddingHorizontal: size === 'sm' ? 16 : 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: bg, opacity: off && !loading ? 0.5 : 1 },
         kind === 'pr' ? ctaShadow : null, kind === 'ol' ? { borderWidth: 1.5, borderColor: t.hair } : null, block ? { alignSelf: 'stretch' } : null, style]}>
       {loading ? <ActivityIndicator color={fg} /> : icon ? <Icon name={icon} size={18} color={fg} /> : null}
-      <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.s, fontSize: size === 'sm' ? 13.5 : 15, color: fg, flexShrink: 1, textAlign: 'center' }}>{label}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={{ fontFamily: font.s, fontSize: size === 'sm' ? 13.5 : 15, color: fg, flexShrink: 1, textAlign: 'center' }}>{label}</Text>
     </Pressable>
   );
 }

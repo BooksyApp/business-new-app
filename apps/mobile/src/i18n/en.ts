@@ -92,7 +92,7 @@ export const en = {
     notes: 'Notes',
     confirm: 'Confirm',
     noShow: 'No-show',
-    cancel: 'Cancel appointment',
+    cancel: 'Cancel booking',
     cancelReason: 'Reason (optional)',
     reschedule: 'Reschedule',
     rescheduleTitle: 'Pick a new time',

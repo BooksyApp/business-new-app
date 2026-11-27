@@ -29,7 +29,7 @@ export const moreEn = {
 };
 
 export const moreAz: typeof moreEn = {
-  wl: { add: 'Gözləmə siyahısına əlavə et', title: 'Gözləmə siyahısı', name: 'Müştərinin adı', date: 'İstədiyi tarix (YYYY-AA-GG)', time: 'İstədiyi saat (SS:DD, məcburi deyil)', service: 'Xidmət', remove: 'Sil', book: 'İndi rezerv et', removed: 'Siyahıdan silindi', needName: 'Ad yazın və xidmət seçin.', badDate: 'Tarix 2026-12-31 kimi olmalıdır.' },
+  wl: { add: 'Siyahıya əlavə', title: 'Gözləmə siyahısı', name: 'Müştərinin adı', date: 'İstədiyi tarix (YYYY-AA-GG)', time: 'İstədiyi saat (SS:DD, məcburi deyil)', service: 'Xidmət', remove: 'Sil', book: 'İndi rezerv et', removed: 'Siyahıdan silindi', needName: 'Ad yazın və xidmət seçin.', badDate: 'Tarix 2026-12-31 kimi olmalıdır.' },
   sx: {
     add: 'Xidmət əlavə et', newTitle: 'Yeni xidmət', editTitle: 'Xidmətə düzəliş', name: 'Ad', description: 'Təsvir', category: 'Kateqoriya', noCategory: 'Kateqoriyasız',
     tabMain: 'Əsas', tabPrice: 'Qiymət', tabStaff: 'Mütəxəssislər', tabOnline: 'Onlayn rezerv', tabSettings: 'Ayarlar',
@@ -39,8 +39,8 @@ export const moreAz: typeof moreEn = {
     archiveConfirm: 'Bu xidmət arxivə atılsın? Mövcud rezervlər qalır.', needName: 'Ad, qiymət və müddət yazın.', categories: 'Kateqoriyalar', newCategory: 'Yeni kateqoriya', hide: 'Gizlət', show: 'Göstər', delCategory: 'Kateqoriyanı sil', packages: 'Paketlər', noPackages: 'Hələ paket yoxdur', sessions: '{{n}} seans',
   },
   tm: {
-    add: 'Mütəxəssis əlavə et', newTitle: 'Yeni mütəxəssis', editTitle: 'Mütəxəssisə düzəliş', name: 'Ad', position: 'Vəzifə', services: 'Xidmətlər', schedule: 'Həftəlik cədvəl', closed: 'İstirahət günü',
-    invite: 'Dəvət göndər', invited: 'Dəvət göndərildi', timeOff: 'İstirahət / məzuniyyət', noTimeOff: 'Planlaşdırılmış istirahət yoxdur', addTimeOff: 'İstirahət əlavə et', role: 'Rol', needName: 'Ad yazın.', deactivate: 'Deaktiv et', activate: 'Aktiv et',
+    add: 'Əlavə et', newTitle: 'Yeni mütəxəssis', editTitle: 'Mütəxəssisə düzəliş', name: 'Ad', position: 'Vəzifə', services: 'Xidmətlər', schedule: 'Həftəlik cədvəl', closed: 'İstirahət günü',
+    invite: 'Dəvət göndər', invited: 'Dəvət göndərildi', timeOff: 'İstirahət / məzuniyyət', noTimeOff: 'Planlaşdırılmış istirahət yoxdur', addTimeOff: 'İstirahət', role: 'Rol', needName: 'Ad yazın.', deactivate: 'Deaktiv et', activate: 'Aktiv et',
     days: { MONDAY: 'B.e.', TUESDAY: 'Ç.a.', WEDNESDAY: 'Çər.', THURSDAY: 'C.a.', FRIDAY: 'Cümə', SATURDAY: 'Şən.', SUNDAY: 'Baz.' },
   },
   sl: {
@@ -49,16 +49,16 @@ export const moreAz: typeof moreEn = {
   },
   rv: { title: 'Rəylər', average: 'Orta', count: '{{n}} rəy', empty: 'Hələ rəy yoxdur', emptyBody: 'Müştəri rəyləri burada görünəcək.', reply: 'Cavab ver', yourReply: 'Sizin cavabınız', send: 'Cavabı dərc et', report: 'Hal aç', reportBody: 'Salon rəyi redaktə edə, gizlədə və ya silə bilməz. Rəyin nə üçün yanlış olduğunu booqi komandasına yazın, yoxlayacaq.', reason: 'Səbəb', reasons: { FAKE: 'Saxta və ya müştəri deyil', ABUSIVE: 'Təhqiramiz dil', OTHER: 'Digər' }, reportSent: 'Hal açıldı. Komanda yoxlayacaq.', anonymous: 'Müştəri' },
   rp: { title: 'Hesabatlar', today: 'Bu gün', week: '7 gün', month: '30 gün', revenue: 'Gəlir', bookings: 'Rezervlər', averageTicket: 'Orta çek', clients: 'Müştərilər', newClients: 'Yeni müştərilər', returningClients: 'Təkrar gələn', noShowRate: 'Gəlməyənlər', cancellationRate: 'Ləğvlər', utilization: 'Yüklənmə', onlineShare: 'Onlayn pay', top: 'Ən çox satılan xidmətlər', team: 'Komanda', sources: 'Rezerv mənbələri', vsPrev: 'əvvəlki dövrlə müqayisədə', empty: 'Bu dövr üçün məlumat yoxdur' },
-  hr: { title: 'İş saatları', save: 'Saatları saxla', saved: 'İş saatları saxlanıldı', open: 'Açıq', closed: 'Bağlı', badTime: 'SS:DD yazın, bağlanış açılışdan sonra olmalıdır.', exceptions: 'Bayram və bağlı günlər', addException: 'Bağlı gün əlavə et', from: 'Başlanğıc (YYYY-AA-GG)', to: 'Son (YYYY-AA-GG)', note: 'Qeyd', none: 'İstisna yoxdur', badDate: 'Tarix 2026-12-31 kimi olmalı, son başlanğıcdan əvvəl olmamalıdır.' },
+  hr: { title: 'İş saatları', save: 'Saatları saxla', saved: 'İş saatları saxlanıldı', open: 'Açıq', closed: 'Bağlı', badTime: 'SS:DD yazın, bağlanış açılışdan sonra olmalıdır.', exceptions: 'Bayram və bağlı günlər', addException: 'Gün əlavə et', from: 'Başlanğıc (YYYY-AA-GG)', to: 'Son (YYYY-AA-GG)', note: 'Qeyd', none: 'İstisna yoxdur', badDate: 'Tarix 2026-12-31 kimi olmalı, son başlanğıcdan əvvəl olmamalıdır.' },
   ns: { title: 'Bildiriş seçimləri', emailConfirmation: 'Rezerv təsdiqi e-poçtu', emailReminder: 'Xatırlatma e-poçtu', emailCancellation: 'Ləğv e-poçtu', emailReschedule: 'Vaxt dəyişikliyi e-poçtu', emailWaitlist: 'Gözləmə siyahısı e-poçtu', emailReviewRequest: 'Rəy xahişi e-poçtu', salonAlerts: 'Onlayn rezervlər barədə mənə yaz', smsEnabled: 'SMS xatırlatmaları', pushEnabled: 'Push bildirişlər', whatsappEnabled: 'WhatsApp xatırlatmaları', saved: 'Saxlanıldı', unavailable: 'Bu planda mövcud deyil' },
   sub: { title: 'Abunəlik', plan: 'Plan', status: 'Status', until: 'Yenilənmə / bitmə', trial: 'Sınaq bitir' },
   lk: { photos: 'Şəkillər', stories: 'Hekayələr', empty: 'Hələ heç nə yoxdur', views: '{{n}} baxış', delete: 'Sil', confirmDelete: 'Bu silinsin?', webHint: 'Şəkil və hekayələri veb paneldən yükləyin; burada baxıb silə bilərsiniz.', pending: 'Gözləyir', approved: 'Təsdiqlənib', rejected: 'Rədd edilib' },
   ev: { title: 'Son hadisələr', BOOKING_NEW: 'Yeni rezerv', BOOKING_CANCELLED: 'Rezerv ləğv edildi', WAITLIST: 'Gözləmə siyahısına yazıldı', REVIEW: 'Yeni rəy', markRead: 'Hamısını oxunmuş et' },
-  cx: { edit: 'Müştəriyə düzəliş', consents: 'Razılıq formaları', noConsents: 'İmzalanmış forma yoxdur', saved: 'Müştəri saxlanıldı' },
+  cx: { edit: 'Düzəliş et', consents: 'Razılıq formaları', noConsents: 'İmzalanmış forma yoxdur', saved: 'Müştəri saxlanıldı' },
 };
 
 export const moreRu: typeof moreEn = {
-  wl: { add: 'Добавить в лист ожидания', title: 'Лист ожидания', name: 'Имя клиента', date: 'Желаемая дата (ГГГГ-ММ-ДД)', time: 'Желаемое время (ЧЧ:ММ, необязательно)', service: 'Услуга', remove: 'Убрать', book: 'Записать', removed: 'Убран из списка', needName: 'Введите имя и выберите услугу.', badDate: 'Дата должна выглядеть как 2026-12-31.' },
+  wl: { add: 'В лист ожидания', title: 'Лист ожидания', name: 'Имя клиента', date: 'Желаемая дата (ГГГГ-ММ-ДД)', time: 'Желаемое время (ЧЧ:ММ, необязательно)', service: 'Услуга', remove: 'Убрать', book: 'Записать', removed: 'Убран из списка', needName: 'Введите имя и выберите услугу.', badDate: 'Дата должна выглядеть как 2026-12-31.' },
   sx: {
     add: 'Добавить услугу', newTitle: 'Новая услуга', editTitle: 'Изменить услугу', name: 'Название', description: 'Описание', category: 'Категория', noCategory: 'Без категории',
     tabMain: 'Основное', tabPrice: 'Цена', tabStaff: 'Мастера', tabOnline: 'Онлайн-запись', tabSettings: 'Настройки',
@@ -68,20 +68,20 @@ export const moreRu: typeof moreEn = {
     archiveConfirm: 'Отправить услугу в архив? Существующие записи останутся.', needName: 'Введите название, цену и длительность.', categories: 'Категории', newCategory: 'Новая категория', hide: 'Скрыть', show: 'Показать', delCategory: 'Удалить категорию', packages: 'Пакеты', noPackages: 'Пакетов пока нет', sessions: '{{n}} сеансов',
   },
   tm: {
-    add: 'Добавить мастера', newTitle: 'Новый мастер', editTitle: 'Изменить мастера', name: 'Имя', position: 'Должность', services: 'Услуги', schedule: 'График на неделю', closed: 'Выходной',
-    invite: 'Отправить приглашение', invited: 'Приглашение отправлено', timeOff: 'Отпуск / отгулы', noTimeOff: 'Отсутствий не запланировано', addTimeOff: 'Добавить отсутствие', role: 'Роль', needName: 'Введите имя.', deactivate: 'Отключить', activate: 'Включить',
+    add: 'Новый мастер', newTitle: 'Новый мастер', editTitle: 'Изменить мастера', name: 'Имя', position: 'Должность', services: 'Услуги', schedule: 'График на неделю', closed: 'Выходной',
+    invite: 'Пригласить', invited: 'Приглашение отправлено', timeOff: 'Отпуск / отгулы', noTimeOff: 'Отсутствий не запланировано', addTimeOff: 'Отсутствие', role: 'Роль', needName: 'Введите имя.', deactivate: 'Отключить', activate: 'Включить',
     days: { MONDAY: 'Пн', TUESDAY: 'Вт', WEDNESDAY: 'Ср', THURSDAY: 'Чт', FRIDAY: 'Пт', SATURDAY: 'Сб', SUNDAY: 'Вс' },
   },
   sl: {
     add: 'Новая продажа', title: 'Новая продажа', client: 'Клиент (необязательно)', master: 'Мастер', items: 'Позиции', pickService: 'Добавить услугу', custom: 'Своя позиция', customName: 'Название позиции', price: 'Цена', qty: 'Кол-во', discount: 'Скидка', tip: 'Чаевые', method: 'Способ оплаты', giftCode: 'Код подарочной карты',
     total: 'Итого', charge: 'Принять оплату', done: 'Продажа сохранена', needItem: 'Добавьте хотя бы одну позицию.', needGift: 'Введите код подарочной карты.', refund: 'Возврат', refundAmount: 'Сумма возврата', refundReason: 'Причина (необязательно)', refunded: 'Возврат записан', refundMax: 'До {{n}}', receipt: 'Чек', tips: 'Чаевые за сегодня', quick: 'Быстрая продажа',
   },
-  rv: { title: 'Отзывы', average: 'Средняя', count: 'Отзывов: {{n}}', empty: 'Отзывов пока нет', emptyBody: 'Отзывы клиентов появятся здесь.', reply: 'Ответить', yourReply: 'Ваш ответ', send: 'Опубликовать ответ', report: 'Открыть обращение', reportBody: 'Салон не может редактировать, скрывать или удалять отзыв. Напишите команде booqi, почему он неверен, и её специалисты проверят.', reason: 'Причина', reasons: { FAKE: 'Фейк или не клиент', ABUSIVE: 'Оскорбления', OTHER: 'Другое' }, reportSent: 'Обращение открыто. Команда проверит.', anonymous: 'Клиент' },
+  rv: { title: 'Отзывы', average: 'Средняя', count: 'Отзывов: {{n}}', empty: 'Отзывов пока нет', emptyBody: 'Отзывы клиентов появятся здесь.', reply: 'Ответить', yourReply: 'Ваш ответ', send: 'Опубликовать ответ', report: 'Обращение', reportBody: 'Салон не может редактировать, скрывать или удалять отзыв. Напишите команде booqi, почему он неверен, и её специалисты проверят.', reason: 'Причина', reasons: { FAKE: 'Фейк или не клиент', ABUSIVE: 'Оскорбления', OTHER: 'Другое' }, reportSent: 'Обращение открыто. Команда проверит.', anonymous: 'Клиент' },
   rp: { title: 'Отчёты', today: 'Сегодня', week: '7 дней', month: '30 дней', revenue: 'Выручка', bookings: 'Записи', averageTicket: 'Средний чек', clients: 'Клиенты', newClients: 'Новые клиенты', returningClients: 'Повторные', noShowRate: 'Неявки', cancellationRate: 'Отмены', utilization: 'Загрузка', onlineShare: 'Доля онлайн', top: 'Топ услуг', team: 'Команда', sources: 'Источники записей', vsPrev: 'к прошлому периоду', empty: 'Нет данных за период' },
-  hr: { title: 'Часы работы', save: 'Сохранить часы', saved: 'Часы работы сохранены', open: 'Открыто', closed: 'Закрыто', badTime: 'Формат ЧЧ:ММ, закрытие позже открытия.', exceptions: 'Праздники и закрытые дни', addException: 'Добавить закрытые дни', from: 'С (ГГГГ-ММ-ДД)', to: 'По (ГГГГ-ММ-ДД)', note: 'Заметка', none: 'Исключений нет', badDate: 'Даты вида 2026-12-31, конец не раньше начала.' },
+  hr: { title: 'Часы работы', save: 'Сохранить часы', saved: 'Часы работы сохранены', open: 'Открыто', closed: 'Закрыто', badTime: 'Формат ЧЧ:ММ, закрытие позже открытия.', exceptions: 'Праздники и закрытые дни', addException: 'Добавить дни', from: 'С (ГГГГ-ММ-ДД)', to: 'По (ГГГГ-ММ-ДД)', note: 'Заметка', none: 'Исключений нет', badDate: 'Даты вида 2026-12-31, конец не раньше начала.' },
   ns: { title: 'Настройки уведомлений', emailConfirmation: 'Письмо-подтверждение записи', emailReminder: 'Письмо-напоминание', emailCancellation: 'Письмо об отмене', emailReschedule: 'Письмо о переносе', emailWaitlist: 'Письмо листа ожидания', emailReviewRequest: 'Письмо с просьбой об отзыве', salonAlerts: 'Писать мне об онлайн-записях', smsEnabled: 'SMS-напоминания', pushEnabled: 'Push-уведомления', whatsappEnabled: 'WhatsApp-напоминания', saved: 'Сохранено', unavailable: 'Недоступно на этом тарифе' },
   sub: { title: 'Подписка', plan: 'Тариф', status: 'Статус', until: 'Продление / окончание', trial: 'Пробный период до' },
   lk: { photos: 'Фото', stories: 'Истории', empty: 'Пока ничего нет', views: 'Просмотров: {{n}}', delete: 'Удалить', confirmDelete: 'Удалить это?', webHint: 'Фото и истории загружаются в веб-панели; здесь их можно просмотреть и удалить.', pending: 'На проверке', approved: 'Одобрено', rejected: 'Отклонено' },
   ev: { title: 'Последние события', BOOKING_NEW: 'Новая запись', BOOKING_CANCELLED: 'Запись отменена', WAITLIST: 'Встал в лист ожидания', REVIEW: 'Новый отзыв', markRead: 'Отметить всё прочитанным' },
-  cx: { edit: 'Изменить клиента', consents: 'Формы согласия', noConsents: 'Подписанных форм нет', saved: 'Клиент сохранён' },
+  cx: { edit: 'Изменить', consents: 'Формы согласия', noConsents: 'Подписанных форм нет', saved: 'Клиент сохранён' },
 };
