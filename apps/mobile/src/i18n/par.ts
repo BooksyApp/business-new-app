@@ -99,6 +99,7 @@ export const parEn = {
     answers: 'Client answers', visitAddress: 'Visit address', promoCode: 'Promo code', cancelReason: 'Cancellation reason',
     secRules: 'Booking rules', assignMode: 'Who gets "any specialist" bookings', assignFair: 'Fair earnings', assignRound: 'Round robin', assignPriority: 'Priority order', parallel: 'Allow parallel services', parallelHint: 'One client can have two services at the same time with different specialists.', healthNote: 'Health and safety note', availFrom: 'Available from (optional)', availTo: 'Available until (optional)',
     secCategory: 'Category', building: 'Building', apartment: 'Office / flat', lateFee: 'Late cancellation fee', payMethods: 'Payments you accept', payOnline: 'Online', secReceipts: 'Tax and receipts', tax: 'Tax rate %', footer: 'Receipt footer', addCover: 'Add cover photo', changeCover: 'Change cover',
+    gAddress: 'Address and map', gBooking: 'Booking rules', gPay: 'Payments and receipts', gTeam: 'Team rules', gLook: 'Photos and brand', sumOn: 'Online on', sumOff: 'Online off', sumAuto: 'auto-confirm', sumManual: 'manual confirm', sumEmpty: 'Not filled in', noPin: 'Map pin required', pinSet: 'Pin set on map', sumLook: 'Logo, cover, gallery, brand colour',
   },
 };
 export const parAz = {
@@ -201,6 +202,7 @@ export const parAz = {
     answers: 'Müştərinin cavabları', visitAddress: 'Ziyarət ünvanı', promoCode: 'Promo kod', cancelReason: 'Ləğv səbəbi',
     secRules: 'Rezerv qaydaları', assignMode: '"İstənilən usta" rezervləri kimə düşür', assignFair: 'Bərabər qazanc', assignRound: 'Növbə ilə', assignPriority: 'Prioritet sırası', parallel: 'Paralel xidmətə icazə ver', parallelHint: 'Bir müştərinin iki xidməti eyni vaxtda fərqli ustalarla ola bilər.', healthNote: 'Sağlamlıq və təhlükəsizlik qeydi', availFrom: 'Başlanğıc tarix (ixtiyari)', availTo: 'Son tarix (ixtiyari)',
     secCategory: 'Kateqoriya', building: 'Bina', apartment: 'Ofis / mənzil', lateFee: 'Gec ləğv haqqı', payMethods: 'Qəbul etdiyin ödənişlər', payOnline: 'Onlayn', secReceipts: 'Vergi və qəbzlər', tax: 'Vergi dərəcəsi %', footer: 'Qəbzin alt yazısı', addCover: 'Üz qabığı şəkli əlavə et', changeCover: 'Üz qabığını dəyiş',
+    gAddress: 'Ünvan və xəritə', gBooking: 'Rezerv qaydaları', gPay: 'Ödəniş və qəbzlər', gTeam: 'Komanda qaydaları', gLook: 'Şəkillər və brend', sumOn: 'Onlayn açıq', sumOff: 'Onlayn bağlı', sumAuto: 'avtomatik təsdiq', sumManual: 'əl ilə təsdiq', sumEmpty: 'Doldurulmayıb', noPin: 'Xəritə nöqtəsi lazımdır', pinSet: 'Xəritədə işarələnib', sumLook: 'Loqo, üz qabığı, qalereya, brend rəngi',
   },
 };
 export const parRu = {
@@ -303,5 +305,6 @@ export const parRu = {
     answers: 'Ответы клиента', visitAddress: 'Адрес визита', promoCode: 'Промокод', cancelReason: 'Причина отмены',
     secRules: 'Правила записи', assignMode: 'Кому достаются записи «любой мастер»', assignFair: 'Равный заработок', assignRound: 'По очереди', assignPriority: 'По приоритету', parallel: 'Разрешить параллельные услуги', parallelHint: 'Один клиент может получать две услуги одновременно у разных мастеров.', healthNote: 'Заметка о здоровье и безопасности', availFrom: 'Доступна с (необязательно)', availTo: 'Доступна до (необязательно)',
     secCategory: 'Категория', building: 'Здание', apartment: 'Офис / квартира', lateFee: 'Штраф за позднюю отмену', payMethods: 'Принимаемые способы оплаты', payOnline: 'Онлайн', secReceipts: 'Налог и чеки', tax: 'Ставка налога %', footer: 'Подпись на чеке', addCover: 'Добавить обложку', changeCover: 'Сменить обложку',
+    gAddress: 'Адрес и карта', gBooking: 'Правила записи', gPay: 'Оплата и чеки', gTeam: 'Правила команды', gLook: 'Фото и бренд', sumOn: 'Онлайн включён', sumOff: 'Онлайн выключен', sumAuto: 'автоподтверждение', sumManual: 'ручное подтверждение', sumEmpty: 'Не заполнено', noPin: 'Нужна точка на карте', pinSet: 'Точка на карте задана', sumLook: 'Логотип, обложка, галерея, цвет бренда',
   },
 };
