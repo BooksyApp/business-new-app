@@ -23,6 +23,8 @@ import { font } from '@/theme/tokens';
 
 const DAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'] as const;
 const hm = (s?: string) => (s ?? '').slice(0, 5);
+/** The salon's built-in roles arrive from the server as English 'Manager' / 'Staff'; custom role names are shown as typed. */
+const roleLabel = (n: string) => (/^manager$/i.test(n.trim()) ? tr('tm.roleManager') : /^staff$/i.test(n.trim()) ? tr('tm.roleStaff') : n);
 const okTime = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 
 /** Specialist editor: contact, position, services, weekly schedule, role, invite, time off. */
@@ -109,7 +111,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
           <Field label={tr('cl.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
         </Section>
         {staff ? <ToggleRow label={active ? tr('tm.deactivate') : tr('tm.activate')} value={active} onChange={setActive} /> : null}
-        {(roles.data ?? []).filter((r) => !r.isOwner).length ? (<><SectionTitle>{tr('tm.role')}</SectionTitle><Choice value={roleId} onChange={setRoleId} options={(roles.data ?? []).filter((r) => !r.isOwner || String(r.id) === roleId).map((r) => ({ value: String(r.id), label: r.name }))} /></>) : null}
+        {(roles.data ?? []).filter((r) => !r.isOwner).length ? (<><SectionTitle>{tr('tm.role')}</SectionTitle><Choice value={roleId} onChange={setRoleId} options={(roles.data ?? []).filter((r) => !r.isOwner || String(r.id) === roleId).map((r) => ({ value: String(r.id), label: roleLabel(r.name) }))} /></>) : null}
         <SectionTitle>{tr('tm.services')}</SectionTitle>
         <MultiChoice value={ids} onChange={setIds} options={(svc.data ?? []).filter((s) => s.isActive).map((s) => ({ value: String(s.id), label: s.name }))} />
         <SectionTitle>{tr('tm.schedule')}</SectionTitle>

@@ -11,7 +11,7 @@ export const moreEn = {
   },
   tm: {
     add: 'Add specialist', newTitle: 'New specialist', editTitle: 'Edit specialist', name: 'Name', position: 'Position', services: 'Services', schedule: 'Weekly schedule', closed: 'Day off',
-    invite: 'Send invitation', invited: 'Invitation sent', timeOff: 'Time off', noTimeOff: 'No time off planned', addTimeOff: 'Add time off', role: 'Role', needName: 'Enter a name.', deactivate: 'Deactivate', activate: 'Activate',
+    roleManager: 'Manager', roleStaff: 'Staff', invite: 'Send invitation', invited: 'Invitation sent', timeOff: 'Time off', noTimeOff: 'No time off planned', addTimeOff: 'Add time off', role: 'Role', needName: 'Enter a name.', deactivate: 'Deactivate', activate: 'Activate',
     days: { MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed', THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun' },
   },
   sl: {
@@ -41,7 +41,7 @@ export const moreAz: typeof moreEn = {
   },
   tm: {
     add: 'Əlavə et', newTitle: 'Yeni mütəxəssis', editTitle: 'Mütəxəssisə düzəliş', name: 'Ad', position: 'Vəzifə', services: 'Xidmətlər', schedule: 'Həftəlik cədvəl', closed: 'İstirahət günü',
-    invite: 'Dəvət göndər', invited: 'Dəvət göndərildi', timeOff: 'İstirahət / məzuniyyət', noTimeOff: 'Planlaşdırılmış istirahət yoxdur', addTimeOff: 'İstirahət', role: 'Rol', needName: 'Ad yazın.', deactivate: 'Deaktiv et', activate: 'Aktiv et',
+    roleManager: 'Menecer', roleStaff: 'İşçi', invite: 'Dəvət göndər', invited: 'Dəvət göndərildi', timeOff: 'İstirahət / məzuniyyət', noTimeOff: 'Planlaşdırılmış istirahət yoxdur', addTimeOff: 'İstirahət', role: 'Rol', needName: 'Ad yazın.', deactivate: 'Deaktiv et', activate: 'Aktiv et',
     days: { MONDAY: 'B.e.', TUESDAY: 'Ç.a.', WEDNESDAY: 'Çər.', THURSDAY: 'C.a.', FRIDAY: 'Cümə', SATURDAY: 'Şən.', SUNDAY: 'Baz.' },
   },
   sl: {
@@ -71,7 +71,7 @@ export const moreRu: typeof moreEn = {
   },
   tm: {
     add: 'Новый мастер', newTitle: 'Новый мастер', editTitle: 'Изменить мастера', name: 'Имя', position: 'Должность', services: 'Услуги', schedule: 'График на неделю', closed: 'Выходной',
-    invite: 'Пригласить', invited: 'Приглашение отправлено', timeOff: 'Отпуск / отгулы', noTimeOff: 'Отсутствий не запланировано', addTimeOff: 'Отсутствие', role: 'Роль', needName: 'Введите имя.', deactivate: 'Отключить', activate: 'Включить',
+    roleManager: 'Менеджер', roleStaff: 'Сотрудник', invite: 'Пригласить', invited: 'Приглашение отправлено', timeOff: 'Отпуск / отгулы', noTimeOff: 'Отсутствий не запланировано', addTimeOff: 'Отсутствие', role: 'Роль', needName: 'Введите имя.', deactivate: 'Отключить', activate: 'Включить',
     days: { MONDAY: 'Пн', TUESDAY: 'Вт', WEDNESDAY: 'Ср', THURSDAY: 'Чт', FRIDAY: 'Пт', SATURDAY: 'Сб', SUNDAY: 'Вс' },
   },
   sl: {
