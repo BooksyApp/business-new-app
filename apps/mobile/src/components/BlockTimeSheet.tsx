@@ -10,7 +10,7 @@ import { Btn, Chip, Field, Toggle } from '@/components/ui';
 import { t as tr } from '@/i18n';
 import { api, toDay, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { addDays, dateLabel, fromMin } from '@/lib/format';
+import { addDays, dateLabel, fromIso, fromMin } from '@/lib/format';
 import { apiM } from '@/lib/api-more';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -86,6 +86,7 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
         <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink }}>{tr('block.title')}</Text>
         <Text style={{ fontFamily: font.m, fontSize: 15, color: t.muted, marginTop: 6 }}>{existing.staffName} · {existing.isFullDay ? tr('block.fullDay') : `${(existing.startTime ?? '').slice(0, 5)} – ${(existing.endTime ?? '').slice(0, 5)}`}</Text>
         {existing.reason ? <Text style={{ fontFamily: font.s, fontSize: 15, color: t.ink, marginTop: 6 }}>{existing.reason}</Text> : null}
+        {existing.recurrenceEndDate ? <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted, marginTop: 6 }}>{tr('ux.repUntilDate', { d: dateLabel(fromIso(existing.recurrenceEndDate)) })}</Text> : null}
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 16, paddingBottom: 16 }}>
           <Btn label={tr('common.close')} variant="secondary" style={{ flex: 1 }} onPress={onClose} />
           <Btn label={tr('block.remove')} variant="danger" style={{ flex: 1 }} loading={busy} onPress={() => void remove()} />

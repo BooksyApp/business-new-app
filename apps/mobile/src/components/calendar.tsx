@@ -8,7 +8,7 @@ import { t as tr, type StringKey } from '@/i18n';
 import type { Appointment, ClientWithStats, Staff, TimeOff } from '@/lib/api';
 import { recallClient } from '@/lib/client-cache';
 import { useDockInset } from '@/lib/dock';
-import { addDays, fromMin, hhmm, sameDay, startOfWeek, toMin, weekdayShort } from '@/lib/format';
+import { addDays, dateLabel, fromIso, fromMin, hhmm, sameDay, startOfWeek, toMin, weekdayShort } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeContext';
 import { ctaShadow, font } from '@/theme/tokens';
 import { salonNow } from '@/lib/salonClock';
@@ -249,7 +249,7 @@ export function Agenda({ date, appts, blocks = [], refreshing, onRefresh, onOpen
       {blocks.map((b) => (
         <Pressable key={`b-${b.id}`} onPress={() => onBlock?.(b)} noScale accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed', borderColor: t.ink3, paddingHorizontal: 16, marginLeft: 66, backgroundColor: t.fill }}>
           <Icon name="lock" size={18} color={t.muted} />
-          <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.muted }}>{b.reason || tr('block.title')}{b.startTime ? ` · ${hhmm(b.startTime)} – ${hhmm(b.endTime)}` : ''}</Text>
+          <Text numberOfLines={1} style={{ flex: 1, fontFamily: font.b, fontSize: 15, color: t.muted }}>{b.reason || tr('block.title')}{b.startTime ? ` · ${hhmm(b.startTime)} – ${hhmm(b.endTime)}` : ''}{b.recurrenceEndDate ? ` · ${tr('ux.repUntilDate', { d: dateLabel(fromIso(b.recurrenceEndDate)) })}` : ''}</Text>
         </Pressable>
       ))}
     </ScrollView>

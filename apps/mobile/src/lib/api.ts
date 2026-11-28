@@ -175,6 +175,7 @@ export interface TimeOff {
   endTime?: string | null;
   isFullDay: boolean;
   reason?: string | null;
+  recurrenceEndDate?: string | null;
 }
 
 export interface Sale {

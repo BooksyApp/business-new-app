@@ -123,7 +123,7 @@ export const apiX = {
   /** PUT /api/staff/{id}/role {roleId}: one of the salon's roles (what the hub does). The {role} tier form still works for OWNER / MANAGER / STAFF. */
   setStaffRoleId: (id: Id, roleId: Id) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { roleId } }),
   setStaffRole: (id: Id, role: string) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { role } }),
-  timeOffForStaff: (b: Id, s: Id) => request<{ id: Id; startDate: string; endDate: string; startTime?: string | null; endTime?: string | null; isFullDay: boolean; reason?: string | null; isApproved?: boolean }[]>(`/time-off/staff/${s}`),
+  timeOffForStaff: (b: Id, s: Id) => request<{ id: Id; startDate: string; endDate: string; startTime?: string | null; endTime?: string | null; isFullDay: boolean; reason?: string | null; recurrenceEndDate?: string | null; isApproved?: boolean }[]>(`/time-off/staff/${s}`),
   // waitlist
   addWaitlist: (b: Id, body: WaitlistAdd) => request<{ id: Id }>(`/waitlist/business/${b}`, { method: 'POST', body }),
   removeWaitlist: (b: Id, id: Id) => request<void>(`/waitlist/business/${b}/${id}`, { method: 'DELETE' }),

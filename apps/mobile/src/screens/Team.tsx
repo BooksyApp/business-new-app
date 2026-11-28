@@ -122,7 +122,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
             {(off.data ?? []).length === 0 ? <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted, marginBottom: 8 }}>{tr('tm.noTimeOff')}</Text> : (off.data ?? []).map((o) => (
               <Card key={o.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, padding: 12 }}>
                 <Icon name="clock-alert" size={20} color={t.vtext} />
-                <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{dateLabel(fromIso(o.startDate))}{o.endDate !== o.startDate ? ` - ${dateLabel(fromIso(o.endDate))}` : ''}{!o.isFullDay && o.startTime ? ` · ${o.startTime.slice(0, 5)}-${(o.endTime ?? '').slice(0, 5)}` : ''}{o.reason ? ` · ${o.reason}` : ''}</Text>
+                <Text style={{ flex: 1, fontFamily: font.s, fontSize: 14.5, color: t.ink }}>{dateLabel(fromIso(o.startDate))}{o.endDate !== o.startDate ? ` - ${dateLabel(fromIso(o.endDate))}` : ''}{!o.isFullDay && o.startTime ? ` · ${o.startTime.slice(0, 5)}-${(o.endTime ?? '').slice(0, 5)}` : ''}{o.reason ? ` · ${o.reason}` : ''}{o.recurrenceEndDate ? ` · ${tr('ux.repUntilDate', { d: dateLabel(fromIso(o.recurrenceEndDate)) })}` : ''}</Text>
                 <Pressable onPress={() => void api.deleteTimeOff(o.id).then(() => off.reload()).catch((e: Error) => toast(e.message, 'error'))} accessibilityRole="button" accessibilityLabel={tr('lk.delete')}><Icon name="trash" size={20} color={t.gink} /></Pressable>
               </Card>
             ))}
