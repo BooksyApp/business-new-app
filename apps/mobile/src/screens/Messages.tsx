@@ -10,7 +10,7 @@ import { Avatar, Card, ErrorState, Header, Screen, Skeleton, StateView } from '@
 import { t as tr } from '@/i18n';
 import { api, type InboxSummary } from '@/lib/api';
 import { useApp } from '@/lib/app';
-import { dateLabel, hhmm } from '@/lib/format';
+import { dateLabel, stampDate } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { findClient } from '@/lib/client-cache';
 import { useTheme } from '@/theme/ThemeContext';
@@ -36,7 +36,7 @@ export function Messages({ onBack }: { onBack: () => void }) {
               <Avatar name={c.customerName} size={56} uri={(findClient(c.customerName, null) as { avatarUrl?: string | null } | undefined)?.avatarUrl} />
               <View style={{ flex: 1 }}>
                 <Text numberOfLines={1} style={{ fontFamily: c.unread ? font.x : font.b, fontSize: 17, letterSpacing: -0.2, color: t.ink }}>{c.customerName}</Text>
-                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{c.lastMessageAt ? dateLabel(new Date(c.lastMessageAt)) : ''}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{(() => { const d = stampDate(c.lastMessageAtInstant, c.lastMessageAt); return d ? dateLabel(d) : ''; })()}</Text>
               </View>
               {c.unread ? <View accessibilityLabel={tr('msg.unread', { n: c.unread })} style={{ minWidth: 22, height: 22, paddingHorizontal: 6, borderRadius: 11, backgroundColor: t.guava, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontFamily: font.x, fontSize: 12, color: '#fff' }}>{c.unread}</Text></View> : null}
             </Card>
@@ -80,7 +80,7 @@ function Thread({ sid, c, onBack }: { sid: string; c: InboxSummary; onBack: () =
             renderItem={({ item: m }) => (
               <View style={{ alignSelf: m.fromSalon ? 'flex-end' : 'flex-start', maxWidth: '82%', backgroundColor: m.fromSalon ? t.violet : t.surface, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 }}>
                 <Text style={{ fontFamily: font.m, fontSize: 15, color: m.fromSalon ? '#fff' : t.ink }}>{m.body}</Text>
-                <Text style={{ fontFamily: font.m, fontSize: 11, color: m.fromSalon ? 'rgba(255,255,255,.75)' : t.muted, marginTop: 2, textAlign: 'right' }}>{hhmm(new Date(m.sentAt).toTimeString())}</Text>
+                <Text style={{ fontFamily: font.m, fontSize: 11, color: m.fromSalon ? 'rgba(255,255,255,.75)' : t.muted, marginTop: 2, textAlign: 'right' }}>{(() => { const d = stampDate(m.sentAtInstant, m.sentAt); return d ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : ''; })()}</Text>
               </View>
             )} />
         )}

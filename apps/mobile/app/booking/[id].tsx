@@ -17,7 +17,7 @@ import { useApp } from '@/lib/app';
 import { CheckoutSheet } from '@/components/CheckoutSheet';
 import { recallClient } from '@/lib/client-cache';
 import { clientPhoto } from '@/lib/day';
-import { dateLabel, fromIso, hhmm, money, sameDay } from '@/lib/format';
+import { calDaysAgo, dateLabel, fromIso, hhmm, money, sameDay } from '@/lib/format';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { toast } from '@/lib/toast';
 import { useLoad } from '@/lib/useLoad';
@@ -59,13 +59,13 @@ export default function BookingDetail() {
   const a = q.data;
   const c = cl.data;
   const m = (staff.data ?? []).find((s) => String(s.id) === String(a.staffId));
-  const answers = (() => { try { const j = a.clientAnswers ? (JSON.parse(a.clientAnswers) as { question?: string; answer?: string }[]) : []; return (Array.isArray(j) ? j : []).filter((r) => r.question && r.answer) as { question: string; answer: string }[]; } catch { return []; } })();
+  const answers = (() => { const fromArr = Array.isArray(a.answers) ? a.answers : null; if (fromArr) return fromArr.filter((r) => r && r.question && r.answer) as { question: string; answer: string }[]; try { const j = a.clientAnswers ? (JSON.parse(a.clientAnswers) as { question?: string; answer?: string }[]) : []; return (Array.isArray(j) ? j : []).filter((r) => r.question && r.answer) as { question: string; answer: string }[]; } catch { return []; } })();
   const paid = a.paymentStatus === 'PAID';
   const step = a.status === 'COMPLETED' ? 3 : a.status === 'PENDING' ? 1 : a.status === 'CONFIRMED' ? 2 : 0;
   const open = a.status === 'PENDING' || a.status === 'CONFIRMED';
   const day = fromIso(a.appointmentDate);
   const tags: string[] = (c as { tags?: string[] } | null)?.tags ?? (c?.vip ? ['VIP'] : []);
-  const visits = c?.totalVisits ? tr('v2.visits', { n: c.totalVisits, d: c.lastVisitDate ? ago(fromIso(c.lastVisitDate)) : '-' }) : tr('v2.firstVisit');
+  const visits = c?.totalVisits ? tr('v2.visits', { n: c.totalVisits, d: c.lastVisitDate ? ago(c.lastVisitDate) : '-' }) : tr('v2.firstVisit');
   const photo = clientPhoto(c);
 
   async function run(fn: () => Promise<unknown>, after?: () => void) {
@@ -118,18 +118,18 @@ export default function BookingDetail() {
               <KV lines={1} icon="clock" label={tr('v2.time')} value={`${hhmm(a.startTime)} – ${hhmm(a.endTime)}, ${sameDay(day, salonNow()) ? tr('v2.today').toLowerCase() : dateLabel(day)}`} />
               <KV lines={1} icon="wallet" label={tr('v2.price')} value={paid ? `${money(a.price, salon?.currency)} · ${tr('n4.paid')}` : `${money(a.price, salon?.currency)} · ${tr('v2.payAtSalon')}`} />
             </Card>
-            {answers.length ? (
-              <Card style={{ marginTop: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 8 }}>
-                <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{tr('pa.answers')}</Text>
-                {answers.map((r, i) => <View key={i}><T k="xs" color={t.muted}>{r.question}</T><T k="body">{r.answer}</T></View>)}
-              </Card>
-            ) : null}
             {a.clientAddress ? <Card style={{ marginTop: 12, paddingVertical: 4, paddingHorizontal: 16 }}><KV first icon="pin" label={tr('pa.visitAddress')} value={a.clientAddress} />{a.travelFee ? <KV icon="car" label={tr('pa.travelFee')} value={money(a.travelFee, salon?.currency)} /> : null}</Card> : null}
             {a.promoCode || (a.status === 'CANCELLED' && a.cancellationReason) ? <Card style={{ marginTop: 12, paddingVertical: 4, paddingHorizontal: 16 }}>{a.promoCode ? <KV first icon="tag" label={tr('pa.promoCode')} value={a.promoCode} /> : null}{a.status === 'CANCELLED' && a.cancellationReason ? <KV first={!a.promoCode} icon="info" label={tr('pa.cancelReason')} value={a.cancellationReason} /> : null}</Card> : null}
             {a.notes || c?.notes ? (
               <Card style={{ marginTop: 12, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', gap: 12 }}>
                 <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: t.gsoft, alignItems: 'center', justifyContent: 'center' }}><Icon name="info" size={19} color={t.guava} /></View>
                 <View style={{ flex: 1 }}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{tr('v2.note')}</Text><T k="sm" color={t.muted}>{a.notes || c?.notes}</T></View>
+              </Card>
+            ) : null}
+            {answers.length ? (
+              <Card style={{ marginTop: 12, paddingVertical: 12, paddingHorizontal: 16, gap: 8 }}>
+                <Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{tr('pa.answers')}</Text>
+                {answers.map((r, i) => <View key={i}><T k="xs" color={t.muted}>{r.question}</T><T k="body">{r.answer}</T></View>)}
               </Card>
             ) : null}
           </View>
@@ -196,8 +196,8 @@ export default function BookingDetail() {
 }
 
 /** "bu gün", "12 gün əvvəl", "3 həftə əvvəl" style relative day (AZ wording via ux strings where present). */
-function ago(d: Date) {
-  const days = Math.round((Date.now() - d.getTime()) / 864e5);
+function ago(iso: string) {
+  const days = calDaysAgo(iso);
   if (days <= 0) return tr('v2.today').toLowerCase();
   return tr('v2.daysAgo', { n: days });
 }

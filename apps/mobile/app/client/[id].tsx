@@ -16,7 +16,7 @@ import { t as tr } from '@/i18n';
 import { api, type Client, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { recallClient, rememberClients } from '@/lib/client-cache';
-import { dateLabel, digits, fromIso, hhmm, money } from '@/lib/format';
+import { calDaysAgo, dateLabel, digits, fromIso, hhmm, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
@@ -87,7 +87,7 @@ export default function ClientCard() {
 
   const spent = stats.totalSpent;
   const since = (client as { createdAt?: string } | null)?.createdAt;
-  const daysAgo = stats.lastVisitDate ? Math.max(0, Math.round((Date.now() - fromIso(stats.lastVisitDate).getTime()) / 86400000)) : null;
+  const daysAgo = stats.lastVisitDate ? calDaysAgo(stats.lastVisitDate) : null;
   const photosArr = ((rec.data as unknown as { photos?: { id: string | number; url: string }[] } | null)?.photos ?? []);
   const sub = [client?.phone, since ? tr('v3.clientSince', { d: since.slice(0, 7) }) : null].filter(Boolean).join(' · ');
   const L = (icon: string, text: string) => <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 6 }}><Icon name={icon} size={18} color={t.ink} /><T k="h2">{text}</T></View>;

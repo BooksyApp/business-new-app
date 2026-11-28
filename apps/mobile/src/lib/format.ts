@@ -1,4 +1,4 @@
-import { getLocale, intlLocale } from '@/i18n';
+import { getLocale, intlLocale, t as tr } from '@/i18n';
 
 // Azerbaijani names are fixed tables: Intl 'az' data is missing on some runtimes (it printed "M11" / "Mon"), and the product is AZ-first.
 const AZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'İyun', 'İyul', 'Avqust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
@@ -38,6 +38,26 @@ export const fromIso = (s: string) => {
   return new Date(y, (m || 1) - 1, d || 1);
 };
 
+/**
+ * A server timestamp as a Date in device local time. Prefers the absolute instant (ISO with Z); the zone-less
+ * LocalDateTime fallback is read as local wall time (old behaviour). Null when neither parses.
+ */
+export const stampDate = (instant?: string | null, naive?: string | null): Date | null => {
+  for (const s of [instant, naive]) {
+    if (!s) continue;
+    const d = new Date(s.length > 10 && s[10] === ' ' ? `${s.slice(0, 10)}T${s.slice(11)}` : s);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+};
+
+/** Whole calendar days between a yyyy-MM-dd date and today (0 = today), independent of the time of day. */
+export const calDaysAgo = (iso: string) => {
+  const d = fromIso(iso);
+  const n = new Date();
+  return Math.max(0, Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime() - d.getTime()) / 86400000));
+};
+
 export const dateLabel = (d: Date) =>
   az() ? `${d.getDate()} ${AZ_MONTHS_S[d.getMonth()]}` : new Intl.DateTimeFormat(intlLocale(), {
     weekday: 'short',
@@ -64,6 +84,18 @@ export function money(n: number | null | undefined, currency = 'AZN') {
   } catch {
     return `${n} ${currency}`;
   }
+}
+
+/** A service's list price: "30 ₼" (fixed), "30-dan" (FROM, "Başlayaraq") or "30–50 ₼" (RANGE with a maximum). */
+export function servicePrice(s: { price?: number | null; priceType?: string | null; priceMax?: number | null }, currency = 'AZN') {
+  const lo = money(s.price, currency);
+  if (s.price == null) return lo;
+  if (s.priceType === 'RANGE' && s.priceMax != null && s.priceMax > s.price) {
+    const hi = money(s.priceMax, currency);
+    return az() && currency === 'AZN' ? `${lo.replace(/\s₼$/, '')}–${hi}` : `${lo}–${hi}`;
+  }
+  if (s.priceType === 'FROM') return az() ? `${lo}-dan` : `${tr('sx.from')} ${lo}`;
+  return lo;
 }
 
 export const initials = (name: string | undefined | null) =>

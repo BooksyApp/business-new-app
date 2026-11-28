@@ -15,7 +15,7 @@ import { api, ApiError, toDay, validId, type Client, type ClientWithStats, type 
 import { useApp } from '@/lib/app';
 import { recallClient } from '@/lib/client-cache';
 import { apiM, type Combo } from '@/lib/api-more';
-import { addDays, dateLabel, fromIso, fromMin, hhmm, money, monthLabel, toMin } from '@/lib/format';
+import { addDays, dateLabel, fromIso, fromMin, hhmm, money, monthLabel, servicePrice, toMin } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { bookingErrorText } from '@/lib/booking-errors';
 import { useTheme } from '@/theme/ThemeContext';
@@ -285,7 +285,7 @@ function ServiceStep({ sid, sel, cur, onToggle }: { sid: string; sel: Service[];
     <View style={{ flex: 1 }}>
       <Text style={{ fontFamily: font.m, fontSize: 13.5, color: t.muted, marginTop: -6, marginBottom: 10 }}>{tr('create.multiHint')}</Text>
       <FlatList data={rows} keyExtractor={(s) => String(s.id)} contentContainerStyle={{ gap: 2, paddingBottom: 140 }}
-        renderItem={({ item: s }) => <Row thumb={<ServiceThumb name={s.name} cat={s.categoryName} size={56} />} name={s.name} sub={`${s.durationMinutes ?? 30} ${tr('common.min')} · ${money(s.price, cur)}`} on={sel.some((x) => x.id === s.id)} onPress={() => onToggle(s)} />} />
+        renderItem={({ item: s }) => <Row thumb={<ServiceThumb name={s.name} cat={s.categoryName} size={56} />} name={s.name} sub={`${s.durationMinutes ?? 30} ${tr('common.min')} · ${servicePrice(s, cur)}`} on={sel.some((x) => x.id === s.id)} onPress={() => onToggle(s)} />} />
     </View>
   );
 }

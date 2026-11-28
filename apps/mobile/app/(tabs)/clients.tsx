@@ -12,14 +12,14 @@ import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { clientKey, rememberClients } from '@/lib/client-cache';
 import { useDockInset } from '@/lib/dock';
-import { fromIso, money } from '@/lib/format';
+import { calDaysAgo, fromIso, money } from '@/lib/format';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
 import { font } from '@/theme/tokens';
 
 type Seg = 'all' | 'vip' | 'new' | 'lapsed' | 'regular' | 'never';
 const visitsOf = (c: ClientWithStats) => c.pastVisits ?? c.totalVisits ?? 0;
-const daysSince = (iso: string) => Math.floor((Date.now() - fromIso(iso).getTime()) / 86400000);
+const daysSince = (iso: string) => calDaysAgo(iso);
 const tagsOf = (c: ClientWithStats) => (c as { tags?: string[] }).tags;
 const isVip = (c: ClientWithStats) => !!c.vip || !!tagsOf(c)?.includes('VIP');
 const isNew = (c: ClientWithStats) => visitsOf(c) <= 1;

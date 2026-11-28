@@ -49,16 +49,22 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
   const [busy, setBusy] = useState(false);
   const [rep, setRep] = useState<'' | 'DAILY' | 'WEEKLY' | 'BIWEEKLY'>('');
   const [weeks, setWeeks] = useState(8);
-  useEffect(() => { if (open) { setStaffId(String(preset ?? masters[0]?.id ?? '')); setFull(false); setFrom(12 * 60); setTo(13 * 60); setReason(''); setRep(''); setWeeks(8); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [first, setFirst] = useState(date);
+  const [last, setLast] = useState(date);
+  useEffect(() => { if (open) { setFirst(date); setLast(date); setStaffId(String(preset ?? masters[0]?.id ?? '')); setFull(false); setFrom(12 * 60); setTo(13 * 60); setReason(''); setRep(''); setWeeks(8); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const usable = masters.filter((m) => m.id !== '__none');
   const who = staffId || String(usable[0]?.id ?? ''); // masters may arrive after the sheet opened (live: staff list still loading)
+  const multi = toDay(last) !== toDay(first);
+  const spanDays = Math.round((new Date(last.getFullYear(), last.getMonth(), last.getDate()).getTime() - new Date(first.getFullYear(), first.getMonth(), first.getDate()).getTime()) / 86400000) + 1;
+  const firstDays = React.useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(date, i)), [date.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lastDays = React.useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(first, i)), [first.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps
   async function create() {
     if (!salon || !who) return;
     setBusy(true);
     try {
-      if (rep) await apiM.createRecurringTimeOff({ businessId: salon.id, staffId: who, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined, recurrencePattern: rep, recurrenceEndDate: toDay(addDays(date, weeks * 7)) });
-      else await api.createTimeOff({ businessId: salon.id, staffId: who, startDate: toDay(date), endDate: toDay(date), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined });
+      if (rep && !multi) await apiM.createRecurringTimeOff({ businessId: salon.id, staffId: who, startDate: toDay(first), endDate: toDay(first), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined, recurrencePattern: rep, recurrenceEndDate: toDay(addDays(date, weeks * 7)) });
+      else await api.createTimeOff({ businessId: salon.id, staffId: who, startDate: toDay(first), endDate: toDay(last), isFullDay: full, ...(full ? null : { startTime: fromMin(from), endTime: fromMin(to) }), reason: reason.trim() || undefined });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onDone();
     } catch (e) {
@@ -91,9 +97,17 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
   return (
     <BottomSheet open={open} onClose={onClose}>
       <Text style={{ fontFamily: font.x, fontSize: 22, color: t.ink }}>{tr('block.new')}</Text>
-      <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted, marginTop: 2, marginBottom: 12 }}>{dateLabel(date)}</Text>
+      <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted, marginTop: 2, marginBottom: 12 }}>{multi ? `${dateLabel(first)} - ${dateLabel(last)} · ${tr('n5.tDays', { n: spanDays })}` : dateLabel(first)}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
         {usable.map((m) => <Chip key={m.id} label={m.name} active={who === String(m.id)} onPress={() => setStaffId(String(m.id))} />)}
+      </ScrollView>
+      <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('n5.tFrom')}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+        {firstDays.map((d) => <Chip key={d.toISOString()} soft label={dateLabel(d)} active={d.toDateString() === first.toDateString()} onPress={() => { setFirst(d); if (last < d) setLast(d); }} />)}
+      </ScrollView>
+      <Text style={{ fontFamily: font.s, fontSize: 13, color: t.muted, marginBottom: 6 }}>{tr('n5.tTo')}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+        {lastDays.map((d) => <Chip key={d.toISOString()} soft label={dateLabel(d)} active={d.toDateString() === last.toDateString()} onPress={() => setLast(d)} />)}
       </ScrollView>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
         <Text style={{ fontFamily: font.s, fontSize: 15, color: t.ink }}>{tr('block.fullDay')}</Text>
@@ -105,11 +119,11 @@ export function BlockTimeSheet({ open, date, masters, preset, existing, onClose,
           <Stepper label={tr('block.to')} value={Math.min(to, 23 * 60 + 59)} min={30} max={23 * 60 + 30} onChange={setTo} />
         </View>
       )}
-      <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted, marginTop: 6, marginBottom: 8 }}>{tr('ux.repeatRule')}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
+      {multi ? null : <Text style={{ fontFamily: font.b, fontSize: 14.5, color: t.muted, marginTop: 6, marginBottom: 8 }}>{tr('ux.repeatRule')}</Text>}
+      {multi ? null : <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
         {([['', 'ux.repNone'], ['DAILY', 'ux.repDaily'], ['WEEKLY', 'ux.repWeekly'], ['BIWEEKLY', 'ux.repBiweekly']] as const).map(([k, l]) => <Chip key={k} soft label={tr(l)} icon={k ? 'repeat' : undefined} active={rep === k} onPress={() => setRep(k)} />)}
-      </ScrollView>
-      {rep ? (
+      </ScrollView>}
+      {rep && !multi ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
           {[4, 8, 12, 26].map((w) => <Chip key={w} soft label={tr('ux.repWeeks', { n: w })} active={weeks === w} onPress={() => setWeeks(w)} />)}
         </ScrollView>

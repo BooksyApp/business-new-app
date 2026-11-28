@@ -3,6 +3,7 @@ import { uxRu } from './ux';
 import { v2Ru } from './v2';
 import { v3Ru } from './v3';
 import { v4Ru } from './v4';
+import { v5Ru } from './v5';
 import { obRu } from './ob';
 import { parRu } from './par';
 import { extraRu } from './extra';
@@ -179,6 +180,7 @@ export const ru: DeepPartial<Strings> = {
   ...v2Ru,
   ...v3Ru,
   ...v4Ru,
+  ...v5Ru,
   ...obRu,
   ...parRu,
 };

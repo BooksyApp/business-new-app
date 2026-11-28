@@ -18,7 +18,7 @@ import { api } from '@/lib/api';
 import { apiX } from '@/lib/api-ext';
 import { apiB } from '@/lib/api-biz';
 import { useApp } from '@/lib/app';
-import { money } from '@/lib/format';
+import { servicePrice } from '@/lib/format';
 import { photoSource } from '@/lib/photo';
 import { pickImage, postStoryPicked, uploadPicked, type Picked } from '@/lib/pick';
 import { useSafeAreaInsets } from '@/lib/insets';
@@ -95,7 +95,7 @@ export default function StoryCreate() {
     if (!sid) return refuse(tr('cp.noSalon'));
     setErr(''); setBusy(true);
     try {
-      const svcLabel = svc ? `${svc.name}${svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}` : '';
+      const svcLabel = svc ? `${svc.name}${svc.price != null ? ` · ${servicePrice(svc, salon?.currency)}` : ''}` : '';
       const tagList = [svc ? { k: 'svc', t: svcLabel, ...(pos.current.svc ?? { x: 0.04, y: 0.7 }) } : null, who ? { k: 'who', t: `@${who.name.split(' ')[0]}`, ...(pos.current.who ?? { x: 0.04, y: 0.64 }) } : null].filter(Boolean);
       const tags = tagList.length ? JSON.stringify(tagList) : undefined;
       await postStoryPicked(sid, sel.picked, text.trim(), tags);
@@ -144,7 +144,7 @@ export default function StoryCreate() {
             {svc ? (
               <DragChip bounds={bounds} slot={0} label={svc.name} onPress={() => setSheet('svc')} onRemove={() => setSvc(null)} onMove={(x, y) => { pos.current.svc = { x, y }; }}>
                 <Icon name="tag" size={14} color="#5b3fd6" />
-                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{svc.name}{svc.price != null ? ` · ${money(svc.price, salon?.currency)}` : ''}</Text>
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontFamily: font.b, fontSize: 13.5, color: '#1d1730' }}>{svc.name}{svc.price != null ? ` · ${servicePrice(svc, salon?.currency)}` : ''}</Text>
               </DragChip>
             ) : null}
             {who ? (
@@ -190,7 +190,7 @@ export default function StoryCreate() {
               <Button label={tr('v3.toSvc')} kind="ol" onPress={() => { setSheet(null); router.push('/section/services'); }} />
             </View>
           ) : null}
-          <ScrollView style={{ maxHeight: 360 }}>{(services.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={money(s.price, salon?.currency)} onPress={() => { setSvc({ id: s.id, name: s.name, price: s.price }); setSheet(null); }} />)}</ScrollView>
+          <ScrollView style={{ maxHeight: 360 }}>{(services.data ?? []).map((s, i) => <ListItem key={String(s.id)} first={i === 0} title={s.name} sub={servicePrice(s, salon?.currency)} onPress={() => { setSvc({ id: s.id, name: s.name, price: s.price }); setSheet(null); }} />)}</ScrollView>
         </BottomSheet>
         <BottomSheet open={sheet === 'who'} onClose={() => setSheet(null)}>
           <T k="h1" style={{ marginBottom: 8 }}>{tr('v3.addWho')}</T>

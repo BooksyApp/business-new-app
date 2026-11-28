@@ -46,7 +46,7 @@ export interface Membership { id: Id; name: string; price: number; billing_perio
 export interface RefCode { id: Id; code: string; type: string; status: string; rewardAmount: number; currentUses: number; maxUses?: number }
 export interface RefStats { totalReferralCodes: number; activeReferralCodes: number; totalUsages: number; successfulUsages: number; totalRewardsGiven: number }
 
-export interface InboxItem { id: number; type: string; title: string; body: string | null; data: string | null; createdAt: string; readAt: string | null }
+export interface InboxItem { id: number; type: string; title: string; body: string | null; data: string | null; createdAt: string; readAt: string | null; createdAtInstant?: string | null; readAtInstant?: string | null }
 export interface PushPrefs { types: string[]; pushOff: string[]; inboxOff: string[]; emailOff: string[]; quietStart: string | null; quietEnd: string | null; staff: string[]; stockThreshold: number | null }
 
 export const apiB = {

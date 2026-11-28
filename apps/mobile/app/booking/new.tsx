@@ -14,7 +14,7 @@ import { api, ApiError, toDay, validId, type ClientWithStats, type Service, type
 import { useApp } from '@/lib/app';
 import { rememberClients } from '@/lib/client-cache';
 import { firstName } from '@/lib/day';
-import { addDays, dayMonth, fromIso, fromMin, money, sameDay, startOfWeek, toMin, weekdayLong, weekdayMini } from '@/lib/format';
+import { addDays, dayMonth, fromIso, fromMin, money, servicePrice, sameDay, startOfWeek, toMin, weekdayLong, weekdayMini } from '@/lib/format';
 import { useSafeAreaInsets } from '@/lib/insets';
 import { toast } from '@/lib/toast';
 import { ToastHost } from '@/components/ToastHost';
@@ -158,7 +158,7 @@ export default function NewBooking() {
                       {on ? <View style={{ position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: t.violet, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={14} color="#fff" /></View> : null}
                       <View style={{ paddingTop: 10, paddingHorizontal: 12, paddingBottom: 12 }}>
                         <Text numberOfLines={2} style={{ fontFamily: font.b, fontSize: 14, lineHeight: 17.5, color: t.ink }}>{s.name}</Text>
-                        <T k="sm" color={t.muted}>{s.durationMinutes ?? 30} {tr('v2.min')} · {money(s.price, salon?.currency)}</T>
+                        <T k="sm" color={t.muted}>{s.durationMinutes ?? 30} {tr('v2.min')} · {servicePrice(s, salon?.currency)}</T>
                       </View>
                     </Pressable>
                   );
@@ -272,7 +272,7 @@ function SvcCard({ s, cur }: { s: Service; cur?: string }) {
   return (
     <Card style={{ marginTop: 16, marginHorizontal: 20, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Photo src={(s as { imageUrl?: string }).imageUrl} style={{ width: 52, height: 52, borderRadius: 14 }} />
-      <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{s.name}</Text><T k="sm" color={t.muted}>{s.durationMinutes ?? 30} {tr('v2.min')} · {money(s.price, cur)}</T></View>
+      <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ fontFamily: font.b, fontSize: 15, color: t.ink }}>{s.name}</Text><T k="sm" color={t.muted}>{s.durationMinutes ?? 30} {tr('v2.min')} · {servicePrice(s, cur)}</T></View>
     </Card>
   );
 }

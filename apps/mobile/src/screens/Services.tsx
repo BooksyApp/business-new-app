@@ -15,7 +15,7 @@ import { apiH, type ResourceType } from '@/lib/api-hub';
 import { apiB, type PeakRule } from '@/lib/api-biz';
 import { apiX, type Category, type ServiceBody, type ServiceFull } from '@/lib/api-ext';
 import { useApp } from '@/lib/app';
-import { money } from '@/lib/format';
+import { money, servicePrice } from '@/lib/format';
 import { Addons, Packages } from '@/screens/ServiceExtras';
 import { useLoad } from '@/lib/useLoad';
 import { useTheme } from '@/theme/ThemeContext';
@@ -44,6 +44,7 @@ function Editor({ service, cats, onClose, onSaved, onCatsChanged }: { service: S
   }
   const [price, setPrice] = useState(service?.price != null ? String(service.price) : '');
   const [dur, setDur] = useState(service?.durationMinutes != null ? String(service.durationMinutes) : '60');
+  const [priceMax, setPriceMax] = useState(service?.priceMax != null ? String(service.priceMax) : '');
   const [ptype, setPtype] = useState<'FIXED' | 'FROM' | 'RANGE'>(service?.priceType ?? 'FIXED');
   const [deposit, setDeposit] = useState(service?.depositPercent != null ? String(service.depositPercent) : '');
   const [taxRate, setTaxRate] = useState(service?.taxRate != null ? String(service.taxRate) : '');
@@ -83,9 +84,16 @@ function Editor({ service, cats, onClose, onSaved, onCatsChanged }: { service: S
       setTab('main');
       return;
     }
+    const pmax = ptype === 'RANGE' ? num(priceMax) : null;
+    if (ptype === 'RANGE' && (!Number.isFinite(pmax) || (pmax as number) < p)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      toast(tr('n5.priceMaxBad'), 'error');
+      setTab('price');
+      return;
+    }
     const dep = deposit.trim() === '' ? undefined : Math.min(100, Math.max(0, Math.round(num(deposit)) || 0));
     const body: ServiceBody = {
-      name: name.trim(), description: desc.trim() || undefined, categoryId: cat || undefined, price: p, durationMinutes: d, priceType: ptype,
+      name: name.trim(), description: desc.trim() || undefined, categoryId: cat || undefined, price: p, priceMax: pmax, durationMinutes: d, priceType: ptype,
       staffIds: ids, isVisible: visible, paddingBefore: Math.max(0, Math.round(num(padB)) || 0), paddingAfter: Math.max(0, Math.round(num(padA)) || 0),
       parallelClients: Math.max(0, Math.round(num(parallel)) || 0),
       mobileService: mobile, messageToClient: msg.trim() || null, depositPercent: dep ?? (service ? -1 : undefined),
@@ -124,7 +132,7 @@ function Editor({ service, cats, onClose, onSaved, onCatsChanged }: { service: S
       </ScrollView>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}>
         <View style={{ marginBottom: 14 }}>
-          <HeroCard icon="scissors" title={name || tr('sx.newTitle')} sub={[cats.find((c) => String(c.id) === cat)?.name, dur ? `${dur} ${tr('common.min')}` : null].filter(Boolean).join(' · ')} stat={price ? money(num(price) || 0, salon?.currency) : undefined} />
+          <HeroCard icon="scissors" title={name || tr('sx.newTitle')} sub={[cats.find((c) => String(c.id) === cat)?.name, dur ? `${dur} ${tr('common.min')}` : null].filter(Boolean).join(' · ')} stat={price ? servicePrice({ price: num(price) || 0, priceType: ptype, priceMax: ptype === 'RANGE' && priceMax.trim() ? num(priceMax) : null }, salon?.currency) : undefined} />
         </View>
         {tab === 'main' ? (
           <>
@@ -153,7 +161,13 @@ function Editor({ service, cats, onClose, onSaved, onCatsChanged }: { service: S
           <>
             <SectionTitle>{tr('sx.priceType')}</SectionTitle>
             <Choice value={ptype} onChange={setPtype} options={pt} />
-            <Field label={`${tr('appt.price')} (${salon?.currency ?? 'AZN'})`} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+            {ptype === 'RANGE' ? (
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}><Field label={`${tr('n5.priceMin')} (${salon?.currency ?? 'AZN'})`} value={price} onChangeText={setPrice} keyboardType="decimal-pad" /></View>
+                <View style={{ flex: 1 }}><Field label={`${tr('n5.priceMax')} (${salon?.currency ?? 'AZN'})`} value={priceMax} onChangeText={setPriceMax} keyboardType="decimal-pad" /></View>
+              </View>
+            ) : <Field label={`${tr('appt.price')} (${salon?.currency ?? 'AZN'})`} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />}
+            {ptype === 'RANGE' && priceMax.trim() !== '' && num(priceMax) < num(price) ? <Text style={{ fontFamily: font.m, fontSize: 13, color: t.gink, marginTop: -6, marginBottom: 8 }}>{tr('n5.priceMaxBad')}</Text> : null}
             <Field label={tr('sx.deposit')} value={deposit} onChangeText={setDeposit} keyboardType="number-pad" />
             <Field label={tr('sx.tax')} value={taxRate} onChangeText={setTaxRate} keyboardType="decimal-pad" />
             {service ? (
@@ -360,7 +374,7 @@ export function Services({ onBack }: { onBack: () => void }) {
                     {s.isVisible === false ? <KPill text={tr('sx.tabOnline')} tone="fl" /> : null}
                   </>}
                   right={<View style={{ alignItems: 'flex-end', gap: 10 }}>
-                    <Text style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{money(s.price, salon?.currency)}</Text>
+                    <Text style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{servicePrice(s, salon?.currency)}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <Pressable onPress={toggleQuick} accessibilityRole="button" accessibilityLabel={tr('sl.quick')} accessibilityState={{ selected: isQuick }} hitSlop={10}><Icon name="star" size={20} color={isQuick ? t.star : t.faint} filled={isQuick} /></Pressable>
                       <Toggle on={on} onChange={(v) => void toggle(s, v)} label={s.name} />

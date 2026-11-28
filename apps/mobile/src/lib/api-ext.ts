@@ -6,7 +6,7 @@ import { request, requestList, toDay } from '@/lib/api';
 export interface Category { id: Id; name: string; description?: string; color?: string; isVisible: boolean; serviceCount?: number }
 export interface ServiceFull {
   id: Id; categoryId?: Id | null; categoryName?: string; name: string; description?: string; durationMinutes?: number; price?: number;
-  priceType?: 'FIXED' | 'FROM' | 'RANGE'; isActive: boolean; isVisible?: boolean; staffIds?: Id[]; depositPercent?: number | null;
+  priceType?: 'FIXED' | 'FROM' | 'RANGE'; priceMax?: number | null; isActive: boolean; isVisible?: boolean; staffIds?: Id[]; depositPercent?: number | null;
   paddingBefore?: number; paddingAfter?: number; bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null;
   messageToClient?: string | null;
   isClass?: boolean; maxParticipants?: number | null;
@@ -14,7 +14,7 @@ export interface ServiceFull {
   travelFee?: number | null; serviceArea?: string | null; questions?: { text: string; required?: boolean }[];
 }
 export interface ServiceBody {
-  categoryId?: Id | null; name?: string; description?: string; durationMinutes?: number; price?: number; priceType?: 'FIXED' | 'FROM' | 'RANGE';
+  categoryId?: Id | null; name?: string; description?: string; durationMinutes?: number; price?: number; priceMax?: number | null; priceType?: 'FIXED' | 'FROM' | 'RANGE';
   staffIds?: Id[]; isVisible?: boolean; isActive?: boolean; depositPercent?: number | null; paddingBefore?: number; paddingAfter?: number;
   bookingInterval?: number; parallelClients?: number; mobileService?: boolean; taxRate?: number | null; messageToClient?: string | null; isClass?: boolean; maxParticipants?: number | null;
   resourceTypeId?: Id | null; staffOverrides?: { staffId: Id; price?: number | null; durationMinutes?: number | null }[]; availableFrom?: string; availableTo?: string; serviceType?: string; color?: string; virtualAppointment?: boolean; processingDuring?: number; processingAfter?: number; travelFee?: number | null; serviceArea?: string | null; questions?: { text: string; required?: boolean }[];
@@ -123,7 +123,7 @@ export const apiX = {
   /** PUT /api/staff/{id}/role {roleId}: one of the salon's roles (what the hub does). The {role} tier form still works for OWNER / MANAGER / STAFF. */
   setStaffRoleId: (id: Id, roleId: Id) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { roleId } }),
   setStaffRole: (id: Id, role: string) => request<unknown>(`/staff/${id}/role`, { method: 'PUT', body: { role } }),
-  timeOffForStaff: (b: Id, s: Id) => request<{ id: Id; startDate: string; endDate: string; isFullDay: boolean; reason?: string | null; isApproved?: boolean }[]>(`/time-off/staff/${s}`),
+  timeOffForStaff: (b: Id, s: Id) => request<{ id: Id; startDate: string; endDate: string; startTime?: string | null; endTime?: string | null; isFullDay: boolean; reason?: string | null; isApproved?: boolean }[]>(`/time-off/staff/${s}`),
   // waitlist
   addWaitlist: (b: Id, body: WaitlistAdd) => request<{ id: Id }>(`/waitlist/business/${b}`, { method: 'POST', body }),
   removeWaitlist: (b: Id, id: Id) => request<void>(`/waitlist/business/${b}/${id}`, { method: 'DELETE' }),

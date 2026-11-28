@@ -186,13 +186,28 @@ export function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () =
   const [time, setTime] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const length = toMin(a.endTime) - toMin(a.startTime);
-  const slots = useLoad(() => api.slots(salon!.id, a.serviceId, date, a.staffId), [date.toDateString()]);
-  const list = slots.data?.availableSlots ?? [];
+  // M-08: a booking that belongs to a visit with several live services moves as the whole visit (backend: PUT /bookings/visit/{id}/reschedule).
+  const siblings = useLoad(() => (a.visitId && salon ? api.appointments(salon.id, fromIso(a.appointmentDate)) : Promise.resolve([] as Appointment[])), [a.id]);
+  const parts = React.useMemo(() => (a.visitId ? (siblings.data ?? []).filter((r) => r.visitId === a.visitId && r.status !== 'CANCELLED' && r.status !== 'COMPLETED').sort((x, y) => toMin(x.startTime) - toMin(y.startTime)) : []), [siblings.data, a.visitId]);
+  const visit = parts.length > 1;
+  const probing = !!a.visitId && siblings.loading && !siblings.data;
+  const totalMin = visit ? Math.max(...parts.map((r) => toMin(r.endTime))) - Math.min(...parts.map((r) => toMin(r.startTime))) : length;
+  const slots = useLoad<string[]>(async () => {
+    if (probing || !salon) return [];
+    if (visit) return api.basketSlots(salon.id, date, parts.map((r) => ({ serviceId: r.serviceId, staffId: r.staffAutoAssigned ? null : r.staffId })), a.id);
+    return (await api.slots(salon.id, a.serviceId, date, a.staffId, undefined, a.id)).availableSlots ?? [];
+  }, [date.toDateString(), probing, visit]);
+  const list = slots.data ?? [];
 
   async function save(override = false) {
     if (!time || !salon) return;
     setBusy(true);
     try {
+      if (visit && a.visitId) {
+        await api.rescheduleVisit(a.visitId, { businessId: salon.id, appointmentDate: toDay(date), startTime: time });
+        onDone();
+        return;
+      }
       await api.updateAppointment(a.id, {
         businessId: salon.id, staffId: a.staffId, clientId: a.clientId, clientName: a.clientName, clientPhone: a.clientPhone,
         serviceId: a.serviceId, appointmentDate: toDay(date), startTime: time, endTime: fromMin(toMin(time) + length), price: a.price, notes: a.notes,
@@ -216,10 +231,16 @@ export function Reschedule({ a, onBack, onDone }: { a: Appointment; onBack: () =
   return (
     <>
       <Text style={{ fontFamily: font.b, fontSize: 16, color: t.ink }}>{tr('appt.rescheduleTitle')}</Text>
+      {visit ? (
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontFamily: font.m, fontSize: 14, color: t.muted }}>{parts.map((r) => r.serviceName ?? '-').join(' + ')} · {tr('n5.visitTotal', { n: totalMin })}</Text>
+          <Text style={{ fontFamily: font.s, fontSize: 14, color: t.ink }}>{tr('n5.visitMove')}</Text>
+        </View>
+      ) : null}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {days.map((d) => <Chip key={d.toISOString()} label={dateLabel(d)} active={d.toDateString() === date.toDateString()} onPress={() => { setDate(d); setTime(null); }} />)}
       </ScrollView>
-      {slots.loading ? <Skeleton rows={1} height={40} /> : list.length === 0 ? (
+      {slots.loading || probing ? <Skeleton rows={1} height={40} /> : list.length === 0 ? (
         <Text style={{ fontFamily: font.m, fontSize: 14.5, color: t.muted }}>{tr('create.noSlots')}</Text>
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

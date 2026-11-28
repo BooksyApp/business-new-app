@@ -47,6 +47,8 @@ export interface Service {
   name: string;
   durationMinutes?: number;
   price?: number;
+  priceType?: 'FIXED' | 'FROM' | 'RANGE';
+  priceMax?: number | null;
   isActive: boolean;
   isVisible?: boolean;
   categoryName?: string;
@@ -85,6 +87,8 @@ export interface Appointment {
   guestName?: string | null;
   /** JSON text [{question, answer}] the client gave to the service's booking questions. */
   clientAnswers?: string | null;
+  /** The customer's answers to the service's booking questions (the API sends this array; clientAnswers is not serialized). */
+  answers?: { question: string; answer: string }[] | null;
   clientAddress?: string | null;
   travelFee?: number | null;
   promoCode?: string | null;
@@ -191,8 +195,10 @@ export interface InboxSummary {
   customerEmail: string;
   unread: number;
   lastMessageAt: string | null;
+  /** Absolute instant (ISO, Z) of the last message; lastMessageAt is a zone-less server wall time. */
+  lastMessageAtInstant?: string | null;
 }
-export interface InboxMessage { messageId: string; fromSalon: boolean; body: string; sentAt: string }
+export interface InboxMessage { messageId: string; fromSalon: boolean; body: string; sentAt: string; sentAtInstant?: string | null }
 export interface InboxThread { conversationId: string; customerName: string; customerEmail: string; messages: InboxMessage[] }
 
 export interface CreateAppointmentBody {
@@ -464,10 +470,21 @@ export const api = {
   replyConversation: (b: Id, c: string, body: string) =>
     request<InboxMessage>(`/businesses/${b}/messages/conversations/${encodeURIComponent(c)}/messages`, { method: 'POST', body: { body } }),
   /** GET /api/public/studios/{b}/services/{s}/slots?date&staffId -> { availableSlots: string[] } */
-  slots: (b: Id, serviceId: Id, date: Date, staffId?: Id, extraMinutes?: number) =>
+  slots: (b: Id, serviceId: Id, date: Date, staffId?: Id, extraMinutes?: number, excludeBookingId?: string) =>
     request<{ availableSlots: string[]; durationMinutes: number; slotIntervalMinutes?: number; nextAvailableDate?: string | null }>(
-      `/public/studios/${b}/services/${serviceId}/slots?date=${day(date)}${staffId ? `&staffId=${staffId}` : ''}${extraMinutes ? `&extraMinutes=${extraMinutes}` : ''}`,
+      `/public/studios/${b}/services/${serviceId}/slots?date=${day(date)}${staffId ? `&staffId=${staffId}` : ''}${extraMinutes ? `&extraMinutes=${extraMinutes}` : ''}${excludeBookingId ? `&excludeBookingId=${encodeURIComponent(excludeBookingId)}` : ''}`,
     ), // signed in on purpose: the server drops the online minimum notice for the salon's own team
+
+  /**
+   * POST /api/public/studios/{b}/basket/slots: bookable start times for a whole visit (items back to back). `excludeBookingId` (any booking of the
+   * visit) makes the visit's own rows count as free, so small shifts are offered. Resolves to the chain start times ("HH:mm").
+   */
+  basketSlots: (b: Id, date: Date, items: { serviceId: Id; staffId: Id | null }[], excludeBookingId?: string) =>
+    request<{ slots?: { startTime?: string }[] }>(`/public/studios/${b}/basket/slots`, { method: 'POST', body: { date: day(date), items, ...(excludeBookingId ? { excludeBookingId } : {}) } })
+      .then((r) => (Array.isArray(r?.slots) ? r!.slots! : []).map((s) => (s.startTime ?? '').slice(0, 5)).filter(Boolean)),
+  /** PUT /api/bookings/visit/{visitId}/reschedule: moves every live part of a multi-service visit; `startTime` is where the first part starts. */
+  rescheduleVisit: (visitId: string, body: { businessId: Id; appointmentDate: string; startTime: string }) =>
+    request<unknown>(`/bookings/visit/${visitId}/reschedule`, { method: 'PUT', body }),
 
   /** GET /api/bookings/business/{id}/clients (with stats) */
   clientsWithStats: (b: Id) =>

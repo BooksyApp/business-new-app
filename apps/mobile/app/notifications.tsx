@@ -12,7 +12,7 @@ import { t as tr } from '@/i18n';
 import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { useDockInset } from '@/lib/dock';
-import { addDays, dateLabel, fromIso, hhmm } from '@/lib/format';
+import { addDays, dateLabel, fromIso, hhmm, stampDate } from '@/lib/format';
 import { usePushPerm } from '@/lib/push';
 import { findClient, recallClient } from '@/lib/client-cache';
 import { OfferSheet, WaitlistSheet } from '@/components/WaitlistSheet';
@@ -63,14 +63,15 @@ export default function Notifications() {
   const empty = !!data.data && !pending.length && !waitlist.length && !(inbox.data?.items ?? []).length;
   const unread = inbox.data?.unread ?? 0;
   const iconOf = (type: string) => (/CANCEL/.test(type) ? 'x' : /REVIEW/.test(type) ? 'star' : /WAIT/.test(type) ? 'clock' : /STOCK/.test(type) ? 'box' : /PAY|SALE/.test(type) ? 'wallet' : 'cal');
-  const when = (iso: string) => { const d = fromIso(iso); return `${dateLabel(d)} · ${iso.slice(11, 16)}`; };
+  const at = (n: { createdAt: string; createdAtInstant?: string | null }) => stampDate(n.createdAtInstant, n.createdAt) ?? new Date();
+  const when = (d: Date) => `${dateLabel(d)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
   const typeOf = (type: string) => (/REVIEW/.test(type) ? 'reviews' : /STOCK/.test(type) ? 'stock' : 'bookings');
   const items = (inbox.data?.items ?? []).filter((n) => (filter === 'all' || typeOf(n.type) === filter) && !(pending.length && n.type === 'BOOKING_NEW'));
   const showPending = filter === 'all' || filter === 'bookings';
-  const dayKey = (iso: string) => { const d = iso.slice(0, 10); const now = new Date(); const y = addDays(now, -1); const f = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; return d === f(now) ? tr('v2.today') : d === f(y) ? tr('v3.yesterday') : dateLabel(fromIso(d)); };
+  const dayKey = (dt: Date) => { const d = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`; const now = new Date(); const y = addDays(now, -1); const f = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; return d === f(now) ? tr('v2.today') : d === f(y) ? tr('v3.yesterday') : dateLabel(fromIso(d)); };
   const groups: { label: string; rows: typeof items }[] = [];
-  items.slice(0, 20).forEach((n) => { const l = dayKey(n.createdAt); const g = groups.find((x) => x.label === l); if (g) g.rows.push(n); else groups.push({ label: l, rows: [n] }); });
+  items.slice(0, 20).forEach((n) => { const l = dayKey(at(n)); const g = groups.find((x) => x.label === l); if (g) g.rows.push(n); else groups.push({ label: l, rows: [n] }); });
   const markRead = (id?: string | number) => void apiB.readInbox(id as never).then(() => { void inbox.reload(); bump(); }).catch(() => {});
   const Group = ({ label }: { label: string }) => <T k="sm" color={t.muted} style={{ fontFamily: font.b, marginTop: 10, marginBottom: -2, marginLeft: 4 }}>{label}</T>;
   const lead = (icon: string, tint = false) => <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: tint ? t.gsoft : t.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={22} color={tint ? t.gink : t.ink} /></View>;
@@ -132,7 +133,7 @@ export default function Notifications() {
                     <View style={{ flex: 1, gap: 2 }}>
                       <T k="t1" style={{ fontFamily: font.b }}>{n.title}</T>
                       {n.body ? <T k="body" color={t.ink}>{n.body}</T> : null}
-                      <T k="sm" color={t.muted}>{when(n.createdAt)}</T>
+                      <T k="sm" color={t.muted}>{when(at(n))}</T>
                       {ty === 'reviews' ? <Button size="sm" kind="fl" label={tr('v3.reply')} style={{ alignSelf: 'flex-start', marginTop: 8 }} onPress={() => router.push('/section/reviews')} /> : null}
                       {ty === 'stock' ? <Button size="sm" kind="fl" label={tr('v3.orderNote')} style={{ alignSelf: 'flex-start', marginTop: 8 }} onPress={() => router.push('/section/inventory')} /> : null}
                     </View>
