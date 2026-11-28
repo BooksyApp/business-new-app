@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from '@/lib/toast';
 import { Alert, FlatList, Linking, RefreshControl, ScrollView, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -52,6 +52,17 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
     const a = staff?.workingHoursStart?.[d]; const b = staff?.workingHoursEnd?.[d];
     return [d, a && b ? { on: true, from: hm(a), to: hm(b) } : { on: !staff && d !== 'SUNDAY', from: '09:00', to: '18:00' }];
   })));
+  // New specialist: default schedule = the salon's business hours (closed days off). Never overrides what the owner already edited.
+  const salonHours = useLoad(() => (staff ? Promise.resolve(null) : apiX.hours(sid).catch(() => null)), [sid, staff?.id]);
+  const schedTouched = useRef(false);
+  useEffect(() => {
+    const rows = salonHours.data;
+    if (staff || schedTouched.current || !rows || rows.length === 0) return;
+    setSched(Object.fromEntries(DAYS.map((d) => {
+      const r = rows.find((x) => x.dayOfWeek === d);
+      return [d, r?.enabled && hm(r.startTime ?? undefined) && hm(r.endTime ?? undefined) ? { on: true, from: hm(r.startTime ?? undefined), to: hm(r.endTime ?? undefined) } : { on: false, from: '09:00', to: '18:00' }];
+    })));
+  }, [salonHours.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const [busy, setBusy] = useState(false);
   const [block, setBlock] = useState(false);
   const [tool, setTool] = useState<null | 'port' | 'rent' | 'feed'>(null);
@@ -81,7 +92,7 @@ function Editor({ staff, onClose, onSaved }: { staff: StaffFull | null; onClose:
       toast((e as Error).message, 'error');
     } finally { setBusy(false); }
   }
-  const setDay = (d: string, p: Partial<{ on: boolean; from: string; to: string }>) => setSched((m) => ({ ...m, [d]: { ...m[d], ...p } }));
+  const setDay = (d: string, p: Partial<{ on: boolean; from: string; to: string }>) => { schedTouched.current = true; setSched((m) => ({ ...m, [d]: { ...m[d], ...p } })); };
   return (
     <Screen>
       <Header title={staff ? tr('tm.editTitle') : tr('tm.newTitle')} subtitle={staff?.name} onBack={onClose} />
