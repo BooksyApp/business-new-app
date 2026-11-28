@@ -11,13 +11,14 @@ export function loadNotifications(): typeof import('expo-notifications') | null 
   try { return require('expo-notifications'); } catch { return null; }
 }
 
-/** Android notification channels: bookings (also payments, waitlist), stock, reviews. */
+/** Android notification channels: bookings (also payments, waitlist), stock, reviews, messages (chat). */
 async function setupChannels(N: NonNullable<ReturnType<typeof loadNotifications>>) {
   if (Platform.OS !== 'android') return;
   const mk = (id: string, name: string, imp: number) => N.setNotificationChannelAsync(id, { name, importance: imp, sound: 'default', vibrationPattern: [0, 250, 250, 250] });
   await mk('bookings', 'Rezervlər', N.AndroidImportance.HIGH);
   await mk('stock', 'Anbar', N.AndroidImportance.DEFAULT);
   await mk('reviews', 'Rəylər', N.AndroidImportance.DEFAULT);
+  await mk('messages', 'Mesajlar', N.AndroidImportance.HIGH);
 }
 
 const TOKEN_KEY = 'biz.pushToken';
