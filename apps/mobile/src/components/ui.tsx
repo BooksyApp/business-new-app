@@ -107,7 +107,7 @@ export function SearchBar({ value, onChangeText, placeholder, onAction, actionIc
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   const { t } = useTheme();
   return (
-    <Pressable onPress={() => onChange(!on)} haptic accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: on }} noScale hitSlop={8}
+    <Pressable onPress={() => onChange(!on)} haptic accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: on }} aria-checked={on} noScale hitSlop={8}
       style={{ width: 46, height: 28, borderRadius: 14, backgroundColor: on ? t.violet : '#e4ddd3', justifyContent: 'center' }}>
       <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', marginLeft: on ? 21 : 3, boxShadow: '0 2px 6px rgba(29,23,48,.28)' } as any} />
     </Pressable>

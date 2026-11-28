@@ -329,7 +329,7 @@ export const Field = React.forwardRef<TextInput, TextInputProps & { icon?: strin
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   const { t } = useTheme();
   return (
-    <Pressable onPress={() => onChange(!on)} haptic noScale accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: on }} hitSlop={8}
+    <Pressable onPress={() => onChange(!on)} haptic noScale accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: on }} aria-checked={on} hitSlop={8}
       style={{ width: 46, height: 28, borderRadius: 14, backgroundColor: on ? t.violet : t.dark ? '#3a3448' : '#e4ddd3', justifyContent: 'center' }}>
       <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', marginLeft: on ? 21 : 3, boxShadow: '0 1px 3px rgba(0,0,0,.2)' } as ViewStyle} />
     </Pressable>
