@@ -190,7 +190,9 @@ export default function NewBooking() {
           </>
         ) : step === 3 && svc ? (
           <>
-            <View style={{ flexDirection: 'row', paddingHorizontal: 14, marginTop: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, marginTop: 14 }}>
+              {(() => { const prevEnd = addDays(startOfWeek(date), -1); const off = prevEnd < salonNow() && !sameDay(prevEnd, salonNow());
+                return <Pressable disabled={off} onPress={() => { setDate(addDays(date, -7)); setSlot(null); }} noScale hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('n5.prevWeek')} style={{ width: 28, height: 40, alignItems: 'center', justifyContent: 'center', opacity: off ? 0.3 : 1 }}><Icon name="back" size={18} color={t.ink} /></Pressable>; })()}
               {Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(date), i)).map((d) => {
                 const on = sameDay(d, date); const past = d < addDays(salonNow(), -1) && !sameDay(d, salonNow());
                 return (
@@ -204,6 +206,7 @@ export default function NewBooking() {
                   </Pressable>
                 );
               })}
+              <Pressable onPress={() => { setDate(addDays(date, 7)); setSlot(null); }} noScale hitSlop={6} accessibilityRole="button" accessibilityLabel={tr('n5.nextWeek')} style={{ width: 28, height: 40, alignItems: 'center', justifyContent: 'center' }}><Icon name="chev" size={18} color={t.ink} /></Pressable>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 22, marginBottom: 12, marginHorizontal: 20 }}>
               <T k="h2">{dayMonth(date)}</T><T k="sm" color={t.muted}>{svc.durationMinutes ?? 30} {tr('v2.min')}</T>

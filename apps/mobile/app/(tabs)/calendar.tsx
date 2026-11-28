@@ -131,7 +131,7 @@ export default function Calendar() {
                 onOpen={open} onPickDay={(d) => { setDate(d); setLayout('summary'); }} />
             </View>
           ) : dayList.length === 0 && !(focus && (off.data ?? []).some((b) => String(b.staffId) === focus)) ? (
-            <EmptyState photo="demo:p7518700" artHeight={170} style={{ marginTop: 14 }} title={tr('v2.dayEmptyTitle')} body={tr('v2.dayEmptyBody')} action={{ label: tr('v2.addBooking'), icon: 'plus', onPress: () => newBooking() }} />
+            <EmptyState photo="demo:p7518700" artHeight={170} style={{ marginTop: 14 }} title={sameDay(date, salonNow()) ? tr('v2.dayEmptyTitle') : tr('n5.emptyDay')} body={tr('v2.dayEmptyBody')} action={{ label: tr('v2.addBooking'), icon: 'plus', onPress: () => newBooking() }} />
           ) : focused ? (
             <DayColumn tint={Math.max(0, team.findIndex((s) => String(s.id) === focus))} date={date} list={dayList.filter((a) => String(a.staffId) === focus)} blocks={(off.data ?? []).filter((b) => String(b.staffId) === focus)} hourPx={dense ? 84 : 116}
               avatarOf={avatarOf} onOpen={open} onBlock={(b) => { setBlock(b); setBlockOpen(true); }} />
@@ -143,7 +143,7 @@ export default function Calendar() {
                 return (
                   <ListItem key={String(s.id)} first={i === 0} title={firstName(s.name)} onPress={() => setFocus(String(s.id))}
                     lead={<LoadRing value={load} size={56}><Avatar uri={s.avatarUrl} name={s.name} size={46} /></LoadRing>}
-                    sub={n ? tr('v2.nextAt', { t: hhmm(n.startTime), n: firstName(n.clientName) }) : tr('v2.freeToday')}
+                    sub={n ? tr('v2.nextAt', { t: hhmm(n.startTime), n: firstName(n.clientName) }) : sameDay(date, salonNow()) ? tr('v2.freeToday') : tr('n5.freeOther')}
                     right={<View style={{ alignItems: 'flex-end' }}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{Math.round(load * 100)}%</Text><T k="sm" color={t.ink3}>{tr('v2.hours', { a: hours, b: 8 })}</T></View>} />
                 );
               })}
@@ -273,8 +273,8 @@ function Month({ date, appts, loading, avatarOf, onMonth, onPick, onOpenDay, onO
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 14, marginBottom: 6 }}>
         <T k="h2">{monthLabel(date)}</T>
         <View style={{ flexDirection: 'row' }}>
-          <IconBtn icon="back" label={tr('calendar.prevWeek')} onPress={() => onMonth(new Date(date.getFullYear(), date.getMonth() - 1, 1))} />
-          <IconBtn icon="chev" label={tr('calendar.nextWeek')} onPress={() => onMonth(new Date(date.getFullYear(), date.getMonth() + 1, 1))} />
+          <IconBtn icon="back" label={tr('n5.prevMonth')} onPress={() => onMonth(new Date(date.getFullYear(), date.getMonth() - 1, 1))} />
+          <IconBtn icon="chev" label={tr('n5.nextMonth')} onPress={() => onMonth(new Date(date.getFullYear(), date.getMonth() + 1, 1))} />
         </View>
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14 }}>
@@ -314,7 +314,7 @@ function Month({ date, appts, loading, avatarOf, onMonth, onPick, onOpenDay, onO
           </View>
         ) : (
           <View style={{ alignItems: 'flex-start' }}>
-            <T k="sm" color={t.muted} style={{ marginTop: 8, marginBottom: 10 }}>{tr('v2.dayFree')}</T>
+            <T k="sm" color={t.muted} style={{ marginTop: 8, marginBottom: 10 }}>{isToday ? tr('v2.dayFree') : tr('n5.dayFreeOther')}</T>
             <Button label={tr('v2.booking')} icon="plus" size="sm" onPress={() => onNew(date)} />
           </View>
         )}
