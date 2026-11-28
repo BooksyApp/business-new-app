@@ -12,6 +12,7 @@ import { Pressable } from '@/components/Pressable';
 import { Text } from '@/components/Text';
 import { ErrorState, Screen } from '@/components/ui';
 import { t as tr } from '@/i18n';
+import { apiX } from '@/lib/api-ext';
 import { api, toDay, type Appointment, type ClientWithStats, type Staff, type TimeOff } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { rememberClients } from '@/lib/client-cache';
@@ -56,6 +57,7 @@ export default function Calendar() {
   const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
   const gridStart = startOfWeek(monthStart);
   const staff = useLoad<Staff[]>(() => api.staff(sid), [sid, version]);
+  const salonHrs = useLoad(() => apiX.hours(sid).catch(() => []), [sid, version]);
   const q = useLoad(() => (mode === 'month' ? api.appointments(sid, gridStart, addDays(gridStart, 41)) : api.appointments(sid, weekStart, addDays(weekStart, 6))),
     [sid, mode, mode === 'month' ? `${date.getFullYear()}-${date.getMonth()}` : weekStart.toDateString(), version]);
   const off = useLoad<TimeOff[]>(() => (mode === 'day' ? api.timeOffOn(sid, date).catch(() => []) : Promise.resolve([])), [sid, mode, date.toDateString(), version]);
@@ -138,13 +140,13 @@ export default function Calendar() {
           ) : (
             <View style={{ paddingHorizontal: 20, marginTop: 6 }}>
               {team.map((s, i) => {
-                const { load, hours } = staffLoad(dayList, s);
+                const { load, mins, shift } = staffLoad(dayList, s, date, salonHrs.data);
                 const n = dayList.find((a) => String(a.staffId) === String(s.id) && a.status !== 'COMPLETED' && (!sameDay(date, salonNow()) || toMin(a.endTime) > nowMin()));
                 return (
                   <ListItem key={String(s.id)} first={i === 0} title={firstName(s.name)} onPress={() => setFocus(String(s.id))}
                     lead={<LoadRing value={load} size={56}><Avatar uri={s.avatarUrl} name={s.name} size={46} /></LoadRing>}
                     sub={n ? tr('v2.nextAt', { t: hhmm(n.startTime), n: firstName(n.clientName) }) : sameDay(date, salonNow()) ? tr('v2.freeToday') : tr('n5.freeOther')}
-                    right={<View style={{ alignItems: 'flex-end' }}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{Math.round(load * 100)}%</Text><T k="sm" color={t.ink3}>{tr('v2.hours', { a: hours, b: 8 })}</T></View>} />
+                    right={<View style={{ alignItems: 'flex-end' }}><Text style={{ fontFamily: font.b, fontSize: 14, color: t.ink }}>{Math.round(load * 100)}%</Text><T k="sm" color={t.ink3}>{mins < 60 ? tr('v2.hoursMin', { a: mins, b: hrs(shift) }) : tr('v2.hours', { a: hrs(mins), b: hrs(shift) })}</T></View>} />
                 );
               })}
             </View>
@@ -190,6 +192,9 @@ function Pro({ label, uri, name, on, onPress }: { label: string; uri?: string | 
 }
 
 /** Visible hour range: working day by default, stretched to every booking and, on today, to the current hour so the red "now" line is always on screen. */
+/** Minutes as hours for the load label: whole numbers stay whole, otherwise one decimal (1.3). */
+const hrs = (m: number) => String(Math.round((m / 60) * 10) / 10);
+
 function hoursOf(list: Appointment[], today: boolean, end = 21): [number, number] {
   let lo = Math.min(9, ...list.map((a) => Math.floor(toMin(a.startTime) / 60)));
   let hi = Math.max(end, ...list.map((a) => Math.ceil(toMin(a.endTime) / 60)));

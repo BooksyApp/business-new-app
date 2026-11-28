@@ -40,6 +40,9 @@ export interface Staff {
   email?: string;
   phone?: string;
   role?: string;
+  /** Weekly shift by weekday name (the same /staff/business/{b} rows carry it). */
+  workingHoursStart?: Record<string, string>;
+  workingHoursEnd?: Record<string, string>;
 }
 
 export interface Service {
