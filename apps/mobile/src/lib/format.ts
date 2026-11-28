@@ -86,6 +86,12 @@ export function money(n: number | null | undefined, currency = 'AZN') {
   }
 }
 
+/** Server-written inbox text: raw "2026-11-28 22:00" becomes the app's "28 noy · 22:00", and in AZ "15 AZN" becomes "15 ₼". Anything else is untouched. */
+export function readableServerText(s: string) {
+  const out = s.replace(/\b(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?\b/g, (_m, d: string, hm: string) => `${dateLabel(fromIso(d))} · ${hm}`);
+  return az() ? out.replace(/(\d(?:[\d.,]*\d)?)\s?AZN\b/g, '$1 ₼') : out;
+}
+
 /** A service's list price: "30 ₼" (fixed), "30-dan" (FROM, "Başlayaraq") or "30–50 ₼" (RANGE with a maximum). */
 export function servicePrice(s: { price?: number | null; priceType?: string | null; priceMax?: number | null }, currency = 'AZN') {
   const lo = money(s.price, currency);

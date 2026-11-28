@@ -12,7 +12,7 @@ import { t as tr } from '@/i18n';
 import { api, type ClientWithStats } from '@/lib/api';
 import { useApp } from '@/lib/app';
 import { useDockInset } from '@/lib/dock';
-import { addDays, dateLabel, fromIso, hhmm, stampDate } from '@/lib/format';
+import { addDays, dateLabel, fromIso, hhmm, readableServerText, stampDate } from '@/lib/format';
 import { usePushPerm } from '@/lib/push';
 import { findClient, recallClient } from '@/lib/client-cache';
 import { OfferSheet, WaitlistSheet } from '@/components/WaitlistSheet';
@@ -131,8 +131,8 @@ export default function Notifications() {
                   <Card key={n.id} onPress={ty === 'bookings' ? () => { if (!n.readAt) markRead(n.id); router.push(routeOf(d) as never); } : undefined} label={n.title} style={{ padding: 14, flexDirection: 'row', gap: 12 }}>
                     {lead(iconOf(n.type), ty === 'stock')}
                     <View style={{ flex: 1, gap: 2 }}>
-                      <T k="t1" style={{ fontFamily: font.b }}>{n.title}</T>
-                      {n.body ? <T k="body" color={t.ink}>{n.body}</T> : null}
+                      <T k="t1" style={{ fontFamily: font.b }}>{readableServerText(n.title)}</T>
+                      {n.body ? <T k="body" color={t.ink}>{readableServerText(n.body)}</T> : null}
                       <T k="sm" color={t.muted}>{when(at(n))}</T>
                       {ty === 'reviews' ? <Button size="sm" kind="fl" label={tr('v3.reply')} style={{ alignSelf: 'flex-start', marginTop: 8 }} onPress={() => router.push('/section/reviews')} /> : null}
                       {ty === 'stock' ? <Button size="sm" kind="fl" label={tr('v3.orderNote')} style={{ alignSelf: 'flex-start', marginTop: 8 }} onPress={() => router.push('/section/inventory')} /> : null}
@@ -151,7 +151,7 @@ export default function Notifications() {
                   {lead(e.type === 'REVIEW' ? 'star' : e.type === 'WAITLIST' ? 'user-plus' : e.type === 'BOOKING_CANCELLED' ? 'x' : 'cal')}
                   <View style={{ flex: 1 }}>
                     <T k="t1" lines={1}>{`${tr(`ev.${e.type}` as 'ev.REVIEW')}${e.who ? ` · ${e.who}` : ''}`}</T>
-                    <T k="sm" color={t.muted} lines={1}>{[e.what, e.date, e.time?.slice(0, 5)].filter(Boolean).join(' · ')}</T>
+                    <T k="sm" color={t.muted} lines={1}>{[e.what, e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? dateLabel(fromIso(e.date)) : e.date, e.time?.slice(0, 5)].filter(Boolean).join(' · ')}</T>
                   </View>
                 </Card>
               ))}
