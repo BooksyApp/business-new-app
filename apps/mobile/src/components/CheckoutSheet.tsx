@@ -89,7 +89,10 @@ export function CheckoutBody({ a, onClose, onDone }: { a: Appointment; onClose: 
       bump(); setDone(true);
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-      setErr((e as Error).message || tr('common.error'));
+      // The server's own codes get a clear Azerbaijani sentence; anything else shows its message as before.
+      const code = (e as { code?: string })?.code;
+      const coded = code === 'VISIT_NOT_TODAY' ? 'Ziyarət yalnız öz günündə ödənilə bilər.' : null;
+      setErr(coded || (e as Error).message || tr('common.error'));
     } finally { setBusy(false); }
   }
   const close = () => { if (done) onDone(); else onClose(); };
