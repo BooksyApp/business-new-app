@@ -94,7 +94,7 @@ export default function Register() {
       const bid = auth.businessId;
       if (bid == null) throw new Error(tr('ob.noBusiness'));
       // Same follow-up the hub runs after sign-up. Hours / service / staff are best effort: the checklist on Bu gun shows what is still missing.
-      await apiB.updateBusiness(bid, { name: bizName.trim(), category: cat, address: address.trim() || undefined, city: city.trim() || undefined, country: 'Azerbaijan', phone: (bizPhone || phone).trim() || undefined, latitude: pin?.latitude, longitude: pin?.longitude } as never).catch(() => undefined);
+      await apiB.updateBusiness(bid, { name: bizName.trim(), category: cat, address: address.trim() || undefined, city: city.trim() || undefined, country: 'Azerbaijan', phone: bizPhone.trim() || undefined, latitude: pin?.latitude, longitude: pin?.longitude } as never).catch(() => undefined);
       await apiX.saveHours(bid, DAYS.map((d) => ({ dayOfWeek: d, enabled: rows[d].on, startTime: rows[d].from, endTime: rows[d].to }))).catch(() => undefined);
       // Only the areas the owner ticked become service categories; nothing is created by default.
       const catIds: Record<string, string> = {};
